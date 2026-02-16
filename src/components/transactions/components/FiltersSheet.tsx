@@ -22,7 +22,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Filter, X, Undo2, Circle, User, ChevronRight } from 'lucide-react';
+import { Filter, X, Undo2, Circle, User } from 'lucide-react';
 import type { TableFilter } from './TransactionsFilters';
 import type { SourceFilter } from '@/lib/constants';
 import type { BankAccount } from '@/lib/data';

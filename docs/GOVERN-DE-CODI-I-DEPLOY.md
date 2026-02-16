@@ -1,7 +1,7 @@
 # Govern de Codi i Deploy — Summa Social
 
-**Versió:** 3.1
-**Data:** 2026-02-14
+**Versió:** 3.2
+**Data:** 2026-02-16
 **Autor:** Raül Vico (CEO/CTO)
 
 ---
@@ -19,13 +19,16 @@
 
 | Branca | Funció | Qui hi treballa |
 |--------|--------|-----------------|
-| `main` | Integració i desenvolupament | Desenvolupador |
+| `main` | Integració central i preparació de deploy | Repositori de control |
 | `prod` | Producció (App Hosting) | Només merge des de main |
-| `ui/*`, `fix/*`, `feat/*` | Branques WIP específiques | Desenvolupador |
+| `codex/*` | Tasques d'implementació | Worktrees externs |
 
 ```
-[WIP] → [main] → [prod] → Deploy automàtic
+[worktree codex/*] → [main] → [prod] → Deploy automàtic
 ```
+
+**Repositori de control:** `/Users/raulvico/Documents/summa-social`  
+**Regla:** el control es manté a `main` i net. Les tasques van fora, en worktrees.
 
 **Firebase App Hosting desplega automàticament només des de `prod`.**
 
@@ -45,13 +48,14 @@ Aquesta classificació determina els requisits de validació (secció 4).
 
 ## 3. Ritual de desenvolupament
 
-1. **Treballar** a `main` o branca WIP (`ui/xxx`, `fix/xxx`, `feat/xxx`)
-2. **Validar** abans de merge:
+1. Des del **repositori de control** (a `main`, net): `npm run inicia` o `npm run implementa`
+2. El sistema crea **branca `codex/*` + worktree extern** a `../summa-social-worktrees/<branch>`
+3. **Treballar i validar** dins del worktree de tasca:
    ```bash
    npm run build && npm test
    ```
-3. **Commit** amb propòsit clar (un commit = una intenció)
-4. **Push** a `main`
+4. `npm run acabat` des del worktree: checks + commit + push + integració a `main` (control)
+5. Després d'`acabat`, el sistema pregunta si vols tancar el worktree (`npm run worktree:close`)
 
 ---
 
@@ -92,22 +96,26 @@ git push origin prod
 El ritual complet d'"acabar feina" i publicar s'executa via scripts deterministes:
 
 ```bash
-npm run inicia    # crea branca segura abans de començar
+npm run inicia    # crea branca codex/* + worktree extern de tasca
 npm run implementa # equivalent a inicia
-npm run acabat    # tanca tasca (checks + commit + push + integració a main)
-npm run publica   # publica main -> prod (deploy verificat)
+npm run acabat    # tanca tasca des del worktree (checks + commit + push + integració a main)
+npm run publica   # publica main -> prod (només des del repositori de control)
+npm run worktree:list
+npm run worktree:close
+npm run worktree:gc
 ```
 
-`npm run inicia` i `npm run implementa` (`scripts/workflow.sh inicia|implementa`) creen una branca `codex/...` segura abans de tocar codi.
+`npm run inicia` i `npm run implementa` (`scripts/workflow.sh inicia|implementa`) només funcionen al repositori de control (`main` net) i creen una tasca aïllada: branca `codex/...` + worktree extern.
 
 `npm run acabat` (`scripts/workflow.sh acabat`) fa aquests passos de forma seqüencial:
 1. Detectar canvis pendents i classificar risc (ALT/MITJÀ/BAIX)
 2. Verificacions (`verify-local.sh`, `verify-ci.sh`)
-3. Commit i push de la branca de treball
-4. Integració automàtica a `main` (si no hi ha conflictes)
+3. Commit i push de la branca de treball (`codex/...`)
+4. Integració automàtica a `main` via repositori de control (si no hi ha conflictes)
+5. Pregunta operativa de tancament del worktree
 
 `npm run publica` executa `scripts/deploy.sh`, que fa:
-1. Preflight git (branca=main, working tree net, pull ff-only)
+1. Preflight git al **repositori de control** (branca=main, working tree net, pull ff-only)
 2. Detectar fitxers canviats (main vs prod)
 3. Classificar risc (ALT/MITJÀ/BAIX) per patrons de path
 4. **Backup curt automàtic** quan el risc és ALT fiscal (si l'entorn està configurat)
@@ -184,7 +192,8 @@ Claude només pot reportar un d'aquests tres estats:
 - **NO pot** decidir quan desplegar
 - **NO pot** fer canvis fora del ritual establert
 - **NO pot** usar `--no-verify` en cap cas
-- **Treballa sempre** a `main` (o branques WIP), mai a `prod`
+- **Implementa sempre** en worktrees de tasca (`codex/*`), mai directament al repositori de control
+- **Publica només** des del repositori de control a `main`
 
 ---
 
@@ -220,12 +229,13 @@ Aquest document conté:
 ## 7. Regles d'or
 
 1. Mai commit directe a `prod`
-2. Treballar sempre a `main` o branques WIP
-3. Un commit = un propòsit clar
-4. Build + test abans de merge
-5. Deploy només amb autorització CEO
-6. Rollback des de `prod`
-7. Risc ALT = confirmació extra obligatòria
+2. Repositori de control sempre a `main` i net abans d'obrir tasca o publicar
+3. Implementació sempre en worktree extern (`codex/*`)
+4. Un commit = un propòsit clar
+5. Build + test abans de merge
+6. Deploy només amb autorització CEO
+7. Rollback des de `prod`
+8. Risc ALT = confirmació extra obligatòria
 
 ---
 

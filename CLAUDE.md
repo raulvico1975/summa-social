@@ -185,8 +185,9 @@ npm run inicia
 ```
 
 Aquesta ordre prepara el desenvolupament:
-- per defecte crea branca `codex/...` abans de tocar codi
-- si Claude ha classificat el canvi com a trivial, pot usar `npm run inicia:main`
+- només es pot executar des del repositori de control (`/Users/raulvico/Documents/summa-social`) a `main` i net
+- crea branca `codex/...` + worktree extern de tasca
+- Claude continua la implementació dins del worktree creat
 
 Quan Raül escriu literalment:
 
@@ -214,7 +215,8 @@ npm run acabat
 Això llança `scripts/workflow.sh acabat`, que:
 - executa verificacions locals i CI (`verify-local.sh`, `verify-ci.sh`)
 - commiteja i fa push
-- integra a `main` quan és segur
+- integra a `main` al repositori de control quan és segur
+- pregunta operativament si cal tancar el worktree de tasca
 
 Després de completar aquesta fase, Claude:
 - escriu literalment `Acabat`
@@ -231,6 +233,8 @@ Claude Code executa:
 ```bash
 npm run publica
 ```
+
+Precondició obligatòria: executar-ho des del repositori de control (`/Users/raulvico/Documents/summa-social`) a `main`.
 
 Això llança `scripts/deploy.sh`, que és un script determinista i bloquejant que:
 - verifica git, detecta canvis

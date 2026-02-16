@@ -385,7 +385,6 @@ export function useTransactionCategorization({
         if (forcedCategoryId) {
           // Categoria forçada - no cal cridar IA
           updateDocumentNonBlocking(doc(transactionsCollection, tx.id), { category: forcedCategoryId });
-          const categoryName = getCategoryDisplayName(forcedCategoryId);
           successCount++;
           continue; // No cal delay, no hem cridat l'API
         }
@@ -424,13 +423,12 @@ export function useTransactionCategorization({
         // Èxit - Si categoryId és null, marcar com Revisar
         const categoryToSave = result.categoryId ?? 'Revisar';
         updateDocumentNonBlocking(doc(transactionsCollection, tx.id), { category: categoryToSave });
-        const categoryName = result.categoryId ? getCategoryDisplayName(result.categoryId) : 'Revisar';
         successCount++;
 
         // Reset delay si èxit (opcional: podríem mantenir-lo)
         // currentDelay = bulkMode ? BASE_DELAY_BULK_MS : BASE_DELAY_NORMAL_MS;
 
-      } catch (error: any) {
+      } catch (error: unknown) {
         // Error de xarxa o inesperada
         console.error('Error categorizing transaction:', error);
         errorCount++;

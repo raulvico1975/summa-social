@@ -259,17 +259,17 @@ export function ProductUpdatesSection({ isSuperAdmin = false }: ProductUpdatesSe
     return allPublished.filter(u => u.isActive !== false);
   }, [allPublished]);
 
-  // GATING: No renderitzar res si no és superadmin
-  // (els hooks ja retornen null, però això evita renderitzar la UI)
-  if (!isSuperAdmin) {
-    return null;
-  }
-
   // Filtrar esborranys actius (no publicats ni descartats)
   const activeDrafts = React.useMemo(() => {
     if (!allDrafts) return [];
     return allDrafts.filter(d => d.status === 'draft');
   }, [allDrafts]);
+
+  // GATING: No renderitzar res si no és superadmin
+  // (els hooks ja retornen null, però això evita renderitzar la UI)
+  if (!isSuperAdmin) {
+    return null;
+  }
 
   // Handler importar JSON
   const handleImportJson = async (e: React.ChangeEvent<HTMLInputElement>) => {

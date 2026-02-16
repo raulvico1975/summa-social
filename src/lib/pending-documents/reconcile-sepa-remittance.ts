@@ -6,14 +6,13 @@ import {
   getDoc,
   collection,
   writeBatch,
-  setDoc,
   serverTimestamp,
   type Firestore,
 } from 'firebase/firestore';
 import type { Transaction } from '@/lib/data';
 import type { PendingDocument } from './types';
 import type { PrebankRemittance } from './sepa-remittance';
-import { pendingDocumentDoc, pendingDocumentsCollection } from './refs';
+import { pendingDocumentDoc } from './refs';
 import { prebankRemittanceDoc } from './sepa-remittance';
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -192,7 +191,7 @@ export async function reconcileSepaRemittanceToAggregatedTransaction(
     };
   }
 
-  const { prebankRemittance, parentTransaction, pendingDocs } = validation;
+  const { parentTransaction, pendingDocs } = validation;
 
   // Col·leccions
   const transactionsRef = collection(firestore, 'organizations', orgId, 'transactions');
@@ -216,8 +215,8 @@ export async function reconcileSepaRemittanceToAggregatedTransaction(
     endToEndId: pendingDoc.sepa!.endToEndId,
   }));
 
-  // Processar en batxos (màxim ~150 operacions per batch per seguretat)
-  const BATCH_SIZE = 100;
+  // Firestore writeBatch: límit dur de 500, però invariants de plataforma <= 50
+  const BATCH_SIZE = 50;
   const childTransactionIds: string[] = [];
 
   // Primer batch: crear transaccions fill
@@ -245,9 +244,8 @@ export async function reconcileSepaRemittanceToAggregatedTransaction(
         remittanceId: remittanceId,
       };
 
-      // Afegir contactType si hi ha contacte
       if (child.contactId) {
-        (newTxData as any).contactType = 'supplier';
+        newTxData.contactType = 'supplier';
       }
 
       batch.set(newTxRef, newTxData);

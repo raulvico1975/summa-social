@@ -60,18 +60,13 @@ export function BackupsSettings() {
   const canEdit = userRole === 'admin';
 
   // ─────────────────────────────────────────────────────────────────────────────
-  // Feature desactivada: no renderitzar res (transparència total)
-  // ─────────────────────────────────────────────────────────────────────────────
-  if (!CLOUD_BACKUPS_UI_ENABLED) {
-    return null;
-  }
-
-  // ─────────────────────────────────────────────────────────────────────────────
-  // Codi original (només s'executa si CLOUD_BACKUPS_UI_ENABLED = true)
+  // Codi original (render bloquejat més avall si CLOUD_BACKUPS_UI_ENABLED = false)
   // ─────────────────────────────────────────────────────────────────────────────
 
   // Mostrar toast si s'ha connectat correctament (després de redirect OAuth)
   React.useEffect(() => {
+    if (!CLOUD_BACKUPS_UI_ENABLED) return;
+
     const connected = searchParams.get('backup_connected');
     const error = searchParams.get('backup_error');
 
@@ -122,6 +117,7 @@ export function BackupsSettings() {
 
   // Inicialitzar document si no existeix
   React.useEffect(() => {
+    if (!CLOUD_BACKUPS_UI_ENABLED) return;
     if (!backupDocRef || isLoadingDoc || backupData || isInitializing) return;
 
     // Si no hi ha data i no estem carregant, el document no existeix
@@ -149,6 +145,7 @@ export function BackupsSettings() {
   const [lastRunUnavailable, setLastRunUnavailable] = React.useState(false);
 
   React.useEffect(() => {
+    if (!CLOUD_BACKUPS_UI_ENABLED) return;
     if (!firestore || !organizationId) return;
 
     const loadLastRun = async () => {
@@ -334,6 +331,11 @@ export function BackupsSettings() {
   const integration = backupData ?? INITIAL_BACKUP_INTEGRATION;
   const isConnected = integration.status === 'connected';
   const hasError = integration.status === 'error';
+
+  // Feature desactivada: no renderitzar UI
+  if (!CLOUD_BACKUPS_UI_ENABLED) {
+    return null;
+  }
 
   // Loading state
   if (isLoadingDoc || isInitializing) {

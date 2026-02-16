@@ -160,15 +160,6 @@ export const TransactionsFilters = React.memo(function TransactionsFilters({
   onShowArchivedChange,
   t,
 }: TransactionsFiltersProps) {
-  // Count active filters for badge
-  const activeFiltersCount = React.useMemo(() => {
-    let count = 0;
-    if (currentFilter !== 'all') count++;
-    if (sourceFilter !== 'all') count++;
-    if (bankAccountFilter !== '__all__') count++;
-    return count;
-  }, [currentFilter, sourceFilter, bankAccountFilter]);
-
   return (
     <div className="flex flex-col gap-3 w-full md:flex-row md:flex-wrap md:items-center">
       {/* ═══════════════════════════════════════════════════════════════════

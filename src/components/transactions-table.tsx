@@ -49,7 +49,6 @@ import {
   ChevronDown,
   ChevronUp,
   Check,
-  AlertTriangle,
   Undo2,
   Download,
   X,
@@ -67,7 +66,7 @@ import { StripeImporter } from '@/components/stripe-importer';
 import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
 import { collection, doc, writeBatch, query, orderBy } from 'firebase/firestore';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Minus, Tag, XCircle, Search, FileX, Undo } from 'lucide-react';
+import { Tag, XCircle, Search, FileX, Undo } from 'lucide-react';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useTranslations } from '@/i18n';
@@ -131,9 +130,6 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
   // Cercador intel·ligent
   const [searchQuery, setSearchQuery] = React.useState('');
 
-  // Llegir paràmetre de filtre de la URL
-  const [hasUrlFilter, setHasUrlFilter] = React.useState(false);
-
   // Filtre per contactId (des d'enllaç de donant)
   const [contactIdFilter, setContactIdFilter] = React.useState<string | null>(null);
 
@@ -145,12 +141,10 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
 
       if (isTransactionUrlFilter(filter)) {
         setTableFilter(filter);
-        setHasUrlFilter(true);
       }
 
       if (contactId) {
         setContactIdFilter(contactId);
-        setHasUrlFilter(true);
       }
     }
   }, []);
@@ -190,18 +184,6 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
     loadPrebankRemittances();
   }, [firestore, organizationId]);
 
-  // Funció per netejar el filtre i actualitzar la URL
-  const clearFilter = () => {
-    setTableFilter('all');
-    setContactIdFilter(null);
-    setHasUrlFilter(false);
-    if (typeof window !== 'undefined') {
-      const url = new URL(window.location.href);
-      url.searchParams.delete('filter');
-      url.searchParams.delete('contactId');
-      window.history.replaceState({}, '', url.toString());
-    }
-  };
   const [sortDateAsc, setSortDateAsc] = React.useState(false); // false = més recents primer
 
   // Columna Projecte - sempre oculta a la taula de moviments
@@ -507,11 +489,9 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
     handleSetProject,
     // Document Upload / Delete
     docLoadingStates,
-    handleAttachDocument,
     handleAttachDocumentWithName,
     handleDeleteDocument,
     isDeleteDocDialogOpen,
-    transactionToDeleteDoc,
     handleDeleteDocConfirm,
     handleCloseDeleteDocDialog,
     // Edit Dialog
@@ -522,7 +502,6 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
     handleCloseEditDialog,
     // Delete Dialog
     isDeleteDialogOpen,
-    transactionToDelete,
     handleDeleteClick,
     handleDeleteConfirm,
     handleCloseDeleteDialog,
@@ -698,9 +677,6 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
       pendingIndividualsList: pendingIndividuals,
     };
   }, [transactions]);
-
-  // Alias per compatibilitat amb codi existent
-  const hasPendingRemittances = pendingReturnsStats.hasPendingRemittances;
 
   // Moviments sense categoritzar
   const uncategorizedTransactions = React.useMemo(() => {
@@ -899,7 +875,6 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
     setDateFilter({ type: 'all' });
     setContactIdFilter(null);
     setSourceFilter('all');
-    setHasUrlFilter(false);
     if (typeof window !== 'undefined') {
       const url = new URL(window.location.href);
       url.searchParams.delete('filter');
@@ -1189,7 +1164,7 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
         month: '2-digit',
         year: 'numeric',
       });
-    } catch (e) {
+    } catch {
       return dateString;
     }
   };
@@ -1322,12 +1297,13 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
       setIsUndoDialogOpen(false);
       setUndoTransaction(null);
 
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Error desconegut';
       console.error('Error undoing processing (server-side):', error);
       toast({
         variant: 'destructive',
         title: 'Error desfent processament',
-        description: error.message,
+        description: errorMessage,
       });
     }
   };
@@ -1357,12 +1333,13 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
           description: result.error || 'Error desconegut',
         });
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Error desconegut';
       console.error('Error undoing processing:', error);
       toast({
         variant: 'destructive',
         title: 'Error desfent processament',
-        description: error.message,
+        description: errorMessage,
       });
     }
   };
@@ -1442,7 +1419,9 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
     remittanceQuotes: t.movements.table.remittanceQuotes,
     remittanceProcessedLabel: t.movements.table.remittanceProcessedLabel,
     remittanceNotApplicable: t.movements.table.remittanceNotApplicable,
-    undoRemittance: (t.movements.table as any).undoRemittance || 'Desfer remesa',
+    undoRemittance:
+      (t.movements.table as typeof t.movements.table & { undoRemittance?: string }).undoRemittance ||
+      'Desfer remesa',
     moreOptionsAriaLabel: t.movements.table.moreOptionsAriaLabel,
     legacyCategory: t.movements?.table?.legacyCategory ?? 'Cal recategoritzar',
   }), [t]);

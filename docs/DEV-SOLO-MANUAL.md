@@ -112,7 +112,8 @@ No llegeixis tot. Consulta el que necessitis.
 □ git status → branca neta, sense canvis pendents
 □ git pull → tinc l'última versió
 □ npm run build → compila sense errors
-□ Estic a la branca correcta (`main` o feature branch)
+□ Si sóc al repo de control, estic a `main`
+□ Si implemento, estic dins d'un worktree de tasca (`codex/*`)
 □ He llegit el que vaig a tocar (no codi a cegues)
 □ Tinc backup mental del que faré (puc desfer-ho)
 ```
@@ -125,9 +126,35 @@ No llegeixis tot. Consulta el que necessitis.
 
 El hook Husky (`.husky/pre-commit`) bloqueja `git commit` si estàs a la branca `prod`. Això s'aplica automàticament perquè el projecte ja usa Husky (`core.hooksPath = .husky/_`).
 
-**Desactivar temporalment:** `git commit --no-verify` — NOMÉS per emergències amb autorització explícita del CEO.
+**No es pot desactivar:** `--no-verify` queda prohibit en qualsevol cas.
 
-**Per què no s'hauria de desactivar:** El model de branques `main → prod` és invariant. Un commit directe a `prod` salta el ritual de govern i pot corrompre l'historial.
+**Per què:** el model `worktree de tasca → main → prod` depèn dels checks per evitar regressions i errors silenciosos.
+
+---
+
+### 4.1c Treball en paral·lel amb worktrees (obligatori)
+
+**Regla base:** 1 tasca d'implementació = 1 worktree.
+
+**Worktree de control:**
+- Ruta: `/Users/raulvico/Documents/summa-social`
+- Branca obligatòria: `main`
+- Sempre net abans d'obrir tasca o publicar
+
+**Cicle de vida d'una tasca:**
+1. Des del control (`main`, net): `npm run inicia` (o `npm run implementa`)
+2. El sistema crea:
+   - branca `codex/...`
+   - worktree extern a `../summa-social-worktrees/<branch>`
+3. Implementar dins del worktree nou
+4. Tancar amb `npm run acabat` des del worktree
+5. Respondre la pregunta operativa de tancament:
+   - recomanat: `npm run worktree:close`
+
+**Operacions de manteniment:**
+- Llistar worktrees: `npm run worktree:list`
+- Tancar worktree actual o indicat: `npm run worktree:close`
+- Neteja automàtica (TTL 14 dies): `npm run worktree:gc`
 
 ---
 
@@ -153,14 +180,18 @@ Flux guiat recomanat:
 
 ```bash
 npm run inicia        # o: npm run implementa
+npm run worktree:list # identifica la ruta del worktree actiu
 npm run estat         # et suggereix quan dir "Acabat" amb resum no tècnic
 npm run acabat
+npm run worktree:close # recomanat després d'integrar a main
 npm run estat         # et suggereix quan dir "Autoritzo deploy" i què vol dir
 npm run publica
 ```
 
 `inicia` i `implementa` són equivalents.
 `Inicia` i `Implementa` serveixen igual.
+
+**Important:** `npm run publica` només es pot executar des del repositori de control (`/Users/raulvico/Documents/summa-social`) a la branca `main`.
 
 ```bash
 npm run deploy
