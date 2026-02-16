@@ -91,12 +91,16 @@ export default function SettingsPage() {
       {/* Gestió de membres (només admins) */}
       {canManageMembers && <MembersManager />}
 
-      {/* Mòduls opcionals (només admins) */}
-      {canManageFeatures && <FeatureFlagsSettings />}
+      {/* Backups - només SuperAdmin (els admins normals no veuen res) */}
+      {isSuperAdmin && <BackupsSettings />}
+
+      {/* Zona de Perill - només SuperAdmin */}
+      {isSuperAdmin && <DangerZone />}
 
       {/* Configuració de l'organització */}
       <div>
         <h2 className="text-lg font-semibold mb-4">{t.settings.organizationSettingsTitle}</h2>
+
         {canManageOrganization ? (
           <OrganizationSettings />
         ) : (
@@ -104,25 +108,32 @@ export default function SettingsPage() {
             {t.settings.permissionDenied}
           </div>
         )}
-      </div>
 
-      {/* Gestió de categories */}
-      {canManageCategories ? (
-        <CategoryManager />
-      ) : (
-        <div className="p-4 bg-muted/50 rounded-lg text-sm text-muted-foreground">
-          {t.settings.permissionDenied}
+        {/* Gestió de categories */}
+        <div className="mt-6">
+          {canManageCategories ? (
+            <CategoryManager />
+          ) : (
+            <div className="p-4 bg-muted/50 rounded-lg text-sm text-muted-foreground">
+              {t.settings.permissionDenied}
+            </div>
+          )}
         </div>
-      )}
 
-      {/* Gestió de comptes bancaris (només admins) */}
-      {canManageOrganization && <BankAccountsManager />}
+        {/* Gestió de comptes bancaris (només admins) */}
+        {canManageOrganization && (
+          <div className="mt-6">
+            <BankAccountsManager />
+          </div>
+        )}
 
-      {/* Backups - només SuperAdmin (els admins normals no veuen res) */}
-      {isSuperAdmin && <BackupsSettings />}
-
-      {/* Zona de Perill - només SuperAdmin */}
-      {isSuperAdmin && <DangerZone />}
+        {/* Mòduls opcionals (només admins) - al final de tot */}
+        {canManageFeatures && (
+          <div className="mt-6">
+            <FeatureFlagsSettings />
+          </div>
+        )}
+      </div>
     </div>
   );
 }
