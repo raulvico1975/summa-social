@@ -2175,6 +2175,8 @@
   "login.prompt": "Introduce tus credenciales para acceder.",
   "login.resetEmailSentNeutral": "Si el correo existe, recibirás un email con instrucciones para restablecer la contraseña.",
   "login.resetRequiresEmail": "Introduce tu correo electrónico primero.",
+  "login.resetUseLatestEmail": "Por seguridad, solo es válido el último correo de restablecimiento enviado.",
+  "login.resetWaitBeforeRetry": "Ya hemos enviado un correo hace poco. Revisa el último mensaje recibido antes de pedir uno nuevo.",
   "login.tooManyRequests": "Demasiados intentos. Inténtalo de nuevo más tarde.",
   "login.userNotFound": "No existe ninguna cuenta con este correo",
   "login.verifyingSession": "Verificando sesión...",

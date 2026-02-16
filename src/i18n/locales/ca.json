@@ -2175,6 +2175,8 @@
   "login.prompt": "Introdueix les teves credencials per accedir.",
   "login.resetEmailSentNeutral": "Si el correu existeix, rebràs un email amb instruccions per restablir la contrasenya.",
   "login.resetRequiresEmail": "Introdueix el teu correu electrònic primer.",
+  "login.resetUseLatestEmail": "Per seguretat, només és vàlid l'últim correu de restabliment enviat.",
+  "login.resetWaitBeforeRetry": "Ja hem enviat un correu fa poc. Revisa l'últim missatge rebut abans de demanar-ne un de nou.",
   "login.tooManyRequests": "Massa intents. Prova-ho de nou més tard.",
   "login.userNotFound": "No existeix cap compte amb aquest correu",
   "login.verifyingSession": "Verificant sessió...",
