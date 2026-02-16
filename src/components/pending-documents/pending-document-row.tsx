@@ -75,6 +75,7 @@ interface PendingDocumentRowProps {
   doc: PendingDocument;
   contacts: Contact[];
   categories: Category[];
+  canOperate?: boolean;
   onUpdate: (docId: string, field: string, value: string | number | null) => void;
   onConfirm: (doc: PendingDocument) => void;
   onArchive: (doc: PendingDocument) => void;
@@ -156,6 +157,7 @@ export function PendingDocumentRow({
   doc,
   contacts,
   categories,
+  canOperate = false,
   onUpdate,
   onConfirm,
   onArchive,
@@ -208,6 +210,8 @@ export function PendingDocumentRow({
   const debouncedUpdateRef = React.useRef<NodeJS.Timeout | null>(null);
 
   const handleTextChange = React.useCallback((field: string, value: string) => {
+    if (!canOperate) return;
+
     if (debouncedUpdateRef.current) {
       clearTimeout(debouncedUpdateRef.current);
     }
@@ -220,7 +224,7 @@ export function PendingDocumentRow({
         onUpdate(doc.id, field, value.trim() || null);
       }
     }, 500);
-  }, [doc.id, onUpdate]);
+  }, [canOperate, doc.id, onUpdate]);
 
   // Cleanup debounce on unmount
   React.useEffect(() => {
@@ -255,8 +259,8 @@ export function PendingDocumentRow({
 
   // Determinar quins camps són editables segons l'estat
   const editability = getEditableFields(doc.status);
-  const isEditable = editability.allEditable;
-  const canEditCategory = editability.editableFields.includes('categoryId');
+  const isEditable = canOperate && editability.allEditable;
+  const canEditCategory = canOperate && editability.editableFields.includes('categoryId');
   const isReady = isDocumentReadyToConfirm(doc);
   const missingFields = getMissingFields(doc);
 
@@ -571,8 +575,11 @@ export function PendingDocumentRow({
           {doc.suggestedTransactionIds && doc.suggestedTransactionIds.length > 0 && (
             <Badge
               variant="outline"
-              className="bg-cyan-50 text-cyan-700 border-cyan-200 cursor-pointer hover:bg-cyan-100"
-              onClick={() => onReconcile?.(doc)}
+              className={cn(
+                'bg-cyan-50 text-cyan-700 border-cyan-200',
+                canOperate && onReconcile && 'cursor-pointer hover:bg-cyan-100'
+              )}
+              onClick={canOperate && onReconcile ? () => onReconcile(doc) : undefined}
             >
               <Link2 className="h-3 w-3 mr-1" />
               {t.pendingDocs.suggested}
@@ -585,7 +592,7 @@ export function PendingDocumentRow({
       <TableCell>
         <div className="flex items-center gap-1">
           {/* Reconcile button when suggestions exist */}
-          {doc.suggestedTransactionIds && doc.suggestedTransactionIds.length > 0 && onReconcile && (
+          {canOperate && doc.suggestedTransactionIds && doc.suggestedTransactionIds.length > 0 && onReconcile && (
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
@@ -673,7 +680,7 @@ export function PendingDocumentRow({
               */}
 
               {/* Delete matched (undo reconciliation) */}
-              {doc.status === 'matched' && onDeleteMatched && (
+              {canOperate && doc.status === 'matched' && onDeleteMatched && (
                 <>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
@@ -692,7 +699,7 @@ export function PendingDocumentRow({
               )}
 
               {/* Archive (for draft, confirmed, sepa_generated) */}
-              {(doc.status === 'draft' || doc.status === 'confirmed' || doc.status === 'sepa_generated') && (
+              {canOperate && (doc.status === 'draft' || doc.status === 'confirmed' || doc.status === 'sepa_generated') && (
                 <>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
@@ -711,7 +718,7 @@ export function PendingDocumentRow({
               )}
 
               {/* Restore (for archived) */}
-              {doc.status === 'archived' && (
+              {canOperate && doc.status === 'archived' && (
                 <>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem

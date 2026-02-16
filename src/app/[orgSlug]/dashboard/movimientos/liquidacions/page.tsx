@@ -171,8 +171,8 @@ export default function LiquidacionsPage() {
   // Feature flag check
   const isPendingDocsEnabled = organization?.features?.pendingDocs ?? false;
 
-  // Només admins poden operar
-  const canOperate = userRole === 'admin';
+  // Admin i user poden operar (superadmin es resol com admin). Viewer: només lectura.
+  const canOperate = userRole === 'admin' || userRole === 'user';
 
   // Tab principal (liquidacions, tickets o quilometratge)
   const [mainTab, setMainTab] = React.useState<'liquidacions' | 'tickets' | 'quilometratge'>('liquidacions');
@@ -245,7 +245,7 @@ export default function LiquidacionsPage() {
 
   // Crear nova liquidació
   const handleCreate = async () => {
-    if (!organizationId || !firestore) return;
+    if (!canOperate || !organizationId || !firestore) return;
 
     setIsCreating(true);
     try {
@@ -273,7 +273,7 @@ export default function LiquidacionsPage() {
   // Pre-check amb dryRun per detectar tiquets pendents
   // ═══════════════════════════════════════════════════════════════════════════
   const handleArchiveRequest = async (report: ExpenseReport) => {
-    if (!organizationId || !user) return;
+    if (!canOperate || !organizationId || !user) return;
 
     setReportToArchive(report);
     setIsCheckingArchive(true);
@@ -335,7 +335,7 @@ export default function LiquidacionsPage() {
 
   // Arxivar via API (sense dryRun)
   const handleArchiveConfirm = async (report: ExpenseReport) => {
-    if (!organizationId || !user) {
+    if (!canOperate || !organizationId || !user) {
       setReportToArchive(null);
       return;
     }
@@ -381,7 +381,7 @@ export default function LiquidacionsPage() {
 
   // Marcar com enviada (amb confirmació)
   const handleSubmit = async () => {
-    if (!organizationId || !firestore || !reportToSubmit) return;
+    if (!canOperate || !organizationId || !firestore || !reportToSubmit) return;
 
     setIsSubmitting(true);
     try {
@@ -402,7 +402,7 @@ export default function LiquidacionsPage() {
 
   // Restaurar
   const handleRestore = async (report: ExpenseReport) => {
-    if (!organizationId || !firestore) return;
+    if (!canOperate || !organizationId || !firestore) return;
 
     try {
       await restoreExpenseReport(firestore, organizationId, report.id, 'draft');
@@ -419,6 +419,7 @@ export default function LiquidacionsPage() {
 
   // Editar (navegar al detall)
   const handleEdit = (report: ExpenseReport) => {
+    if (!canOperate) return;
     router.push(buildUrl(`/dashboard/movimientos/liquidacions/${report.id}`));
   };
 
@@ -649,7 +650,7 @@ export default function LiquidacionsPage() {
                             </div>
 
                             {/* Mobile: DropdownMenu amb totes les accions */}
-                            {isMobile ? (
+                            {canOperate && (isMobile ? (
                               <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
                                   <Button
@@ -775,7 +776,7 @@ export default function LiquidacionsPage() {
                                   </Button>
                                 )}
                               </>
-                            )}
+                            ))}
                             <ChevronRight className="h-4 w-4 text-muted-foreground" />
                           </div>
                         </div>
@@ -867,14 +868,16 @@ export default function LiquidacionsPage() {
                             <div className="flex items-center gap-1">
                               {getStatusInfo(report, t).badge}
                             </div>
-                            <Button
-                              variant="default"
-                              size="sm"
-                              onClick={() => router.push(buildUrl(`/dashboard/movimientos/liquidacions/${report.id}?tab=kilometratge`))}
-                            >
-                              <Car className="mr-2 h-4 w-4" />
-                              {t.expenseReports.actions.manageMileage}
-                            </Button>
+                            {canOperate && (
+                              <Button
+                                variant="default"
+                                size="sm"
+                                onClick={() => router.push(buildUrl(`/dashboard/movimientos/liquidacions/${report.id}?tab=kilometratge`))}
+                              >
+                                <Car className="mr-2 h-4 w-4" />
+                                {t.expenseReports.actions.manageMileage}
+                              </Button>
+                            )}
                           </div>
                         </div>
                       </CardContent>
