@@ -107,13 +107,18 @@ function statusBadgeVariant(status: ControlStatus): 'default' | 'secondary' | 'd
   return 'default'
 }
 
+function resolveAuthLanguage(language: string): string {
+  const supported = new Set(['ca', 'es', 'fr', 'pt', 'en'])
+  return supported.has(language) ? language : 'en'
+}
+
 function AdminPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user, firestore, auth, isUserLoading } = useFirebase();
   const { toast } = useToast();
   const isMobile = useIsMobile();
-  const { t } = useTranslations();
+  const { t, language } = useTranslations();
   const reason = searchParams.get('reason');
 
   const [isSuperAdmin, setIsSuperAdmin] = React.useState<boolean | null>(null);
@@ -351,6 +356,7 @@ function AdminPageContent() {
     if (!resetEmail.trim()) return;
     setIsResetting(true);
     try {
+      auth.languageCode = resolveAuthLanguage(language);
       await sendPasswordResetEmail(auth, resetEmail.trim());
       logAdminAction(firestore, 'RESET_PASSWORD_SENT', user!.uid, resetEmail.trim());
       refreshSummary()
