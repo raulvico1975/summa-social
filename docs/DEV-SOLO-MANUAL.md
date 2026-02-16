@@ -156,6 +156,12 @@ El hook Husky (`.husky/pre-commit`) bloqueja `git commit` si estàs a la branca 
 - Tancar worktree actual o indicat: `npm run worktree:close`
 - Neteja automàtica (TTL 14 dies): `npm run worktree:gc`
 
+### Bloqueig d’artefactes
+
+El sistema impedeix commitejar dependències i artefactes de build encara que s’intentin afegir manualment.
+
+En cas de test intern del mecanisme, pot ser necessari utilitzar `git add -f` per simular un intent maliciós i validar que el workflow el bloqueja correctament.
+
 ---
 
 ### 4.2 Gate de producció (obligatori)
