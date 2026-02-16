@@ -79,6 +79,7 @@ interface PendingDocumentCardProps {
   doc: PendingDocument;
   contacts: Contact[];
   categories: Category[];
+  canOperate?: boolean;
   onUpdate: (docId: string, field: string, value: string | number | null) => void;
   onConfirm: (doc: PendingDocument) => void;
   onArchive: (doc: PendingDocument) => void;
@@ -141,6 +142,7 @@ export function PendingDocumentCard({
   doc,
   contacts,
   categories,
+  canOperate = false,
   onUpdate,
   onConfirm,
   onArchive,
@@ -195,6 +197,8 @@ export function PendingDocumentCard({
   const debouncedUpdateRef = React.useRef<NodeJS.Timeout | null>(null);
 
   const handleTextChange = React.useCallback((field: string, value: string) => {
+    if (!canOperate) return;
+
     if (debouncedUpdateRef.current) {
       clearTimeout(debouncedUpdateRef.current);
     }
@@ -207,7 +211,7 @@ export function PendingDocumentCard({
         onUpdate(doc.id, field, value.trim() || null);
       }
     }, 500);
-  }, [doc.id, onUpdate]);
+  }, [canOperate, doc.id, onUpdate]);
 
   // Cleanup debounce on unmount
   React.useEffect(() => {
@@ -401,32 +405,34 @@ export function PendingDocumentCard({
           )}
         </Button>
 
-        {/* Confirmar (sempre visible) */}
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <span>
-              <Button
-                variant={isReady ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => onConfirm(doc)}
-                disabled={!isReady || isConfirming}
-                className="h-8 flex-shrink-0"
-              >
-                {isConfirming ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <>
-                    <Check className="h-4 w-4 sm:mr-1" />
-                    <span className="hidden sm:inline">{t.pendingDocs.actions.confirm}</span>
-                  </>
-                )}
-              </Button>
-            </span>
-          </TooltipTrigger>
-          <TooltipContent>
-            {isReady ? t.pendingDocs.actions.confirm : `${t.pendingDocs.missing}: ${missingFields.join(', ')}`}
-          </TooltipContent>
-        </Tooltip>
+        {/* Confirmar */}
+        {canOperate && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span>
+                <Button
+                  variant={isReady ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => onConfirm(doc)}
+                  disabled={!isReady || isConfirming}
+                  className="h-8 flex-shrink-0"
+                >
+                  {isConfirming ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <>
+                      <Check className="h-4 w-4 sm:mr-1" />
+                      <span className="hidden sm:inline">{t.pendingDocs.actions.confirm}</span>
+                    </>
+                  )}
+                </Button>
+              </span>
+            </TooltipTrigger>
+            <TooltipContent>
+              {isReady ? t.pendingDocs.actions.confirm : `${t.pendingDocs.missing}: ${missingFields.join(', ')}`}
+            </TooltipContent>
+          </Tooltip>
+        )}
       </div>
 
       {/* BLOC EXPANDIT */}
@@ -451,6 +457,7 @@ export function PendingDocumentCard({
                     'h-9 text-right',
                     missingFields.includes('amount') && 'border-amber-400 bg-amber-50'
                   )}
+                  disabled={!canOperate}
                 />
                 <span className="text-sm text-muted-foreground">€</span>
               </div>
@@ -468,6 +475,7 @@ export function PendingDocumentCard({
                       !validInvoiceDate && 'text-muted-foreground',
                       missingFields.includes('invoiceDate') && 'border-amber-400 bg-amber-50'
                     )}
+                    disabled={!canOperate}
                   >
                     <CalendarIcon className="mr-2 h-4 w-4 flex-shrink-0" />
                     <span className="truncate">{validInvoiceDate ? format(validInvoiceDate, 'dd/MM/yyyy') : t.pendingDocs.filters.dateFrom}</span>
@@ -478,7 +486,7 @@ export function PendingDocumentCard({
                     mode="single"
                     selected={validInvoiceDate}
                     onSelect={(date) => {
-                      if (date) {
+                      if (canOperate && date) {
                         onUpdate(doc.id, 'invoiceDate', format(date, 'yyyy-MM-dd'));
                       }
                       setDateOpen(false);
@@ -496,6 +504,7 @@ export function PendingDocumentCard({
               <Select
                 value={doc.type}
                 onValueChange={(value) => onUpdate(doc.id, 'type', value)}
+                disabled={!canOperate}
               >
                 <SelectTrigger className="h-9">
                   <SelectValue />
@@ -527,7 +536,7 @@ export function PendingDocumentCard({
                   missingFields.includes('invoiceNumber') && 'border-amber-400 bg-amber-50',
                   doc.type === 'receipt' && 'opacity-50'
                 )}
-                disabled={doc.type === 'receipt'}
+                disabled={!canOperate || doc.type === 'receipt'}
               />
             </div>
 
@@ -545,6 +554,7 @@ export function PendingDocumentCard({
                       !doc.supplierId && 'text-muted-foreground',
                       missingFields.includes('supplierId') && 'border-amber-400 bg-amber-50'
                     )}
+                    disabled={!canOperate}
                   >
                     <span className="truncate">
                       {doc.supplierId ? getContactName(doc.supplierId, contacts) : `${t.pendingDocs.filters.supplier}...`}
@@ -571,6 +581,7 @@ export function PendingDocumentCard({
                               setSupplierOpen(false);
                               setCreateSupplierOpen(true);
                             }}
+                            disabled={!canOperate}
                           >
                             <Plus className="h-4 w-4 mr-1" />
                             {t.pendingDocs.actions.createSupplier}
@@ -582,6 +593,7 @@ export function PendingDocumentCard({
                           <CommandItem
                             key={supplier.id}
                             value={supplier.name}
+                            disabled={!canOperate}
                             onSelect={() => {
                               onUpdate(doc.id, 'supplierId', supplier.id);
                               setSupplierOpen(false);
@@ -615,6 +627,7 @@ export function PendingDocumentCard({
                             setSupplierOpen(false);
                             setCreateSupplierOpen(true);
                           }}
+                          disabled={!canOperate}
                         >
                           <Plus className="h-4 w-4 mr-2" />
                           {t.pendingDocs.actions.createSupplier}
@@ -633,6 +646,7 @@ export function PendingDocumentCard({
             onOpenChange={setCreateSupplierOpen}
             initialName={supplierSearchValue}
             onCreated={(contactId) => {
+              if (!canOperate) return;
               onUpdate(doc.id, 'supplierId', contactId);
               setSupplierSearchValue('');
             }}
@@ -654,6 +668,7 @@ export function PendingDocumentCard({
                       !doc.categoryId && 'text-muted-foreground',
                       missingFields.includes('categoryId') && 'border-amber-400 bg-amber-50'
                     )}
+                    disabled={!canOperate}
                   >
                     <span className="truncate">
                       {doc.categoryId ? getCategoryName(doc.categoryId) : `${t.pendingDocs.filters.category}...`}
@@ -671,6 +686,7 @@ export function PendingDocumentCard({
                           <CommandItem
                             key={category.id}
                             value={categoryTranslations[category.name] || category.name}
+                            disabled={!canOperate}
                             onSelect={() => {
                               onUpdate(doc.id, 'categoryId', category.id);
                               setCategoryOpen(false);
@@ -693,7 +709,7 @@ export function PendingDocumentCard({
             </div>
 
             {/* Suggeriment de renom */}
-            {suggestedFilename && !dismissedRenameSuggestion && onRename && (
+            {canOperate && suggestedFilename && !dismissedRenameSuggestion && onRename && (
               <div className="col-span-full flex items-center gap-2 rounded-md border border-blue-200 bg-blue-50 px-3 py-2">
                 <PenLine className="h-4 w-4 text-blue-600 flex-shrink-0" />
                 <span className="text-sm text-blue-800 flex-1 min-w-0 truncate">
@@ -726,56 +742,60 @@ export function PendingDocumentCard({
 
             {/* Accions */}
             <div className="flex items-end justify-end gap-2">
-              {/* Eliminar amb confirmació */}
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
+              {canOperate && (
+                <>
+                  {/* Eliminar amb confirmació */}
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        disabled={isDeleting}
+                        className="text-destructive hover:text-destructive"
+                      >
+                        {isDeleting ? (
+                          <Loader2 className="h-4 w-4 animate-spin mr-1" />
+                        ) : (
+                          <Trash2 className="h-4 w-4 mr-1" />
+                        )}
+                        Eliminar
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>{t.pendingDocs.deleteDialog.title}</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          {t.pendingDocs.deleteDialog.description}
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>{t.pendingDocs.actions.cancel}</AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={() => onDelete(doc)}
+                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        >
+                          {t.pendingDocs.actions.delete}
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+
                   <Button
                     variant="ghost"
                     size="sm"
-                    disabled={isDeleting}
-                    className="text-destructive hover:text-destructive"
+                    onClick={() => onArchive(doc)}
+                    disabled={isArchiving}
+                    className="text-muted-foreground"
                   >
-                    {isDeleting ? (
+                    {isArchiving ? (
                       <Loader2 className="h-4 w-4 animate-spin mr-1" />
                     ) : (
-                      <Trash2 className="h-4 w-4 mr-1" />
+                      <Archive className="h-4 w-4 mr-1" />
                     )}
-                    Eliminar
+                    Arxivar
                   </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>{t.pendingDocs.deleteDialog.title}</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      {t.pendingDocs.deleteDialog.description}
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>{t.pendingDocs.actions.cancel}</AlertDialogCancel>
-                    <AlertDialogAction
-                      onClick={() => onDelete(doc)}
-                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                    >
-                      {t.pendingDocs.actions.delete}
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => onArchive(doc)}
-                disabled={isArchiving}
-                className="text-muted-foreground"
-              >
-                {isArchiving ? (
-                  <Loader2 className="h-4 w-4 animate-spin mr-1" />
-                ) : (
-                  <Archive className="h-4 w-4 mr-1" />
-                )}
-                Arxivar
-              </Button>
+                </>
+              )}
               <Button
                 variant="ghost"
                 size="sm"
