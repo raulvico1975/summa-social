@@ -8,8 +8,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Logo } from '@/components/logo';
 import { useFirebase } from '@/firebase';
+import { useTranslations } from '@/i18n';
 import { useToast } from '@/hooks/use-toast';
-import { signInWithEmailAndPassword, setPersistence, browserSessionPersistence } from 'firebase/auth';
+import { signInWithEmailAndPassword, setPersistence, browserSessionPersistence, sendPasswordResetEmail } from 'firebase/auth';
 import { doc, getDoc, setDoc, updateDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { Loader2, Building2, AlertCircle, Clock } from 'lucide-react';
 import { isDemoEnv } from '@/lib/demo/isDemoOrg';
@@ -30,11 +31,13 @@ function OrgLoginContent() {
   const nextPath = searchParams.get('next');
   const inviteToken = searchParams.get('inviteToken');
   const { auth, firestore, user, isUserLoading } = useFirebase();
+  const { tr } = useTranslations();
   const { toast } = useToast();
 
   const [email, setEmail] = React.useState('');
   const [password, setPassword] = React.useState('');
   const [error, setError] = React.useState('');
+  const [resetInfo, setResetInfo] = React.useState('');
   const [isLoggingIn, setIsLoggingIn] = React.useState(false);
   // DEMO: Bypass per /demo/login — no cal carregar org abans de login
   const isDemoLogin = isDemoEnv() && orgSlug === 'demo';
@@ -228,6 +231,33 @@ function OrgLoginContent() {
     }
   };
 
+  const handlePasswordReset = async () => {
+    if (!email.trim()) {
+      setResetInfo('');
+      setError(tr('login.resetRequiresEmail', 'Introdueix el teu correu electrònic primer.'));
+      return;
+    }
+
+    setError('');
+    const trimmedEmail = email.trim();
+    const neutralMessage = tr(
+      'login.resetEmailSentNeutral',
+      'Si el correu existeix, rebràs un email amb instruccions per restablir la contrasenya.'
+    );
+
+    try {
+      await sendPasswordResetEmail(auth, trimmedEmail, {
+        url: `${window.location.origin}/${orgSlug}/login`,
+        handleCodeInApp: false,
+      });
+    } catch (resetError) {
+      console.error('Password reset error (silenced):', resetError);
+    } finally {
+      // Sempre missatge neutre per evitar enumeració d'usuaris.
+      setResetInfo(neutralMessage);
+    }
+  };
+
   const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
       handleLogin();
@@ -325,6 +355,7 @@ function OrgLoginContent() {
               onChange={(e) => {
                 setEmail(e.target.value);
                 setError('');
+                setResetInfo('');
               }}
               onKeyPress={handleKeyPress}
               placeholder="nombre@ejemplo.com"
@@ -342,6 +373,7 @@ function OrgLoginContent() {
               onChange={(e) => {
                 setPassword(e.target.value);
                 setError('');
+                setResetInfo('');
               }}
               onKeyPress={handleKeyPress}
               placeholder="••••••••"
@@ -355,6 +387,21 @@ function OrgLoginContent() {
               {error}
             </p>
           )}
+
+          {resetInfo && (
+            <p className="text-sm text-emerald-700 bg-emerald-50 p-2 rounded-md">
+              {resetInfo}
+            </p>
+          )}
+
+          <button
+            type="button"
+            onClick={handlePasswordReset}
+            className="text-sm text-primary underline"
+            disabled={isLoggingIn}
+          >
+            {tr('login.forgotPassword', 'Has oblidat la contrasenya?')}
+          </button>
         </div>
 
         <Button
