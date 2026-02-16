@@ -1,7 +1,7 @@
 # SUMMA SOCIAL - Manual d'Usuari Complet
 
-**Versió**: 1.41
-**Última actualització**: 11 Febrer 2026
+**Versió**: 1.42
+**Última actualització**: 16 Febrer 2026
 
 ---
 
@@ -43,7 +43,7 @@ Endavant!
 
 **Aquesta secció t'ajudarà a...**
 
-Orientar-te dins l'aplicació els primers dies. Sabem que quan s'obre una eina nova, la primera sensació pot ser de "per on començo?". Aquí t'expliquem com entrar, com moure't per les diferents pantalles, i què significen els números i alertes que veuràs al Dashboard.
+Orientar-te dins l'aplicació els primers dies. Sabem que quan s'obre una eina nova, la primera sensació pot ser de "per on començo?". Aquí t'expliquem com entrar, com moure't per les diferents pantalles, i com interpretar els números clau que veuràs al Dashboard.
 
 Després de llegir aquesta secció, et sentiràs còmode navegant per Summa Social i sabràs interpretar la informació que et mostra.
 
@@ -84,7 +84,7 @@ Si necessites una còpia de les dades de la teva entitat (per exemple, per a una
 
 ---
 
-## 1.2 Canviar l'idioma de l'aplicació
+## 1.2 Configuració d'Usuari: Idioma de l'aplicació
 
 L'aplicació està disponible en **3 idiomes**:
 - 🇨🇦 Català
@@ -93,9 +93,9 @@ L'aplicació està disponible en **3 idiomes**:
 
 ### Com canviar-lo
 
-1. Clica el teu **nom** (a dalt a la dreta)
-2. Veuràs les opcions d'idioma
-3. Selecciona l'idioma que prefereixis
+1. Ves a ⚙️ **Configuració**
+2. A l'apartat **Configuració d'Usuari**, busca **"Idioma de l'aplicació"**
+3. Tria l'idioma que prefereixis
 4. El canvi s'aplica immediatament
 
 > 💡 Cada persona de l'equip pot tenir el seu propi idioma configurat. El teu canvi no afecta els altres.
@@ -108,14 +108,14 @@ A la part esquerra de la pantalla tens el **menú de navegació**. Aquí tens un
 
 | Icona | Secció | Què hi trobaràs |
 |:-----:|--------|-----------------|
-| 📊 | **Dashboard** | El resum de com van les finances: números clau, alertes, gràfics |
+| 📊 | **Dashboard** | El resum de com van les finances: números clau, gràfics i resum compartible |
 | 💰 | **Moviments** | Els extractes bancaris i totes les transaccions |
 | ❤️ | **Donants** | La base de dades de donants i socis |
 | 🏢 | **Proveïdors** | Empreses i professionals als quals pagueu |
 | 👷 | **Treballadors** | El personal contractat |
 | 📁 | **Projectes** | Per organitzar per àrees de treball i justificar subvencions |
 | 📄 | **Informes** | Model 182, Model 347 i certificats de donació |
-| ⚙️ | **Configuració** | Dades de l'entitat, categories, membres de l'equip |
+| ⚙️ | **Configuració** | Preferències d'usuari, dades de l'entitat i mòduls |
 
 ---
 
@@ -150,6 +150,45 @@ Mostra les **persones** que us donen suport — socis i donants.
 
 > 🔍 **Nota:** Si sumes Quotes + Donacions + Altres ingressos, el resultat hauria de coincidir amb els Ingressos totals del bloc "Diners". Això et permet reconciliar mentalment el Dashboard amb l'extracte bancari.
 
+### 📊 Bloc "Despeses principals per categoria"
+
+Aquest bloc et mostra on se'n van els diners del període seleccionat.
+
+| Categoria | Import | % del total | ∆ vs anterior | Acció |
+|-----------|--------|-------------|---------------|-------|
+| Comunicació i màrqueting | 14.429,86 € | 84,8% | — | Veure |
+| Salaris i seguretat social | 2.119,62 € | 12,5% | — | Veure |
+| Serveis professionals | 471,90 € | 2,8% | — | Veure |
+
+Si cliques **"Veure"** a una categoria, obres directament el detall dels moviments d'aquella categoria.
+
+### 🗓️ Selector de període
+
+El període que triïs afecta tot el Dashboard alhora.
+
+Opcions habituals:
+- Tot
+- Mes
+- Trimestre
+- Any
+- Rang personalitzat
+
+> 💡 Si vols comparar bé, utilitza períodes equivalents (per exemple, trimestre actual vs trimestre anterior).
+
+### 🔗 "Compartir resum"
+
+Aquest botó obre una finestra amb un resum del període, pensada per compartir amb junta o equip de manera ràpida i clara.
+
+Pas a pas recomanat:
+1. Tria el període
+2. Clica **"Compartir resum"**
+3. Revisa el text generat (i edita'l si ho necessites)
+4. Tria com el vols compartir: **Copiar** el text, **Enviar per email** o **Exportar Excel/CSV**
+5. Comparteix-lo amb qui correspongui
+
+> 💡 Aquest botó no crea un enllaç públic: comparteixes un resum en format text o fitxer.
+> 💡 Abans de compartir, val la pena revisar si tens moviments sense categoritzar o sense contacte.
+
 ### 📅 Obligacions Fiscals
 
 Et recorda les dates límit dels models fiscals:
@@ -163,208 +202,150 @@ El color t'indica la urgència: 🟢 Tens temps · 🟡 Prepara-ho · 🔴 Urgen
 
 ---
 
-## 1.5 El teu primer mes amb Summa Social
-
-### Què és normal els primers dies
-
-- ❓ Veure molts moviments sense categoritzar
-- ❓ Tenir moltes alertes al Dashboard
-- ❓ Trobar que falten dades de donants
-- ❓ Sentir que hi ha "massa coses per fer"
-
-**Tot això és completament normal.** L'aplicació t'està mostrant tot el que abans estava amagat en fulls de càlcul dispersos. No intentis fer-ho tot el primer dia.
-
-### En què centrar-te primer
-
-1. ✅ Configurar les dades bàsiques de l'entitat
-2. ✅ Importar l'extracte bancari del mes actual
-3. ✅ Categoritzar els moviments principals
-4. ✅ Identificar els donants més habituals
-
-### Després d'1-2 mesos
-
-- Les alertes baixaran dràsticament
-- La gestió mensual et portarà **menys d'una hora**
-- Els informes fiscals sortiran nets a la primera
-- Et preguntaràs com ho feies abans sense Summa Social
-
----
-
 # 2. Configuració Inicial
 
 **Aquesta secció t'ajudarà a...**
 
-Deixar l'aplicació a punt perquè els documents que generis (certificats de donació, informes) tinguin les dades correctes de la teva entitat. És com posar els fonaments d'una casa: ho fas una vegada i després no t'has de preocupar.
+Deixar Summa Social preparada perquè tothom treballi amb criteri comú i amb les dades ben informades.
 
-La bona notícia és que aquesta configuració **només cal fer-la una vegada**. Després, tot funciona sol.
+Per fer-ho fàcil, seguim sempre aquest ordre:
+- **A. Configuració d'Usuari**: Idioma de l'aplicació, Canviar contrasenya, Membres
+- **B. Configuració de l'Organització**: Dades de l'organització, Gestionar categories, Comptes bancaris, Mòduls opcionals
 
 ---
 
-## 2.1 Configurar les dades de l'entitat
+## 2.1 Configuració d'Usuari
 
-Aquestes dades apareixeran automàticament als certificats de donació i altres documents oficials.
-
-### Pas a pas
+### Idioma de l'aplicació
 
 1. Ves a ⚙️ **Configuració**
-2. Busca la secció **"Dades de l'organització"**
-3. Omple tots els camps:
+2. A **Configuració d'Usuari**, tria l'idioma de la interfície
+3. El canvi s'aplica immediatament
+
+> 💡 Cada membre pot tenir el seu idioma. No afecta la resta de l'equip.
+
+### Canviar contrasenya
+
+1. Ves a ⚙️ **Configuració**
+2. A **Canviar contrasenya**, informa:
+   - Contrasenya actual
+   - Nova contrasenya
+   - Confirmació de la nova contrasenya
+3. Clica **"Guardar nova contrasenya"**
+
+Si no recordes la contrasenya actual, fes servir la recuperació des de la pantalla de login (ho tens explicat a la secció 11.1).
+
+### Membres
+
+Si tens rol d'administrador, des d'aquí pots convidar persones de l'equip i ajustar rols.
+
+Pas a pas:
+1. Ves a ⚙️ **Configuració > Membres**
+2. Clica **"Convidar membre"**
+3. Escriu l'email
+4. Tria el rol
+5. Envia la invitació
+
+Rols disponibles:
+- **Administrador** (`admin`): gestió operativa i de configuració de l'entitat
+- **Usuari** (`user`): operativa diària
+- **Només lectura** (`viewer`): consulta, sense edició
+
+Altres accions útils en aquest bloc:
+- Importar invitacions en bloc (icona de pujada)
+- Exportar la llista de membres (icona de descàrrega)
+- Canviar rol o cancel·lar invitacions pendents
+
+> 💡 Recomanació: dona sempre el rol mínim necessari.
+
+---
+
+## 2.2 Configuració de l'Organització: Dades de l'organització
+
+Aquestes dades surten als documents oficials de l'entitat (certificats, informes, etc.).
+
+### Què convé revisar
 
 | Camp | Exemple |
 |------|---------|
-| Nom de l'entitat | Fundació Exemple |
+| Nom de l'organització | Associació Exemple |
 | CIF | G12345678 |
-| Adreça fiscal | Carrer Major, 15 |
-| Ciutat | Barcelona |
-| Codi postal | 08001 |
+| Adreça | Carrer Major, 15 |
+| Codi postal / Ciutat / Província | 08001 · Barcelona · Barcelona |
 | Telèfon | 93 123 45 67 |
 | Email | info@entitat.org |
-| Web | www.entitat.org |
+| Pàgina web | https://entitat.org |
+| Llindar mínim per alertes | 50 € |
 
-4. Clica **"Guardar"**
+També pots pujar el **logo** de l'entitat (PNG o JPG, màxim 2 MB).
 
----
+### Certificats de donació (dins de Configuració)
 
-## 2.2 Pujar el logo de l'entitat
+En aquest bloc pots deixar a punt:
+- l'**idioma dels certificats**
+- la **firma digitalitzada** (imatge)
+- el **nom del signant**
+- el **càrrec del signant**
 
-El logo apareixerà als certificats de donació, donant-los un aspecte professional.
-
-### Requisits
-
-- Format: PNG (preferit) o JPG
-- Mida màxima: 2 MB
-- Recomanació: Fons transparent (PNG)
-
-### Pas a pas
-
-1. A Configuració, busca la secció **"Logo"**
-2. Clica **"Pujar logo"**
-3. Selecciona la imatge
-4. Veuràs una previsualització
-
-> 💡 **Consell:** Si el teu logo té fons blanc i vols que quedi més bonic, pots usar [remove.bg](https://remove.bg) per eliminar el fons gratuitament.
+> 💡 Si això està ben configurat ara, quan arribi la campanya de certificats aniràs molt més ràpid.
 
 ---
 
-## 2.3 Configurar la firma digitalitzada
+## 2.3 Configuració de l'Organització: Gestionar categories
 
-La firma apareixerà als certificats de donació, fent que semblin signats a mà sense haver de signar-los físicament un per un.
+Les categories t'ajuden a tenir dades netes per al dia a dia i per als informes fiscals.
 
-### Què necessites
+### Accions habituals
 
-1. Una imatge de la firma (PNG amb fons transparent, idealment)
-2. El nom del signant (ex: "Maria Garcia López")
-3. El càrrec (ex: "Presidenta")
+- Crear categoria nova
+- Editar categories existents
+- Arxivar categories que ja no faràs servir
+- Importar o exportar categories
+- Reassignar moviments si arxives una categoria que encara estava en ús
 
-### Com crear una imatge de la firma
+Pas a pas per crear-ne una:
+1. Ves a ⚙️ **Configuració > Gestionar Categories**
+2. Clica **"Afegir categoria"**
+3. Escriu el nom i el tipus (ingrés o despesa)
+4. Desa
 
-1. Signa en un paper blanc amb bolígraf negre
-2. Fes-li una foto amb el mòbil (bona il·luminació, sense ombres)
-3. Retalla la imatge perquè només es vegi la firma
-4. Si vols, elimina el fons amb una eina online
-
-### Pas a pas per pujar-la
-
-1. A Configuració, busca **"Firma digitalitzada"**
-2. Clica **"Pujar firma"**
-3. Selecciona la imatge
-4. Omple el **nom del signant**
-5. Omple el **càrrec**
-6. Clica **"Guardar"**
+> 💡 Millor poques categories clares que moltes categories difícils de mantenir.
 
 ---
 
-## 2.4 Configurar categories comptables
+## 2.4 Configuració de l'Organització: Comptes bancaris
 
-Les categories serveixen per classificar els moviments (ingressos i despeses). Summa Social ja ve amb categories predefinides, però pots afegir-ne més segons les necessitats de la teva entitat.
+Si tens més d'un compte, registra'ls aquí per poder filtrar bé moviments i remeses.
 
-### Categories habituals
-
-| Ingressos | Despeses |
-|-----------|----------|
-| Donacions | Nòmines i Seguretat Social |
-| Quotes de socis | Lloguer |
-| Subvencions | Subministraments |
-| Loteries i sorteigs | Serveis professionals |
-| Ingressos voluntariat | Material d'oficina |
-| Altres ingressos | Transferències a contraparts |
-| | Comissions bancàries |
-
-### Com afegir una categoria nova
-
-1. Ves a ⚙️ **Configuració > Categories**
-2. Clica **"+ Nova categoria"**
-3. Escriu el **nom** (ex: "Cursos i formació")
-4. Selecciona el **tipus**: Ingrés o Despesa
-5. Clica **"Crear"**
-
-> 💡 **Un consell:** Millor tenir 10-15 categories clares que 50 de massa específiques. Les categories molt granulars acaben sent difícils de mantenir i no aporten gaire valor.
-
-### Importar categories des d'Excel (v1.28)
-
-1. Ves a ⚙️ **Configuració > Categories**
-2. Clica **"Importar categories"**
-3. Dins el modal, clica **"Descarregar plantilla"** per obtenir el format correcte
-4. Omple la plantilla amb les teves categories
-5. Arrossega el fitxer omplert
-6. Revisa la previsualització (els duplicats es marquen com "Omesa")
-7. Clica **"Importar"**
-
-### Eliminar categories
-
-Quan elimines una categoria, els moviments que la tenien assignada **no s'esborren**, simplement perden la categoria. Veuràs un avís amb el nombre de moviments afectats.
-
-> ⚠️ Si necessites esborrar TOTES les categories i tornar a començar, demana-ho a l'administració de la teva entitat.
-
----
-
-## 2.5 Configurar comptes bancaris
-
-Si la teva entitat té **més d'un compte bancari**, pots registrar-los aquí per després poder filtrar moviments per compte.
-
-### Quan cal fer-ho?
-
-- Si tens un compte corrent i un d'estalvi
-- Si tens comptes en diferents bancs
-- Si vols saber exactament d'on ve cada transacció
-
-Si només tens un compte, pots saltar-te aquest pas.
-
-### Pas a pas
-
+Pas a pas:
 1. Ves a ⚙️ **Configuració > Comptes bancaris**
-2. Clica **"+ Nou compte"**
-3. Omple:
-   - **Nom identificatiu**: "Compte principal La Caixa"
-   - **IBAN**: ES12 3456 7890 1234 5678 90
-   - **Nom del banc**: CaixaBank
-4. Clica **"Crear"**
+2. Clica **"Afegir compte"**
+3. Informa nom, IBAN i banc
+4. Desa
+
+Des d'aquest mateix bloc també pots:
+- Editar un compte existent
+- Marcar un compte com a **Per defecte**
+- Desactivar o reactivar comptes
+- Importar/exportar comptes en Excel
+
+Si l'entitat genera remeses de cobrament, comprova també que el compte tingui informat l'**Identificador de creditor SEPA (ICS)**.
+
+> 💡 Per seguretat, no es pot desactivar l'últim compte actiu ni un compte que tingui moviments associats.
 
 ---
 
-## 2.6 Convidar membres de l'equip
+## 2.5 Configuració de l'Organització: Mòduls opcionals
 
-Si altres persones de l'entitat necessiten accedir a Summa Social, pots convidar-les i assignar-los diferents nivells de permisos.
+Si tens rol d'administrador, aquí pots activar o desactivar funcionalitats addicionals de l'entitat.
 
-### Rols disponibles
+Exemples habituals:
+- **Mòdul Projectes**
+- **Documents pendents** (experimental)
 
-| Rol | Què pot fer |
-|-----|-------------|
-| **Admin** | Gestió completa de l'organització (configuració, membres i operativa) |
-| **User** | Gestió diària (importar, categoritzar) |
-| **Viewer** | Només veure, no modificar res |
-
-### Pas a pas per convidar algú
-
-1. Ves a ⚙️ **Configuració > Membres**
-2. Clica **"Convidar membre"**
-3. Introdueix l'**email** de la persona
-4. Selecciona el **rol** apropiat
-5. Clica **"Enviar invitació"**
-
-La persona rebrà un email amb instruccions.
-
-> 💡 **Consell de seguretat:** Dona sempre el rol mínim necessari. Si algú només ha de consultar dades, fes-lo Viewer.
+Punt important:
+- **Documents pendents** i **Liquidacions** solen venir activats per defecte
+- L'entitat pot decidir desactivar-los en qualsevol moment des d'aquí (administradors)
 
 ---
 
@@ -474,7 +455,7 @@ Si ja tens una llista de donants en un full de càlcul, no cal que els introduei
 
 ### Categoria per defecte
 
-Si l'Excel porta una columna "Categoria", el sistema intentarà trobar-la entre les categories existents. Si no la troba, s'usarà la categoria de fallback configurada (sense bloquejar la importació).
+Si l'Excel porta una columna "Categoria", el sistema intentarà trobar-la entre les categories existents. Si no la troba, s'usarà la categoria alternativa configurada (sense bloquejar la importació).
 
 ---
 
@@ -524,14 +505,39 @@ A la llista de donants (filtra per "Baixes"), clica la icona de **fletxa circula
 Clica el **nom** de qualsevol donant per obrir la seva fitxa lateral. Hi trobaràs:
 
 - Dades personals completes
-- Historial de donacions
+- Historial de quotes i donacions (incloent les que venen de remeses)
 - Historial de devolucions
 - Resum per any
 - Accions: Editar, Generar certificat
 
 ---
 
-## 3.7 Exportar la llista de donants a Excel
+## 3.7 Assignació automàtica de quotes i aportacions
+
+Quan divideixes una remesa des de **Moviments**, Summa reparteix automàticament les quotes/aportacions a cada soci o donant identificat.
+
+Això aplica tant a:
+- remeses SEPA de cobrament
+- remeses de Stripe
+
+> 💡 Això et evita haver d'entrar donant per donant per registrar manualment cada aportació.
+
+---
+
+## 3.8 Devolucions: com impacten al donant
+
+També es registra automàticament quan:
+- processos una remesa de devolucions
+- assignes una devolució individual des de Moviments
+
+El resultat és que la fitxa del donant queda actualitzada amb el net real:
+- aportacions
+- devolucions
+- total anual resultant
+
+---
+
+## 3.9 Exportar la llista de donants a Excel
 
 Si necessites les dades fora de Summa Social:
 
@@ -541,7 +547,7 @@ Si necessites les dades fora de Summa Social:
 
 ---
 
-## 3.8 Filtrar donants al dashboard (v1.41)
+## 3.10 Filtrar donants a la llista (v1.41)
 
 A la llista de donants pots combinar diversos filtres per trobar exactament el que busques. Els filtres funcionen amb lògica "i" — és a dir, si actives dos filtres, es mostren els donants que compleixen **tots dos** alhora.
 
@@ -569,7 +575,7 @@ Cada opció de filtre mostra un **comptador** amb el nombre de donants que coinc
 
 ---
 
-## 3.9 Dinàmica de donants
+## 3.11 Dinàmica de donants
 
 La secció **Dinàmica de donants** a la pantalla de Donants permet analitzar el comportament de la base social per períodes.
 
@@ -983,7 +989,6 @@ Aquesta funcionalitat serveix per **generar el fitxer SEPA de cobrament (pain.00
 **És un flux PRE-BANC:** Summa genera un fitxer que després s'ha de **pujar al portal del banc**.
 
 **Ruta del wizard:** Donants → Remeses de cobrament
-(URL típica: `/{orgSlug}/dashboard/donants/remeses-cobrament`)
 
 ---
 
@@ -1056,7 +1061,7 @@ Quan el banc executa el cobrament:
 
 Gestionar factures de proveïdors que has rebut però encara no has pagat, i a generar remeses SEPA per pagar-les totes d'un cop des del banc. Després, quan el banc executi el pagament, podràs conciliar-lo automàticament.
 
-> **Nota:** Aquesta funcionalitat és experimental i només està disponible per a administradors.
+> **Nota:** **Documents pendents** i **Liquidacions** solen venir activats per defecte. Si l'entitat no els vol utilitzar, els administradors els poden desactivar a **Configuració > Mòduls opcionals**.
 
 ---
 
@@ -1166,10 +1171,7 @@ Quan el banc executa la remesa, veuràs un únic moviment negatiu a l'extracte.
 
 ### Com funciona la detecció
 
-Quan importes l'extracte, el sistema detecta automàticament si aquest moviment coincideix amb una remesa SEPA pendent:
-- Mateix import (amb tolerància de 0,02€)
-- Mateix compte bancari
-- Data propera a l'execució (±3 dies)
+Quan importes l'extracte, el sistema intenta detectar automàticament si un moviment correspon a una remesa SEPA pendent i et proposa la conciliació.
 
 ### Pas a pas per conciliar
 
@@ -1188,7 +1190,7 @@ El sistema fa tot això automàticament:
 3. Adjunta les factures a cada transacció
 4. Aplica categories i proveïdors
 5. Marca els documents com a conciliats
-6. El moviment pare queda amb `isRemittance = true` (no compta als totals)
+6. El moviment pare queda marcat com a remesa processada (no compta dues vegades als totals)
 
 ### Resultat final
 
@@ -1221,7 +1223,7 @@ Si decideixes no pagar un document, pots arxivar-lo per treure'l de circulació 
 
 Agrupar tiquets i quilometratge d'un viatge en una sola liquidació, generar el PDF i deixar el reemborsament ben documentat.
 
-> **Nota:** La pantalla de **Liquidacions** forma part del mòdul de **Documents pendents**. Si no et surt al menú, un administrador la pot activar/desactivar a **Configuració > Mòduls opcionals**.
+> **Nota:** La pantalla de **Liquidacions** forma part del mòdul de **Documents pendents**. Normalment ve activat per defecte. Si no et surt al menú, un administrador el pot activar/desactivar a **Configuració > Mòduls opcionals**.
 
 ---
 
@@ -1317,8 +1319,8 @@ No et preocupis, el procés és senzill un cop l'entens.
 
 ## 7.2 Com saber si tinc devolucions pendents
 
-- 📊 **Dashboard:** Alerta "X devolucions pendents d'assignar"
-- 💰 **Moviments:** Banner vermell amb botó "Revisar"
+- 💰 **Moviments:** veuràs un banner amb el botó **"Revisar"**
+- També pots filtrar directament els moviments per devolucions pendents
 
 ---
 
@@ -1687,7 +1689,7 @@ Edita un moviment → Columna "Projecte" → Selecciona
 
 Per a entitats que necessiten justificar subvencions amb traçabilitat econòmica real (ACCD, Fons Català, ajuntaments, etc.).
 
-> Aquesta part del manual correspon a la ruta `project-module/expenses` (**Assignació de despeses**), no a la pantalla d'**Eixos d'actuació**.
+> Aquesta part del manual correspon a la pantalla d'**Assignació de despeses** del Mòdul de Projectes, no a **Eixos d'actuació**.
 
 ### Abans de començar
 
@@ -1704,7 +1706,7 @@ Al menú lateral:
 
 La safata barreja dues fonts de despesa:
 - **Seu**: despeses bancàries elegibles per projectes
-- **Terreny**: despeses pujades manualment (off-bank)
+- **Terreny**: despeses pujades manualment
 
 Per cada despesa, veuràs:
 - Data, concepte, contrapart i import
@@ -1791,7 +1793,7 @@ Regles importants:
 - no es pot guardar per sobre del **100%**
 - si deixes el total per sota del 100%, la despesa queda en estat **Parcial** (queda part pendent d'imputar)
 
-### Crear i editar despeses de terreny (off-bank)
+### Crear i editar despeses de terreny
 
 Des de **Assignació de despeses** pots clicar **Afegir despesa**.
 
@@ -1824,12 +1826,106 @@ A les files de **Seu**, el botó de detall obre una pantalla específica on pots
 
 ---
 
-## 10.3 Importar pressupost des d'Excel
+## 10.3 Gestió Econòmica del projecte (pressupost)
 
-1. A la Gestió Econòmica del projecte
-2. Clica **"Importar pressupost"**
-3. Segueix el wizard de 5 passos
-4. Clica **"Importar"**
+És la pantalla on controles si el projecte va bé econòmicament i on prepares la justificació amb seguretat.
+
+Et respon, de forma molt clara:
+1. quant estava pressupostat
+2. quant portes executat
+3. quant et queda pendent (o si hi ha sobreexecució)
+
+### On la trobaràs
+
+**Projectes > (projecte) > Gestió Econòmica**
+
+### Què hi trobaràs
+
+| Bloc | Per a què serveix |
+|------|-------------------|
+| Resum econòmic | Veure pressupost, executat i pendent/sobreexecució |
+| Partides | Fer seguiment detallat per línia |
+| Tipus de canvi (FX) | Gestionar conversió de moneda local a EUR |
+| Exportacions | Preparar Excel i ZIP de justificació |
+
+### Si encara no tens partides
+
+No passa res: pots començar amb control global.
+
+Veuràs:
+- pressupost global
+- import executat
+- pendent o sobreexecució
+
+Quan necessitis més detall, pots crear partides manualment o importar-les.
+
+### Crear partides manualment
+
+1. Clica **"Afegir partida"**
+2. Omple com a mínim:
+   - Nom
+   - Import pressupostat (positiu)
+3. Opcionalment afegeix codi i ordre
+4. Desa
+
+### Importar partides des d'Excel
+
+1. Clica **"Importar pressupost"**
+2. Puja el fitxer `.xlsx` o `.xls`
+3. Tria pestanya, mapeja columnes i revisa previsualització
+4. Clica **"Importar i substituir"**
+
+> ⚠️ Aquesta acció substitueix les partides actuals del projecte.
+
+### Entendre cada partida
+
+A cada fila veuràs:
+- **Pressupostat**
+- **Executat**
+- **% executat**
+- **Pendent** (o sobreexecució)
+- **Estat**: OK, Sense execució o ALERTA
+
+ALERTA apareix quan se supera la desviació permesa del projecte.
+
+### Editar o eliminar partides
+
+- **Llapis**: edites la partida
+- **Paperera**: elimines la partida
+
+> ⚠️ Si una partida té despeses assignades, no es pot eliminar fins que les desassignis o reubiquis.
+
+### Moneda local i tipus de canvi (FX)
+
+Aquesta pantalla aplica la prioritat següent:
+1. tipus de canvi propi de la despesa (si existeix)
+2. tipus de canvi calculat per transferències del projecte
+3. tipus de canvi manual del projecte (valor de reserva)
+
+### Transferències FX
+
+Pots registrar transferències reals amb:
+- data
+- EUR enviats
+- moneda local
+- import local rebut
+
+Amb això, Summa calcula un tipus de canvi ponderat del projecte.
+
+### Re-aplicar tipus de canvi
+
+Si canvies el context FX (transferències o TC), pot aparèixer el botó **"Re-aplicar tipus de canvi"**.
+
+Quan el fas servir:
+- recalcula imports EUR de les imputacions afectades
+- manté intactes les despeses que ja tenen TC manual
+
+### Veure despeses del projecte o d'una partida
+
+- Botó **"Veure despeses"**: obre totes les despeses imputades al projecte
+- Clicant una partida: obre les despeses filtrades d'aquella partida
+
+És la manera més ràpida de passar del resum a la revisió detallada.
 
 ---
 
@@ -1862,9 +1958,36 @@ Pensada per al personal de camp: pujar comprovants al moment i deixar la revisi�
 Resultat:
 - La despesa entra com a **Terreny**
 - Queda marcada com a **pendent de revisió**
-- L'equip d'oficina la pot completar i imputar des de `project-module/expenses`
+- L'equip d'oficina la pot completar i imputar des d'**Assignació de despeses**
 
 > 💡 No cal tenir-ho tot perfecte en el moment de pujar. L'important és no perdre el comprovant.
+
+### Com pujar comprovants (factures, rebuts, nòmines)
+
+Tens dues maneres de fer-ho:
+1. des de **Captura (Terreny)** amb **"Fer foto i enviar"**
+2. des de **Assignació de despeses**, arrossegant el fitxer sobre la fila de la despesa
+
+### Com eliminar comprovants
+
+- En despeses de **Terreny**, pots eliminar el comprovant des de la taula o des de l'edició de la despesa.
+- En despeses de **Seu**, des d'aquesta taula pots pujar i obrir documents, però no eliminar-los directament des del mateix control.
+
+### Què passa si guardes una despesa ràpida sense import
+
+Es pot guardar igualment (si hi ha comprovant adjunt).
+
+Queda:
+- com a **pendent**
+- preparada perquè l'equip la completi després
+
+### Com completar una despesa pendent
+
+1. Ves a **Projectes > Assignació de despeses**
+2. Filtra per **"Pendents de revisió"**
+3. Obre la despesa (icona de llapis)
+4. Completa camps (import, concepte, categoria, moneda, etc.)
+5. Desa
 
 ---
 
@@ -1919,6 +2042,7 @@ A **Assignació de despeses**, pots arrossegar fitxers directament sobre una fil
 - Funciona tant per despeses de **Seu** com de **Terreny**
 - Si la pujada va bé, el document queda vinculat a la despesa
 - El comprovant es pot obrir des de la mateixa taula
+- L'eliminació ràpida de comprovant des d'aquesta taula està disponible per a despeses de **Terreny**
 
 Aquest gest és especialment pràctic quan estàs revisant moltes despeses seguides.
 
@@ -2109,8 +2233,15 @@ El sistema reconeix sinònims i expressions comunes, així que no et preocupis p
 |----------|---------|
 | "Email o contrasenya incorrectes" | Revisa majúscules i espais |
 | "Usuari no trobat" | Contacta l'administrador |
-| No recordo la contrasenya | Clica "He oblidat la contrasenya" |
+| No recordo la contrasenya | A la pantalla de login, clica **"Has oblidat la contrasenya?"** |
 | La sessió es tanca sovint | És intencionat per seguretat |
+
+### Recuperar la contrasenya (pas a pas)
+
+1. A la pantalla d'accés, clica **"Has oblidat la contrasenya?"**
+2. Rebràs un correu per restablir-la
+3. Defineix la nova contrasenya
+4. Torna al login i accedeix amb la nova
 
 ---
 
