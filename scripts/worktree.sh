@@ -162,6 +162,29 @@ worktree_exists() {
   '
 }
 
+link_control_env_file() {
+  local worktree_path="$1"
+  local file_name="$2"
+  local control_file="$CONTROL_REPO_DIR/$file_name"
+  local worktree_file="$worktree_path/$file_name"
+
+  if [ ! -f "$control_file" ]; then
+    return 0
+  fi
+
+  if [ -e "$worktree_file" ]; then
+    return 0
+  fi
+
+  if ln -s "$control_file" "$worktree_file"; then
+    say "Enllaç d'entorn creat: $file_name"
+    return 0
+  fi
+
+  say "Avís: no s'ha pogut enllaçar $file_name al worktree."
+  return 0
+}
+
 create_cmd() {
   local branch=""
 
@@ -200,6 +223,8 @@ create_cmd() {
   worktree_path="$(build_worktree_path "$branch")"
 
   git_control worktree add -b "$branch" "$worktree_path" main >/dev/null
+  link_control_env_file "$worktree_path" ".env.local"
+  link_control_env_file "$worktree_path" ".env.demo"
 
   say "Branca de tasca creada: $branch"
   say "Worktree creat: $worktree_path"

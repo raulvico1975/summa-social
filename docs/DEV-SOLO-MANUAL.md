@@ -111,6 +111,7 @@ No llegeixis tot. Consulta el que necessitis.
 ```
 □ git status → branca neta, sense canvis pendents
 □ git pull → tinc l'última versió
+□ node scripts/check-build-env.mjs → env mínim de build validat
 □ npm run build → compila sense errors
 □ Si sóc al repo de control, estic a `main`
 □ Si implemento, estic dins d'un worktree de tasca (`codex/*`)
@@ -169,8 +170,8 @@ En cas de test intern del mecanisme, pot ser necessari utilitzar `git add -f` pe
 **Abans de push a prod** (via deploy des de `main`), si el canvi toca Moviments, Remeses, Devolucions, Donants, Certificats, Imports o Permisos:
 
 ```
-□ scripts/verify-ci.sh ✅ (typecheck + tests + build)
-□ scripts/verify-local.sh ✅ (build + checks fiables i18n / undefined)
+□ scripts/verify-ci.sh ✅ (typecheck + tests + env de build + build)
+□ scripts/verify-local.sh ✅ (env de build + build + checks fiables i18n / undefined)
 □ docs/QA-FISCAL.md completat amb PASS/FAIL ✅
 ```
 

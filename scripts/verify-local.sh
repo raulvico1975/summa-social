@@ -7,6 +7,9 @@ npm run i18n:check
 echo "[verify-local] Checking tr() keys exist in ca.json..."
 npm run i18n:check-tr-keys
 
+echo "[verify-local] Checking build env..."
+node scripts/check-build-env.mjs
+
 echo "[verify-local] Build..."
 npm run build
 
