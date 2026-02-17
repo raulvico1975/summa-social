@@ -109,6 +109,7 @@ interface TransactionRowProps {
   onDelete: (tx: Transaction) => void;
   onOpenReturnDialog: (tx: Transaction) => void;
   onSplitRemittance: (tx: Transaction) => void;
+  onSplitAmount: (tx: Transaction) => void;
   onSplitStripeRemittance?: (tx: Transaction) => void;
   onViewRemittanceDetail: (txId: string, parentTx?: Transaction) => void;
   onUndoRemittance?: (tx: Transaction) => void;
@@ -117,6 +118,7 @@ interface TransactionRowProps {
   // SEPA reconciliation
   detectedPrebankRemittance?: { id: string; nbOfTxs: number; ctrlSum: number } | null;
   onReconcileSepa?: (tx: Transaction) => void;
+  isSplitDeleteBlocked?: boolean;
   // Translations
   t: {
     date: string;
@@ -148,10 +150,12 @@ interface TransactionRowProps {
     deleteDocument: string;
     manageReturn: string;
     edit: string;
+    splitAmount: string;
     splitRemittance: string;
     splitPaymentRemittance?: string;
     splitStripeRemittance: string;
     delete: string;
+    deleteBlocked: string;
     viewRemittanceDetail: string;
     remittanceQuotes: string;
     remittanceProcessedLabel: string;
@@ -199,6 +203,7 @@ export const TransactionRow = React.memo(function TransactionRow({
   onDelete,
   onOpenReturnDialog,
   onSplitRemittance,
+  onSplitAmount,
   onSplitStripeRemittance,
   onViewRemittanceDetail,
   onUndoRemittance,
@@ -206,6 +211,7 @@ export const TransactionRow = React.memo(function TransactionRow({
   onOpenReturnImporter,
   detectedPrebankRemittance,
   onReconcileSepa,
+  isSplitDeleteBlocked,
   t,
   getCategoryDisplayName,
 }: TransactionRowProps) {
@@ -221,6 +227,15 @@ export const TransactionRow = React.memo(function TransactionRow({
   const isReturnedDonation = tx.donationStatus === 'returned';
   // Detecta transaccions via Stripe (donations, fees)
   const isFromStripe = tx.source === 'stripe';
+  const canSplitAmount =
+    tx.amount > 0 &&
+    !tx.isRemittance &&
+    !tx.isRemittanceItem &&
+    !tx.isSplit &&
+    !tx.parentTransactionId &&
+    tx.source !== 'stripe' &&
+    tx.transactionType !== 'donation' &&
+    tx.transactionType !== 'fee';
 
   // Detecta si pot dividir remesa Stripe (amb fallback conservador per legacy data)
   const canSplitStripeRemittance = (transaction: Transaction): boolean => {
@@ -331,6 +346,16 @@ export const TransactionRow = React.memo(function TransactionRow({
       onSplitRemittance(tx);
     }, 100);
   }, [tx, onSplitRemittance]);
+
+  const handleSplitAmount = React.useCallback(() => {
+    setIsActionsMenuOpen(false);
+    setTimeout(() => {
+      if (document.activeElement instanceof HTMLElement) {
+        document.activeElement.blur();
+      }
+      onSplitAmount(tx);
+    }, 100);
+  }, [tx, onSplitAmount]);
 
   const handleSplitStripeRemittance = React.useCallback(() => {
     if (!onSplitStripeRemittance) return;
@@ -856,6 +881,12 @@ export const TransactionRow = React.memo(function TransactionRow({
                 {t.splitStripeRemittance}
               </DropdownMenuItem>
             )}
+            {canSplitAmount && (
+              <DropdownMenuItem onClick={handleSplitAmount}>
+                <GitMerge className="mr-2 h-4 w-4" />
+                {t.splitAmount}
+              </DropdownMenuItem>
+            )}
             {tx.amount > 0 && !isReturn && !isReturnFee && !tx.isRemittance && !tx.isRemittanceItem && !isFromStripe && (
               <DropdownMenuItem onClick={handleSplitRemittance}>
                 <GitMerge className="mr-2 h-4 w-4" />
@@ -886,6 +917,11 @@ export const TransactionRow = React.memo(function TransactionRow({
               <DropdownMenuItem disabled className="text-muted-foreground cursor-not-allowed">
                 <Trash2 className="mr-2 h-4 w-4" />
                 {tx.isRemittance ? 'Primer desfés la remesa' : 'Forma part d\'una remesa'}
+              </DropdownMenuItem>
+            ) : isSplitDeleteBlocked ? (
+              <DropdownMenuItem disabled className="text-muted-foreground cursor-not-allowed">
+                <Trash2 className="mr-2 h-4 w-4" />
+                {t.deleteBlocked}
               </DropdownMenuItem>
             ) : (
               <DropdownMenuItem className="text-rose-600 focus:text-rose-600" onClick={handleDelete}>

@@ -16,14 +16,16 @@ const createTransaction = (overrides: {
   amount: number;
   date?: string;
   transactionType?: string;
-  donationStatus?: string;
   contactId?: string | null;
+  archivedAt?: string | null;
+  isSplit?: boolean;
 }) => ({
   amount: overrides.amount,
   date: overrides.date ?? '2024-06-15',
-  transactionType: overrides.transactionType,
-  donationStatus: overrides.donationStatus,
+  transactionType: overrides.transactionType ?? (overrides.amount > 0 ? 'donation' : undefined),
   contactId: overrides.contactId ?? 'donor-1',
+  archivedAt: overrides.archivedAt,
+  isSplit: overrides.isSplit,
 });
 
 // =============================================================================
@@ -111,18 +113,18 @@ describe('calculateDonorNet', () => {
     assert.strictEqual(result.donationsCount, 1);
   });
 
-  it('ignora donacions amb donationStatus=returned', () => {
+  it('compta donacions fiscals encara que tinguin metadades addicionals', () => {
     const result = calculateDonorNet({
       transactions: [
         createTransaction({ amount: 100, date: '2024-03-01' }),
-        createTransaction({ amount: 50, date: '2024-06-15', donationStatus: 'returned' }),
+        createTransaction({ amount: 50, date: '2024-06-15' }),
       ],
       donorId: 'donor-1',
       year: 2024,
     });
 
-    assert.strictEqual(result.grossDonationsCents, 10000); // Només 100€
-    assert.strictEqual(result.donationsCount, 1);
+    assert.strictEqual(result.grossDonationsCents, 15000);
+    assert.strictEqual(result.donationsCount, 2);
   });
 
   it('ignora devolucions amb amount positiu (malformed)', () => {
@@ -135,9 +137,24 @@ describe('calculateDonorNet', () => {
       year: 2024,
     });
 
-    // El return amb amount positiu s'ignora com a return però compta com a donació
-    assert.strictEqual(result.grossDonationsCents, 15000);
+    // El return amb amount positiu no compta ni com retorn ni com donació fiscal
+    assert.strictEqual(result.grossDonationsCents, 10000);
     assert.strictEqual(result.returnsCount, 0);
+  });
+
+  it('ignora pares split i transaccions arxivades com a donació fiscal', () => {
+    const result = calculateDonorNet({
+      transactions: [
+        createTransaction({ amount: 120, date: '2024-03-01' }),
+        createTransaction({ amount: 80, date: '2024-04-01', isSplit: true }),
+        createTransaction({ amount: 40, date: '2024-05-01', archivedAt: '2024-06-01T10:00:00.000Z' }),
+      ],
+      donorId: 'donor-1',
+      year: 2024,
+    });
+
+    assert.strictEqual(result.grossDonationsCents, 12000);
+    assert.strictEqual(result.donationsCount, 1);
   });
 
   it('retorna zeros per donant sense transaccions', () => {

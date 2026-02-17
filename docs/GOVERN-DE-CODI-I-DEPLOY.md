@@ -199,7 +199,7 @@ Claude només pot reportar un d'aquests tres estats:
 
 El workflow bloqueja explícitament qualsevol fitxer staged sota:
 - `node_modules/`
-- `functions/node_modules/`
+- qualsevol subruta `node_modules/` dins del repositori (incloent `functions/`)
 - `.next/`
 - `dist/`
 - `build/`

@@ -268,7 +268,7 @@ preflight_git_checks() {
   if [ -n "$(git status --porcelain)" ]; then
     DEPLOY_BLOCK_REASON="Hi ha canvis pendents sense tancar abans de publicar."
     echo "ERROR: Hi ha canvis sense commitejar o fitxers sense seguiment."
-    echo "  Fes commit o stash dels canvis abans de desplegar."
+    echo "  Fes commit o descarta els canvis abans de desplegar."
     git status --short
     exit 1
   fi

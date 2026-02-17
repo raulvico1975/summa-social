@@ -427,6 +427,15 @@ commit_changes() {
 
 push_branch() {
   local branch="$1"
+  if [[ "$branch" == codex/* ]]; then
+    if ! git rev-parse --abbrev-ref --symbolic-full-name "@{u}" >/dev/null 2>&1; then
+      git push -u origin "$branch"
+      return
+    fi
+    git push
+    return
+  fi
+
   git push -u origin "$branch"
 }
 
@@ -537,10 +546,8 @@ run_inicia() {
 }
 
 run_acabat() {
-  local changed_files risk final_status branch head_sha
+  local final_status branch control_branch control_main_ref ahead_count
   branch="$(current_branch)"
-  head_sha="$(git rev-parse HEAD)"
-  changed_files="$(collect_changed_files)"
 
   if [ "$branch" = "HEAD" ]; then
     say "$STATUS_NO"
@@ -554,34 +561,40 @@ run_acabat() {
     exit 1
   fi
 
-  if is_control_repo && [ -n "$changed_files" ]; then
-    say "$STATUS_NO"
-    say "Els canvis d'implementació no es tanquen des del repositori de control."
-    say "Inicia una tasca nova amb worktree i implementa allà."
-    exit 1
-  fi
-
   if [ "$branch" = "main" ] && ! is_control_repo; then
     say "$STATUS_NO"
     say "Aquest worktree no pot treballar directament a main."
     exit 1
   fi
 
-  if [ -z "$changed_files" ]; then
-    if [ "$branch" != "main" ] && ! is_control_repo && head_needs_integration_on_control_main "$head_sha"; then
-      say "No hi ha canvis locals nous, pero la branca te commits pendents d'integrar."
-      push_branch "$branch"
-      integrate_to_main "$branch"
+  if [ -n "$(git status --porcelain)" ]; then
+    say "BLOCKED_SAFE"
+    say "Hi ha canvis locals no commitejats al worktree. Fes commit o descarta abans d'Acabat."
+    exit 1
+  fi
 
-      final_status="$(compute_repo_status)"
-      say "$final_status"
-      emit_guidance_for_status "$final_status"
-      say ""
-      say "PREGUNTA OPERATIVA"
-      say "- Vols tancar aquest worktree de tasca ara? (recomanat: npm run worktree:close)"
-      return
-    fi
+  if ! git_control fetch origin --quiet >/dev/null 2>&1; then
+    say "BLOCKED_SAFE"
+    say "No s'ha pogut actualitzar el repositori de control des d'origin."
+    exit 1
+  fi
 
+  control_branch="$(git_control branch --show-current)"
+  if [ "$control_branch" != "main" ]; then
+    say "BLOCKED_SAFE"
+    say "El repositori de control no és a main. Ves a $CONTROL_REPO_DIR i posa'l a main per integrar."
+    exit 1
+  fi
+
+  control_main_ref="main"
+  if ! git rev-parse --verify "$control_main_ref" >/dev/null 2>&1; then
+    say "BLOCKED_SAFE"
+    say "No s'ha trobat la referència $control_main_ref per calcular integració."
+    exit 1
+  fi
+
+  ahead_count="$(git rev-list --count "$control_main_ref..HEAD")"
+  if [ "$ahead_count" -eq 0 ]; then
     final_status="$(compute_repo_status)"
     say "$final_status"
     say "No hi ha canvis nous per tancar."
@@ -589,26 +602,13 @@ run_acabat() {
     return
   fi
 
-  risk="$(classify_risk "$changed_files")"
-  emit_pre_acabat_summary "$changed_files" "$risk" || {
-    say "$STATUS_NO"
-    return
-  }
-  emit_next_step_block "Si aquest resum és correcte, pots dir: Acabat"
-
-  say "Risc detectat: $risk"
-
-  if ! stage_changes; then
-    final_status="$(compute_repo_status)"
-    say "$final_status"
-    say "No hi ha canvis per commitejar."
-    emit_guidance_for_status "$final_status"
-    return
+  if [ "$branch" = "main" ]; then
+    say "BLOCKED_SAFE"
+    say "No es pot executar Acabat des de main quan hi ha commits pendents."
+    exit 1
   fi
 
-  guard_no_prohibited_staged_paths
-  run_checks
-  commit_changes "$risk"
+  say "No hi ha canvis locals nous, pero la branca te commits pendents d'integrar."
   push_branch "$branch"
   integrate_to_main "$branch"
 

@@ -54,6 +54,7 @@ import { MobileListItem } from '@/components/mobile/mobile-list-item';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { MOBILE_ACTIONS_BAR, MOBILE_CTA_PRIMARY } from '@/lib/ui/mobile-actions';
+import { isFiscalDonationCandidate } from '@/lib/fiscal/is-fiscal-donation-candidate';
 
 // Mapa de codis de província per a Model 182
 const PROVINCE_CODES: Record<string, string> = {
@@ -280,16 +281,9 @@ export function DonationsReportGenerator() {
             excludedReturns++;
             excludedAmount += Math.abs(tx.amount);
           }
-        } else if (tx.amount > 0 && tx.donationStatus !== 'returned') {
-          // Donació vàlida → sumar
+        } else if (tx.amount > 0 && isFiscalDonationCandidate(tx)) {
+          // Donació fiscal vàlida → sumar
           netAmount = tx.amount;
-        } else if (tx.amount > 0 && tx.donationStatus === 'returned') {
-          // Donació retornada manualment → restar
-          netAmount = -tx.amount;
-          if (txYear === year) {
-            excludedReturns++;
-            excludedAmount += tx.amount;
-          }
         }
 
         // Acumular segons l'any

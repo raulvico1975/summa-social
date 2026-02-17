@@ -11,6 +11,7 @@ import { useTranslations } from '@/i18n';
 import { useToast } from '@/hooks/use-toast';
 import { jsPDF } from 'jspdf';
 import { getPeriodicitySuffix } from '@/lib/donors/periodicity-suffix';
+import { isFiscalDonationCandidate } from '@/lib/fiscal/is-fiscal-donation-candidate';
 
 // UI Components
 import {
@@ -258,7 +259,7 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
     let previousYearReturned = 0;
 
     transactions.forEach(tx => {
-      if (tx.amount > 0 && tx.donationStatus !== 'returned') {
+      if (tx.amount > 0 && isFiscalDonationCandidate(tx)) {
         // Donació vàlida (per mostrar a la UI)
         totalHistoric += tx.amount;
         totalHistoricCount++;
@@ -276,7 +277,7 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
       }
 
       // CRITERI CONSERVADOR per a import net certificable (mateix que certificats)
-      if (tx.amount > 0 && tx.date.startsWith(currentYearStr)) {
+      if (tx.amount > 0 && isFiscalDonationCandidate(tx) && tx.date.startsWith(currentYearStr)) {
         currentYearGross += tx.amount;
       }
       if (tx.amount < 0 && tx.transactionType === 'return' && tx.date.startsWith(currentYearStr)) {
@@ -284,7 +285,7 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
       }
 
       // ANY ANTERIOR - Càlcul NET
-      if (tx.amount > 0 && tx.date.startsWith(previousYearStr)) {
+      if (tx.amount > 0 && isFiscalDonationCandidate(tx) && tx.date.startsWith(previousYearStr)) {
         previousYearGross += tx.amount;
       }
       if (tx.amount < 0 && tx.transactionType === 'return' && tx.date.startsWith(previousYearStr)) {
@@ -331,7 +332,7 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
   // Per defecte: historial obert si <= 5 donacions
   React.useEffect(() => {
     if (transactions && transactions.length > 0) {
-      const donationsCount = transactions.filter(tx => tx.amount > 0).length;
+      const donationsCount = transactions.filter(tx => tx.amount > 0 && isFiscalDonationCandidate(tx)).length;
       setIsHistoryOpen(donationsCount <= 5);
     }
   }, [transactions]);
@@ -349,7 +350,7 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
         return tx.transactionType === 'return';
       }
       // 'all': mostrar donacions vàlides i devolucions
-      return tx.amount > 0 || tx.transactionType === 'return';
+      return (tx.amount > 0 && isFiscalDonationCandidate(tx)) || tx.transactionType === 'return';
     });
   }, [transactions, selectedYear, filterStatus]);
 
@@ -625,10 +626,11 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
     // CRITERI CONSERVADOR (coherent amb donation-certificate-generator.tsx)
     // ═══════════════════════════════════════════════════════════════════════════
 
-    // Totes les donacions positives del donant dins l'any (NO filtrar per donationStatus)
+    // Criteri fiscal únic: només transactionType='donation'
     const yearDonations = transactions?.filter(tx =>
       tx.date.startsWith(year) &&
-      tx.amount > 0
+      tx.amount > 0 &&
+      isFiscalDonationCandidate(tx)
     ) || [];
 
     // Totes les devolucions del donant dins l'any (excloure return_fee)
@@ -1149,10 +1151,11 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
     // CRITERI CONSERVADOR (coherent amb donation-certificate-generator.tsx)
     // ═══════════════════════════════════════════════════════════════════════════
 
-    // Totes les donacions positives del donant dins l'any (NO filtrar per donationStatus)
+    // Criteri fiscal únic: només transactionType='donation'
     const yearDonations = transactions?.filter(tx =>
       tx.date.startsWith(year) &&
-      tx.amount > 0
+      tx.amount > 0 &&
+      isFiscalDonationCandidate(tx)
     ) || [];
 
     // Totes les devolucions del donant dins l'any (excloure return_fee)
