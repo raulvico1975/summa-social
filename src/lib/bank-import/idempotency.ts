@@ -4,6 +4,8 @@ export interface CanonicalBankImportTx {
   date: string;
   description: string;
   amount: number;
+  balanceAfter?: number;
+  operationDate?: string;
   category: string | null;
   document: string | null;
   contactId: string | null;
@@ -35,6 +37,8 @@ export function buildCanonicalSignature(tx: CanonicalBankImportTx): string {
     d: tx.date,
     n: tx.description.trim().replace(/\s+/g, ' ').toUpperCase(),
     a: toAmountCents(tx.amount),
+    ...(tx.balanceAfter !== undefined ? { ba: toAmountCents(tx.balanceAfter) } : {}),
+    ...(tx.operationDate ? { od: tx.operationDate } : {}),
     c: tx.category ?? null,
     x: tx.contactId ?? null,
     y: tx.contactType ?? null,

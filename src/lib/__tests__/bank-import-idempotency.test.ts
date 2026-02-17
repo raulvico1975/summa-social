@@ -69,4 +69,83 @@ describe('bank import idempotency', () => {
     assert.equal(ids.length, 2);
     assert.notEqual(ids[0], ids[1]);
   });
+
+  it('manté el mateix hash quan els opcionals no existeixen', () => {
+    const txWithoutOptionals = makeTx({ description: 'Quota sense opcionals' });
+    const txWithUndefinedOptionals = makeTx({
+      description: 'Quota sense opcionals',
+      balanceAfter: undefined,
+      operationDate: undefined,
+    });
+
+    const hash1 = computeBankImportHash({
+      orgId: 'org-1',
+      bankAccountId: 'acc-1',
+      source: 'csv',
+      fileName: 'extracte.csv',
+      totalRows: 1,
+      transactions: [txWithoutOptionals],
+    });
+
+    const hash2 = computeBankImportHash({
+      orgId: 'org-1',
+      bankAccountId: 'acc-1',
+      source: 'csv',
+      fileName: 'extracte.csv',
+      totalRows: 1,
+      transactions: [txWithUndefinedOptionals],
+    });
+
+    assert.equal(hash1, hash2);
+  });
+
+  it('canvia el hash quan canvia balanceAfter present', () => {
+    const baseTx = makeTx({ description: 'Quota amb saldo', balanceAfter: 1000 });
+    const changedTx = makeTx({ description: 'Quota amb saldo', balanceAfter: 1001 });
+
+    const hash1 = computeBankImportHash({
+      orgId: 'org-1',
+      bankAccountId: 'acc-1',
+      source: 'csv',
+      fileName: 'extracte.csv',
+      totalRows: 1,
+      transactions: [baseTx],
+    });
+
+    const hash2 = computeBankImportHash({
+      orgId: 'org-1',
+      bankAccountId: 'acc-1',
+      source: 'csv',
+      fileName: 'extracte.csv',
+      totalRows: 1,
+      transactions: [changedTx],
+    });
+
+    assert.notEqual(hash1, hash2);
+  });
+
+  it('canvia el hash quan canvia operationDate present', () => {
+    const baseTx = makeTx({ description: 'Quota amb opDate', operationDate: '2026-02-01' });
+    const changedTx = makeTx({ description: 'Quota amb opDate', operationDate: '2026-02-02' });
+
+    const hash1 = computeBankImportHash({
+      orgId: 'org-1',
+      bankAccountId: 'acc-1',
+      source: 'csv',
+      fileName: 'extracte.csv',
+      totalRows: 1,
+      transactions: [baseTx],
+    });
+
+    const hash2 = computeBankImportHash({
+      orgId: 'org-1',
+      bankAccountId: 'acc-1',
+      source: 'csv',
+      fileName: 'extracte.csv',
+      totalRows: 1,
+      transactions: [changedTx],
+    });
+
+    assert.notEqual(hash1, hash2);
+  });
 });
