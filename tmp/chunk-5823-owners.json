@@ -1,0 +1,26 @@
+{
+  "chunk": "static/chunks/5823-56b73bfaa283ecfe.js",
+  "buildDir": ".next",
+  "owners": {
+    "pagesManifestEntries": [],
+    "pagesManifestRoutes": [],
+    "appManifestEntries": [
+      "/admin/page",
+      "/layout"
+    ],
+    "appManifestRoutes": [
+      "/admin",
+      "/layout"
+    ],
+    "allRoutes": [
+      "/admin",
+      "/layout"
+    ]
+  },
+  "sharedReferences": {
+    "rootMainFiles": false,
+    "polyfillFiles": false,
+    "lowPriorityFiles": false
+  },
+  "isSharedChunk": false
+}
