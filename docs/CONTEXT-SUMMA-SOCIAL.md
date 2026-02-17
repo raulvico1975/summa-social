@@ -1568,12 +1568,12 @@ interface Transaction {
   parentTransactionId?: string | null; // ID del pare
 
   // Soft-delete (per desfer remeses)
-  archivedAt?: string | null; // null = activa, ISO timestamp = arxivada
+  archivedAt?: string | null; // null/undefined/"" = activa, ISO timestamp = arxivada
   archivedByUid?: string | null;
   archivedReason?: string | null; // ex: "undo_remittance"
 
   // Devolucions
-  transactionType?: 'normal' | 'return' | 'return_fee' | 'donation';
+  transactionType?: 'normal' | 'return' | 'return_fee' | 'donation' | 'fee';
   linkedTransactionId?: string | null; // Per vincular devolucions
 
   // Metadades
