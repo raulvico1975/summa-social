@@ -25,6 +25,7 @@ import {
   Trash2,
   FolderKanban,
   MessageSquare,
+  GitMerge,
 } from 'lucide-react';
 import type { Transaction, ContactType } from '@/lib/data';
 import { formatCurrencyEU, formatDateShort } from '@/lib/normalize';
@@ -46,6 +47,8 @@ interface TransactionRowMobileProps {
   categoryDisplayName: string;
   onEdit: (tx: Transaction) => void;
   onDelete: (tx: Transaction) => void;
+  onSplitAmount?: (tx: Transaction) => void;
+  isSplitDeleteBlocked?: boolean;
   onOpenReturnDialog?: (tx: Transaction) => void;
   onViewRemittanceDetail?: (txId: string) => void;
   onAttachDocument?: (txId: string) => void;
@@ -57,6 +60,8 @@ interface TransactionRowMobileProps {
     attachProof: string;
     edit: string;
     delete: string;
+    splitAmount: string;
+    deleteBlocked: string;
     viewRemittanceDetail: string;
     remittanceQuotes: string;
     manageReturn?: string;
@@ -72,6 +77,8 @@ export const TransactionRowMobile = React.memo(function TransactionRowMobile({
   categoryDisplayName,
   onEdit,
   onDelete,
+  onSplitAmount,
+  isSplitDeleteBlocked,
   onOpenReturnDialog,
   onViewRemittanceDetail,
   onAttachDocument,
@@ -83,6 +90,15 @@ export const TransactionRowMobile = React.memo(function TransactionRowMobile({
   const isReturnFee = tx.transactionType === 'return_fee';
   const isReturnedDonation = tx.donationStatus === 'returned';
   const hasDocument = !!tx.document;
+  const canSplitAmount =
+    tx.amount > 0 &&
+    !tx.isRemittance &&
+    !tx.isRemittanceItem &&
+    !tx.isSplit &&
+    !tx.parentTransactionId &&
+    tx.source !== 'stripe' &&
+    tx.transactionType !== 'donation' &&
+    tx.transactionType !== 'fee';
 
   // Background color based on transaction type
   const bgClass = isReturn
@@ -137,6 +153,15 @@ export const TransactionRowMobile = React.memo(function TransactionRowMobile({
       onAttachDocument(tx.id);
     }, 50);
   }, [tx.id, onAttachDocument]);
+
+  const handleSplitAmount = React.useCallback(() => {
+    if (!onSplitAmount) return;
+    setIsMenuOpen(false);
+    setTimeout(() => {
+      if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
+      onSplitAmount(tx);
+    }, 50);
+  }, [onSplitAmount, tx]);
 
   return (
     <div className={`border rounded-lg p-3 ${bgClass}`}>
@@ -274,10 +299,23 @@ export const TransactionRowMobile = React.memo(function TransactionRowMobile({
               </DropdownMenuItem>
             )}
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={handleDelete} className="text-destructive">
-              <Trash2 className="h-4 w-4 mr-2" />
-              {t.delete}
-            </DropdownMenuItem>
+            {canSplitAmount && onSplitAmount && (
+              <DropdownMenuItem onClick={handleSplitAmount}>
+                <GitMerge className="h-4 w-4 mr-2" />
+                {t.splitAmount}
+              </DropdownMenuItem>
+            )}
+            {isSplitDeleteBlocked ? (
+              <DropdownMenuItem disabled className="text-muted-foreground cursor-not-allowed">
+                <Trash2 className="h-4 w-4 mr-2" />
+                {t.deleteBlocked}
+              </DropdownMenuItem>
+            ) : (
+              <DropdownMenuItem onClick={handleDelete} className="text-destructive">
+                <Trash2 className="h-4 w-4 mr-2" />
+                {t.delete}
+              </DropdownMenuItem>
+            )}
           </DropdownMenuContent>
         </DropdownMenu>
       </div>

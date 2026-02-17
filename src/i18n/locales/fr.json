@@ -3969,5 +3969,21 @@
   "ticketsInbox.tooltips.archive": "Archiver",
   "ticketsInbox.tooltips.edit": "Modifier",
   "ticketsInbox.tooltips.fillWithAI": "Remplir avec l'IA",
-  "ticketsInbox.tooltips.viewFile": "Voir le fichier"
+  "ticketsInbox.tooltips.viewFile": "Voir le fichier",
+  "movements.split.action": "Ventiler le montant",
+  "movements.split.title": "Ventiler le montant",
+  "movements.split.subtitle": "Ce mouvement bancaire n'est pas modifié. Indiquez comment il se répartit.",
+  "movements.split.missingBankAccount": "Ce mouvement n'a pas de compte bancaire associé. Assignez-le d'abord.",
+  "movements.split.amount": "Montant",
+  "movements.split.kind": "Type",
+  "movements.split.kindDonation": "Contribution du donateur (comptabilisée pour le 182 et le certificat)",
+  "movements.split.kindNonDonation": "Autres (non comptabilisé comme don)",
+  "movements.split.category": "Catégorie",
+  "movements.split.contact": "Contact",
+  "movements.split.note": "Note",
+  "movements.split.addLine": "Ajouter une ligne",
+  "movements.split.apply": "Appliquer",
+  "movements.split.cancel": "Annuler",
+  "movements.split.deltaInvalid": "La somme des lignes doit correspondre au montant bancaire (tolérance ±0,02 €).",
+  "movements.split.deleteBlocked": "Fait partie d'une ventilation. Pour le modifier, annulez la ventilation."
 }

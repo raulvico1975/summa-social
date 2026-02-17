@@ -4100,5 +4100,21 @@
   "ticketsInbox.tooltips.archive": "Arquivar",
   "ticketsInbox.tooltips.edit": "Editar",
   "ticketsInbox.tooltips.fillWithAI": "Preencher com IA",
-  "ticketsInbox.tooltips.viewFile": "Ver ficheiro"
+  "ticketsInbox.tooltips.viewFile": "Ver ficheiro",
+  "movements.split.action": "Desdobrar valor",
+  "movements.split.title": "Desdobrar valor",
+  "movements.split.subtitle": "Este movimento bancário não é modificado. Indique como se distribui.",
+  "movements.split.missingBankAccount": "Este movimento não tem conta bancária associada. Atribua-a primeiro.",
+  "movements.split.amount": "Valor",
+  "movements.split.kind": "Tipo",
+  "movements.split.kindDonation": "Contribuição do doador (conta para o 182 e certificado)",
+  "movements.split.kindNonDonation": "Outros (não conta como doação)",
+  "movements.split.category": "Categoria",
+  "movements.split.contact": "Contacto",
+  "movements.split.note": "Nota",
+  "movements.split.addLine": "Adicionar linha",
+  "movements.split.apply": "Aplicar",
+  "movements.split.cancel": "Cancelar",
+  "movements.split.deltaInvalid": "A soma das linhas deve fechar com o valor bancário (tolerância ±0,02 €).",
+  "movements.split.deleteBlocked": "Faz parte de um desdobramento. Para alterar, desfaça o desdobramento."
 }

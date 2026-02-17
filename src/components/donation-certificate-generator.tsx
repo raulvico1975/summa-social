@@ -78,6 +78,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
 import { MOBILE_ACTIONS_BAR, MOBILE_CTA_PRIMARY, MOBILE_CTA_TRUNCATE } from '@/lib/ui/mobile-actions';
+import { isFiscalDonationCandidate } from '@/lib/fiscal/is-fiscal-donation-candidate';
 
 // Tipus per al resum de donacions per donant
 interface DonorSummary {
@@ -310,17 +311,15 @@ export function DonationCertificateGenerator() {
       const yearStart = `${selectedYear}-01-01`;
       const yearEnd = `${selectedYear}-12-31`;
       
-      // CRITERI CONSERVADOR: totes les donacions positives del donant dins l'any
-      // No usem donationStatus perquè el returnedAmount ja cobreix les devolucions
-      // P0: Excloure transaccions arxivades (soft-delete) - no compten fiscalment
+      // Criteri fiscal únic: només transactionType='donation' (helper unificat)
       const yearDonations = allTransactions.filter(tx => {
         const txDate = tx.date.substring(0, 10);
         return tx.amount > 0 &&
+               isFiscalDonationCandidate(tx) &&
                tx.contactId &&
                tx.contactType === 'donor' &&
                txDate >= yearStart &&
-               txDate <= yearEnd &&
-               tx.archivedAt == null;
+               txDate <= yearEnd;
       });
 
       // CRITERI CONSERVADOR: totes les devolucions (transactionType==='return') del donant dins l'any
