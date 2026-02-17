@@ -8,7 +8,6 @@ import type { Transaction, AnyContact, Category } from '@/lib/data';
 import { detectReturnType } from '@/lib/data';
 import { isCategoryIdCompatibleStrict } from '@/lib/constants';
 import Papa from 'papaparse';
-import * as XLSX from 'xlsx';
 import { inferContact } from '@/ai/flows/infer-contact';
 import { findMatchingContact } from '@/lib/auto-match';
 import { normalizeTransaction } from '@/lib/normalize';
@@ -300,8 +299,9 @@ export function TransactionImporter({ availableCategories }: TransactionImporter
 
   const parseXlsx = (file: File, bankAccountId: string | null) => {
     const reader = new FileReader();
-    reader.onload = (e) => {
+    reader.onload = async (e) => {
       try {
+        const XLSX = await import('xlsx');
         const data = e.target?.result;
         const workbook = XLSX.read(data, { type: 'binary', cellDates: true });
         const sheetName = workbook.SheetNames[0];

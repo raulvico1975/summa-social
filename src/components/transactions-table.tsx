@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import dynamic from 'next/dynamic';
 import {
   Table,
   TableBody,
@@ -53,15 +54,12 @@ import {
   Download,
   X,
 } from 'lucide-react';
-import * as XLSX from 'xlsx';
 import type { Transaction, Category, Project, AnyContact, Donor, Supplier, Employee, ContactType } from '@/lib/data';
 import { SUPER_ADMIN_UID } from '@/lib/data';
 import { formatCurrencyEU } from '@/lib/normalize';
 import { trackUX } from '@/lib/ux/trackUX';
 import { useToast } from '@/hooks/use-toast';
-import { RemittanceSplitter } from '@/components/remittance-splitter';
 import { RemittanceDetailModal } from '@/components/remittance-detail-modal';
-import { ReturnImporter } from '@/components/return-importer';
 import { StripeImporter } from '@/components/stripe-importer';
 import { SplitAmountDialog } from '@/components/transactions/split-amount-dialog';
 import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
@@ -104,6 +102,16 @@ import { detectLegacyCategoryTransactions, logLegacyCategorySummary } from '@/li
 interface TransactionsTableProps {
   initialDateFilter?: DateFilterValue | null;
 }
+
+const RemittanceSplitter = dynamic(
+  () => import('@/components/remittance-splitter').then((mod) => mod.RemittanceSplitter),
+  { ssr: false },
+);
+
+const ReturnImporter = dynamic(
+  () => import('@/components/return-importer').then((mod) => mod.ReturnImporter),
+  { ssr: false },
+);
 
 export function TransactionsTable({ initialDateFilter = null }: TransactionsTableProps = {}) {
   const { firestore, user, storage } = useFirebase();
@@ -1031,9 +1039,18 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
   // EXPORTAR EXCEL
   // ═══════════════════════════════════════════════════════════════════════════
 
-  const handleExportFilteredTransactions = () => {
+  const handleExportFilteredTransactions = async () => {
     if (filteredTransactions.length === 0) {
       toast({ title: t.movements.table.noTransactions });
+      return;
+    }
+
+    let XLSX: typeof import('xlsx');
+    try {
+      XLSX = await import('xlsx');
+    } catch (error) {
+      console.error('Error loading xlsx for filtered export:', error);
+      toast({ variant: 'destructive', title: t.common.error, description: "No s'ha pogut carregar l'exportador Excel." });
       return;
     }
 
@@ -2186,19 +2203,21 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
       )}
 
       {/* Return Importer Modal */}
-      <ReturnImporter
-        open={isReturnImporterOpen}
-        onOpenChange={(open) => {
-          setIsReturnImporterOpen(open);
-          if (!open) setReturnImporterParentTx(null);
-        }}
-        onComplete={() => {
-          setIsReturnImporterOpen(false);
-          setReturnImporterParentTx(null);
-        }}
-        isSuperAdmin={isSuperAdmin}
-        parentTransaction={returnImporterParentTx}
-      />
+      {isReturnImporterOpen && (
+        <ReturnImporter
+          open={isReturnImporterOpen}
+          onOpenChange={(open) => {
+            setIsReturnImporterOpen(open);
+            if (!open) setReturnImporterParentTx(null);
+          }}
+          onComplete={() => {
+            setIsReturnImporterOpen(false);
+            setReturnImporterParentTx(null);
+          }}
+          isSuperAdmin={isSuperAdmin}
+          parentTransaction={returnImporterParentTx}
+        />
+      )}
 
       {/* Stripe Importer Modal */}
       {stripeTransactionToSplit && (
