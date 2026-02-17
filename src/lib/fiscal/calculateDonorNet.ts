@@ -2,6 +2,8 @@
 // Motor únic de càlcul fiscal per donants
 // Centralitza la lògica duplicada en donor-detail-drawer, donation-certificate-generator, etc.
 
+import { isFiscalDonationCandidate } from '@/lib/fiscal/is-fiscal-donation-candidate';
+
 /**
  * Input per al càlcul del net fiscal d'un donant
  */
@@ -10,8 +12,9 @@ export interface DonorNetInput {
     amount: number;
     date: string;
     transactionType?: string;
-    donationStatus?: string;
     contactId?: string | null;
+    archivedAt?: string | null;
+    isSplit?: boolean;
   }>;
   donorId: string;
   year: number;
@@ -34,7 +37,7 @@ export interface DonorNetResult {
  * Calcula el net fiscal d'un donant per a un any específic.
  *
  * Criteris:
- * - Donacions: amount > 0 i donationStatus !== 'returned'
+ * - Donacions: només transactionType === 'donation' (criteri fiscal únic)
  * - Devolucions: transactionType === 'return' i amount < 0
  * - Net: gross + returns (returns són negatius, per tant és una resta)
  *
@@ -56,8 +59,8 @@ export function calculateDonorNet(input: DonorNetInput): DonorNetResult {
     // Només transaccions de l'any especificat
     if (!tx.date.startsWith(yearStr)) continue;
 
-    // Donació vàlida: amount > 0 i no marcada com returned
-    if (tx.amount > 0 && tx.donationStatus !== 'returned') {
+    // Donació fiscal vàlida (helper unificat)
+    if (tx.amount > 0 && isFiscalDonationCandidate(tx)) {
       grossDonationsCents += Math.round(tx.amount * 100);
       donationsCount++;
     }

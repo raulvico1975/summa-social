@@ -3968,5 +3968,21 @@
   "ticketsInbox.tooltips.archive": "Arxivar",
   "ticketsInbox.tooltips.edit": "Editar",
   "ticketsInbox.tooltips.fillWithAI": "Omplir amb IA",
-  "ticketsInbox.tooltips.viewFile": "Veure fitxer"
+  "ticketsInbox.tooltips.viewFile": "Veure fitxer",
+  "movements.split.action": "Desglossar import",
+  "movements.split.title": "Desglossar import",
+  "movements.split.subtitle": "Aquest moviment del banc no es modifica. Indica com es reparteix.",
+  "movements.split.missingBankAccount": "Aquest moviment no té compte bancari associat. Assigna'l primer.",
+  "movements.split.amount": "Import",
+  "movements.split.kind": "Tipus",
+  "movements.split.kindDonation": "Aportació del donant (compta per al 182 i certificat)",
+  "movements.split.kindNonDonation": "Altres (no compta com donació)",
+  "movements.split.category": "Categoria",
+  "movements.split.contact": "Contacte",
+  "movements.split.note": "Nota",
+  "movements.split.addLine": "Afegir línia",
+  "movements.split.apply": "Aplicar",
+  "movements.split.cancel": "Cancel·lar",
+  "movements.split.deltaInvalid": "La suma de les línies ha de quadrar amb l'import del banc (tolerància ±0,02 €).",
+  "movements.split.deleteBlocked": "Forma part d'un desglossament. Per canviar-ho, desfés el desglossament."
 }

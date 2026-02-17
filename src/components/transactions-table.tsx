@@ -63,6 +63,7 @@ import { RemittanceSplitter } from '@/components/remittance-splitter';
 import { RemittanceDetailModal } from '@/components/remittance-detail-modal';
 import { ReturnImporter } from '@/components/return-importer';
 import { StripeImporter } from '@/components/stripe-importer';
+import { SplitAmountDialog } from '@/components/transactions/split-amount-dialog';
 import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
 import { collection, doc, writeBatch, query, orderBy } from 'firebase/firestore';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -89,7 +90,7 @@ import { SepaReconcileModal } from '@/components/pending-documents/sepa-reconcil
 import { filterValidSelectItems } from '@/lib/ui/safe-select-options';
 import type { PrebankRemittance } from '@/lib/pending-documents/sepa-remittance';
 import { prebankRemittancesCollection } from '@/lib/pending-documents/sepa-remittance';
-import { where, getDocs } from 'firebase/firestore';
+import { where, getDocs, getDoc } from 'firebase/firestore';
 import { filterActiveContacts } from '@/lib/contacts/filterActiveContacts';
 import { UndoProcessingDialog } from '@/components/undo-processing-dialog';
 import {
@@ -107,7 +108,7 @@ interface TransactionsTableProps {
 export function TransactionsTable({ initialDateFilter = null }: TransactionsTableProps = {}) {
   const { firestore, user, storage } = useFirebase();
   const { organizationId, userRole } = useCurrentOrganization();
-  const { t, language } = useTranslations();
+  const { t, language, tr } = useTranslations();
   const { toast } = useToast();
   const locale = language === 'es' ? 'es-ES' : 'ca-ES';
   const isMobile = useIsMobile();
@@ -328,6 +329,8 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
 
   const [isSplitterOpen, setIsSplitterOpen] = React.useState(false);
   const [transactionToSplit, setTransactionToSplit] = React.useState<Transaction | null>(null);
+  const [isSplitAmountDialogOpen, setIsSplitAmountDialogOpen] = React.useState(false);
+  const [splitAmountTransaction, setSplitAmountTransaction] = React.useState<Transaction | null>(null);
 
   // Modal detall remesa
   const [isRemittanceDetailOpen, setIsRemittanceDetailOpen] = React.useState(false);
@@ -407,6 +410,13 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
         return acc;
     }, {} as Record<string, string>) || {},
   [availableProjects]);
+
+  const allTransactionsById = React.useMemo(() => {
+    return (allTransactions ?? []).reduce((acc, tx) => {
+      acc[tx.id] = tx;
+      return acc;
+    }, {} as Record<string, Transaction>);
+  }, [allTransactions]);
 
   // Mapa de comptes bancaris per ID (per export)
   const bankAccountMap = React.useMemo(() =>
@@ -1174,10 +1184,74 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
     setIsSplitterOpen(true);
   };
 
+  const handleSplitAmount = React.useCallback((transaction: Transaction) => {
+    if (!transaction.bankAccountId) {
+      toast({
+        variant: 'destructive',
+        title: t.common.error,
+        description: tr('movements.split.missingBankAccount'),
+      });
+      return;
+    }
+
+    setSplitAmountTransaction(transaction);
+    setIsSplitAmountDialogOpen(true);
+  }, [t.common.error, toast, tr]);
+
   const handleOnSplitDone = () => {
     setIsSplitterOpen(false);
     setTransactionToSplit(null);
   };
+
+  const isSplitDeleteBlockedInMemory = React.useCallback((transaction: Transaction): boolean => {
+    if (transaction.isSplit) return true;
+    if (!transaction.parentTransactionId) return false;
+    return !!allTransactionsById[transaction.parentTransactionId]?.isSplit;
+  }, [allTransactionsById]);
+
+  const handleDeleteWithSplitGuard = React.useCallback(async (transaction: Transaction) => {
+    if (transaction.isSplit) {
+      toast({
+        variant: 'destructive',
+        title: t.common.error,
+        description: tr('movements.split.deleteBlocked'),
+      });
+      return;
+    }
+
+    if (transaction.parentTransactionId) {
+      let parentIsSplit = !!allTransactionsById[transaction.parentTransactionId]?.isSplit;
+
+      if (!parentIsSplit && firestore && organizationId) {
+        try {
+          const parentRef = doc(
+            firestore,
+            'organizations',
+            organizationId,
+            'transactions',
+            transaction.parentTransactionId
+          );
+          const parentSnap = await getDoc(parentRef);
+          if (parentSnap.exists()) {
+            parentIsSplit = parentSnap.data().isSplit === true;
+          }
+        } catch (error) {
+          console.warn('[transactions-table] Error validant pare per bloqueig delete split:', error);
+        }
+      }
+
+      if (parentIsSplit) {
+        toast({
+          variant: 'destructive',
+          title: t.common.error,
+          description: tr('movements.split.deleteBlocked'),
+        });
+        return;
+      }
+    }
+
+    handleDeleteClick(transaction);
+  }, [allTransactionsById, firestore, handleDeleteClick, organizationId, t.common.error, toast, tr]);
 
   const handleViewRemittanceDetail = (remittanceId: string, parentTx?: Transaction) => {
     setSelectedRemittanceId(remittanceId);
@@ -1412,9 +1486,11 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
     deleteDocument: t.movements.table.deleteDocument,
     manageReturn: t.movements.table.manageReturn,
     edit: t.movements.table.edit,
+    splitAmount: tr('movements.split.action'),
     splitRemittance: t.movements.table.splitRemittance,
     splitStripeRemittance: t.movements.table.splitStripeRemittance,
     delete: t.movements.table.delete,
+    deleteBlocked: tr('movements.split.deleteBlocked'),
     viewRemittanceDetail: t.movements.table.viewRemittanceDetail,
     remittanceQuotes: t.movements.table.remittanceQuotes,
     remittanceProcessedLabel: t.movements.table.remittanceProcessedLabel,
@@ -1424,7 +1500,7 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
       'Desfer remesa',
     moreOptionsAriaLabel: t.movements.table.moreOptionsAriaLabel,
     legacyCategory: t.movements?.table?.legacyCategory ?? 'Cal recategoritzar',
-  }), [t]);
+  }), [t, tr]);
 
   // Memoized filter translations
   const filterTranslations = React.useMemo(() => ({
@@ -1685,7 +1761,9 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
               contactType={tx.contactId ? contactMap[tx.contactId]?.type || null : null}
               categoryDisplayName={getCategoryDisplayName(tx.category)}
               onEdit={handleEditClick}
-              onDelete={handleDeleteClick}
+              onDelete={handleDeleteWithSplitGuard}
+              onSplitAmount={handleSplitAmount}
+              isSplitDeleteBlocked={isSplitDeleteBlockedInMemory(tx)}
               onOpenReturnDialog={handleOpenReturnDialog}
               onViewRemittanceDetail={handleViewRemittanceDetail}
               onAttachDocument={handleAttachDocumentWithRename}
@@ -1794,8 +1872,9 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
                   onDeleteDocument={handleDeleteDocument}
                   onCategorize={handleCategorize}
                   onEdit={handleEditClick}
-                  onDelete={handleDeleteClick}
+                  onDelete={handleDeleteWithSplitGuard}
                   onOpenReturnDialog={handleOpenReturnDialog}
+                  onSplitAmount={handleSplitAmount}
                   onSplitRemittance={handleSplitRemittance}
                   onSplitStripeRemittance={handleSplitStripeRemittance}
                   onViewRemittanceDetail={handleViewRemittanceDetail}
@@ -1811,6 +1890,7 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
                     ctrlSum: detectedSepaRemittances.get(tx.id)!.ctrlSum,
                   } : null}
                   onReconcileSepa={handleReconcileSepa}
+                  isSplitDeleteBlocked={isSplitDeleteBlockedInMemory(tx)}
                   t={rowTranslations}
                   getCategoryDisplayName={getCategoryDisplayName}
                 />
@@ -2072,6 +2152,25 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
           existingSuppliers={suppliers}
           existingEmployees={employees}
           onSplitDone={handleOnSplitDone}
+        />
+      )}
+
+      {splitAmountTransaction && (
+        <SplitAmountDialog
+          open={isSplitAmountDialogOpen}
+          onOpenChange={(open) => {
+            setIsSplitAmountDialogOpen(open);
+            if (!open) {
+              setSplitAmountTransaction(null);
+            }
+          }}
+          transaction={splitAmountTransaction}
+          categories={availableCategories || []}
+          contacts={availableContacts || []}
+          onApplied={() => {
+            setIsSplitAmountDialogOpen(false);
+            setSplitAmountTransaction(null);
+          }}
         />
       )}
 

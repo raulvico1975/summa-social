@@ -3968,5 +3968,21 @@
   "ticketsInbox.tooltips.archive": "Archivar",
   "ticketsInbox.tooltips.edit": "Editar",
   "ticketsInbox.tooltips.fillWithAI": "Rellenar con IA",
-  "ticketsInbox.tooltips.viewFile": "Ver archivo"
+  "ticketsInbox.tooltips.viewFile": "Ver archivo",
+  "movements.split.action": "Desglosar importe",
+  "movements.split.title": "Desglosar importe",
+  "movements.split.subtitle": "Este movimiento del banco no se modifica. Indica cómo se reparte.",
+  "movements.split.missingBankAccount": "Este movimiento no tiene cuenta bancaria asociada. Asígnala primero.",
+  "movements.split.amount": "Importe",
+  "movements.split.kind": "Tipo",
+  "movements.split.kindDonation": "Aportación del donante (cuenta para el 182 y certificado)",
+  "movements.split.kindNonDonation": "Otros (no cuenta como donación)",
+  "movements.split.category": "Categoría",
+  "movements.split.contact": "Contacto",
+  "movements.split.note": "Nota",
+  "movements.split.addLine": "Añadir línea",
+  "movements.split.apply": "Aplicar",
+  "movements.split.cancel": "Cancelar",
+  "movements.split.deltaInvalid": "La suma de las líneas debe cuadrar con el importe bancario (tolerancia ±0,02 €).",
+  "movements.split.deleteBlocked": "Forma parte de un desglose. Para cambiarlo, deshaz el desglose."
 }
