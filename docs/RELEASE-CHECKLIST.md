@@ -1,6 +1,7 @@
 # Release checklist (manual, 5 minuts)
 
 ## Abans de push
+- `node scripts/check-build-env.mjs` (credencials mínimes per build)
 - `npm run check` (tsc + tests + build) → ha de donar `CHECK_OK`
 - `git diff --stat` revisat
 

@@ -52,7 +52,7 @@ Aquesta classificació determina els requisits de validació (secció 4).
 2. El sistema crea **branca `codex/*` + worktree extern** a `../summa-social-worktrees/<branch>`
 3. **Treballar i validar** dins del worktree de tasca:
    ```bash
-   npm run build && npm test
+   node scripts/check-build-env.mjs && npm run build && npm test
    ```
 4. `npm run acabat` des del worktree: checks + commit + push + integració a `main` (control)
 5. Després d'`acabat`, el sistema pregunta si vols tancar el worktree (`npm run worktree:close`)
@@ -68,6 +68,8 @@ Aquesta classificació determina els requisits de validació (secció 4).
 | **BAIX** | `npm run build` OK |
 | **MITJÀ** | build + smoke tests (`docs/QA/SMOKE-TESTS.md`) |
 | **ALT** | build + smoke + checklist manual (`tests/CHECKLIST-MANUAL.md`) |
+
+**Prerequisit estable de build:** `npm run build` requereix credencials Firebase mínimes (`NEXT_PUBLIC_FIREBASE_PROJECT_ID` i `NEXT_PUBLIC_FIREBASE_API_KEY`) via `.env.local` o variables d'entorn de shell/CI.
 
 ### Verificació post-deploy: contactes
 
