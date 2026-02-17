@@ -188,81 +188,81 @@ interface HealthCheck {
 const INITIAL_CHECKS: HealthCheck[] = [
   {
     id: 'superadmin-status',
-    name: 'SuperAdmin',
-    description: 'Accés al panell /admin',
-    humanExplanation: 'Verifica que el teu usuari té un document a systemSuperAdmins. Sense això, no pots gestionar el sistema.',
+    name: 'Accés administració',
+    description: 'Comprova accés al panell',
+    humanExplanation: 'Confirma que el teu usuari pot gestionar el sistema. Si falla, no podràs usar el panell de control.',
     status: 'pending',
   },
   {
     id: 'firestore-i18n',
-    name: 'system/i18n',
-    description: 'Firestore accessible',
-    humanExplanation: 'Activa la "versió de textos" que fa servir tothom. Sense això, pot haver-hi inconsistències.',
+    name: 'Textos centrals',
+    description: 'Dades de traduccions disponibles',
+    humanExplanation: 'Valida que la base de textos està accessible. Si falla, poden aparèixer textos trencats o inconsistents.',
     status: 'pending',
     actionable: 'goToI18n',
   },
   {
     id: 'firestore-updates',
-    name: 'productUpdates',
-    description: 'Novetats del producte',
-    humanExplanation: 'Normal si encara no has publicat cap novetat. No afecta el funcionament.',
+    name: 'Novetats publicades',
+    description: 'Historial de novetats',
+    humanExplanation: 'És informatiu. Si falla, no afecta l’operativa del dia a dia.',
     status: 'pending',
     isNonCritical: true, // No contribueix al ❌ global
   },
   {
     id: 'storage-ca',
-    name: 'i18n/ca.json',
-    description: 'Storage accessible',
-    humanExplanation: 'Fitxer de traduccions en català. Si falla, els usuaris amb idioma català veuran claus sense traduir.',
+    name: 'Traduccions català',
+    description: 'Fitxer de traduccions disponible',
+    humanExplanation: 'Comprova que els usuaris en català veuran textos correctes.',
     status: 'pending',
     actionable: 'goToI18n',
   },
   {
     id: 'storage-es',
-    name: 'i18n/es.json',
-    description: 'Storage accessible',
-    humanExplanation: 'Fitxer de traduccions en castellà. Si falla, els usuaris amb idioma castellà veuran claus sense traduir.',
+    name: 'Traduccions castellà',
+    description: 'Fitxer de traduccions disponible',
+    humanExplanation: 'Comprova que els usuaris en castellà veuran textos correctes.',
     status: 'pending',
     actionable: 'goToI18n',
   },
   {
     id: 'storage-fr',
-    name: 'i18n/fr.json',
-    description: 'Storage accessible',
-    humanExplanation: 'Fitxer de traduccions en francès. Si falla, els usuaris amb idioma francès veuran claus sense traduir.',
+    name: 'Traduccions francès',
+    description: 'Fitxer de traduccions disponible',
+    humanExplanation: 'Comprova que els usuaris en francès veuran textos correctes.',
     status: 'pending',
     actionable: 'goToI18n',
   },
   {
     id: 'storage-pt',
-    name: 'i18n/pt.json',
-    description: 'Storage accessible',
-    humanExplanation: 'Fitxer de traduccions en portuguès. Si falla, els usuaris amb idioma portuguès veuran claus sense traduir.',
+    name: 'Traduccions portuguès',
+    description: 'Fitxer de traduccions disponible',
+    humanExplanation: 'Comprova que els usuaris en portuguès veuran textos correctes.',
     status: 'pending',
     actionable: 'goToI18n',
   },
   {
     id: 'firestore-transactions',
-    name: 'Moviments',
-    description: 'Lectura de transaccions',
-    humanExplanation: 'Si falla, els usuaris no podran veure els moviments de la seva organització.',
+    name: 'Llistat de moviments',
+    description: 'Lectura de dades operatives',
+    humanExplanation: 'Si falla, els usuaris no podran veure ni revisar els moviments.',
     status: 'pending',
     requiresOrg: true,
   },
   {
     id: 'storage-upload',
-    name: 'pendingDocuments',
-    description: 'Upload operatiu',
-    humanExplanation: 'Permet pujar factures i nòmines. Política temporal: qualsevol usuari autenticat.',
+    name: 'Pujada de documents',
+    description: 'Pujada de factures i nòmines',
+    humanExplanation: 'Confirma que es poden pujar documents. Si falla, l’equip es queda aturat en la gestió diària.',
     status: 'pending',
     requiresOrg: true,
     actionable: 'testRealUpload', // Quan OK: botó test real.
   },
   {
     id: 'legacy-redirect',
-    name: 'quick-expense',
-    description: 'Redirect legacy OK',
-    humanExplanation: 'Comprova que l\'entrada ràpida de despeses funciona per als usuaris.',
+    name: 'Entrada ràpida despeses',
+    description: 'Comprovació d’accés a la ruta',
+    humanExplanation: 'Comprova que l’entrada ràpida de despeses obre correctament per als usuaris.',
     status: 'pending',
     requiresOrg: true,
     actionable: 'openRoute',
@@ -1445,7 +1445,7 @@ export function SystemHealth() {
               </div>
               <div>
                 <h4 className="font-medium text-sm mb-1">Primers passos</h4>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-sm text-muted-foreground whitespace-pre-line">
                   {INCIDENT_HELP[selectedIncident.type].nextSteps}
                 </p>
               </div>
@@ -1463,7 +1463,7 @@ export function SystemHealth() {
               </div>
 
               <div className="pt-4 border-t">
-                <h4 className="font-medium text-sm mb-2">Detalls tècnics</h4>
+                <h4 className="font-medium text-sm mb-2">Detalls per suport tècnic (opcional)</h4>
                 <div className="bg-muted p-3 rounded text-xs font-mono space-y-1">
                   <div>
                     <span className="text-muted-foreground">Signatura:</span>{' '}

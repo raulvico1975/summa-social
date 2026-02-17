@@ -79,6 +79,7 @@ const LEGACY_CATEGORY_KEYS = new Set<string>([
 
 const POSITIVE_AMOUNT_TYPES = new Set(["donation", "membership", "remittance_in"]);
 const NEGATIVE_AMOUNT_TYPES = new Set(["fee", "commission", "expense", "return", "return_fee"]);
+const SAMPLE_IDS_LIMIT = 10;
 
 function classifyDateFormat(dateStr: string | null | undefined): DateFormat {
   if (!dateStr) return "INVALID";
@@ -97,6 +98,13 @@ function pushIssue(
   }
 }
 
+function pushSampleId(sampleIds: string[], id: string | null | undefined): void {
+  if (!id) return;
+  if (sampleIds.length >= SAMPLE_IDS_LIMIT) return;
+  if (sampleIds.includes(id)) return;
+  sampleIds.push(id);
+}
+
 export function runIntegrityChecks(input: IntegrityChecksInput): IntegrityChecksResult {
   const {
     transactions,
@@ -112,9 +120,11 @@ export function runIntegrityChecks(input: IntegrityChecksInput): IntegrityChecks
   // A) Categories legacy/desconegudes
   let countA = 0;
   const examplesA: Array<Record<string, unknown>> = [];
+  const sampleIdsA: string[] = [];
   for (const tx of transactions) {
     if (tx.category && LEGACY_CATEGORY_KEYS.has(tx.category)) {
       countA++;
+      pushSampleId(sampleIdsA, tx.id);
       pushIssue(examplesA, {
         id: tx.id,
         date: tx.date,
@@ -133,11 +143,13 @@ export function runIntegrityChecks(input: IntegrityChecksInput): IntegrityChecks
   };
   let invalidDateCount = 0;
   const examplesB: Array<Record<string, unknown>> = [];
+  const sampleIdsB: string[] = [];
   for (const tx of transactions) {
     const format = classifyDateFormat(tx.date);
     formatCounts[format]++;
     if (format === "INVALID") invalidDateCount++;
     if (format !== "YYYY-MM-DD") {
+      pushSampleId(sampleIdsB, tx.id);
       pushIssue(examplesB, {
         id: tx.id,
         date: tx.date,
@@ -153,11 +165,13 @@ export function runIntegrityChecks(input: IntegrityChecksInput): IntegrityChecks
   // C) Coherència source ↔ bankAccountId
   let countC = 0;
   const examplesC: Array<Record<string, unknown>> = [];
+  const sampleIdsC: string[] = [];
   for (const tx of transactions) {
     const missingAccount = (tx.source === "bank" || tx.source === "stripe") && !tx.bankAccountId;
     const wrongSource = !!tx.bankAccountId && tx.source !== "bank" && tx.source !== "stripe" && tx.source !== "remittance";
     if (missingAccount || wrongSource) {
       countC++;
+      pushSampleId(sampleIdsC, tx.id);
       pushIssue(examplesC, {
         id: tx.id,
         date: tx.date,
@@ -171,9 +185,11 @@ export function runIntegrityChecks(input: IntegrityChecksInput): IntegrityChecks
   // D) Archived colat al dataset operatiu
   let countD = 0;
   const examplesD: Array<Record<string, unknown>> = [];
+  const sampleIdsD: string[] = [];
   for (const tx of transactions) {
     if (tx.archivedAt != null) {
       countD++;
+      pushSampleId(sampleIdsD, tx.id);
       pushIssue(examplesD, {
         id: tx.id,
         date: tx.date,
@@ -186,12 +202,14 @@ export function runIntegrityChecks(input: IntegrityChecksInput): IntegrityChecks
   // E) Signes incoherents
   let countE = 0;
   const examplesE: Array<Record<string, unknown>> = [];
+  const sampleIdsE: string[] = [];
   for (const tx of transactions) {
     const type = tx.transactionType;
     if (!type || type === "normal") continue;
 
     if (POSITIVE_AMOUNT_TYPES.has(type) && tx.amount <= 0) {
       countE++;
+      pushSampleId(sampleIdsE, tx.id);
       pushIssue(examplesE, {
         id: tx.id,
         date: tx.date,
@@ -204,6 +222,7 @@ export function runIntegrityChecks(input: IntegrityChecksInput): IntegrityChecks
 
     if (NEGATIVE_AMOUNT_TYPES.has(type) && tx.amount >= 0) {
       countE++;
+      pushSampleId(sampleIdsE, tx.id);
       pushIssue(examplesE, {
         id: tx.id,
         date: tx.date,
@@ -217,11 +236,13 @@ export function runIntegrityChecks(input: IntegrityChecksInput): IntegrityChecks
   // F) Categories inexistents
   let countF = 0;
   const examplesF: Array<Record<string, unknown>> = [];
+  const sampleIdsF: string[] = [];
   for (const tx of transactions) {
     if (!tx.category) continue;
     if (LEGACY_CATEGORY_KEYS.has(tx.category)) continue;
     if (!validCategoryIds.has(tx.category)) {
       countF++;
+      pushSampleId(sampleIdsF, tx.id);
       pushIssue(examplesF, {
         id: tx.id,
         date: tx.date,
@@ -234,10 +255,12 @@ export function runIntegrityChecks(input: IntegrityChecksInput): IntegrityChecks
   // G) Projectes inexistents
   let countG = 0;
   const examplesG: Array<Record<string, unknown>> = [];
+  const sampleIdsG: string[] = [];
   for (const tx of transactions) {
     if (!tx.projectId) continue;
     if (!validProjectIds.has(tx.projectId)) {
       countG++;
+      pushSampleId(sampleIdsG, tx.id);
       pushIssue(examplesG, {
         id: tx.id,
         date: tx.date,
@@ -250,10 +273,12 @@ export function runIntegrityChecks(input: IntegrityChecksInput): IntegrityChecks
   // H) Comptes bancaris inexistents
   let countH = 0;
   const examplesH: Array<Record<string, unknown>> = [];
+  const sampleIdsH: string[] = [];
   for (const tx of transactions) {
     if (!tx.bankAccountId) continue;
     if (!validBankAccountIds.has(tx.bankAccountId)) {
       countH++;
+      pushSampleId(sampleIdsH, tx.id);
       pushIssue(examplesH, {
         id: tx.id,
         date: tx.date,
@@ -266,10 +291,12 @@ export function runIntegrityChecks(input: IntegrityChecksInput): IntegrityChecks
   // I) Contactes inexistents
   let countI = 0;
   const examplesI: Array<Record<string, unknown>> = [];
+  const sampleIdsI: string[] = [];
   for (const tx of transactions) {
     if (!tx.contactId) continue;
     if (!validContactIds.has(tx.contactId)) {
       countI++;
+      pushSampleId(sampleIdsI, tx.id);
       pushIssue(examplesI, {
         id: tx.id,
         date: tx.date,
@@ -282,10 +309,12 @@ export function runIntegrityChecks(input: IntegrityChecksInput): IntegrityChecks
   // J) Tiquets orfes
   let countJ = 0;
   const examplesJ: Array<Record<string, unknown>> = [];
+  const sampleIdsJ: string[] = [];
   for (const ticket of tickets) {
     if (!ticket.reportId) continue;
     if (!validReportIds.has(ticket.reportId)) {
       countJ++;
+      pushSampleId(sampleIdsJ, ticket.id);
       pushIssue(examplesJ, {
         id: ticket.id,
         date: ticket.invoiceDate ?? "N/A",
@@ -299,11 +328,13 @@ export function runIntegrityChecks(input: IntegrityChecksInput): IntegrityChecks
   // K) Remeses òrfenes
   let countK = 0;
   const examplesK: Array<Record<string, unknown>> = [];
+  const sampleIdsK: string[] = [];
   for (const tx of transactions) {
     if (!tx.isRemittanceItem) continue;
 
     if (!tx.parentTransactionId) {
       countK++;
+      pushSampleId(sampleIdsK, tx.id);
       pushIssue(examplesK, {
         id: tx.id,
         date: tx.date,
@@ -315,6 +346,7 @@ export function runIntegrityChecks(input: IntegrityChecksInput): IntegrityChecks
 
     if (!validTransactionIds.has(tx.parentTransactionId)) {
       countK++;
+      pushSampleId(sampleIdsK, tx.id);
       pushIssue(examplesK, {
         id: tx.id,
         date: tx.date,
@@ -325,9 +357,10 @@ export function runIntegrityChecks(input: IntegrityChecksInput): IntegrityChecks
   }
 
   return {
-    A: { count: countA, examples: examplesA },
+    A: { count: countA, sampleIds: sampleIdsA, examples: examplesA },
     B: {
       count: countB,
+      sampleIds: sampleIdsB,
       examples: examplesB,
       details: {
         invalidCount: invalidDateCount,
@@ -335,14 +368,14 @@ export function runIntegrityChecks(input: IntegrityChecksInput): IntegrityChecks
         formatCounts,
       },
     },
-    C: { count: countC, examples: examplesC },
-    D: { count: countD, examples: examplesD },
-    E: { count: countE, examples: examplesE },
-    F: { count: countF, examples: examplesF },
-    G: { count: countG, examples: examplesG },
-    H: { count: countH, examples: examplesH },
-    I: { count: countI, examples: examplesI },
-    J: { count: countJ, examples: examplesJ },
-    K: { count: countK, examples: examplesK },
+    C: { count: countC, sampleIds: sampleIdsC, examples: examplesC },
+    D: { count: countD, sampleIds: sampleIdsD, examples: examplesD },
+    E: { count: countE, sampleIds: sampleIdsE, examples: examplesE },
+    F: { count: countF, sampleIds: sampleIdsF, examples: examplesF },
+    G: { count: countG, sampleIds: sampleIdsG, examples: examplesG },
+    H: { count: countH, sampleIds: sampleIdsH, examples: examplesH },
+    I: { count: countI, sampleIds: sampleIdsI, examples: examplesI },
+    J: { count: countJ, sampleIds: sampleIdsJ, examples: examplesJ },
+    K: { count: countK, sampleIds: sampleIdsK, examples: examplesK },
   };
 }
