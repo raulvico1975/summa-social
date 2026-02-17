@@ -59,13 +59,6 @@ if (match) used.add(match.id);
   - emails
   - noms (si s'usen per matching)
 
-## 7) i18n: prohibit `t("...")` i text literal nou
-
-- Regla: en text UI nou, usar `tr("...")` amb clau a `src/i18n/locales/*.json`.
-- Regla: `t("...")` està prohibit; només `t.xxx.yyy` per codi legacy existent.
-- Regla: evitar text literal nou en JSX/TSX si no és una clau i18n.
-- Gate automàtic: `scripts/i18n/forbid-t-call.mjs` (falla si detecta `t("...")` o `t('...')`).
-
 ---
 
 ## Canvis i excepcions
