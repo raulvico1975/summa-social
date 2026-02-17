@@ -837,7 +837,22 @@ export function TransactionImporter({ availableCategories }: TransactionImporter
         const normalizedTransactions = transactionsWithContacts.map((tx) => {
           const normalizedTx = normalizeTransaction(tx) as Record<string, unknown>;
           const { id: _ignored, ...withoutId } = normalizedTx as { id?: string } & Record<string, unknown>;
-          return withoutId;
+          const sanitizedTx = { ...withoutId };
+
+          // Import bancari: no crear "returns" automàtiques sense flux dedicat
+          if (sanitizedTx.transactionType === 'return') {
+            sanitizedTx.transactionType = 'normal';
+
+            if (!sanitizedTx.contactId) {
+              sanitizedTx.contactId = null;
+            }
+
+            if ('linkedTransactionId' in sanitizedTx) {
+              sanitizedTx.linkedTransactionId = null;
+            }
+          }
+
+          return sanitizedTx;
         });
 
         const source: 'csv' | 'xlsx' = fileName?.endsWith('.xlsx') ? 'xlsx' : 'csv';
