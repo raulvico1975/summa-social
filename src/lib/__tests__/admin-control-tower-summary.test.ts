@@ -5,6 +5,7 @@ import {
   evaluateStalenessStatus,
   evaluateSystemStatus,
   inferBotTopic,
+  pickMostRecentIso,
 } from '../admin/control-tower-summary'
 
 test('evaluateSystemStatus follows conservative thresholds', () => {
@@ -38,4 +39,18 @@ test('inferBotTopic groups common operational themes', () => {
   assert.equal(inferBotTopic('no funciona stripe importer'), 'Stripe')
   assert.equal(inferBotTopic('com dividir una remesa sepa pain008'), 'Remeses')
   assert.equal(inferBotTopic('consulta genèrica sense patró'), 'Altres')
+})
+
+test('pickMostRecentIso picks latest valid candidate and ignores invalid values', () => {
+  assert.equal(
+    pickMostRecentIso([
+      null,
+      'invalid',
+      '2026-02-10T09:00:00.000Z',
+      '2026-02-10T11:00:00.000Z',
+      undefined,
+    ]),
+    '2026-02-10T11:00:00.000Z'
+  )
+  assert.equal(pickMostRecentIso([null, undefined, 'invalid']), null)
 })
