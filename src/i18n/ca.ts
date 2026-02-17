@@ -2942,6 +2942,11 @@ export const ca = {
   // Filtre donants amb devolucions
   donorsFilter: {
     withReturns: "Amb devolucions",
+    withReturnsThisMonth: "Amb devolucions aquest mes",
+    withTwoOrMoreReturns: "Amb 2 devolucions o més",
+    noWithReturns: "No hi ha donants amb devolucions",
+    noWithReturnsThisMonth: "No hi ha donants amb devolucions aquest mes",
+    noWithTwoOrMoreReturns: "No hi ha donants amb 2 devolucions o més",
     donorTypeLabel: "Tipus",
     allTypes: "Tots",
     individual: "Particulars",

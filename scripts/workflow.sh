@@ -192,6 +192,16 @@ current_branch() {
   git rev-parse --abbrev-ref HEAD
 }
 
+head_needs_integration_on_control_main() {
+  local head_sha="$1"
+
+  if git_control merge-base --is-ancestor "$head_sha" main 2>/dev/null; then
+    return 1
+  fi
+
+  return 0
+}
+
 refresh_origin() {
   if git fetch origin --quiet >/dev/null 2>&1; then
     LAST_FETCH_OK=true
@@ -527,8 +537,9 @@ run_inicia() {
 }
 
 run_acabat() {
-  local changed_files risk final_status branch
+  local changed_files risk final_status branch head_sha
   branch="$(current_branch)"
+  head_sha="$(git rev-parse HEAD)"
   changed_files="$(collect_changed_files)"
 
   if [ "$branch" = "HEAD" ]; then
@@ -557,6 +568,20 @@ run_acabat() {
   fi
 
   if [ -z "$changed_files" ]; then
+    if [ "$branch" != "main" ] && ! is_control_repo && head_needs_integration_on_control_main "$head_sha"; then
+      say "No hi ha canvis locals nous, pero la branca te commits pendents d'integrar."
+      push_branch "$branch"
+      integrate_to_main "$branch"
+
+      final_status="$(compute_repo_status)"
+      say "$final_status"
+      emit_guidance_for_status "$final_status"
+      say ""
+      say "PREGUNTA OPERATIVA"
+      say "- Vols tancar aquest worktree de tasca ara? (recomanat: npm run worktree:close)"
+      return
+    fi
+
     final_status="$(compute_repo_status)"
     say "$final_status"
     say "No hi ha canvis nous per tancar."
