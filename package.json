@@ -31,6 +31,8 @@
     "prepush": "bash scripts/prepush.sh",
     "verify:ci": "bash scripts/verify-ci.sh",
     "deploy": "bash scripts/deploy.sh",
+    "sentinella:telegram2": "node --import tsx scripts/sentinella/write-telegram2-coherence.ts",
+    "sentinella:telegram3": "node --import tsx scripts/sentinella/send-telegram3-operational-errors.ts",
     "inicia": "bash scripts/workflow.sh inicia",
     "implementa": "bash scripts/workflow.sh implementa",
     "acabat": "bash scripts/workflow.sh acabat",

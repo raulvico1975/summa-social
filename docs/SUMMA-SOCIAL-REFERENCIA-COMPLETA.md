@@ -771,6 +771,16 @@ Els següents blocs estan **desactivats** (comentats al codi) a partir de v1.20:
 4. Detecció de duplicats
 5. Importació amb auto-assignació
 
+**NOU v1.44 · Dedupe fort per saldo (conservador i no destructiu):**
+- Nous camps opcionals a `Transaction`: `balanceAfter?: number`, `operationDate?: string` (`YYYY-MM-DD`), `duplicateReason?: string`.
+- Només es persisteixen en imports nous quan l'input és vàlid (sense `null` ni `undefined` explícits).
+- No es fa backfill, no hi ha migracions massives i no es modifica cap transacció històrica.
+- Ordre de deduplicació durant import:
+  1. `bankAccountId + bankRef` (si hi ha `bankRef`)
+  2. Si l'entrada té `balanceAfter`: `bankAccountId + balanceAfter + amount + (operationDate || date)` → `DUPLICATE_SAFE` + `duplicateReason = "balance+amount+date"`
+  3. Si no aplica l'anterior: lògica actual base/candidate
+- La regla forta per saldo només compara contra existents que també tenen `balanceAfter`.
+
 ### 3.2.2 Sistema d'Auto-Assignació Intel·ligent
 
 **FASE 1: Matching per Nom (instantani)**
@@ -2565,20 +2575,6 @@ El nou sistema permet gestió completa des del SuperAdmin sense tocar codi.
 - **`tr("xxx.yyy")`** → sistema nou (JSON pla)
 
 **❌ Prohibit: `t("xxx.yyy")`** (no existeix, causa error de producció)
-
-#### Contracte i18n per agents (normatiu)
-
-- Regla 0: Text UI nou ⇒ sempre `tr("...")` (mai text literal en JSX/TSX).
-- Regla 1: Claus noves ⇒ primer a `src/i18n/locales/ca.json`, després a `src/i18n/locales/es.json`, `src/i18n/locales/fr.json` i `src/i18n/locales/pt.json`.
-- Regla 2: Prohibit `t("...")` (funció) i qualsevol variant inventada de `t("x.y")`.
-- Regla 3: `t.xxx.yyy` només per tocar text antic (legacy); si és text nou, `tr()`.
-- Regla 4: Si falta traducció, `tr("key", "Fallback text")` només com a fallback temporal; la clau s'ha d'afegir igualment als JSON.
-- Regla 5: Convenció de namespaces:
-  - `common.*`, `errors.*`, `actions.*`, `movements.*`, `donors.*`, `projects.*`, `admin.*`, etc.
-  - Claus en minúscula, dot-notation, sense espais.
-- Check obligatori abans de commit:
-  - `npm run i18n:check`
-  - `npm run i18n:check-tr-keys`
 
 #### Idiomes disponibles
 
@@ -4641,7 +4637,16 @@ El backup manual des de la UI crida la mateixa lògica via `/api/integrations/ba
 | CSV | .csv, .txt | Separador auto (;,\t) |
 | Excel | .xlsx, .xls | SheetJS |
 
-**Columnes detectades:** Data, Concepte/Descripció, Import/Quantitat
+**Columnes detectades (base):** Data, Concepte/Descripció, Import/Quantitat
+
+**Columnes opcionals (NOU v1.44):**
+- `Saldo` / `Balance` → `balanceAfter` (només si és número finit)
+- `F. ejecución` / `Fecha operación` → `operationDate` (només si és data vàlida `YYYY-MM-DD`)
+
+**Regla de duplicate fort (NOU v1.44):**
+- Només s'activa si l'entrada porta `balanceAfter`.
+- Clau: `bankAccountId + balanceAfter + amount + (operationDate || date)`.
+- Si hi ha match, es classifica com `DUPLICATE_SAFE` i es marca `duplicateReason = "balance+amount+date"`.
 
 ## 4.2 Importació de Donants
 
@@ -5404,6 +5409,7 @@ Helper centralitzat per filtrar valors invàlids abans de renderitzar `Select.It
 | **1.33** | **30 Gen 2026** | **Health Check P0: panell d'integritat de dades al Dashboard (només admin). 5 blocs deterministes: A) categories legacy (docIds), B) dates formats mixtos/invàlids, C) coherència origen bancari (source↔bankAccountId), D) archivedAt en queries normals, E) signs per transactionType. UI amb details expandibles, badge recompte, taula exemples (max 5). Deduplicació global importació bancària (per rang dates), guardrails UX solapament extractes, camps bancaris readonly (description/amount) per moviments importats. Fitxer category-health.ts amb runHealthCheck().** |
 | **1.34** | **31 Gen 2026** | **Invariant A4 source↔bankAccountId: `bank`/`stripe` requereixen bankAccountId (P0 error si absent), `remittance` hereta del pare, `manual` no aplica. Health check actualitzat per detectar stripe sense bankAccountId. Camps (date/amount/description) bloquejats si bankAccountId present. Backfill dades legacy Flores (363 transaccions: 340 bank + 23 remittance).** |
 | **1.35** | **1 Feb 2026** | **Guardrails integritat Categories i Eixos: prohibit delete físic (Firestore Rules), arxivat només via API amb reassignació obligatòria si count > 0, camps archivedAt/ByUid/FromAction protegits contra escriptura client. APIs `/api/categories/archive` i `/api/projects/archive` amb validació orgId derivat de membership. Health Check nou: blocs F (categories òrfenes) i G (projects orfes). UI: icona Archive, ReassignModal, traduccions CA/ES/FR.** |
+| **1.44** | **17 Feb 2026** | **Importació bancària conservadora: nous camps opcionals `balanceAfter` i `operationDate` (sense backfill), regla de deduplicació forta per saldo (`bankAccountId + balanceAfter + amount + (operationDate || date)`) amb prioritat després de `bankRef`, i diagnòstic `duplicateReason="balance+amount+date"` en duplicats forts.** |
 | **1.43** | **14 Feb 2026** | **Hub de Guies/Bot: recuperació semàntica reforçada (més intents reals coberts), desambiguació 1/2 en consultes ambigües, fallback guiat i badges de navegació clicables. SuperAdmin `/admin`: redisseny "Torre de Control" en 5 blocs (Estat, Entitats, Coneixement/Bot, Comunicació, Configuració), resum executiu via `/api/admin/control-tower/summary` i fix de robustesa de timestamps.** |
 | **1.41** | **11 Feb 2026** | **Donants: persona de contacte per empreses (contactPersonName), 3 filtres dashboard (Tipus/Modalitat/Periodicitat) amb comptadors i lògica AND, quota amb sufix periodicitat. Accés operatiu unificat (require-operational-access.ts) amb superadmin bypass. Fix Firestore Rules `.get('archived', null)` per docs legacy. Fixes menors i18n i typecheck.** |
 | **1.40** | **10 Feb 2026** | **Admin SDK compartit centralitzat (admin-sdk.ts, -500 línies). Registre/invitacions via Admin API. Pre-selecció SEPA pain.008 per periodicitat natural. Dinàmica donants redissenyada (5 blocs, PF/PJ). Health Check K/L. Gate i18n pre-commit. SafeSelect guard. Neteja console.logs.** |
