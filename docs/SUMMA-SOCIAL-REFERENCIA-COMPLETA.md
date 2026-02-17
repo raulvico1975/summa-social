@@ -153,6 +153,10 @@ El sistema garanteix les següents invariants per assegurar la integritat de les
 
 **Nota sobre Stripe:** Les donacions Stripe sense `contactId` es creen però queden excloses automàticament de Model 182, certificats de donació i càlcul de net per donant fins que l'usuari assigni un donant manualment.
 
+**Validació d'importació (`/api/transactions/import`):**
+- `transactionType` ha de ser un dels valors suportats (`normal`, `return`, `return_fee`, `donation`, `fee`).
+- `contactType` només admet `donor`, `supplier`, `employee` i ha d'estar informat sempre que hi hagi `contactId` (i viceversa).
+
 #### A2: Coherència de signes (amount)
 
 | Tipus | amount |
@@ -1102,7 +1106,7 @@ El flux correcte per gestionar remeses IN és:
 4. Marca doc remesa com `status: 'undone'`
 
 **Servidor (`/api/remittances/in/check`):**
-- Verifica consistència: filles actives = `transactionIds[]`
+- Verifica consistència: filles actives = `transactionIds[]` (activa = `archivedAt` null/undefined/"")
 - Només per remeses IN (import positiu)
 - Retorna issues detectades (COUNT_MISMATCH, SUM_MISMATCH, etc.)
 
@@ -2452,6 +2456,10 @@ Evita errors AEAT 20701 per separacions artificials en denominacions socials.
 **Llindar:** > 3.005,06€ anuals per proveïdor
 
 **Exportació:** CSV amb NIF, Nom, Import total
+
+**AEAT (fitxer oficial):**
+- El registre exigeix codi de província (01-52). Es deriva del CP (2 primers dígits) o d'una província informada com a codi.
+- El camp BDNS (posicions 300-305) es fixa a `000000` per compatibilitat 2025+.
 
 ### 3.8.3 Certificats de Donació
 
@@ -4697,6 +4705,7 @@ El backup manual des de la UI crida la mateixa lògica via `/api/integrations/ba
 |-------------------|----------------|------------|
 | taxId | NIF | ✅ |
 | name | NOMBRE/RAZON SOCIAL | ✅ |
+| zipCode (2 primers) o province (codi 01-52) | PROVINCIA | ✅ |
 | Suma transaccions | IMPORTE | ✅ |
 
 ## 5.3 Certificats de Donació

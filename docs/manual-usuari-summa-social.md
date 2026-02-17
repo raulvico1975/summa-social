@@ -1628,7 +1628,7 @@ Declaració d'operacions amb tercers que superen **3.005,06€ anuals**.
 
 1. Ves a 📄 **Informes > Model 347**
 2. Selecciona l'any
-3. Revisa que tots tinguin NIF
+3. Revisa que tots tinguin NIF i **CP vàlid** (o província com a codi 01-52)
 4. Clica **"Generar CSV"**
 5. Envia a la gestoria
 
