@@ -1,7 +1,6 @@
 'use client';
 
 import * as React from 'react';
-import * as XLSX from 'xlsx';
 import { useToast } from '@/hooks/use-toast';
 import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
@@ -519,6 +518,7 @@ export function useReturnImporter(options: UseReturnImporterOptions = {}) {
         const isExcel = fileName.endsWith('.xlsx') || fileName.endsWith('.xls');
 
         if (isExcel) {
+          const XLSX = await import('xlsx');
           const data = await file.arrayBuffer();
           const workbook = XLSX.read(data, { type: 'array' });
           const firstSheet = workbook.Sheets[workbook.SheetNames[0]];

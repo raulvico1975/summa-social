@@ -43,7 +43,6 @@ import {
 import type { Donor, Transaction, AnyContact } from '@/lib/data';
 import { formatCurrencyEU, normalizeTaxId, removeAccents } from '@/lib/normalize';
 import { useToast } from '@/hooks/use-toast';
-import * as XLSX from 'xlsx';
 import { generateModel182AEATFile, encodeLatin1, type AEATExcludedDonor } from '@/lib/model182-aeat';
 import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
 import { collection } from 'firebase/firestore';
@@ -55,6 +54,15 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { MOBILE_ACTIONS_BAR, MOBILE_CTA_PRIMARY } from '@/lib/ui/mobile-actions';
 import { isFiscalDonationCandidate } from '@/lib/fiscal/is-fiscal-donation-candidate';
+
+let xlsxModulePromise: Promise<typeof import('xlsx')> | null = null;
+
+async function loadXlsx() {
+  if (!xlsxModulePromise) {
+    xlsxModulePromise = import('xlsx');
+  }
+  return xlsxModulePromise;
+}
 
 // Mapa de codis de província per a Model 182
 const PROVINCE_CODES: Record<string, string> = {
@@ -362,9 +370,18 @@ export function DonationsReportGenerator() {
     }
   };
 
-  const handleExportExcel = () => {
+  const handleExportExcel = async () => {
     if (reportData.length === 0) {
       toast({ variant: 'destructive', title: t.reports.noDataToExport, description: t.reports.noDataToExportDescription });
+      return;
+    }
+
+    let XLSX: typeof import('xlsx');
+    try {
+      XLSX = await loadXlsx();
+    } catch (error) {
+      console.error('Error loading xlsx for report export:', error);
+      toast({ variant: 'destructive', title: t.common.error, description: t.reports.noDataToExportDescription });
       return;
     }
 
@@ -415,9 +432,18 @@ export function DonationsReportGenerator() {
    * Export format simplificat per gestories (7 columnes A–G)
    * No substitueix l'export estàndard
    */
-  const handleExportGestoria = () => {
+  const handleExportGestoria = async () => {
     if (reportData.length === 0) {
       toast({ variant: 'destructive', title: t.reports.noDataToExport, description: t.reports.noDataToExportDescription });
+      return;
+    }
+
+    let XLSX: typeof import('xlsx');
+    try {
+      XLSX = await loadXlsx();
+    } catch (error) {
+      console.error('Error loading xlsx for gestoria export:', error);
+      toast({ variant: 'destructive', title: t.common.error, description: t.reports.noDataToExportDescription });
       return;
     }
 
