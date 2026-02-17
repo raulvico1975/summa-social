@@ -53,6 +53,57 @@ Llindars d'estat usats en aquest informe:
 | `/[orgSlug]/dashboard/informes` | 2231.15 kB | 706 kB |
 | `/[orgSlug]/dashboard` | 2048.33 kB | 642 kB |
 
+## Chunk 5823 forensic
+
+- Fitxer: `.next/static/chunks/5823-56b73bfaa283ecfe.js` (`1,152,508 bytes`, ~`1.10 MB`)
+- Sourcemap: `.next/static/chunks/5823-56b73bfaa283ecfe.js.map` (`46 KB`)
+- Evidència generada amb:
+  - `scripts/performance/inspect-chunk-sourcemap.mjs`
+  - `scripts/performance/find-chunk-owners.mjs`
+  - outputs: `tmp/chunk-5823-sourcemap-analysis.json`, `tmp/chunk-5823-owners.json`
+
+### Owners (rutes detectades)
+
+- App manifest entries: `/admin/page`, `/layout`
+- Rutes normalitzades: `/admin`, `/layout`
+- Shared chunk global (`rootMainFiles/polyfillFiles`): **No**
+
+### Top node_modules packages (sourcemap)
+
+| Package | Count |
+|---|---:|
+| _No hi ha entrades `node_modules` al sourcemap d'aquest chunk_ | 0 |
+
+Indicadors de llibreries pesades al `sources[]` (xlsx/pdf/charts/editor/firebase/genkit): **cap coincidència directa**.
+
+### Top local sources (sourcemap)
+
+| Carpeta local | Count |
+|---|---:|
+| `src/i18n` | 1 |
+| `src/hooks` | 1 |
+| `src/lib` | 1 |
+
+### Local imports detectats dins sourcesContent
+
+| Fitxer local resolt | Mida |
+|---|---:|
+| `src/i18n/locales/fr.json` | 293.43 kB |
+| `src/i18n/locales/pt.json` | 292.70 kB |
+| `src/i18n/locales/es.json` | 285.58 kB |
+| `src/i18n/locales/ca.json` | 281.04 kB |
+
+### Hipòtesis tècniques (origen del pes)
+
+1. `src/i18n/json-runtime.ts` importa de forma estàtica `ca/es/fr/pt` (`./locales/*.json`), i la suma d'aquests fitxers és ~`1.15 MB`; això encaixa amb la mida del chunk 5823.
+2. El chunk també inclou codi de `src/lib/system-incidents.ts` i `src/hooks/use-toast.ts`, que enllaça codi d'incidents/admin dins el mateix paquet carregat a `/admin`.
+
+### Fix mínim recomanat (sense implementar encara)
+
+- `lazy import`: carregar bundle d'idioma sota demanda (no importar `ca/es/fr/pt` tots al mateix mòdul client d'entrada).
+- `split component`: a `/admin`, carregar seccions pesades (diagnòstic/incidents/ajudes) només quan s'obren.
+- `server-only` quan sigui viable: moure lògica/textos de suport que no calen al client cap a API/server layer i retornar només el payload mínim al frontend.
+
 ## Components sospitosos
 
 1. `src/components/transactions-table.tsx`
