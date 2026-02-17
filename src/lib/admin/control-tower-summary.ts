@@ -80,6 +80,13 @@ export interface AdminControlTowerSummary {
 }
 
 const DAY_MS = 24 * 60 * 60 * 1000
+const ENTITY_ACTIVITY_QUERY_PLAN = [
+  { collection: 'transactions', fields: ['updatedAt', 'createdAt', 'date'] },
+  { collection: 'importRuns', fields: ['createdAt', 'updatedAt'] },
+  { collection: 'remittances', fields: ['updatedAt', 'createdAt'] },
+  { collection: 'expenseReports', fields: ['updatedAt', 'submittedAt', 'createdAt'] },
+  { collection: 'contacts', fields: ['updatedAt', 'createdAt'] },
+] as const
 
 export const CONTROL_TOWER_THRESHOLDS: ThresholdsApplied = {
   policy: 'conservative',
@@ -218,6 +225,57 @@ export function inferBotTopic(rawText: string): string {
   return 'Altres'
 }
 
+export function pickMostRecentIso(
+  candidates: Array<string | null | undefined>
+): string | null {
+  let latestMs: number | null = null
+  for (const candidate of candidates) {
+    if (!candidate) continue
+    const date = new Date(candidate)
+    const time = date.getTime()
+    if (!Number.isFinite(time)) continue
+    if (latestMs === null || time > latestMs) {
+      latestMs = time
+    }
+  }
+  return latestMs === null ? null : new Date(latestMs).toISOString()
+}
+
+async function queryMostRecentFieldIso(
+  db: Firestore,
+  orgId: string,
+  collectionName: string,
+  fields: readonly string[]
+): Promise<string | null> {
+  for (const field of fields) {
+    try {
+      const snap = await db
+        .collection(`organizations/${orgId}/${collectionName}`)
+        .orderBy(field, 'desc')
+        .limit(1)
+        .get()
+      const iso = toIsoOrNull(snap.docs[0]?.get(field))
+      if (iso) return iso
+    } catch {
+      // Ignore source-level errors to keep summary available with partial data.
+    }
+  }
+  return null
+}
+
+async function resolveEntityLastActivity(
+  db: Firestore,
+  orgId: string,
+  baseCandidates: Array<string | null | undefined>
+): Promise<string | null> {
+  const sourceCandidates = await Promise.all(
+    ENTITY_ACTIVITY_QUERY_PLAN.map((plan) =>
+      queryMostRecentFieldIso(db, orgId, plan.collection, plan.fields)
+    )
+  )
+  return pickMostRecentIso([...baseCandidates, ...sourceCandidates])
+}
+
 export async function buildAdminControlTowerSummary(
   db: Firestore
 ): Promise<AdminControlTowerSummary> {
@@ -267,10 +325,9 @@ export async function buildAdminControlTowerSummary(
     now
   )
 
-  const entities: EntityRow[] = orgsSnap.docs.map((doc) => {
+  const entitiesBase = orgsSnap.docs.map((doc) => {
     const data = doc.data() as Record<string, unknown>
     const createdAt = toIsoOrNull(data.createdAt)
-    const lastActivityAt = toIsoOrNull(data.updatedAt) ?? createdAt
 
     return {
       id: doc.id,
@@ -279,9 +336,25 @@ export async function buildAdminControlTowerSummary(
       status: (data.status as EntityRow['status']) ?? 'pending',
       ...(typeof data.taxId === 'string' ? { taxId: data.taxId } : {}),
       createdAt,
-      lastActivityAt,
+      orgUpdatedAt: toIsoOrNull(data.updatedAt),
     }
   })
+
+  const entities: EntityRow[] = await Promise.all(
+    entitiesBase.map(async (entity) => ({
+      id: entity.id,
+      name: entity.name,
+      slug: entity.slug,
+      status: entity.status,
+      ...(entity.taxId ? { taxId: entity.taxId } : {}),
+      createdAt: entity.createdAt,
+      lastActivityAt:
+        (await resolveEntityLastActivity(db, entity.id, [
+          entity.orgUpdatedAt,
+          entity.createdAt,
+        ])) ?? entity.createdAt,
+    }))
+  )
 
   const startOfTodayUtc = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()))
 

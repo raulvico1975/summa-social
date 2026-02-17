@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { useFirebase } from '@/firebase';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
+import { useTranslations } from '@/i18n';
 import { doc, updateDoc } from 'firebase/firestore';
 import { Puzzle, FolderKanban, Loader2, FileStack } from 'lucide-react';
 import { useRouter } from 'next/navigation';
@@ -20,6 +21,7 @@ export function FeatureFlagsSettings() {
   const { organization, organizationId } = useCurrentOrganization();
   const { toast } = useToast();
   const router = useRouter();
+  const { tr } = useTranslations();
 
   const [isUpdating, setIsUpdating] = React.useState(false);
   const [updatingFlag, setUpdatingFlag] = React.useState<string | null>(null);
@@ -40,10 +42,18 @@ export function FeatureFlagsSettings() {
       });
 
       toast({
-        title: enabled ? 'Mòdul activat' : 'Mòdul desactivat',
+        title: enabled
+          ? tr('settings.featureFlags.toasts.moduleEnabledTitle', 'Mòdul activat')
+          : tr('settings.featureFlags.toasts.moduleDisabledTitle', 'Mòdul desactivat'),
         description: enabled
-          ? 'El Mòdul Projectes s\'ha activat correctament.'
-          : 'El Mòdul Projectes s\'ha desactivat.',
+          ? tr(
+            'settings.featureFlags.toasts.projectModuleEnabledDescription',
+            'El Mòdul Projectes s\'ha activat correctament.'
+          )
+          : tr(
+            'settings.featureFlags.toasts.projectModuleDisabledDescription',
+            'El Mòdul Projectes s\'ha desactivat.'
+          ),
       });
 
       // Refrescar per actualitzar sidebar
@@ -52,8 +62,11 @@ export function FeatureFlagsSettings() {
       console.error('Error actualitzant feature flag:', error);
       toast({
         variant: 'destructive',
-        title: 'Error',
-        description: 'No s\'ha pogut actualitzar el mòdul. Torna-ho a intentar.',
+        title: tr('settings.featureFlags.toasts.errorTitle', 'Error'),
+        description: tr(
+          'settings.featureFlags.toasts.errorDescription',
+          'No s\'ha pogut actualitzar el mòdul. Torna-ho a intentar.'
+        ),
       });
     } finally {
       setIsUpdating(false);
@@ -74,10 +87,18 @@ export function FeatureFlagsSettings() {
       });
 
       toast({
-        title: enabled ? 'Mòdul activat' : 'Mòdul desactivat',
+        title: enabled
+          ? tr('settings.featureFlags.toasts.moduleEnabledTitle', 'Mòdul activat')
+          : tr('settings.featureFlags.toasts.moduleDisabledTitle', 'Mòdul desactivat'),
         description: enabled
-          ? 'Documents pendents de conciliació activat.'
-          : 'Documents pendents de conciliació desactivat.',
+          ? tr(
+            'settings.featureFlags.toasts.pendingDocsEnabledDescription',
+            'Documents pendents de conciliació activat.'
+          )
+          : tr(
+            'settings.featureFlags.toasts.pendingDocsDisabledDescription',
+            'Documents pendents de conciliació desactivat.'
+          ),
       });
 
       router.refresh();
@@ -85,8 +106,11 @@ export function FeatureFlagsSettings() {
       console.error('Error actualitzant feature flag:', error);
       toast({
         variant: 'destructive',
-        title: 'Error',
-        description: 'No s\'ha pogut actualitzar el mòdul. Torna-ho a intentar.',
+        title: tr('settings.featureFlags.toasts.errorTitle', 'Error'),
+        description: tr(
+          'settings.featureFlags.toasts.errorDescription',
+          'No s\'ha pogut actualitzar el mòdul. Torna-ho a intentar.'
+        ),
       });
     } finally {
       setIsUpdating(false);
@@ -99,10 +123,13 @@ export function FeatureFlagsSettings() {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Puzzle className="h-5 w-5" />
-          Mòduls opcionals
+          {tr('settings.featureFlags.title', 'Mòduls opcionals')}
         </CardTitle>
         <CardDescription>
-          Activa o desactiva mòduls addicionals per a la teva organització.
+          {tr(
+            'settings.featureFlags.description',
+            'Activa o desactiva mòduls addicionals per a la teva organització.'
+          )}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -115,16 +142,19 @@ export function FeatureFlagsSettings() {
             <div className="space-y-1">
               <div className="flex items-center gap-2">
                 <Label htmlFor="project-module" className="text-base font-medium cursor-pointer">
-                  Mòdul Projectes
+                  {tr('settings.featureFlags.projectModule.label', 'Mòdul Projectes')}
                 </Label>
                 {isProjectModuleEnabled && (
                   <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200">
-                    Actiu
+                    {tr('settings.featureFlags.badges.active', 'Actiu')}
                   </Badge>
                 )}
               </div>
               <p className="text-sm text-muted-foreground">
-                Gestió de pressupostos, imputació de despeses i justificació econòmica per projectes.
+                {tr(
+                  'settings.featureFlags.projectModule.description',
+                  'Gestió de pressupostos, imputació de despeses i justificació econòmica per projectes.'
+                )}
               </p>
             </div>
           </div>
@@ -148,19 +178,22 @@ export function FeatureFlagsSettings() {
             <div className="space-y-1">
               <div className="flex items-center gap-2">
                 <Label htmlFor="pending-docs" className="text-base font-medium cursor-pointer">
-                  Documents pendents
+                  {tr('settings.featureFlags.pendingDocs.label', 'Documents pendents')}
                 </Label>
                 <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">
-                  Experimental
+                  {tr('settings.featureFlags.badges.experimental', 'Experimental')}
                 </Badge>
                 {isPendingDocsEnabled && (
                   <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200">
-                    Actiu
+                    {tr('settings.featureFlags.badges.active', 'Actiu')}
                   </Badge>
                 )}
               </div>
               <p className="text-sm text-muted-foreground">
-                Pujar factures i nòmines abans de tenir l'extracte bancari. Es concilien automàticament quan arriba el moviment.
+                {tr(
+                  'settings.featureFlags.pendingDocs.description',
+                  'Pujar factures i nòmines abans de tenir l\'extracte bancari. Es concilien automàticament quan arriba el moviment.'
+                )}
               </p>
             </div>
           </div>
@@ -177,7 +210,7 @@ export function FeatureFlagsSettings() {
 
         {/* Espai per futurs mòduls */}
         <p className="text-xs text-muted-foreground text-center pt-2">
-          Properament més mòduls disponibles.
+          {tr('settings.featureFlags.comingSoon', 'Properament més mòduls disponibles.')}
         </p>
       </CardContent>
     </Card>

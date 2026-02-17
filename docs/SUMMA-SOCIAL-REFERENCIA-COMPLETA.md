@@ -2566,6 +2566,20 @@ El nou sistema permet gestió completa des del SuperAdmin sense tocar codi.
 
 **❌ Prohibit: `t("xxx.yyy")`** (no existeix, causa error de producció)
 
+#### Contracte i18n per agents (normatiu)
+
+- Regla 0: Text UI nou ⇒ sempre `tr("...")` (mai text literal en JSX/TSX).
+- Regla 1: Claus noves ⇒ primer a `src/i18n/locales/ca.json`, després a `src/i18n/locales/es.json`, `src/i18n/locales/fr.json` i `src/i18n/locales/pt.json`.
+- Regla 2: Prohibit `t("...")` (funció) i qualsevol variant inventada de `t("x.y")`.
+- Regla 3: `t.xxx.yyy` només per tocar text antic (legacy); si és text nou, `tr()`.
+- Regla 4: Si falta traducció, `tr("key", "Fallback text")` només com a fallback temporal; la clau s'ha d'afegir igualment als JSON.
+- Regla 5: Convenció de namespaces:
+  - `common.*`, `errors.*`, `actions.*`, `movements.*`, `donors.*`, `projects.*`, `admin.*`, etc.
+  - Claus en minúscula, dot-notation, sense espais.
+- Check obligatori abans de commit:
+  - `npm run i18n:check`
+  - `npm run i18n:check-tr-keys`
+
 #### Idiomes disponibles
 
 | Codi | Idioma | TS (legacy) | JSON | Estat |
