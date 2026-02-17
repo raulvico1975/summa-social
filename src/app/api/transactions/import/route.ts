@@ -53,6 +53,8 @@ interface ImportTransactionInput {
   date: string;
   description: string;
   amount: number;
+  balanceAfter?: number;
+  operationDate?: string;
   category?: string | null;
   document?: string | null;
   contactId?: string | null;
@@ -77,6 +79,8 @@ interface CreatedTransaction {
   date: string;
   description: string;
   amount: number;
+  balanceAfter?: number;
+  operationDate?: string;
   category: string | null;
   document: string | null;
   contactId: string | null;
@@ -205,6 +209,20 @@ function validateBody(body: unknown): {
   };
 }
 
+const ISO_DATE_ONLY_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+function normalizeIsoDateOnly(dateValue: string | undefined): string | null {
+  if (!dateValue) return null;
+  const trimmed = dateValue.trim();
+  if (!ISO_DATE_ONLY_RE.test(trimmed)) return null;
+
+  const parsed = new Date(`${trimmed}T00:00:00.000Z`);
+  if (Number.isNaN(parsed.getTime())) return null;
+  if (parsed.toISOString().slice(0, 10) !== trimmed) return null;
+
+  return trimmed;
+}
+
 function normalizeTransactionInput(
   tx: ImportTransactionInput,
   bankAccountId: string
@@ -221,11 +239,17 @@ function normalizeTransactionInput(
 
   const transactionType: TransactionType = tx.transactionType ?? 'normal';
   const contactType: ContactType | null = tx.contactType ?? null;
+  const operationDate = normalizeIsoDateOnly(tx.operationDate);
+  const balanceAfter = typeof tx.balanceAfter === 'number' && Number.isFinite(tx.balanceAfter)
+    ? tx.balanceAfter
+    : undefined;
 
   return {
     date: dateObj.toISOString(),
     description: normalizeBankDescription(tx.description),
     amount: tx.amount,
+    ...(balanceAfter !== undefined ? { balanceAfter } : {}),
+    ...(operationDate ? { operationDate } : {}),
     category: tx.category ?? null,
     document: null,
     contactId: tx.contactId ?? null,
@@ -577,6 +601,8 @@ export async function POST(
       date: item.tx.date,
       description: item.tx.description,
       amount: item.tx.amount,
+      ...(item.tx.balanceAfter !== undefined ? { balanceAfter: item.tx.balanceAfter } : {}),
+      ...(item.tx.operationDate ? { operationDate: item.tx.operationDate } : {}),
       category: item.tx.category,
       document: item.tx.document,
       contactId: item.tx.contactId,
