@@ -11,15 +11,14 @@
 import { getStorage, ref, getDownloadURL } from 'firebase/storage';
 import { isDemoEnv } from '@/lib/demo/isDemoOrg';
 
-// Imports explícits (NO dinàmics) - Next.js compatible
-import ca from './locales/ca.json';
-import es from './locales/es.json';
-import fr from './locales/fr.json';
-import pt from './locales/pt.json';
-
 export type JsonMessages = Record<string, string>;
 
-const localBundles: Record<string, JsonMessages> = { ca, es, fr, pt };
+const SUPPORTED_LOCALES = ['ca', 'es', 'fr', 'pt'] as const;
+type SupportedLocale = (typeof SUPPORTED_LOCALES)[number];
+
+const localBundleCache = new Map<SupportedLocale, JsonMessages>();
+const localBundlePromises = new Map<SupportedLocale, Promise<JsonMessages>>();
+const EMPTY_MESSAGES: JsonMessages = {};
 
 // Cache in-memory amb version per invalidació
 type CachedBundle = {
@@ -33,12 +32,73 @@ const storageMissing = new Set<string>();
 // Control de logs únics
 const loggedStorageMissing = new Set<string>();
 
+function normalizeLocale(language: string): SupportedLocale {
+  return SUPPORTED_LOCALES.includes(language as SupportedLocale)
+    ? (language as SupportedLocale)
+    : 'ca';
+}
+
+async function importLocalBundle(locale: SupportedLocale): Promise<JsonMessages> {
+  if (typeof window === 'undefined') {
+    return EMPTY_MESSAGES;
+  }
+
+  const response = await fetch(`/i18n/${locale}.json`, { cache: 'force-cache' });
+  if (!response.ok) {
+    throw new Error(`Failed to load local bundle ${locale}: HTTP ${response.status}`);
+  }
+  return await response.json();
+}
+
+async function loadLocalBundle(language: string): Promise<JsonMessages> {
+  const locale = normalizeLocale(language);
+  const cached = localBundleCache.get(locale);
+  if (cached) return cached;
+
+  const pending = localBundlePromises.get(locale);
+  if (pending) return pending;
+
+  const promise = importLocalBundle(locale)
+    .then((messages) => {
+      if (isValidMessages(messages)) {
+        localBundleCache.set(locale, messages);
+        return messages;
+      }
+      if (!loggedStorageMissing.has(`invalid-local-${locale}`)) {
+        loggedStorageMissing.add(`invalid-local-${locale}`);
+        console.warn(`[i18n] Invalid local JSON format for ${locale}, using empty fallback`);
+      }
+      localBundleCache.set(locale, EMPTY_MESSAGES);
+      return EMPTY_MESSAGES;
+    })
+    .catch(async (error) => {
+      if (!loggedStorageMissing.has(`error-local-${locale}`)) {
+        loggedStorageMissing.add(`error-local-${locale}`);
+        console.warn(`[i18n] Error loading local JSON for ${locale}:`, error);
+      }
+
+      if (locale === 'ca') {
+        localBundleCache.set('ca', EMPTY_MESSAGES);
+        return EMPTY_MESSAGES;
+      }
+
+      return loadLocalBundle('ca');
+    })
+    .finally(() => {
+      localBundlePromises.delete(locale);
+    });
+
+  localBundlePromises.set(locale, promise);
+  return promise;
+}
+
 /**
  * Obté el bundle local per un idioma
  * Fallback a 'ca' si l'idioma no existeix
  */
 export function getLocalBundle(language: string): JsonMessages {
-  return localBundles[language] ?? localBundles.ca;
+  const locale = normalizeLocale(language);
+  return localBundleCache.get(locale) ?? localBundleCache.get('ca') ?? EMPTY_MESSAGES;
 }
 
 /**
@@ -131,7 +191,7 @@ export async function loadTranslations(
   }
 
   // 2. Bundle local (base)
-  const localMessages = getLocalBundle(language);
+  const localMessages = await loadLocalBundle(language);
 
   // 3. Intent carregar des de Storage (merge: Storage sobreescriu clau a clau)
   const storageMessages = await loadFromStorage(language);
@@ -166,6 +226,8 @@ export function trFactory(messages: JsonMessages) {
 export function clearCache() {
   cache.clear();
   storageMissing.clear();
+  localBundleCache.clear();
+  localBundlePromises.clear();
 }
 
 /**
