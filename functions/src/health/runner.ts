@@ -4,6 +4,7 @@ import {
   HEALTH_CHECK_IDS,
   type HealthCheckId,
   type HealthChecksMap,
+  type HealthResultsMap,
   type HealthDeltaMap,
   type HealthSeverity,
   type HealthSnapshotDoc,
@@ -112,14 +113,20 @@ async function writeFailedSnapshot(params: {
     .doc(runDate);
 
   const emptyChecks = {} as HealthChecksMap;
+  const emptyResults = {} as HealthResultsMap;
   for (const id of HEALTH_CHECK_IDS) {
     emptyChecks[id] = {
       id,
       title: CHECK_META[id].title,
       severity: CHECK_META[id].severity,
       count: 0,
+      sampleIds: [],
       hasIssues: false,
       examples: [],
+    };
+    emptyResults[id] = {
+      count: 0,
+      sampleIds: [],
     };
   }
 
@@ -148,6 +155,7 @@ async function writeFailedSnapshot(params: {
       projectModuleProjects: 0,
     },
     checks: emptyChecks,
+    results: emptyResults,
     totals: {
       criticalCount: 0,
       warningCount: 0,
@@ -276,7 +284,7 @@ export async function runNightlyHealthForOrganization(params: {
     const rawChecks = {
       ...integrity,
       ...reconciliations,
-    } as Record<HealthCheckId, { count: number; examples: Array<Record<string, unknown>>; details?: Record<string, unknown> }>;
+    } as Record<HealthCheckId, { count: number; sampleIds: string[]; examples: Array<Record<string, unknown>>; details?: Record<string, unknown> }>;
 
     const checks = {} as HealthChecksMap;
     for (const id of HEALTH_CHECK_IDS) {
@@ -286,9 +294,18 @@ export async function runNightlyHealthForOrganization(params: {
         title: CHECK_META[id].title,
         severity: CHECK_META[id].severity,
         count: raw.count,
+        sampleIds: Array.isArray(raw.sampleIds) ? raw.sampleIds.slice(0, 10) : [],
         hasIssues: raw.count > 0,
         examples: raw.examples,
         details: raw.details,
+      };
+    }
+
+    const results = {} as HealthResultsMap;
+    for (const id of HEALTH_CHECK_IDS) {
+      results[id] = {
+        count: checks[id].count,
+        sampleIds: checks[id].sampleIds,
       };
     }
 
@@ -328,6 +345,11 @@ export async function runNightlyHealthForOrganization(params: {
     const shouldAlert = hasPrevious && worsenedCriticalChecks.length > 0;
 
     if (shouldAlert) {
+      const sampleIdsByBlock = {} as Partial<Record<HealthCheckId, string[]>>;
+      for (const id of worsenedCriticalChecks) {
+        sampleIdsByBlock[id] = checks[id].sampleIds;
+      }
+
       incidentId = await upsertNightlyHealthIncident({
         db,
         orgId,
@@ -337,6 +359,7 @@ export async function runNightlyHealthForOrganization(params: {
           id,
           delta: deltaVsPrevious[id].delta,
         })),
+        sampleIdsByBlock,
       });
     }
 
@@ -368,6 +391,7 @@ export async function runNightlyHealthForOrganization(params: {
         projectModuleProjects: moduleProjects.length,
       },
       checks,
+      results,
       totals: {
         criticalCount,
         warningCount,

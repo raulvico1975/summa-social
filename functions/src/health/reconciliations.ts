@@ -2,6 +2,7 @@ import type { ComputedCheck } from "./types";
 import type { HealthTx } from "./checks";
 
 const MONEY_TOLERANCE = 0.01;
+const SAMPLE_IDS_LIMIT = 10;
 
 export interface CategoryDoc {
   id: string;
@@ -83,6 +84,13 @@ function pushIssue(
   if (examples.length < maxExamples) {
     examples.push(issue);
   }
+}
+
+function pushSampleId(sampleIds: string[], id: string | null | undefined): void {
+  if (!id) return;
+  if (sampleIds.length >= SAMPLE_IDS_LIMIT) return;
+  if (sampleIds.includes(id)) return;
+  sampleIds.push(id);
 }
 
 function findMissionTransferCategoryId(categories: CategoryDoc[]): string | null {
@@ -205,6 +213,7 @@ export function runReconciliations(input: ReconciliationInput): ReconciliationRe
   const negativesFromParts = expensesAbs + transfersAbs;
 
   const examplesR1: Array<Record<string, unknown>> = [];
+  const sampleIdsR1: string[] = [];
   let countR1 = 0;
 
   if (!nearlyEqual(signedNet, netFromParts)) {
@@ -239,6 +248,7 @@ export function runReconciliations(input: ReconciliationInput): ReconciliationRe
   const allTxIds = new Set(allTransactions.map((tx) => tx.id));
 
   const examplesR2: Array<Record<string, unknown>> = [];
+  const sampleIdsR2: string[] = [];
   let countR2 = 0;
 
   for (const tx of allTransactions) {
@@ -253,6 +263,7 @@ export function runReconciliations(input: ReconciliationInput): ReconciliationRe
 
     if (expectedEligible !== observedEligible) {
       countR2++;
+      pushSampleId(sampleIdsR2, tx.id);
       pushIssue(examplesR2, {
         txId: tx.id,
         issue: "eligibility_mismatch",
@@ -268,6 +279,7 @@ export function runReconciliations(input: ReconciliationInput): ReconciliationRe
 
     if (!allTxIds.has(exp.id)) {
       countR2++;
+      pushSampleId(sampleIdsR2, exp.id);
       pushIssue(examplesR2, {
         txId: exp.id,
         issue: "export_without_source_transaction",
@@ -290,6 +302,7 @@ export function runReconciliations(input: ReconciliationInput): ReconciliationRe
   }
 
   const examplesR3: Array<Record<string, unknown>> = [];
+  const sampleIdsR3: string[] = [];
   let countR3 = 0;
 
   for (const link of expenseLinks) {
@@ -305,6 +318,7 @@ export function runReconciliations(input: ReconciliationInput): ReconciliationRe
       const offExpense = offBankById.get(offId);
       if (!offExpense) {
         countR3++;
+        pushSampleId(sampleIdsR3, link.id);
         pushIssue(examplesR3, {
           txId: link.id,
           issue: "offbank_expense_missing",
@@ -319,6 +333,7 @@ export function runReconciliations(input: ReconciliationInput): ReconciliationRe
       const bankExpense = exportByTxId.get(link.id);
       if (!bankExpense) {
         countR3++;
+        pushSampleId(sampleIdsR3, link.id);
         pushIssue(examplesR3, {
           txId: link.id,
           issue: "bank_export_missing",
@@ -335,6 +350,7 @@ export function runReconciliations(input: ReconciliationInput): ReconciliationRe
 
     if (hasLocalPct && totalLocalPct > 100.01) {
       countR3++;
+      pushSampleId(sampleIdsR3, link.id);
       pushIssue(examplesR3, {
         txId: link.id,
         issue: "local_pct_over_100",
@@ -347,6 +363,7 @@ export function runReconciliations(input: ReconciliationInput): ReconciliationRe
     for (const assignment of assignments) {
       if (!assignment.projectId || !moduleProjectById.has(assignment.projectId)) {
         countR3++;
+        pushSampleId(sampleIdsR3, link.id);
         pushIssue(examplesR3, {
           txId: link.id,
           issue: "assignment_project_missing",
@@ -356,6 +373,7 @@ export function runReconciliations(input: ReconciliationInput): ReconciliationRe
 
       if (typeof assignment.localPct === "number" && (assignment.localPct < 0 || assignment.localPct > 100)) {
         countR3++;
+        pushSampleId(sampleIdsR3, link.id);
         pushIssue(examplesR3, {
           txId: link.id,
           issue: "local_pct_out_of_range",
@@ -366,6 +384,7 @@ export function runReconciliations(input: ReconciliationInput): ReconciliationRe
 
       if (assignment.amountEUR != null && assignment.amountEUR > 0) {
         countR3++;
+        pushSampleId(sampleIdsR3, link.id);
         pushIssue(examplesR3, {
           txId: link.id,
           issue: "assignment_amount_positive",
@@ -416,6 +435,7 @@ export function runReconciliations(input: ReconciliationInput): ReconciliationRe
 
       if (!equivalent) {
         countR3++;
+        pushSampleId(sampleIdsR3, link.id);
         pushIssue(examplesR3, {
           txId: link.id,
           issue: "fx_amount_mismatch",
@@ -430,6 +450,7 @@ export function runReconciliations(input: ReconciliationInput): ReconciliationRe
 
     if (totalAbs !== null && assignedAbs > totalAbs + MONEY_TOLERANCE) {
       countR3++;
+      pushSampleId(sampleIdsR3, link.id);
       pushIssue(examplesR3, {
         txId: link.id,
         issue: "assigned_over_total",
@@ -442,6 +463,7 @@ export function runReconciliations(input: ReconciliationInput): ReconciliationRe
   return {
     R1: {
       count: countR1,
+      sampleIds: sampleIdsR1,
       examples: examplesR1,
       details: {
         incomeAbs: round2(incomeAbs),
@@ -452,6 +474,7 @@ export function runReconciliations(input: ReconciliationInput): ReconciliationRe
     },
     R2: {
       count: countR2,
+      sampleIds: sampleIdsR2,
       examples: examplesR2,
       details: {
         transactionsChecked: allTransactions.length,
@@ -460,6 +483,7 @@ export function runReconciliations(input: ReconciliationInput): ReconciliationRe
     },
     R3: {
       count: countR3,
+      sampleIds: sampleIdsR3,
       examples: examplesR3,
       details: {
         expenseLinksChecked: expenseLinks.length,

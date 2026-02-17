@@ -192,6 +192,12 @@ export type Transaction = {
    * - string: ID del compte bancari
    */
   bankAccountId?: string | null;
+  /** Saldo immediat després del moviment (si el banc el proporciona). */
+  balanceAfter?: number;
+  /** Data operació en format ISO YYYY-MM-DD (si existeix). */
+  operationDate?: string;
+  /** Motiu intern de detecció de duplicat fort (només importació). */
+  duplicateReason?: string;
 
   // ═══════════════════════════════════════════════════════════════════════════
   // CAMPS PER SOFT-DELETE (TRANSACCIONS FISCALS)

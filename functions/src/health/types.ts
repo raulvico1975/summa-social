@@ -41,12 +41,14 @@ export interface HealthCheckBlock {
   title: string;
   severity: HealthSeverity;
   count: number;
+  sampleIds: string[];
   hasIssues: boolean;
   examples: Array<Record<string, unknown>>;
   details?: Record<string, unknown>;
 }
 
 export type HealthChecksMap = Record<HealthCheckId, HealthCheckBlock>;
+export type HealthResultsMap = Record<HealthCheckId, { count: number; sampleIds: string[] }>;
 
 export interface HealthCheckDelta {
   previous: number;
@@ -99,6 +101,7 @@ export interface HealthSnapshotDoc {
 
   datasetStats: HealthDatasetStats;
   checks: HealthChecksMap;
+  results: HealthResultsMap;
   totals: HealthTotals;
   deltaVsPrevious: HealthDeltaMap;
 
@@ -112,6 +115,7 @@ export interface HealthSnapshotDoc {
 
 export interface ComputedCheck {
   count: number;
+  sampleIds: string[];
   examples: Array<Record<string, unknown>>;
   details?: Record<string, unknown>;
 }

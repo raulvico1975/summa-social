@@ -77,34 +77,34 @@ export interface IncidentHelp {
 
 export const INCIDENT_HELP: Record<IncidentType, IncidentHelp> = {
   CLIENT_CRASH: {
-    whatItMeans: 'Una pantalla peta per un error de codi. L\'usuari veu una pantalla en blanc o un missatge d\'error.',
-    whyCritical: 'L\'usuari no pot continuar treballant. Si es repeteix, afecta la confiança en el sistema.',
+    whatItMeans: 'Una pantalla no s\'obre bé i l\'usuari queda bloquejat.',
+    whyCritical: 'La persona no pot continuar la feina en aquest punt del producte.',
     nextSteps:
-      '1. Obre la ruta afectada en una finestra privada per reproduir.\n2. Copia el missatge d\'error complet i passa\'l a Claude Code per corregir.',
+      '1. Obre la ruta afectada en una finestra privada i comprova si també falla.\n2. Si falla, copia el missatge i passa\'l a l\'equip tècnic.',
   },
   PERMISSIONS: {
-    whatItMeans: 'Un usuari ha intentat accedir a dades sense permisos. Pot ser un error de configuració o una regressió.',
-    whyCritical: 'L\'usuari no pot veure o modificar dades crítiques. Pot bloquejar operativa diària.',
+    whatItMeans: 'El sistema ha bloquejat un accés perquè no reconeix permisos suficients.',
+    whyCritical: 'L\'usuari pot quedar-se sense accés a dades necessàries per treballar.',
     nextSteps:
-      '1. Verifica el rol de l\'usuari a l\'organització (admin/user/viewer).\n2. Si ha passat just després d\'un deploy, revisa firestore.rules amb Claude.',
+      '1. Revisa el rol de la persona afectada a l\'organització.\n2. Si el rol és correcte, escala el cas a tècnic amb la signatura de l\'incident.',
   },
   IMPORT_FAILURE: {
-    whatItMeans: 'Una importació de dades (banc, CSV, Stripe) ha fallat. Les dades no s\'han carregat.',
-    whyCritical: 'L\'usuari no pot treballar amb les dades noves. Pot retardar conciliació o informes.',
+    whatItMeans: 'La càrrega d\'un fitxer o connexió externa no s\'ha completat.',
+    whyCritical: 'Les dades noves no entren i l\'equip no pot avançar amb normalitat.',
     nextSteps:
-      '1. Demana a l\'usuari el fitxer original per revisar el format.\n2. Si el format és correcte, passa l\'error a Claude Code.',
+      '1. Torna a provar la importació amb el fitxer original.\n2. Si torna a fallar, escala el cas amb el missatge d\'error.',
   },
   EXPORT_FAILURE: {
-    whatItMeans: 'Una exportació (Excel, PDF, SEPA) ha fallat. L\'usuari no ha rebut el fitxer.',
-    whyCritical: 'L\'usuari no pot generar documents per a gestories, finançadors o Hisenda.',
+    whatItMeans: 'No s\'ha pogut generar o descarregar un document.',
+    whyCritical: 'L\'equip no pot entregar informes o fitxers de gestió quan toca.',
     nextSteps:
-      '1. Intenta reproduir l\'exportació manualment.\n2. Si falla, copia l\'error i passa\'l a Claude Code.',
+      '1. Reintenta l\'exportació manualment.\n2. Si falla de nou, escala el cas amb la ruta i el missatge.',
   },
   INVARIANT_BROKEN: {
-    whatItMeans: 'Una regla de negoci s\'ha violat (ex: remesa amb deltaCents≠0, isValid=false).',
-    whyCritical: 'Les dades poden estar desquadrades. No s\'hauria de continuar operant sense revisar.',
+    whatItMeans: 'S\'ha detectat una incoherència interna de dades.',
+    whyCritical: 'Podria afectar càlculs o processos financers si no es revisa.',
     nextSteps:
-      '1. NO modifiquis res. Identifica la transacció o remesa afectada.\n2. Consulta el manual (DEV-SOLO-MANUAL.md) o passa el cas a Claude.',
+      '1. No facis canvis manuals sobre les dades afectades.\n2. Identifica els IDs del cas i escala-ho a tècnic per revisió.',
   },
 };
 
@@ -430,11 +430,11 @@ export interface AppMeta {
 }
 
 const TYPE_LABELS: Record<IncidentType, string> = {
-  CLIENT_CRASH: 'Error de codi (crash)',
-  PERMISSIONS: 'Error de permisos',
-  IMPORT_FAILURE: "Error d'importació",
-  EXPORT_FAILURE: "Error d'exportació",
-  INVARIANT_BROKEN: 'Invariant violada',
+  CLIENT_CRASH: 'Pantalla bloquejada',
+  PERMISSIONS: 'Accés bloquejat',
+  IMPORT_FAILURE: "Importació fallida",
+  EXPORT_FAILURE: "Exportació fallida",
+  INVARIANT_BROKEN: 'Incoherència de dades',
 };
 
 export function buildIncidentFixPack(
