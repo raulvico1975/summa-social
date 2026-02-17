@@ -4,7 +4,7 @@ import * as React from 'react';
 import { TransactionImporter } from '@/components/transaction-importer';
 import { TransactionsTable } from '@/components/transactions-table';
 import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
-import { collection } from 'firebase/firestore';
+import { collection, query, where } from 'firebase/firestore';
 import type { Transaction, Category } from '@/lib/data';
 import { useTranslations } from '@/i18n';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
@@ -14,6 +14,8 @@ import { Button } from '@/components/ui/button';
 import { FileStack, Receipt } from 'lucide-react';
 import Link from 'next/link';
 import { Badge } from '@/components/ui/badge';
+import type { PendingDocument } from '@/lib/pending-documents';
+import type { ExpenseReport } from '@/lib/expense-reports';
 
 export default function MovimientosPage() {
   const { firestore } = useFirebase();
@@ -37,6 +39,32 @@ export default function MovimientosPage() {
   );
   const { data: categories } = useCollection<Category>(categoriesQuery);
 
+  const pendingActionsQuery = useMemoFirebase(
+    () => {
+      if (!organizationId || !isPendingDocsEnabled) return null;
+      return query(
+        collection(firestore, 'organizations', organizationId, 'pendingDocuments'),
+        where('status', 'in', ['draft', 'confirmed', 'sepa_generated'])
+      );
+    },
+    [firestore, organizationId, isPendingDocsEnabled]
+  );
+  const { data: pendingActions } = useCollection<PendingDocument>(pendingActionsQuery);
+  const pendingActionsCount = pendingActions?.length ?? 0;
+
+  const submittedSettlementsQuery = useMemoFirebase(
+    () => {
+      if (!organizationId || !isPendingDocsEnabled) return null;
+      return query(
+        collection(firestore, 'organizations', organizationId, 'expenseReports'),
+        where('status', '==', 'submitted')
+      );
+    },
+    [firestore, organizationId, isPendingDocsEnabled]
+  );
+  const { data: submittedSettlements } = useCollection<ExpenseReport>(submittedSettlementsQuery);
+  const submittedSettlementsCount = submittedSettlements?.length ?? 0;
+
   return (
     <div className="w-full flex flex-col gap-6">
       <div className="flex flex-col gap-4">
@@ -52,12 +80,22 @@ export default function MovimientosPage() {
                 <Link href="movimientos/pendents">
                   <FileStack className="mr-2 h-4 w-4" />
                   {t.movements.buttons.pendingDocs}
+                  {pendingActionsCount > 0 && (
+                    <Badge variant="secondary" className="ml-2 h-5 min-w-5 rounded-full px-1.5 text-[11px] tabular-nums">
+                      {pendingActionsCount}
+                    </Badge>
+                  )}
                 </Link>
               </Button>
               <Button variant="outline" asChild>
                 <Link href="movimientos/liquidacions">
                   <Receipt className="mr-2 h-4 w-4" />
                   {t.movements.buttons.settlements}
+                  {submittedSettlementsCount > 0 && (
+                    <Badge variant="secondary" className="ml-2 h-5 min-w-5 rounded-full px-1.5 text-[11px] tabular-nums">
+                      {submittedSettlementsCount}
+                    </Badge>
+                  )}
                 </Link>
               </Button>
             </>

@@ -375,7 +375,7 @@ export function RemittanceSplitter({
   const { toast } = useToast();
   const { firestore, user } = useFirebase();
   const { organizationId } = useCurrentOrganization();
-  const { t } = useTranslations();
+  const { t, tr } = useTranslations();
 
   // Carregar configuracions guardades
   const mappingsQuery = useMemoFirebase(
@@ -2229,7 +2229,7 @@ export function RemittanceSplitter({
                     <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-green-50 border border-green-200 text-sm">
                       <CheckCircle2 className="h-3.5 w-3.5 text-green-600" />
                       <span className="font-semibold text-green-700">{stats.totalFound}</span>
-                      <span className="text-green-600">trobades</span>
+                      <span className="text-green-600">{tr('movements.splitter.foundCountLabel', 'trobades')}</span>
                     </div>
 
                     {/* Desglossat per estats especials */}
@@ -2237,21 +2237,21 @@ export function RemittanceSplitter({
                       <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-amber-50 border border-amber-200 text-sm">
                         <AlertTriangle className="h-3.5 w-3.5 text-amber-600" />
                         <span className="font-semibold text-amber-700">{stats.foundInactive}</span>
-                        <span className="text-amber-600">Baixa</span>
+                        <span className="text-amber-600">{tr('movements.splitter.inactiveLabel', 'Baixa')}</span>
                       </div>
                     )}
                     {stats.foundArchived > 0 && (
                       <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-gray-100 border border-gray-300 text-sm">
                         <AlertTriangle className="h-3.5 w-3.5 text-gray-600" />
                         <span className="font-semibold text-gray-700">{stats.foundArchived}</span>
-                        <span className="text-gray-600">Arxivat</span>
+                        <span className="text-gray-600">{tr('movements.splitter.archivedLabel', 'Arxivat')}</span>
                       </div>
                     )}
                     {stats.foundDeleted > 0 && (
                       <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-red-50 border border-red-200 text-sm">
                         <AlertTriangle className="h-3.5 w-3.5 text-red-600" />
                         <span className="font-semibold text-red-700">{stats.foundDeleted}</span>
-                        <span className="text-red-600">Eliminat</span>
+                        <span className="text-red-600">{tr('movements.splitter.deletedLabel', 'Eliminat')}</span>
                       </div>
                     )}
 
@@ -2260,7 +2260,7 @@ export function RemittanceSplitter({
                       <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-orange-50 border border-orange-200 text-sm">
                         <AlertCircle className="h-3.5 w-3.5 text-orange-600" />
                         <span className="font-semibold text-orange-700">{stats.totalPending}</span>
-                        <span className="text-orange-600">pendents</span>
+                        <span className="text-orange-600">{tr('movements.splitter.pendingCountLabel', 'pendents')}</span>
                       </div>
                     )}
 
@@ -2273,7 +2273,7 @@ export function RemittanceSplitter({
                         title={t.movements.splitter.goToAmbiguous(stats.ambiguousIban)}
                       >
                         <span className="font-semibold text-red-700">{stats.ambiguousIban}</span>
-                        <span className="text-red-600">IBAN ambigu</span>
+                        <span className="text-red-600">{tr('movements.splitter.ambiguousIbanLabel', 'IBAN ambigu')}</span>
                         <ArrowRight className="h-3 w-3 text-red-500" />
                       </button>
                     )}
@@ -2285,7 +2285,7 @@ export function RemittanceSplitter({
                         title={t.movements.splitter.goToNotFound(stats.noIbanMatch)}
                       >
                         <span className="font-semibold text-orange-700">{stats.noIbanMatch}</span>
-                        <span className="text-orange-600">IBAN no trobat</span>
+                        <span className="text-orange-600">{tr('movements.splitter.noIbanMatchLabel', 'IBAN no trobat')}</span>
                         <ArrowRight className="h-3 w-3 text-orange-500" />
                       </button>
                     )}
@@ -2511,7 +2511,7 @@ export function RemittanceSplitter({
                             {donation.iban.replace(/(.{4})/g, '$1 ').trim().slice(0, 19)}···
                           </span>
                         ) : (
-                          <span className="text-orange-600 italic">sense IBAN</span>
+                          <span className="text-orange-600 italic">{tr('movements.splitter.withoutIbanLabel', 'sense IBAN')}</span>
                         )}
                       </TableCell>
                       <TableCell className="px-2 py-1.5 text-right text-xs font-mono whitespace-nowrap tabular-nums">
@@ -2522,37 +2522,37 @@ export function RemittanceSplitter({
                         {donation.status === 'found' && (
                           <Badge variant="outline" className="text-[11px] px-2 py-0.5 bg-green-100 text-green-800 border-green-300">
                             <CheckCircle2 className="mr-1 h-3 w-3" />
-                            Trobat per IBAN
+                            {tr('movements.splitter.foundByIbanLabel', 'Trobat per IBAN')}
                           </Badge>
                         )}
                         {donation.status === 'found_inactive' && (
                           <Badge variant="outline" className="text-[11px] px-2 py-0.5 bg-amber-100 text-amber-800 border-amber-300">
                             <AlertTriangle className="mr-1 h-3 w-3" />
-                            Baixa
+                            {tr('movements.splitter.inactiveLabel', 'Baixa')}
                           </Badge>
                         )}
                         {donation.status === 'found_archived' && (
                           <Badge variant="outline" className="text-[11px] px-2 py-0.5 bg-gray-100 text-gray-800 border-gray-300">
                             <AlertTriangle className="mr-1 h-3 w-3" />
-                            Arxivat
+                            {tr('movements.splitter.archivedLabel', 'Arxivat')}
                           </Badge>
                         )}
                         {donation.status === 'found_deleted' && (
                           <Badge variant="outline" className="text-[11px] px-2 py-0.5 bg-red-100 text-red-800 border-red-300">
                             <AlertTriangle className="mr-1 h-3 w-3" />
-                            Eliminat
+                            {tr('movements.splitter.deletedLabel', 'Eliminat')}
                           </Badge>
                         )}
                         {donation.status === 'ambiguous_iban' && (
                           <Badge variant="outline" className="text-[11px] px-2 py-0.5 bg-red-100 text-red-800 border-red-300">
                             <AlertCircle className="mr-1 h-3 w-3" />
-                            IBAN ambigu
+                            {tr('movements.splitter.ambiguousIbanLabel', 'IBAN ambigu')}
                           </Badge>
                         )}
                         {donation.status === 'no_iban_match' && (
                           <Badge variant="outline" className="text-[11px] px-2 py-0.5 bg-orange-100 text-orange-800 border-orange-300">
                             <AlertCircle className="mr-1 h-3 w-3" />
-                            IBAN no trobat
+                            {tr('movements.splitter.noIbanMatchLabel', 'IBAN no trobat')}
                           </Badge>
                         )}
                         {/* Mode OUT legacy */}
