@@ -344,7 +344,11 @@ export function DonorManager() {
   // DEVOLUCIONS: Estat i càrrega
   // ═══════════════════════════════════════════════════════════════════════════
   const [donorsWithReturns, setDonorsWithReturns] = React.useState<Set<string>>(new Set());
+  const [donorsWithReturnsThisMonth, setDonorsWithReturnsThisMonth] = React.useState<Set<string>>(new Set());
+  const [donorsWithTwoOrMoreReturns, setDonorsWithTwoOrMoreReturns] = React.useState<Set<string>>(new Set());
   const [showWithReturnsOnly, setShowWithReturnsOnly] = React.useState(false);
+  const [showWithReturnsThisMonthOnly, setShowWithReturnsThisMonthOnly] = React.useState(false);
+  const [showWithTwoOrMoreReturnsOnly, setShowWithTwoOrMoreReturnsOnly] = React.useState(false);
   const [loadingReturns, setLoadingReturns] = React.useState(false);
 
   const loadDonorsWithReturns = React.useCallback(async () => {
@@ -355,11 +359,29 @@ export function DonorManager() {
       const q = query(txRef, where('transactionType', '==', 'return'));
       const snapshot = await getDocs(q);
       const ids = new Set<string>();
+      const idsThisMonth = new Set<string>();
+      const idsWithTwoOrMore = new Set<string>();
+      const returnsCountByDonor = new Map<string, number>();
+      const now = new Date();
+      const currentMonthPrefix = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
       snapshot.forEach(doc => {
-        const contactId = doc.data().contactId;
+        const data = doc.data() as { contactId?: string; date?: string };
+        const contactId = data.contactId;
         if (contactId) ids.add(contactId);
+
+        if (!contactId) return;
+
+        const nextCount = (returnsCountByDonor.get(contactId) || 0) + 1;
+        returnsCountByDonor.set(contactId, nextCount);
+        if (nextCount >= 2) idsWithTwoOrMore.add(contactId);
+
+        if (typeof data.date === 'string' && data.date.startsWith(currentMonthPrefix)) {
+          idsThisMonth.add(contactId);
+        }
       });
       setDonorsWithReturns(ids);
+      setDonorsWithReturnsThisMonth(idsThisMonth);
+      setDonorsWithTwoOrMoreReturns(idsWithTwoOrMore);
     } catch (e) {
       console.error('Error carregant devolucions:', e);
     } finally {
@@ -435,6 +457,8 @@ export function DonorManager() {
   const clearFilter = () => {
     setShowIncompleteOnly(false);
     setShowWithReturnsOnly(false);
+    setShowWithReturnsThisMonthOnly(false);
+    setShowWithTwoOrMoreReturnsOnly(false);
     setActiveViewFilter(false);
     setMembershipTypeFilter(null);
     setPeriodFilter(null);
@@ -531,13 +555,36 @@ export function DonorManager() {
       result = result.filter(donor => donorsWithReturns.has(donor.id));
     }
 
+    // Filtre de donants amb devolucions aquest mes
+    if (showWithReturnsThisMonthOnly) {
+      result = result.filter(donor => donorsWithReturnsThisMonth.has(donor.id));
+    }
+
+    // Filtre de donants amb 2 devolucions o més
+    if (showWithTwoOrMoreReturnsOnly) {
+      result = result.filter(donor => donorsWithTwoOrMoreReturns.has(donor.id));
+    }
+
     // Filtre per contactes actius (amb transaccions al període)
     if (activeViewFilter && activeContactIds.size > 0) {
       result = result.filter(donor => activeContactIds.has(donor.id));
     }
 
     return result;
-  }, [donors, showIncompleteOnly, showWithReturnsOnly, searchQuery, statusFilter, donorsWithReturns, activeViewFilter, activeContactIds]);
+  }, [
+    donors,
+    showIncompleteOnly,
+    showWithReturnsOnly,
+    showWithReturnsThisMonthOnly,
+    showWithTwoOrMoreReturnsOnly,
+    searchQuery,
+    statusFilter,
+    donorsWithReturns,
+    donorsWithReturnsThisMonth,
+    donorsWithTwoOrMoreReturns,
+    activeViewFilter,
+    activeContactIds
+  ]);
 
   // Comptadors per tipus de donant i modalitat (sobre baseFilteredDonors)
   const donorTypeCounts = React.useMemo(() => {
@@ -606,6 +653,13 @@ export function DonorManager() {
     if (!donors) return 0;
     return donors.filter(donor => !donor.taxId || !donor.zipCode || (donor.membershipType === 'recurring' && !donor.iban)).length;
   }, [donors]);
+
+  const anyReturnsFilterActive = showWithReturnsOnly || showWithReturnsThisMonthOnly || showWithTwoOrMoreReturnsOnly;
+  const returnsEmptyStateTitle = showWithTwoOrMoreReturnsOnly
+    ? (t.donorsFilter.noWithTwoOrMoreReturns || 'No hi ha donants amb 2 devolucions o més')
+    : showWithReturnsThisMonthOnly
+      ? (t.donorsFilter.noWithReturnsThisMonth || 'No hi ha donants amb devolucions aquest mes')
+      : (t.donorsFilter.noWithReturns || 'No hi ha donants amb devolucions');
 
   const handleEdit = (donor: Donor) => {
     setEditingDonor(donor);
@@ -1031,9 +1085,15 @@ export function DonorManager() {
               {/* Botons de filtre per estat */}
               <div className="flex flex-wrap items-center gap-2">
                 <Button
-                  variant={statusFilter === 'active' && !showIncompleteOnly && !showWithReturnsOnly ? 'default' : 'outline'}
+                  variant={statusFilter === 'active' && !showIncompleteOnly && !anyReturnsFilterActive ? 'default' : 'outline'}
                   size="sm"
-                  onClick={() => { setStatusFilter('active'); setShowIncompleteOnly(false); setShowWithReturnsOnly(false); }}
+                  onClick={() => {
+                    setStatusFilter('active');
+                    setShowIncompleteOnly(false);
+                    setShowWithReturnsOnly(false);
+                    setShowWithReturnsThisMonthOnly(false);
+                    setShowWithTwoOrMoreReturnsOnly(false);
+                  }}
                 >
                   {t.donors.allActive} ({statusCounts.active})
                 </Button>
@@ -1041,16 +1101,28 @@ export function DonorManager() {
                   <Button
                     variant={statusFilter === 'inactive' ? 'default' : 'outline'}
                     size="sm"
-                    onClick={() => { setStatusFilter('inactive'); setShowIncompleteOnly(false); setShowWithReturnsOnly(false); }}
+                    onClick={() => {
+                      setStatusFilter('inactive');
+                      setShowIncompleteOnly(false);
+                      setShowWithReturnsOnly(false);
+                      setShowWithReturnsThisMonthOnly(false);
+                      setShowWithTwoOrMoreReturnsOnly(false);
+                    }}
                     className={statusFilter !== 'inactive' ? 'border-gray-400 text-gray-600' : ''}
                   >
                     {t.donors.allInactive} ({statusCounts.inactive})
                   </Button>
                 )}
                 <Button
-                  variant={statusFilter === 'all' && !showIncompleteOnly && !showWithReturnsOnly ? 'default' : 'outline'}
+                  variant={statusFilter === 'all' && !showIncompleteOnly && !anyReturnsFilterActive ? 'default' : 'outline'}
                   size="sm"
-                  onClick={() => { setStatusFilter('all'); setShowIncompleteOnly(false); setShowWithReturnsOnly(false); }}
+                  onClick={() => {
+                    setStatusFilter('all');
+                    setShowIncompleteOnly(false);
+                    setShowWithReturnsOnly(false);
+                    setShowWithReturnsThisMonthOnly(false);
+                    setShowWithTwoOrMoreReturnsOnly(false);
+                  }}
                 >
                   {t.donors.all} ({statusCounts.total})
                 </Button>
@@ -1061,6 +1133,8 @@ export function DonorManager() {
                     onClick={() => {
                       setShowIncompleteOnly(true);
                       setShowWithReturnsOnly(false);
+                      setShowWithReturnsThisMonthOnly(false);
+                      setShowWithTwoOrMoreReturnsOnly(false);
                       setStatusFilter('all');
                     }}
                     className={!showIncompleteOnly ? 'border-amber-300 text-amber-600' : ''}
@@ -1075,8 +1149,9 @@ export function DonorManager() {
                       variant={showWithReturnsOnly ? 'default' : 'outline'}
                       size="sm"
                       onClick={() => {
-                        setShowWithReturnsOnly(prev => !prev);
-                        if (!showWithReturnsOnly) {
+                        const next = !showWithReturnsOnly;
+                        setShowWithReturnsOnly(next);
+                        if (next) {
                           setShowIncompleteOnly(false);
                           setStatusFilter('all');
                         }
@@ -1084,6 +1159,36 @@ export function DonorManager() {
                       className={!showWithReturnsOnly ? 'border-orange-300 text-orange-600' : ''}
                     >
                       {t.donorsFilter.withReturns} ({donorsWithReturns.size})
+                    </Button>
+                    <Button
+                      variant={showWithReturnsThisMonthOnly ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => {
+                        const next = !showWithReturnsThisMonthOnly;
+                        setShowWithReturnsThisMonthOnly(next);
+                        if (next) {
+                          setShowIncompleteOnly(false);
+                          setStatusFilter('all');
+                        }
+                      }}
+                      className={!showWithReturnsThisMonthOnly ? 'border-orange-300 text-orange-600' : ''}
+                    >
+                      {t.donorsFilter.withReturnsThisMonth} ({donorsWithReturnsThisMonth.size})
+                    </Button>
+                    <Button
+                      variant={showWithTwoOrMoreReturnsOnly ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => {
+                        const next = !showWithTwoOrMoreReturnsOnly;
+                        setShowWithTwoOrMoreReturnsOnly(next);
+                        if (next) {
+                          setShowIncompleteOnly(false);
+                          setStatusFilter('all');
+                        }
+                      }}
+                      className={!showWithTwoOrMoreReturnsOnly ? 'border-orange-300 text-orange-600' : ''}
+                    >
+                      {t.donorsFilter.withTwoOrMoreReturns} ({donorsWithTwoOrMoreReturns.size})
                     </Button>
                     <Button
                       variant="ghost"
@@ -1416,14 +1521,14 @@ export function DonorManager() {
                         ? (t.emptyStates?.donors?.noResults ?? t.donors.noSearchResults)
                         : showIncompleteOnly
                           ? (t.donors.noIncompleteData || "No hi ha donants amb dades incompletes")
-                          : showWithReturnsOnly
-                            ? "No hi ha donants amb devolucions"
+                          : anyReturnsFilterActive
+                            ? returnsEmptyStateTitle
                             : (t.emptyStates?.donors?.noData ?? t.donors.noData)
                     }
                     description={
                       searchQuery
                         ? (t.emptyStates?.donors?.noResultsDesc ?? undefined)
-                        : !showIncompleteOnly && !showWithReturnsOnly
+                        : !showIncompleteOnly && !anyReturnsFilterActive
                           ? (t.emptyStates?.donors?.noDataDesc ?? undefined)
                           : undefined
                     }
@@ -1601,14 +1706,14 @@ export function DonorManager() {
                                 ? (t.emptyStates?.donors?.noResults ?? t.donors.noSearchResults)
                                 : showIncompleteOnly
                                   ? (t.donors.noIncompleteData || "No hi ha donants amb dades incompletes")
-                                  : showWithReturnsOnly
-                                    ? "No hi ha donants amb devolucions"
+                                  : anyReturnsFilterActive
+                                    ? returnsEmptyStateTitle
                                     : (t.emptyStates?.donors?.noData ?? t.donors.noData)
                             }
                             description={
                               searchQuery
                                 ? (t.emptyStates?.donors?.noResultsDesc ?? undefined)
-                                : !showIncompleteOnly && !showWithReturnsOnly
+                                : !showIncompleteOnly && !anyReturnsFilterActive
                                   ? (t.emptyStates?.donors?.noDataDesc ?? undefined)
                                   : undefined
                             }
