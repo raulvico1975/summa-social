@@ -2937,6 +2937,11 @@ export const es = {
   // Filtro donantes con devoluciones
   donorsFilter: {
     withReturns: "Con devoluciones",
+    withReturnsThisMonth: "Con devoluciones este mes",
+    withTwoOrMoreReturns: "Con 2 devoluciones o más",
+    noWithReturns: "No hay donantes con devoluciones",
+    noWithReturnsThisMonth: "No hay donantes con devoluciones este mes",
+    noWithTwoOrMoreReturns: "No hay donantes con 2 devoluciones o más",
     donorTypeLabel: "Tipo",
     allTypes: "Todos",
     individual: "Particulares",
