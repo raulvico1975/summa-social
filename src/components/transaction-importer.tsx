@@ -540,12 +540,17 @@ export function TransactionImporter({ availableCategories }: TransactionImporter
             }
 
             // Enrichment: executionDate (F. ejecución) — sempre que existeixi
+            let normalizedOpDate: string | undefined;
             if (opDateRaw) {
-              const normalizedOpDate = parseSingleDate(opDateRaw);
-              if (normalizedOpDate) rawRow._opDate = normalizedOpDate;
+              const parsedOpDate = parseSingleDate(opDateRaw);
+              if (parsedOpDate) {
+                rawRow._opDate = parsedOpDate;
+                normalizedOpDate = parsedOpDate;
+              }
             }
 
             // Enrichment: saldo/balance — parsejar format EU a number
+            let parsedBalanceAfter: number | undefined;
             const balanceRaw = findRawValue(rawRow, ['saldo', 'balance']);
             if (balanceRaw !== null) {
               let balanceNum: number;
@@ -555,7 +560,10 @@ export function TransactionImporter({ availableCategories }: TransactionImporter
                 const cleaned = String(balanceRaw).replace(/\./g, '').replace(',', '.');
                 balanceNum = parseFloat(cleaned);
               }
-              if (!isNaN(balanceNum)) rawRow._balance = balanceNum;
+              if (!isNaN(balanceNum)) {
+                rawRow._balance = balanceNum;
+                parsedBalanceAfter = balanceNum;
+              }
             }
 
             const transactionType = detectReturnType(descriptionValue) || 'normal';
@@ -571,6 +579,8 @@ export function TransactionImporter({ availableCategories }: TransactionImporter
                 transactionType,
                 bankAccountId: bankAccountId ?? null,
                 source: 'bank' as const,
+                ...(parsedBalanceAfter !== undefined && Number.isFinite(parsedBalanceAfter) ? { balanceAfter: parsedBalanceAfter } : {}),
+                ...(normalizedOpDate ? { operationDate: normalizedOpDate } : {}),
             } as Omit<Transaction, 'id'>;
 
             return { tx, rawRow };

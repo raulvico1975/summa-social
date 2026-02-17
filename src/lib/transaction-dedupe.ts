@@ -14,7 +14,7 @@ import type { Transaction } from '@/lib/data';
 // ═══════════════════════════════════════════════════════════════════════════════
 
 export type DedupeStatus = 'NEW' | 'DUPLICATE_SAFE' | 'DUPLICATE_CANDIDATE';
-export type DedupeReason = 'BANK_REF' | 'BASE_KEY' | 'ENRICHED_KEY' | 'INTRA_FILE';
+export type DedupeReason = 'BANK_REF' | 'BALANCE_AMOUNT_DATE' | 'BASE_KEY' | 'ENRICHED_KEY' | 'INTRA_FILE';
 
 export interface ClassifiedRow {
   /** Transacció parsejada */
@@ -38,8 +38,10 @@ export interface ClassifiedRow {
  */
 export interface DedupeTransaction {
   date: string;
+  operationDate?: string;
   description: string;
   amount: number;
+  balanceAfter?: number;
   bankRef?: string | null;
   valueDate?: string;
   bankAccountId?: string | null;
@@ -136,6 +138,29 @@ function isRefKey(key: string): boolean {
   return key.includes(':ref:');
 }
 
+/**
+ * Clau forta de dedupe amb saldo:
+ * bankAccountId + balanceAfter + amount + (operationDate || date)
+ */
+function createBalanceAmountDateKey(tx: {
+  date: string;
+  operationDate?: string;
+  amount: number;
+  balanceAfter?: number;
+  bankAccountId?: string | null;
+}): string | null {
+  if (typeof tx.balanceAfter !== 'number' || !Number.isFinite(tx.balanceAfter)) {
+    return null;
+  }
+
+  const accountPrefix = tx.bankAccountId || 'no-account';
+  const balanceAfterCents = normalizeAmountForDedupe(tx.balanceAfter);
+  const amountCents = normalizeAmountForDedupe(tx.amount);
+  const dateKey = normalizeDateForDedupe(tx.operationDate || tx.date);
+
+  return `${accountPrefix}:bal:${balanceAfterCents}|${amountCents}|${dateKey}`;
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // ENRICHMENT
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -194,6 +219,7 @@ export function classifyTransactions(
 ): ClassifiedRow[] {
   // Indexar existents per refKey i baseKey
   const existingByRefKey = new Map<string, Array<{ id: string; tx: Transaction }>>();
+  const existingByBalanceAmountDateKey = new Map<string, Array<{ id: string; tx: Transaction }>>();
   const existingByBaseKey = new Map<string, Array<{ id: string; tx: Transaction }>>();
 
   for (const etx of existingTransactions) {
@@ -212,6 +238,19 @@ export function classifyTransactions(
       const arr = existingByBaseKey.get(key) || [];
       arr.push({ id: etx.id, tx: etx });
       existingByBaseKey.set(key, arr);
+    }
+
+    const balanceAmountDateKey = createBalanceAmountDateKey({
+      date: etx.date,
+      operationDate: etx.operationDate,
+      amount: etx.amount,
+      balanceAfter: etx.balanceAfter,
+      bankAccountId: etx.bankAccountId,
+    });
+    if (balanceAmountDateKey) {
+      const arr = existingByBalanceAmountDateKey.get(balanceAmountDateKey) || [];
+      arr.push({ id: etx.id, tx: etx });
+      existingByBalanceAmountDateKey.set(balanceAmountDateKey, arr);
     }
   }
 
@@ -289,7 +328,36 @@ export function classifyTransactions(
       continue;
     }
 
-    // 3. Sense bankRef: comprovar match per clau base
+    // 3. Regla forta amb saldo: bankAccount + balanceAfter + amount + (operationDate || date)
+    const balanceAmountDateKey = createBalanceAmountDateKey({
+      date: tx.date,
+      operationDate: (tx as { operationDate?: string }).operationDate,
+      amount: tx.amount,
+      balanceAfter: (tx as { balanceAfter?: number }).balanceAfter,
+      bankAccountId,
+    });
+    if (balanceAmountDateKey) {
+      const strongMatches = existingByBalanceAmountDateKey.get(balanceAmountDateKey);
+      if (strongMatches && strongMatches.length > 0) {
+        results.push({
+          tx: { ...tx, duplicateReason: 'balance+amount+date' },
+          status: 'DUPLICATE_SAFE',
+          reason: 'BALANCE_AMOUNT_DATE',
+          matchedExistingIds: strongMatches.map(m => m.id),
+          matchedExisting: strongMatches.map(m => ({
+            id: m.id,
+            date: m.tx.date,
+            description: m.tx.description,
+            amount: m.tx.amount,
+          })),
+          rawRow,
+          userDecision: null,
+        });
+        continue;
+      }
+    }
+
+    // 4. Sense bankRef/saldo fort: comprovar match per clau base
     const baseMatches = existingByBaseKey.get(effectiveKey);
     if (!baseMatches || baseMatches.length === 0) {
       // Sense match → NEW
