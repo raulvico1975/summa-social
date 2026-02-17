@@ -1,0 +1,2078 @@
+{
+  "generatedAt": "2026-02-17T15:04:00.433Z",
+  "source": {
+    "buildDir": ".next",
+    "buildManifest": ".next/build-manifest.json",
+    "appBuildManifest": ".next/app-build-manifest.json",
+    "buildLog": "tmp/performance-build-output.log"
+  },
+  "summary": {
+    "totalRoutes": 106,
+    "sharedChunksKB": 451.57,
+    "largestRouteBundle": {
+      "route": "/admin",
+      "totalJSKB": 2723.55,
+      "routeOnlyJSKB": 2381.93,
+      "cssKB": 0,
+      "jsFileCount": 24,
+      "cssFileCount": 0
+    },
+    "largestRoutes": [
+      {
+        "route": "/admin",
+        "totalJSKB": 2723.55,
+        "routeOnlyJSKB": 2381.93,
+        "cssKB": 0,
+        "jsFileCount": 24,
+        "cssFileCount": 0
+      },
+      {
+        "route": "/[orgSlug]/dashboard/donants",
+        "totalJSKB": 2344.68,
+        "routeOnlyJSKB": 2003.06,
+        "cssKB": 0,
+        "jsFileCount": 30,
+        "cssFileCount": 0
+      },
+      {
+        "route": "/[orgSlug]/dashboard/movimientos",
+        "totalJSKB": 2319.05,
+        "routeOnlyJSKB": 1977.44,
+        "cssKB": 0,
+        "jsFileCount": 31,
+        "cssFileCount": 0
+      },
+      {
+        "route": "/[orgSlug]/dashboard/informes",
+        "totalJSKB": 2231.15,
+        "routeOnlyJSKB": 1889.54,
+        "cssKB": 0,
+        "jsFileCount": 26,
+        "cssFileCount": 0
+      },
+      {
+        "route": "/[orgSlug]/dashboard/project-module/projects/[projectId]/budget",
+        "totalJSKB": 2055.17,
+        "routeOnlyJSKB": 1713.55,
+        "cssKB": 0,
+        "jsFileCount": 26,
+        "cssFileCount": 0
+      },
+      {
+        "route": "/[orgSlug]/dashboard",
+        "totalJSKB": 2048.33,
+        "routeOnlyJSKB": 1706.71,
+        "cssKB": 0,
+        "jsFileCount": 29,
+        "cssFileCount": 0
+      },
+      {
+        "route": "/[orgSlug]/dashboard/configuracion",
+        "totalJSKB": 2037.1,
+        "routeOnlyJSKB": 1695.48,
+        "cssKB": 0,
+        "jsFileCount": 26,
+        "cssFileCount": 0
+      },
+      {
+        "route": "/[orgSlug]/dashboard/movimientos/liquidacions",
+        "totalJSKB": 1892.88,
+        "routeOnlyJSKB": 1551.27,
+        "cssKB": 0,
+        "jsFileCount": 28,
+        "cssFileCount": 0
+      },
+      {
+        "route": "/[orgSlug]/dashboard/movimientos/liquidacions/[id]",
+        "totalJSKB": 1890.2,
+        "routeOnlyJSKB": 1548.59,
+        "cssKB": 0,
+        "jsFileCount": 26,
+        "cssFileCount": 0
+      },
+      {
+        "route": "/[orgSlug]/dashboard/treballadors",
+        "totalJSKB": 1823.46,
+        "routeOnlyJSKB": 1481.85,
+        "cssKB": 0,
+        "jsFileCount": 22,
+        "cssFileCount": 0
+      }
+    ],
+    "worstOffenders": [
+      {
+        "chunk": "static/chunks/5823-56b73bfaa283ecfe.js",
+        "sizeKB": 1125.5,
+        "routeCount": 1,
+        "sampleRoutes": [
+          "/admin"
+        ]
+      },
+      {
+        "chunk": "static/chunks/563-94840d2c4dbea18c.js",
+        "sizeKB": 465.04,
+        "routeCount": 28,
+        "sampleRoutes": [
+          "/[orgSlug]/dashboard",
+          "/[orgSlug]/dashboard/configuracion",
+          "/[orgSlug]/dashboard/donants",
+          "/[orgSlug]/dashboard/donants/remeses-cobrament",
+          "/[orgSlug]/dashboard/guides"
+        ]
+      },
+      {
+        "chunk": "static/chunks/2170a4aa-f45f143aeaf194ed.js",
+        "sizeKB": 399.71,
+        "routeCount": 8,
+        "sampleRoutes": [
+          "/[orgSlug]/dashboard",
+          "/[orgSlug]/dashboard/configuracion",
+          "/[orgSlug]/dashboard/donants",
+          "/[orgSlug]/dashboard/informes",
+          "/[orgSlug]/dashboard/movimientos"
+        ]
+      },
+      {
+        "chunk": "static/chunks/app/[orgSlug]/dashboard/movimientos/page-dfe3ea30380e44c2.js",
+        "sizeKB": 341.45,
+        "routeCount": 1,
+        "sampleRoutes": [
+          "/[orgSlug]/dashboard/movimientos"
+        ]
+      },
+      {
+        "chunk": "static/chunks/164f4fb6-78e0eec389b2dcc4.js",
+        "sizeKB": 327.7,
+        "routeCount": 5,
+        "sampleRoutes": [
+          "/[orgSlug]/dashboard/donants",
+          "/[orgSlug]/dashboard/informes",
+          "/[orgSlug]/dashboard/informes/certificats",
+          "/[orgSlug]/dashboard/movimientos/liquidacions",
+          "/[orgSlug]/dashboard/movimientos/liquidacions/[id]"
+        ]
+      }
+    ]
+  },
+  "largestRoutes": [
+    {
+      "route": "/admin",
+      "totalJSKB": 2723.55,
+      "routeOnlyJSKB": 2381.93,
+      "cssKB": 0,
+      "jsFileCount": 24,
+      "cssFileCount": 0
+    },
+    {
+      "route": "/[orgSlug]/dashboard/donants",
+      "totalJSKB": 2344.68,
+      "routeOnlyJSKB": 2003.06,
+      "cssKB": 0,
+      "jsFileCount": 30,
+      "cssFileCount": 0
+    },
+    {
+      "route": "/[orgSlug]/dashboard/movimientos",
+      "totalJSKB": 2319.05,
+      "routeOnlyJSKB": 1977.44,
+      "cssKB": 0,
+      "jsFileCount": 31,
+      "cssFileCount": 0
+    },
+    {
+      "route": "/[orgSlug]/dashboard/informes",
+      "totalJSKB": 2231.15,
+      "routeOnlyJSKB": 1889.54,
+      "cssKB": 0,
+      "jsFileCount": 26,
+      "cssFileCount": 0
+    },
+    {
+      "route": "/[orgSlug]/dashboard/project-module/projects/[projectId]/budget",
+      "totalJSKB": 2055.17,
+      "routeOnlyJSKB": 1713.55,
+      "cssKB": 0,
+      "jsFileCount": 26,
+      "cssFileCount": 0
+    },
+    {
+      "route": "/[orgSlug]/dashboard",
+      "totalJSKB": 2048.33,
+      "routeOnlyJSKB": 1706.71,
+      "cssKB": 0,
+      "jsFileCount": 29,
+      "cssFileCount": 0
+    },
+    {
+      "route": "/[orgSlug]/dashboard/configuracion",
+      "totalJSKB": 2037.1,
+      "routeOnlyJSKB": 1695.48,
+      "cssKB": 0,
+      "jsFileCount": 26,
+      "cssFileCount": 0
+    },
+    {
+      "route": "/[orgSlug]/dashboard/movimientos/liquidacions",
+      "totalJSKB": 1892.88,
+      "routeOnlyJSKB": 1551.27,
+      "cssKB": 0,
+      "jsFileCount": 28,
+      "cssFileCount": 0
+    },
+    {
+      "route": "/[orgSlug]/dashboard/movimientos/liquidacions/[id]",
+      "totalJSKB": 1890.2,
+      "routeOnlyJSKB": 1548.59,
+      "cssKB": 0,
+      "jsFileCount": 26,
+      "cssFileCount": 0
+    },
+    {
+      "route": "/[orgSlug]/dashboard/treballadors",
+      "totalJSKB": 1823.46,
+      "routeOnlyJSKB": 1481.85,
+      "cssKB": 0,
+      "jsFileCount": 22,
+      "cssFileCount": 0
+    }
+  ],
+  "sharedChunksKB": 451.57,
+  "worstOffenders": [
+    {
+      "chunk": "static/chunks/5823-56b73bfaa283ecfe.js",
+      "sizeKB": 1125.5,
+      "routeCount": 1,
+      "sampleRoutes": [
+        "/admin"
+      ]
+    },
+    {
+      "chunk": "static/chunks/563-94840d2c4dbea18c.js",
+      "sizeKB": 465.04,
+      "routeCount": 28,
+      "sampleRoutes": [
+        "/[orgSlug]/dashboard",
+        "/[orgSlug]/dashboard/configuracion",
+        "/[orgSlug]/dashboard/donants",
+        "/[orgSlug]/dashboard/donants/remeses-cobrament",
+        "/[orgSlug]/dashboard/guides"
+      ]
+    },
+    {
+      "chunk": "static/chunks/2170a4aa-f45f143aeaf194ed.js",
+      "sizeKB": 399.71,
+      "routeCount": 8,
+      "sampleRoutes": [
+        "/[orgSlug]/dashboard",
+        "/[orgSlug]/dashboard/configuracion",
+        "/[orgSlug]/dashboard/donants",
+        "/[orgSlug]/dashboard/informes",
+        "/[orgSlug]/dashboard/movimientos"
+      ]
+    },
+    {
+      "chunk": "static/chunks/app/[orgSlug]/dashboard/movimientos/page-dfe3ea30380e44c2.js",
+      "sizeKB": 341.45,
+      "routeCount": 1,
+      "sampleRoutes": [
+        "/[orgSlug]/dashboard/movimientos"
+      ]
+    },
+    {
+      "chunk": "static/chunks/164f4fb6-78e0eec389b2dcc4.js",
+      "sizeKB": 327.7,
+      "routeCount": 5,
+      "sampleRoutes": [
+        "/[orgSlug]/dashboard/donants",
+        "/[orgSlug]/dashboard/informes",
+        "/[orgSlug]/dashboard/informes/certificats",
+        "/[orgSlug]/dashboard/movimientos/liquidacions",
+        "/[orgSlug]/dashboard/movimientos/liquidacions/[id]"
+      ]
+    }
+  ],
+  "sharedChunks": [
+    {
+      "chunk": "static/chunks/4bd1b696-16dcc2bec6e1bff8.js",
+      "sizeKB": 169.02
+    },
+    {
+      "chunk": "static/chunks/1255-378231d28d9fc1f6.js",
+      "sizeKB": 168.4
+    },
+    {
+      "chunk": "static/chunks/polyfills-42372ed130431b0a.js",
+      "sizeKB": 109.96
+    },
+    {
+      "chunk": "static/chunks/webpack-779bed78769817bb.js",
+      "sizeKB": 3.58
+    },
+    {
+      "chunk": "static/chunks/main-app-edaddc977346d97d.js",
+      "sizeKB": 0.61
+    }
+  ],
+  "routes": [
+    {
+      "route": "/admin",
+      "totalJSKB": 2723.55,
+      "routeOnlyJSKB": 2381.93,
+      "cssKB": 0,
+      "jsFileCount": 24,
+      "cssFileCount": 0
+    },
+    {
+      "route": "/[orgSlug]/dashboard/donants",
+      "totalJSKB": 2344.68,
+      "routeOnlyJSKB": 2003.06,
+      "cssKB": 0,
+      "jsFileCount": 30,
+      "cssFileCount": 0
+    },
+    {
+      "route": "/[orgSlug]/dashboard/movimientos",
+      "totalJSKB": 2319.05,
+      "routeOnlyJSKB": 1977.44,
+      "cssKB": 0,
+      "jsFileCount": 31,
+      "cssFileCount": 0
+    },
+    {
+      "route": "/[orgSlug]/dashboard/informes",
+      "totalJSKB": 2231.15,
+      "routeOnlyJSKB": 1889.54,
+      "cssKB": 0,
+      "jsFileCount": 26,
+      "cssFileCount": 0
+    },
+    {
+      "route": "/[orgSlug]/dashboard/project-module/projects/[projectId]/budget",
+      "totalJSKB": 2055.17,
+      "routeOnlyJSKB": 1713.55,
+      "cssKB": 0,
+      "jsFileCount": 26,
+      "cssFileCount": 0
+    },
+    {
+      "route": "/[orgSlug]/dashboard",
+      "totalJSKB": 2048.33,
+      "routeOnlyJSKB": 1706.71,
+      "cssKB": 0,
+      "jsFileCount": 29,
+      "cssFileCount": 0
+    },
+    {
+      "route": "/[orgSlug]/dashboard/configuracion",
+      "totalJSKB": 2037.1,
+      "routeOnlyJSKB": 1695.48,
+      "cssKB": 0,
+      "jsFileCount": 26,
+      "cssFileCount": 0
+    },
+    {
+      "route": "/[orgSlug]/dashboard/movimientos/liquidacions",
+      "totalJSKB": 1892.88,
+      "routeOnlyJSKB": 1551.27,
+      "cssKB": 0,
+      "jsFileCount": 28,
+      "cssFileCount": 0
+    },
+    {
+      "route": "/[orgSlug]/dashboard/movimientos/liquidacions/[id]",
+      "totalJSKB": 1890.2,
+      "routeOnlyJSKB": 1548.59,
+      "cssKB": 0,
+      "jsFileCount": 26,
+      "cssFileCount": 0
+    },
+    {
+      "route": "/[orgSlug]/dashboard/treballadors",
+      "totalJSKB": 1823.46,
+      "routeOnlyJSKB": 1481.85,
+      "cssKB": 0,
+      "jsFileCount": 22,
+      "cssFileCount": 0
+    },
+    {
+      "route": "/[orgSlug]/dashboard/proveidors",
+      "totalJSKB": 1817.63,
+      "routeOnlyJSKB": 1476.01,
+      "cssKB": 0,
+      "jsFileCount": 22,
+      "cssFileCount": 0
+    },
+    {
+      "route": "/[orgSlug]/dashboard/informes/certificats",
+      "totalJSKB": 1749.99,
+      "routeOnlyJSKB": 1408.37,
+      "cssKB": 0,
+      "jsFileCount": 23,
+      "cssFileCount": 0
+    },
+    {
+      "route": "/[orgSlug]/dashboard/movimientos/pendents",
+      "totalJSKB": 1627.77,
+      "routeOnlyJSKB": 1286.15,
+      "cssKB": 0,
+      "jsFileCount": 30,
+      "cssFileCount": 0
+    },
+    {
+      "route": "/[orgSlug]/dashboard/project-module/expenses",
+      "totalJSKB": 1536.25,
+      "routeOnlyJSKB": 1194.63,
+      "cssKB": 0,
+      "jsFileCount": 28,
+      "cssFileCount": 0
+    },
+    {
+      "route": "/[orgSlug]/dashboard/layout",
+      "totalJSKB": 1412.7,
+      "routeOnlyJSKB": 1071.08,
+      "cssKB": 0,
+      "jsFileCount": 21,
+      "cssFileCount": 0
+    },
+    {
+      "route": "/[orgSlug]/dashboard/project-module/expenses/[txId]",
+      "totalJSKB": 1386,
+      "routeOnlyJSKB": 1044.38,
+      "cssKB": 0,
+      "jsFileCount": 20,
+      "cssFileCount": 0
+    },
+    {
+      "route": "/[orgSlug]/dashboard/donants/remeses-cobrament",
+      "totalJSKB": 1369.72,
+      "routeOnlyJSKB": 1028.1,
+      "cssKB": 0,
+      "jsFileCount": 17,
+      "cssFileCount": 0
+    },
+    {
+      "route": "/[orgSlug]/dashboard/project-module/expenses/capture",
+      "totalJSKB": 1360.12,
+      "routeOnlyJSKB": 1018.51,
+      "cssKB": 0,
+      "jsFileCount": 19,
+      "cssFileCount": 0
+    },
+    {
+      "route": "/[orgSlug]/dashboard/super-admin",
+      "totalJSKB": 1354.02,
+      "routeOnlyJSKB": 1012.4,
+      "cssKB": 0,
+      "jsFileCount": 16,
+      "cssFileCount": 0
+    },
+    {
+      "route": "/[orgSlug]/dashboard/project-module/projects/[projectId]/edit",
+      "totalJSKB": 1351.52,
+      "routeOnlyJSKB": 1009.91,
+      "cssKB": 0,
+      "jsFileCount": 18,
+      "cssFileCount": 0
+    },
+    {
+      "route": "/[orgSlug]/dashboard/projectes",
+      "totalJSKB": 1351.46,
+      "routeOnlyJSKB": 1009.84,
+      "cssKB": 0,
+      "jsFileCount": 17,
+      "cssFileCount": 0
+    },
+    {
+      "route": "/[orgSlug]/dashboard/project-module/projects/new",
+      "totalJSKB": 1350.2,
+      "routeOnlyJSKB": 1008.59,
+      "cssKB": 0,
+      "jsFileCount": 18,
+      "cssFileCount": 0
+    },
+    {
+      "route": "/[orgSlug]/quick-expense",
+      "totalJSKB": 1285.93,
+      "routeOnlyJSKB": 944.32,
+      "cssKB": 0,
+      "jsFileCount": 14,
+      "cssFileCount": 0
+    },
+    {
+      "route": "/[orgSlug]/dashboard/project-module/projects",
+      "totalJSKB": 1275.15,
+      "routeOnlyJSKB": 933.53,
+      "cssKB": 0,
+      "jsFileCount": 14,
+      "cssFileCount": 0
+    },
+    {
+      "route": "/registre",
+      "totalJSKB": 1240.26,
+      "routeOnlyJSKB": 898.64,
+      "cssKB": 0,
+      "jsFileCount": 11,
+      "cssFileCount": 0
+    },
+    {
+      "route": "/[orgSlug]/login",
+      "totalJSKB": 1233.62,
+      "routeOnlyJSKB": 892,
+      "cssKB": 0,
+      "jsFileCount": 11,
+      "cssFileCount": 0
+    },
+    {
+      "route": "/[orgSlug]/dashboard/guides",
+      "totalJSKB": 871.18,
+      "routeOnlyJSKB": 529.56,
+      "cssKB": 0,
+      "jsFileCount": 9,
+      "cssFileCount": 0
+    },
+    {
+      "route": "/[orgSlug]/dashboard/manual",
+      "totalJSKB": 848.74,
+      "routeOnlyJSKB": 507.12,
+      "cssKB": 0,
+      "jsFileCount": 8,
+      "cssFileCount": 0
+    },
+    {
+      "route": "/[orgSlug]/dashboard/project-module/admin",
+      "totalJSKB": 775.83,
+      "routeOnlyJSKB": 434.21,
+      "cssKB": 0,
+      "jsFileCount": 12,
+      "cssFileCount": 0
+    },
+    {
+      "route": "/[orgSlug]/dashboard/project-module/layout",
+      "totalJSKB": 769.7,
+      "routeOnlyJSKB": 428.08,
+      "cssKB": 0,
+      "jsFileCount": 11,
+      "cssFileCount": 0
+    },
+    {
+      "route": "/redirect-to-org",
+      "totalJSKB": 759.79,
+      "routeOnlyJSKB": 418.17,
+      "cssKB": 0,
+      "jsFileCount": 10,
+      "cssFileCount": 0
+    },
+    {
+      "route": "/[orgSlug]/quick-expense/layout",
+      "totalJSKB": 742.71,
+      "routeOnlyJSKB": 401.09,
+      "cssKB": 0,
+      "jsFileCount": 10,
+      "cssFileCount": 0
+    },
+    {
+      "route": "/[orgSlug]",
+      "totalJSKB": 730.25,
+      "routeOnlyJSKB": 388.63,
+      "cssKB": 0,
+      "jsFileCount": 9,
+      "cssFileCount": 0
+    },
+    {
+      "route": "/quick",
+      "totalJSKB": 730.24,
+      "routeOnlyJSKB": 388.62,
+      "cssKB": 0,
+      "jsFileCount": 9,
+      "cssFileCount": 0
+    },
+    {
+      "route": "/public/[lang]",
+      "totalJSKB": 363.6,
+      "routeOnlyJSKB": 21.98,
+      "cssKB": 0,
+      "jsFileCount": 7,
+      "cssFileCount": 0
+    },
+    {
+      "route": "/public/[lang]/contact",
+      "totalJSKB": 350.28,
+      "routeOnlyJSKB": 8.67,
+      "cssKB": 0,
+      "jsFileCount": 6,
+      "cssFileCount": 0
+    },
+    {
+      "route": "/public/[lang]/novetats/[slug]",
+      "totalJSKB": 350.28,
+      "routeOnlyJSKB": 8.67,
+      "cssKB": 0,
+      "jsFileCount": 6,
+      "cssFileCount": 0
+    },
+    {
+      "route": "/public/[lang]/funcionalitats",
+      "totalJSKB": 350.28,
+      "routeOnlyJSKB": 8.67,
+      "cssKB": 0,
+      "jsFileCount": 6,
+      "cssFileCount": 0
+    },
+    {
+      "route": "/public/[lang]/novetats",
+      "totalJSKB": 350.28,
+      "routeOnlyJSKB": 8.67,
+      "cssKB": 0,
+      "jsFileCount": 6,
+      "cssFileCount": 0
+    },
+    {
+      "route": "/public/[lang]/privacy",
+      "totalJSKB": 350.28,
+      "routeOnlyJSKB": 8.67,
+      "cssKB": 0,
+      "jsFileCount": 6,
+      "cssFileCount": 0
+    },
+    {
+      "route": "/_not-found",
+      "totalJSKB": 344.29,
+      "routeOnlyJSKB": 2.67,
+      "cssKB": 0,
+      "jsFileCount": 5,
+      "cssFileCount": 0
+    },
+    {
+      "route": "/api/admin/control-tower/summary",
+      "totalJSKB": 342.05,
+      "routeOnlyJSKB": 0.43,
+      "cssKB": 0,
+      "jsFileCount": 5,
+      "cssFileCount": 0
+    },
+    {
+      "route": "/api/admin/incident-alert",
+      "totalJSKB": 342.05,
+      "routeOnlyJSKB": 0.43,
+      "cssKB": 0,
+      "jsFileCount": 5,
+      "cssFileCount": 0
+    },
+    {
+      "route": "/api/admin/orgs/[orgId]/backup/local",
+      "totalJSKB": 342.05,
+      "routeOnlyJSKB": 0.43,
+      "cssKB": 0,
+      "jsFileCount": 5,
+      "cssFileCount": 0
+    },
+    {
+      "route": "/api/ai/categorize-transaction",
+      "totalJSKB": 342.05,
+      "routeOnlyJSKB": 0.43,
+      "cssKB": 0,
+      "jsFileCount": 5,
+      "cssFileCount": 0
+    },
+    {
+      "route": "/api/ai/extract-ticket",
+      "totalJSKB": 342.05,
+      "routeOnlyJSKB": 0.43,
+      "cssKB": 0,
+      "jsFileCount": 5,
+      "cssFileCount": 0
+    },
+    {
+      "route": "/api/categories/archive",
+      "totalJSKB": 342.05,
+      "routeOnlyJSKB": 0.43,
+      "cssKB": 0,
+      "jsFileCount": 5,
+      "cssFileCount": 0
+    },
+    {
+      "route": "/api/categories/update",
+      "totalJSKB": 342.05,
+      "routeOnlyJSKB": 0.43,
+      "cssKB": 0,
+      "jsFileCount": 5,
+      "cssFileCount": 0
+    },
+    {
+      "route": "/api/bank-accounts/archive",
+      "totalJSKB": 342.05,
+      "routeOnlyJSKB": 0.43,
+      "cssKB": 0,
+      "jsFileCount": 5,
+      "cssFileCount": 0
+    },
+    {
+      "route": "/api/ai/generate-product-update",
+      "totalJSKB": 342.05,
+      "routeOnlyJSKB": 0.43,
+      "cssKB": 0,
+      "jsFileCount": 5,
+      "cssFileCount": 0
+    },
+    {
+      "route": "/api/contacts/archive",
+      "totalJSKB": 342.05,
+      "routeOnlyJSKB": 0.43,
+      "cssKB": 0,
+      "jsFileCount": 5,
+      "cssFileCount": 0
+    },
+    {
+      "route": "/api/certificates/send-email",
+      "totalJSKB": 342.05,
+      "routeOnlyJSKB": 0.43,
+      "cssKB": 0,
+      "jsFileCount": 5,
+      "cssFileCount": 0
+    },
+    {
+      "route": "/api/editorial/guide/coverage",
+      "totalJSKB": 342.05,
+      "routeOnlyJSKB": 0.43,
+      "cssKB": 0,
+      "jsFileCount": 5,
+      "cssFileCount": 0
+    },
+    {
+      "route": "/api/contacts/import",
+      "totalJSKB": 342.05,
+      "routeOnlyJSKB": 0.43,
+      "cssKB": 0,
+      "jsFileCount": 5,
+      "cssFileCount": 0
+    },
+    {
+      "route": "/api/editorial/checklist",
+      "totalJSKB": 342.05,
+      "routeOnlyJSKB": 0.43,
+      "cssKB": 0,
+      "jsFileCount": 5,
+      "cssFileCount": 0
+    },
+    {
+      "route": "/api/editorial/guide/publish",
+      "totalJSKB": 342.05,
+      "routeOnlyJSKB": 0.43,
+      "cssKB": 0,
+      "jsFileCount": 5,
+      "cssFileCount": 0
+    },
+    {
+      "route": "/api/editorial/guide/draft",
+      "totalJSKB": 342.05,
+      "routeOnlyJSKB": 0.43,
+      "cssKB": 0,
+      "jsFileCount": 5,
+      "cssFileCount": 0
+    },
+    {
+      "route": "/api/expense-reports/archive",
+      "totalJSKB": 342.05,
+      "routeOnlyJSKB": 0.43,
+      "cssKB": 0,
+      "jsFileCount": 5,
+      "cssFileCount": 0
+    },
+    {
+      "route": "/api/exports/closing-bundle-zip",
+      "totalJSKB": 342.05,
+      "routeOnlyJSKB": 0.43,
+      "cssKB": 0,
+      "jsFileCount": 5,
+      "cssFileCount": 0
+    },
+    {
+      "route": "/api/auth/session",
+      "totalJSKB": 342.05,
+      "routeOnlyJSKB": 0.43,
+      "cssKB": 0,
+      "jsFileCount": 5,
+      "cssFileCount": 0
+    },
+    {
+      "route": "/api/integrations/backup/google-drive/callback",
+      "totalJSKB": 342.05,
+      "routeOnlyJSKB": 0.43,
+      "cssKB": 0,
+      "jsFileCount": 5,
+      "cssFileCount": 0
+    },
+    {
+      "route": "/api/integrations/backup/dropbox/callback",
+      "totalJSKB": 342.05,
+      "routeOnlyJSKB": 0.43,
+      "cssKB": 0,
+      "jsFileCount": 5,
+      "cssFileCount": 0
+    },
+    {
+      "route": "/api/integrations/backup/dropbox/start",
+      "totalJSKB": 342.05,
+      "routeOnlyJSKB": 0.43,
+      "cssKB": 0,
+      "jsFileCount": 5,
+      "cssFileCount": 0
+    },
+    {
+      "route": "/api/integrations/backup/run-now",
+      "totalJSKB": 342.05,
+      "routeOnlyJSKB": 0.43,
+      "cssKB": 0,
+      "jsFileCount": 5,
+      "cssFileCount": 0
+    },
+    {
+      "route": "/api/internal/demo/seed",
+      "totalJSKB": 342.05,
+      "routeOnlyJSKB": 0.43,
+      "cssKB": 0,
+      "jsFileCount": 5,
+      "cssFileCount": 0
+    },
+    {
+      "route": "/api/invitations/accept",
+      "totalJSKB": 342.05,
+      "routeOnlyJSKB": 0.43,
+      "cssKB": 0,
+      "jsFileCount": 5,
+      "cssFileCount": 0
+    },
+    {
+      "route": "/api/invitations/resolve",
+      "totalJSKB": 342.05,
+      "routeOnlyJSKB": 0.43,
+      "cssKB": 0,
+      "jsFileCount": 5,
+      "cssFileCount": 0
+    },
+    {
+      "route": "/api/integrations/backup/google-drive/start",
+      "totalJSKB": 342.05,
+      "routeOnlyJSKB": 0.43,
+      "cssKB": 0,
+      "jsFileCount": 5,
+      "cssFileCount": 0
+    },
+    {
+      "route": "/api/pending-documents/relink-document",
+      "totalJSKB": 342.05,
+      "routeOnlyJSKB": 0.43,
+      "cssKB": 0,
+      "jsFileCount": 5,
+      "cssFileCount": 0
+    },
+    {
+      "route": "/api/projects/archive",
+      "totalJSKB": 342.05,
+      "routeOnlyJSKB": 0.43,
+      "cssKB": 0,
+      "jsFileCount": 5,
+      "cssFileCount": 0
+    },
+    {
+      "route": "/api/remittances/in/check",
+      "totalJSKB": 342.05,
+      "routeOnlyJSKB": 0.43,
+      "cssKB": 0,
+      "jsFileCount": 5,
+      "cssFileCount": 0
+    },
+    {
+      "route": "/api/remittances/in/process",
+      "totalJSKB": 342.05,
+      "routeOnlyJSKB": 0.43,
+      "cssKB": 0,
+      "jsFileCount": 5,
+      "cssFileCount": 0
+    },
+    {
+      "route": "/api/remittances/in/repair",
+      "totalJSKB": 342.05,
+      "routeOnlyJSKB": 0.43,
+      "cssKB": 0,
+      "jsFileCount": 5,
+      "cssFileCount": 0
+    },
+    {
+      "route": "/api/remittances/in/undo",
+      "totalJSKB": 342.05,
+      "routeOnlyJSKB": 0.43,
+      "cssKB": 0,
+      "jsFileCount": 5,
+      "cssFileCount": 0
+    },
+    {
+      "route": "/api/remittances/in/sanitize",
+      "totalJSKB": 342.05,
+      "routeOnlyJSKB": 0.43,
+      "cssKB": 0,
+      "jsFileCount": 5,
+      "cssFileCount": 0
+    },
+    {
+      "route": "/api/support/bot-questions/candidates",
+      "totalJSKB": 342.05,
+      "routeOnlyJSKB": 0.43,
+      "cssKB": 0,
+      "jsFileCount": 5,
+      "cssFileCount": 0
+    },
+    {
+      "route": "/api/support/bot-feedback",
+      "totalJSKB": 342.05,
+      "routeOnlyJSKB": 0.43,
+      "cssKB": 0,
+      "jsFileCount": 5,
+      "cssFileCount": 0
+    },
+    {
+      "route": "/api/support/bot-questions/export",
+      "totalJSKB": 342.05,
+      "routeOnlyJSKB": 0.43,
+      "cssKB": 0,
+      "jsFileCount": 5,
+      "cssFileCount": 0
+    },
+    {
+      "route": "/api/support/kb/cards/delete",
+      "totalJSKB": 342.05,
+      "routeOnlyJSKB": 0.43,
+      "cssKB": 0,
+      "jsFileCount": 5,
+      "cssFileCount": 0
+    },
+    {
+      "route": "/api/support/bot-questions/import",
+      "totalJSKB": 342.05,
+      "routeOnlyJSKB": 0.43,
+      "cssKB": 0,
+      "jsFileCount": 5,
+      "cssFileCount": 0
+    },
+    {
+      "route": "/api/support/kb/cards/precheck-and-publish",
+      "totalJSKB": 342.05,
+      "routeOnlyJSKB": 0.43,
+      "cssKB": 0,
+      "jsFileCount": 5,
+      "cssFileCount": 0
+    },
+    {
+      "route": "/api/support/kb/publish",
+      "totalJSKB": 342.05,
+      "routeOnlyJSKB": 0.43,
+      "cssKB": 0,
+      "jsFileCount": 5,
+      "cssFileCount": 0
+    },
+    {
+      "route": "/api/support/kb/cards",
+      "totalJSKB": 342.05,
+      "routeOnlyJSKB": 0.43,
+      "cssKB": 0,
+      "jsFileCount": 5,
+      "cssFileCount": 0
+    },
+    {
+      "route": "/api/support/kb/cards/upsert",
+      "totalJSKB": 342.05,
+      "routeOnlyJSKB": 0.43,
+      "cssKB": 0,
+      "jsFileCount": 5,
+      "cssFileCount": 0
+    },
+    {
+      "route": "/manifest.webmanifest",
+      "totalJSKB": 342.05,
+      "routeOnlyJSKB": 0.43,
+      "cssKB": 0,
+      "jsFileCount": 5,
+      "cssFileCount": 0
+    },
+    {
+      "route": "/api/support/kb/diagnostics",
+      "totalJSKB": 342.05,
+      "routeOnlyJSKB": 0.43,
+      "cssKB": 0,
+      "jsFileCount": 5,
+      "cssFileCount": 0
+    },
+    {
+      "route": "/api/support/bot",
+      "totalJSKB": 342.05,
+      "routeOnlyJSKB": 0.43,
+      "cssKB": 0,
+      "jsFileCount": 5,
+      "cssFileCount": 0
+    },
+    {
+      "route": "/api/transactions/import",
+      "totalJSKB": 342.05,
+      "routeOnlyJSKB": 0.43,
+      "cssKB": 0,
+      "jsFileCount": 5,
+      "cssFileCount": 0
+    },
+    {
+      "route": "/funcionalitats",
+      "totalJSKB": 342.05,
+      "routeOnlyJSKB": 0.43,
+      "cssKB": 0,
+      "jsFileCount": 5,
+      "cssFileCount": 0
+    },
+    {
+      "route": "/contacte",
+      "totalJSKB": 342.05,
+      "routeOnlyJSKB": 0.43,
+      "cssKB": 0,
+      "jsFileCount": 5,
+      "cssFileCount": 0
+    },
+    {
+      "route": "/",
+      "totalJSKB": 342.05,
+      "routeOnlyJSKB": 0.43,
+      "cssKB": 0,
+      "jsFileCount": 5,
+      "cssFileCount": 0
+    },
+    {
+      "route": "/privacitat",
+      "totalJSKB": 342.05,
+      "routeOnlyJSKB": 0.43,
+      "cssKB": 0,
+      "jsFileCount": 5,
+      "cssFileCount": 0
+    },
+    {
+      "route": "/login",
+      "totalJSKB": 342.05,
+      "routeOnlyJSKB": 0.43,
+      "cssKB": 0,
+      "jsFileCount": 5,
+      "cssFileCount": 0
+    },
+    {
+      "route": "/privacy",
+      "totalJSKB": 342.05,
+      "routeOnlyJSKB": 0.43,
+      "cssKB": 0,
+      "jsFileCount": 5,
+      "cssFileCount": 0
+    },
+    {
+      "route": "/[orgSlug]/dashboard/quick-expense",
+      "totalJSKB": 342.05,
+      "routeOnlyJSKB": 0.43,
+      "cssKB": 0,
+      "jsFileCount": 5,
+      "cssFileCount": 0
+    },
+    {
+      "route": "/public/[lang]/layout",
+      "totalJSKB": 342.05,
+      "routeOnlyJSKB": 0.43,
+      "cssKB": 0,
+      "jsFileCount": 5,
+      "cssFileCount": 0
+    },
+    {
+      "route": "/public/[lang]/confidentialite",
+      "totalJSKB": 342.05,
+      "routeOnlyJSKB": 0.43,
+      "cssKB": 0,
+      "jsFileCount": 5,
+      "cssFileCount": 0
+    },
+    {
+      "route": "/public/[lang]/fonctionnalites",
+      "totalJSKB": 342.05,
+      "routeOnlyJSKB": 0.43,
+      "cssKB": 0,
+      "jsFileCount": 5,
+      "cssFileCount": 0
+    },
+    {
+      "route": "/public/[lang]/funcionalidades",
+      "totalJSKB": 342.05,
+      "routeOnlyJSKB": 0.43,
+      "cssKB": 0,
+      "jsFileCount": 5,
+      "cssFileCount": 0
+    },
+    {
+      "route": "/public/[lang]/contacto",
+      "totalJSKB": 342.05,
+      "routeOnlyJSKB": 0.43,
+      "cssKB": 0,
+      "jsFileCount": 5,
+      "cssFileCount": 0
+    },
+    {
+      "route": "/public/[lang]/privacidad",
+      "totalJSKB": 342.05,
+      "routeOnlyJSKB": 0.43,
+      "cssKB": 0,
+      "jsFileCount": 5,
+      "cssFileCount": 0
+    },
+    {
+      "route": "/public/[lang]/privacidade",
+      "totalJSKB": 342.05,
+      "routeOnlyJSKB": 0.43,
+      "cssKB": 0,
+      "jsFileCount": 5,
+      "cssFileCount": 0
+    },
+    {
+      "route": "/[orgSlug]/dashboard/project-module",
+      "totalJSKB": 342.05,
+      "routeOnlyJSKB": 0.43,
+      "cssKB": 0,
+      "jsFileCount": 5,
+      "cssFileCount": 0
+    },
+    {
+      "route": "/[orgSlug]/dashboard/project-module/quick-expense",
+      "totalJSKB": 342.05,
+      "routeOnlyJSKB": 0.43,
+      "cssKB": 0,
+      "jsFileCount": 5,
+      "cssFileCount": 0
+    },
+    {
+      "route": "/_app",
+      "totalJSKB": 263.71,
+      "routeOnlyJSKB": 260.13,
+      "cssKB": 0,
+      "jsFileCount": 4,
+      "cssFileCount": 0
+    },
+    {
+      "route": "/_error",
+      "totalJSKB": 263.7,
+      "routeOnlyJSKB": 260.11,
+      "cssKB": 0,
+      "jsFileCount": 4,
+      "cssFileCount": 0
+    }
+  ],
+  "largestRoutesDetailed": [
+    {
+      "route": "/admin",
+      "totalJSKB": 2723.55,
+      "routeOnlyJSKB": 2381.93,
+      "cssKB": 0,
+      "jsFileCount": 24,
+      "cssFileCount": 0,
+      "jsFiles": [
+        "static/chunks/webpack-779bed78769817bb.js",
+        "static/chunks/4bd1b696-16dcc2bec6e1bff8.js",
+        "static/chunks/1255-378231d28d9fc1f6.js",
+        "static/chunks/main-app-edaddc977346d97d.js",
+        "static/chunks/bc9e92e6-a62388a2f3f30fad.js",
+        "static/chunks/69806262-1fb126ed2e7e64c8.js",
+        "static/chunks/5842-7f2131c2c73909a2.js",
+        "static/chunks/7349-3562eba53fa9761b.js",
+        "static/chunks/9672-4779810a8e8d4e25.js",
+        "static/chunks/4207-832704c6b1d604c4.js",
+        "static/chunks/2592-8f1eb2decdd258b2.js",
+        "static/chunks/5273-a8f8517dde695216.js",
+        "static/chunks/6336-7240d010866a6bea.js",
+        "static/chunks/6936-f7b4c7b2a5ae44b3.js",
+        "static/chunks/6852-7d17b7fac741c06b.js",
+        "static/chunks/5484-9090654ad475dcc5.js",
+        "static/chunks/5638-d8e4665de0487579.js",
+        "static/chunks/6709-680250363e9dfcc9.js",
+        "static/chunks/8447-97766c67b0291d61.js",
+        "static/chunks/563-94840d2c4dbea18c.js",
+        "static/chunks/3034-dc12753e3f3ae29c.js",
+        "static/chunks/5823-56b73bfaa283ecfe.js",
+        "static/chunks/4083-84db3f089fce10ec.js",
+        "static/chunks/app/admin/page-e72bd29ed3fb3c5c.js"
+      ]
+    },
+    {
+      "route": "/[orgSlug]/dashboard/donants",
+      "totalJSKB": 2344.68,
+      "routeOnlyJSKB": 2003.06,
+      "cssKB": 0,
+      "jsFileCount": 30,
+      "cssFileCount": 0,
+      "jsFiles": [
+        "static/chunks/webpack-779bed78769817bb.js",
+        "static/chunks/4bd1b696-16dcc2bec6e1bff8.js",
+        "static/chunks/1255-378231d28d9fc1f6.js",
+        "static/chunks/main-app-edaddc977346d97d.js",
+        "static/chunks/bc9e92e6-a62388a2f3f30fad.js",
+        "static/chunks/69806262-1fb126ed2e7e64c8.js",
+        "static/chunks/2170a4aa-f45f143aeaf194ed.js",
+        "static/chunks/164f4fb6-78e0eec389b2dcc4.js",
+        "static/chunks/5842-7f2131c2c73909a2.js",
+        "static/chunks/7349-3562eba53fa9761b.js",
+        "static/chunks/2619-e6cb6cc2572e4af5.js",
+        "static/chunks/9672-4779810a8e8d4e25.js",
+        "static/chunks/4207-832704c6b1d604c4.js",
+        "static/chunks/2592-8f1eb2decdd258b2.js",
+        "static/chunks/5273-a8f8517dde695216.js",
+        "static/chunks/6336-7240d010866a6bea.js",
+        "static/chunks/6936-f7b4c7b2a5ae44b3.js",
+        "static/chunks/6852-7d17b7fac741c06b.js",
+        "static/chunks/106-eba872fab7f7517b.js",
+        "static/chunks/5484-9090654ad475dcc5.js",
+        "static/chunks/6526-9c3f0f1cb69e9952.js",
+        "static/chunks/8756-467dca67750e2cce.js",
+        "static/chunks/7195-de5b8f60a6bdc439.js",
+        "static/chunks/9592-ec5883136d339b9c.js",
+        "static/chunks/8447-97766c67b0291d61.js",
+        "static/chunks/563-94840d2c4dbea18c.js",
+        "static/chunks/4922-2bbf59fec8240381.js",
+        "static/chunks/1755-f2f68b263546a3bc.js",
+        "static/chunks/7711-09c84b04fabac316.js",
+        "static/chunks/app/[orgSlug]/dashboard/donants/page-bae686aa3a7e2460.js"
+      ]
+    },
+    {
+      "route": "/[orgSlug]/dashboard/movimientos",
+      "totalJSKB": 2319.05,
+      "routeOnlyJSKB": 1977.44,
+      "cssKB": 0,
+      "jsFileCount": 31,
+      "cssFileCount": 0,
+      "jsFiles": [
+        "static/chunks/webpack-779bed78769817bb.js",
+        "static/chunks/4bd1b696-16dcc2bec6e1bff8.js",
+        "static/chunks/1255-378231d28d9fc1f6.js",
+        "static/chunks/main-app-edaddc977346d97d.js",
+        "static/chunks/bc9e92e6-a62388a2f3f30fad.js",
+        "static/chunks/69806262-1fb126ed2e7e64c8.js",
+        "static/chunks/2170a4aa-f45f143aeaf194ed.js",
+        "static/chunks/5842-7f2131c2c73909a2.js",
+        "static/chunks/7349-3562eba53fa9761b.js",
+        "static/chunks/2619-e6cb6cc2572e4af5.js",
+        "static/chunks/9672-4779810a8e8d4e25.js",
+        "static/chunks/4207-832704c6b1d604c4.js",
+        "static/chunks/2592-8f1eb2decdd258b2.js",
+        "static/chunks/5273-a8f8517dde695216.js",
+        "static/chunks/6336-7240d010866a6bea.js",
+        "static/chunks/6936-f7b4c7b2a5ae44b3.js",
+        "static/chunks/6852-7d17b7fac741c06b.js",
+        "static/chunks/106-eba872fab7f7517b.js",
+        "static/chunks/6526-9c3f0f1cb69e9952.js",
+        "static/chunks/9034-f18ee909758ccff6.js",
+        "static/chunks/8756-467dca67750e2cce.js",
+        "static/chunks/1443-f892a15a49f26494.js",
+        "static/chunks/5571-515b5521c4ca19f6.js",
+        "static/chunks/9190-49b78e01b5fc0e4e.js",
+        "static/chunks/9380-dce06d2dab712887.js",
+        "static/chunks/8447-97766c67b0291d61.js",
+        "static/chunks/563-94840d2c4dbea18c.js",
+        "static/chunks/4922-2bbf59fec8240381.js",
+        "static/chunks/2891-06c143b95f29374d.js",
+        "static/chunks/7850-271f2aa086b12457.js",
+        "static/chunks/app/[orgSlug]/dashboard/movimientos/page-dfe3ea30380e44c2.js"
+      ]
+    },
+    {
+      "route": "/[orgSlug]/dashboard/informes",
+      "totalJSKB": 2231.15,
+      "routeOnlyJSKB": 1889.54,
+      "cssKB": 0,
+      "jsFileCount": 26,
+      "cssFileCount": 0,
+      "jsFiles": [
+        "static/chunks/webpack-779bed78769817bb.js",
+        "static/chunks/4bd1b696-16dcc2bec6e1bff8.js",
+        "static/chunks/1255-378231d28d9fc1f6.js",
+        "static/chunks/main-app-edaddc977346d97d.js",
+        "static/chunks/bc9e92e6-a62388a2f3f30fad.js",
+        "static/chunks/69806262-1fb126ed2e7e64c8.js",
+        "static/chunks/2170a4aa-f45f143aeaf194ed.js",
+        "static/chunks/164f4fb6-78e0eec389b2dcc4.js",
+        "static/chunks/5842-7f2131c2c73909a2.js",
+        "static/chunks/7349-3562eba53fa9761b.js",
+        "static/chunks/9672-4779810a8e8d4e25.js",
+        "static/chunks/4207-832704c6b1d604c4.js",
+        "static/chunks/2592-8f1eb2decdd258b2.js",
+        "static/chunks/5273-a8f8517dde695216.js",
+        "static/chunks/6336-7240d010866a6bea.js",
+        "static/chunks/6936-f7b4c7b2a5ae44b3.js",
+        "static/chunks/6852-7d17b7fac741c06b.js",
+        "static/chunks/7195-de5b8f60a6bdc439.js",
+        "static/chunks/1443-f892a15a49f26494.js",
+        "static/chunks/8447-97766c67b0291d61.js",
+        "static/chunks/563-94840d2c4dbea18c.js",
+        "static/chunks/4922-2bbf59fec8240381.js",
+        "static/chunks/1755-f2f68b263546a3bc.js",
+        "static/chunks/3034-dc12753e3f3ae29c.js",
+        "static/chunks/3880-f7fa7ed748740be4.js",
+        "static/chunks/app/[orgSlug]/dashboard/informes/page-1b2b3085bafb99c0.js"
+      ]
+    },
+    {
+      "route": "/[orgSlug]/dashboard/project-module/projects/[projectId]/budget",
+      "totalJSKB": 2055.17,
+      "routeOnlyJSKB": 1713.55,
+      "cssKB": 0,
+      "jsFileCount": 26,
+      "cssFileCount": 0,
+      "jsFiles": [
+        "static/chunks/webpack-779bed78769817bb.js",
+        "static/chunks/4bd1b696-16dcc2bec6e1bff8.js",
+        "static/chunks/1255-378231d28d9fc1f6.js",
+        "static/chunks/main-app-edaddc977346d97d.js",
+        "static/chunks/bc9e92e6-a62388a2f3f30fad.js",
+        "static/chunks/69806262-1fb126ed2e7e64c8.js",
+        "static/chunks/2170a4aa-f45f143aeaf194ed.js",
+        "static/chunks/5842-7f2131c2c73909a2.js",
+        "static/chunks/7349-3562eba53fa9761b.js",
+        "static/chunks/2619-e6cb6cc2572e4af5.js",
+        "static/chunks/9672-4779810a8e8d4e25.js",
+        "static/chunks/4207-832704c6b1d604c4.js",
+        "static/chunks/2592-8f1eb2decdd258b2.js",
+        "static/chunks/5273-a8f8517dde695216.js",
+        "static/chunks/6336-7240d010866a6bea.js",
+        "static/chunks/6936-f7b4c7b2a5ae44b3.js",
+        "static/chunks/106-eba872fab7f7517b.js",
+        "static/chunks/5484-9090654ad475dcc5.js",
+        "static/chunks/9190-49b78e01b5fc0e4e.js",
+        "static/chunks/5780-997747e567e513fa.js",
+        "static/chunks/8447-97766c67b0291d61.js",
+        "static/chunks/563-94840d2c4dbea18c.js",
+        "static/chunks/4922-2bbf59fec8240381.js",
+        "static/chunks/3034-dc12753e3f3ae29c.js",
+        "static/chunks/5487-0f07eab7780fce97.js",
+        "static/chunks/app/[orgSlug]/dashboard/project-module/projects/[projectId]/budget/page-3b7e19dec066b65c.js"
+      ]
+    },
+    {
+      "route": "/[orgSlug]/dashboard",
+      "totalJSKB": 2048.33,
+      "routeOnlyJSKB": 1706.71,
+      "cssKB": 0,
+      "jsFileCount": 29,
+      "cssFileCount": 0,
+      "jsFiles": [
+        "static/chunks/webpack-779bed78769817bb.js",
+        "static/chunks/4bd1b696-16dcc2bec6e1bff8.js",
+        "static/chunks/1255-378231d28d9fc1f6.js",
+        "static/chunks/main-app-edaddc977346d97d.js",
+        "static/chunks/bc9e92e6-a62388a2f3f30fad.js",
+        "static/chunks/69806262-1fb126ed2e7e64c8.js",
+        "static/chunks/2170a4aa-f45f143aeaf194ed.js",
+        "static/chunks/5842-7f2131c2c73909a2.js",
+        "static/chunks/7349-3562eba53fa9761b.js",
+        "static/chunks/2619-e6cb6cc2572e4af5.js",
+        "static/chunks/9672-4779810a8e8d4e25.js",
+        "static/chunks/4207-832704c6b1d604c4.js",
+        "static/chunks/2592-8f1eb2decdd258b2.js",
+        "static/chunks/5273-a8f8517dde695216.js",
+        "static/chunks/6852-7d17b7fac741c06b.js",
+        "static/chunks/106-eba872fab7f7517b.js",
+        "static/chunks/6526-9c3f0f1cb69e9952.js",
+        "static/chunks/9034-f18ee909758ccff6.js",
+        "static/chunks/8756-467dca67750e2cce.js",
+        "static/chunks/1443-f892a15a49f26494.js",
+        "static/chunks/6928-b78e341db0ec4167.js",
+        "static/chunks/8447-97766c67b0291d61.js",
+        "static/chunks/563-94840d2c4dbea18c.js",
+        "static/chunks/4922-2bbf59fec8240381.js",
+        "static/chunks/1755-f2f68b263546a3bc.js",
+        "static/chunks/661-1c591484826e84da.js",
+        "static/chunks/7711-09c84b04fabac316.js",
+        "static/chunks/3404-4d3fc0daffda3dcc.js",
+        "static/chunks/app/[orgSlug]/dashboard/page-bcfacfe346e593fb.js"
+      ]
+    },
+    {
+      "route": "/[orgSlug]/dashboard/configuracion",
+      "totalJSKB": 2037.1,
+      "routeOnlyJSKB": 1695.48,
+      "cssKB": 0,
+      "jsFileCount": 26,
+      "cssFileCount": 0,
+      "jsFiles": [
+        "static/chunks/webpack-779bed78769817bb.js",
+        "static/chunks/4bd1b696-16dcc2bec6e1bff8.js",
+        "static/chunks/1255-378231d28d9fc1f6.js",
+        "static/chunks/main-app-edaddc977346d97d.js",
+        "static/chunks/bc9e92e6-a62388a2f3f30fad.js",
+        "static/chunks/69806262-1fb126ed2e7e64c8.js",
+        "static/chunks/2170a4aa-f45f143aeaf194ed.js",
+        "static/chunks/5842-7f2131c2c73909a2.js",
+        "static/chunks/7349-3562eba53fa9761b.js",
+        "static/chunks/9672-4779810a8e8d4e25.js",
+        "static/chunks/4207-832704c6b1d604c4.js",
+        "static/chunks/2592-8f1eb2decdd258b2.js",
+        "static/chunks/5273-a8f8517dde695216.js",
+        "static/chunks/6336-7240d010866a6bea.js",
+        "static/chunks/6936-f7b4c7b2a5ae44b3.js",
+        "static/chunks/6852-7d17b7fac741c06b.js",
+        "static/chunks/9034-f18ee909758ccff6.js",
+        "static/chunks/5638-d8e4665de0487579.js",
+        "static/chunks/6043-c4c05c2d8ab3b2a7.js",
+        "static/chunks/8447-97766c67b0291d61.js",
+        "static/chunks/563-94840d2c4dbea18c.js",
+        "static/chunks/4922-2bbf59fec8240381.js",
+        "static/chunks/1755-f2f68b263546a3bc.js",
+        "static/chunks/3034-dc12753e3f3ae29c.js",
+        "static/chunks/661-1c591484826e84da.js",
+        "static/chunks/app/[orgSlug]/dashboard/configuracion/page-98ee8c9b6247aa7e.js"
+      ]
+    },
+    {
+      "route": "/[orgSlug]/dashboard/movimientos/liquidacions",
+      "totalJSKB": 1892.88,
+      "routeOnlyJSKB": 1551.27,
+      "cssKB": 0,
+      "jsFileCount": 28,
+      "cssFileCount": 0,
+      "jsFiles": [
+        "static/chunks/webpack-779bed78769817bb.js",
+        "static/chunks/4bd1b696-16dcc2bec6e1bff8.js",
+        "static/chunks/1255-378231d28d9fc1f6.js",
+        "static/chunks/main-app-edaddc977346d97d.js",
+        "static/chunks/bc9e92e6-a62388a2f3f30fad.js",
+        "static/chunks/69806262-1fb126ed2e7e64c8.js",
+        "static/chunks/164f4fb6-78e0eec389b2dcc4.js",
+        "static/chunks/5842-7f2131c2c73909a2.js",
+        "static/chunks/7349-3562eba53fa9761b.js",
+        "static/chunks/2619-e6cb6cc2572e4af5.js",
+        "static/chunks/9672-4779810a8e8d4e25.js",
+        "static/chunks/4207-832704c6b1d604c4.js",
+        "static/chunks/2592-8f1eb2decdd258b2.js",
+        "static/chunks/5273-a8f8517dde695216.js",
+        "static/chunks/6336-7240d010866a6bea.js",
+        "static/chunks/6936-f7b4c7b2a5ae44b3.js",
+        "static/chunks/6526-9c3f0f1cb69e9952.js",
+        "static/chunks/7195-de5b8f60a6bdc439.js",
+        "static/chunks/4397-861c0fcb0768e159.js",
+        "static/chunks/9981-6957ae382b9db13b.js",
+        "static/chunks/8447-97766c67b0291d61.js",
+        "static/chunks/563-94840d2c4dbea18c.js",
+        "static/chunks/4922-2bbf59fec8240381.js",
+        "static/chunks/1755-f2f68b263546a3bc.js",
+        "static/chunks/3034-dc12753e3f3ae29c.js",
+        "static/chunks/2891-06c143b95f29374d.js",
+        "static/chunks/4230-c41aead49e304468.js",
+        "static/chunks/app/[orgSlug]/dashboard/movimientos/liquidacions/page-eac7e1fe27a65692.js"
+      ]
+    },
+    {
+      "route": "/[orgSlug]/dashboard/movimientos/liquidacions/[id]",
+      "totalJSKB": 1890.2,
+      "routeOnlyJSKB": 1548.59,
+      "cssKB": 0,
+      "jsFileCount": 26,
+      "cssFileCount": 0,
+      "jsFiles": [
+        "static/chunks/webpack-779bed78769817bb.js",
+        "static/chunks/4bd1b696-16dcc2bec6e1bff8.js",
+        "static/chunks/1255-378231d28d9fc1f6.js",
+        "static/chunks/main-app-edaddc977346d97d.js",
+        "static/chunks/bc9e92e6-a62388a2f3f30fad.js",
+        "static/chunks/69806262-1fb126ed2e7e64c8.js",
+        "static/chunks/164f4fb6-78e0eec389b2dcc4.js",
+        "static/chunks/5842-7f2131c2c73909a2.js",
+        "static/chunks/7349-3562eba53fa9761b.js",
+        "static/chunks/2619-e6cb6cc2572e4af5.js",
+        "static/chunks/9672-4779810a8e8d4e25.js",
+        "static/chunks/4207-832704c6b1d604c4.js",
+        "static/chunks/2592-8f1eb2decdd258b2.js",
+        "static/chunks/5273-a8f8517dde695216.js",
+        "static/chunks/106-eba872fab7f7517b.js",
+        "static/chunks/6526-9c3f0f1cb69e9952.js",
+        "static/chunks/8756-467dca67750e2cce.js",
+        "static/chunks/7195-de5b8f60a6bdc439.js",
+        "static/chunks/4397-861c0fcb0768e159.js",
+        "static/chunks/8447-97766c67b0291d61.js",
+        "static/chunks/563-94840d2c4dbea18c.js",
+        "static/chunks/4922-2bbf59fec8240381.js",
+        "static/chunks/1755-f2f68b263546a3bc.js",
+        "static/chunks/2891-06c143b95f29374d.js",
+        "static/chunks/4230-c41aead49e304468.js",
+        "static/chunks/app/[orgSlug]/dashboard/movimientos/liquidacions/[id]/page-df09e81a8d4f2132.js"
+      ]
+    },
+    {
+      "route": "/[orgSlug]/dashboard/treballadors",
+      "totalJSKB": 1823.46,
+      "routeOnlyJSKB": 1481.85,
+      "cssKB": 0,
+      "jsFileCount": 22,
+      "cssFileCount": 0,
+      "jsFiles": [
+        "static/chunks/webpack-779bed78769817bb.js",
+        "static/chunks/4bd1b696-16dcc2bec6e1bff8.js",
+        "static/chunks/1255-378231d28d9fc1f6.js",
+        "static/chunks/main-app-edaddc977346d97d.js",
+        "static/chunks/bc9e92e6-a62388a2f3f30fad.js",
+        "static/chunks/69806262-1fb126ed2e7e64c8.js",
+        "static/chunks/2170a4aa-f45f143aeaf194ed.js",
+        "static/chunks/5842-7f2131c2c73909a2.js",
+        "static/chunks/7349-3562eba53fa9761b.js",
+        "static/chunks/9672-4779810a8e8d4e25.js",
+        "static/chunks/4207-832704c6b1d604c4.js",
+        "static/chunks/2592-8f1eb2decdd258b2.js",
+        "static/chunks/5273-a8f8517dde695216.js",
+        "static/chunks/6336-7240d010866a6bea.js",
+        "static/chunks/6936-f7b4c7b2a5ae44b3.js",
+        "static/chunks/9034-f18ee909758ccff6.js",
+        "static/chunks/8447-97766c67b0291d61.js",
+        "static/chunks/563-94840d2c4dbea18c.js",
+        "static/chunks/4922-2bbf59fec8240381.js",
+        "static/chunks/1755-f2f68b263546a3bc.js",
+        "static/chunks/3034-dc12753e3f3ae29c.js",
+        "static/chunks/app/[orgSlug]/dashboard/treballadors/page-3df5dbb38c9a32dc.js"
+      ]
+    }
+  ],
+  "firstLoadFromBuildOutput": {
+    "parsed": true,
+    "totalRoutes": 101,
+    "sharedFirstLoadJSKB": 102,
+    "sharedChunks": [
+      {
+        "chunk": "chunks/1255-378231d28d9fc1f6.js",
+        "sizeKB": 45.6
+      },
+      {
+        "chunk": "chunks/4bd1b696-16dcc2bec6e1bff8.js",
+        "sizeKB": 54.3
+      },
+      {
+        "chunk": "other shared chunks (total)",
+        "sizeKB": 2.18
+      }
+    ],
+    "largestRoute": {
+      "route": "/admin",
+      "sizeKB": 49.3,
+      "firstLoadJSKB": 753
+    },
+    "firstLoadByRoute": [
+      {
+        "route": "/admin",
+        "sizeKB": 49.3,
+        "firstLoadJSKB": 753
+      },
+      {
+        "route": "/[orgSlug]/dashboard/donants",
+        "sizeKB": 26.6,
+        "firstLoadJSKB": 739
+      },
+      {
+        "route": "/[orgSlug]/dashboard/movimientos",
+        "sizeKB": 100,
+        "firstLoadJSKB": 719
+      },
+      {
+        "route": "/[orgSlug]/dashboard/informes",
+        "sizeKB": 14.5,
+        "firstLoadJSKB": 706
+      },
+      {
+        "route": "/[orgSlug]/dashboard",
+        "sizeKB": 25.8,
+        "firstLoadJSKB": 642
+      },
+      {
+        "route": "/[orgSlug]/dashboard/project-module/projects/[projectId]/budget",
+        "sizeKB": 63.9,
+        "firstLoadJSKB": 640
+      },
+      {
+        "route": "/[orgSlug]/dashboard/configuracion",
+        "sizeKB": 47.4,
+        "firstLoadJSKB": 629
+      },
+      {
+        "route": "/[orgSlug]/dashboard/movimientos/liquidacions/[id]",
+        "sizeKB": 17.7,
+        "firstLoadJSKB": 591
+      },
+      {
+        "route": "/[orgSlug]/dashboard/movimientos/liquidacions",
+        "sizeKB": 15.8,
+        "firstLoadJSKB": 589
+      },
+      {
+        "route": "/[orgSlug]/dashboard/treballadors",
+        "sizeKB": 11.8,
+        "firstLoadJSKB": 574
+      },
+      {
+        "route": "/[orgSlug]/dashboard/proveidors",
+        "sizeKB": 9.47,
+        "firstLoadJSKB": 573
+      },
+      {
+        "route": "/[orgSlug]/dashboard/informes/certificats",
+        "sizeKB": 0.75,
+        "firstLoadJSKB": 543
+      },
+      {
+        "route": "/[orgSlug]/dashboard/movimientos/pendents",
+        "sizeKB": 22.5,
+        "firstLoadJSKB": 498
+      },
+      {
+        "route": "/[orgSlug]/dashboard/project-module/expenses",
+        "sizeKB": 13.6,
+        "firstLoadJSKB": 472
+      },
+      {
+        "route": "/[orgSlug]/dashboard/project-module/expenses/[txId]",
+        "sizeKB": 6.28,
+        "firstLoadJSKB": 423
+      },
+      {
+        "route": "/[orgSlug]/dashboard/donants/remeses-cobrament",
+        "sizeKB": 17,
+        "firstLoadJSKB": 417
+      },
+      {
+        "route": "/[orgSlug]/dashboard/project-module/expenses/capture",
+        "sizeKB": 6.31,
+        "firstLoadJSKB": 414
+      },
+      {
+        "route": "/[orgSlug]/dashboard/projectes",
+        "sizeKB": 7.96,
+        "firstLoadJSKB": 414
+      },
+      {
+        "route": "/[orgSlug]/dashboard/project-module/projects/[projectId]/edit",
+        "sizeKB": 0.87,
+        "firstLoadJSKB": 413
+      },
+      {
+        "route": "/[orgSlug]/dashboard/project-module/projects/new",
+        "sizeKB": 0.33,
+        "firstLoadJSKB": 412
+      },
+      {
+        "route": "/[orgSlug]/dashboard/super-admin",
+        "sizeKB": 14.9,
+        "firstLoadJSKB": 411
+      },
+      {
+        "route": "/[orgSlug]/quick-expense",
+        "sizeKB": 8.64,
+        "firstLoadJSKB": 389
+      },
+      {
+        "route": "/[orgSlug]/dashboard/project-module/projects",
+        "sizeKB": 4.73,
+        "firstLoadJSKB": 385
+      },
+      {
+        "route": "/registre",
+        "sizeKB": 7.57,
+        "firstLoadJSKB": 374
+      },
+      {
+        "route": "/[orgSlug]/login",
+        "sizeKB": 6.16,
+        "firstLoadJSKB": 372
+      },
+      {
+        "route": "/[orgSlug]/dashboard/guides",
+        "sizeKB": 9.85,
+        "firstLoadJSKB": 257
+      },
+      {
+        "route": "/[orgSlug]/dashboard/manual",
+        "sizeKB": 4.51,
+        "firstLoadJSKB": 252
+      },
+      {
+        "route": "/[orgSlug]/dashboard/project-module/admin",
+        "sizeKB": 6.28,
+        "firstLoadJSKB": 242
+      },
+      {
+        "route": "/redirect-to-org",
+        "sizeKB": 3.12,
+        "firstLoadJSKB": 235
+      },
+      {
+        "route": "/[orgSlug]",
+        "sizeKB": 0.59,
+        "firstLoadJSKB": 225
+      },
+      {
+        "route": "/quick",
+        "sizeKB": 0.56,
+        "firstLoadJSKB": 225
+      },
+      {
+        "route": "/public/[lang]",
+        "sizeKB": 5.42,
+        "firstLoadJSKB": 111
+      },
+      {
+        "route": "/public/[lang]/contact",
+        "sizeKB": 0.22,
+        "firstLoadJSKB": 106
+      },
+      {
+        "route": "/public/[lang]/funcionalitats",
+        "sizeKB": 0.22,
+        "firstLoadJSKB": 106
+      },
+      {
+        "route": "/public/[lang]/novetats",
+        "sizeKB": 0.22,
+        "firstLoadJSKB": 106
+      },
+      {
+        "route": "/public/[lang]/novetats/[slug]",
+        "sizeKB": 0.22,
+        "firstLoadJSKB": 106
+      },
+      {
+        "route": "/public/[lang]/privacy",
+        "sizeKB": 0.22,
+        "firstLoadJSKB": 106
+      },
+      {
+        "route": "/_not-found",
+        "sizeKB": 1.04,
+        "firstLoadJSKB": 103
+      },
+      {
+        "route": "/",
+        "sizeKB": 0.28,
+        "firstLoadJSKB": 102
+      },
+      {
+        "route": "/[orgSlug]/dashboard/project-module",
+        "sizeKB": 0.28,
+        "firstLoadJSKB": 102
+      },
+      {
+        "route": "/[orgSlug]/dashboard/project-module/quick-expense",
+        "sizeKB": 0.28,
+        "firstLoadJSKB": 102
+      },
+      {
+        "route": "/[orgSlug]/dashboard/quick-expense",
+        "sizeKB": 0.28,
+        "firstLoadJSKB": 102
+      },
+      {
+        "route": "/api/admin/control-tower/summary",
+        "sizeKB": 0.28,
+        "firstLoadJSKB": 102
+      },
+      {
+        "route": "/api/admin/incident-alert",
+        "sizeKB": 0.28,
+        "firstLoadJSKB": 102
+      },
+      {
+        "route": "/api/admin/orgs/[orgId]/backup/local",
+        "sizeKB": 0.28,
+        "firstLoadJSKB": 102
+      },
+      {
+        "route": "/api/ai/categorize-transaction",
+        "sizeKB": 0.28,
+        "firstLoadJSKB": 102
+      },
+      {
+        "route": "/api/ai/extract-ticket",
+        "sizeKB": 0.28,
+        "firstLoadJSKB": 102
+      },
+      {
+        "route": "/api/ai/generate-product-update",
+        "sizeKB": 0.28,
+        "firstLoadJSKB": 102
+      },
+      {
+        "route": "/api/auth/session",
+        "sizeKB": 0.28,
+        "firstLoadJSKB": 102
+      },
+      {
+        "route": "/api/bank-accounts/archive",
+        "sizeKB": 0.28,
+        "firstLoadJSKB": 102
+      },
+      {
+        "route": "/api/categories/archive",
+        "sizeKB": 0.28,
+        "firstLoadJSKB": 102
+      },
+      {
+        "route": "/api/categories/update",
+        "sizeKB": 0.28,
+        "firstLoadJSKB": 102
+      },
+      {
+        "route": "/api/certificates/send-email",
+        "sizeKB": 0.28,
+        "firstLoadJSKB": 102
+      },
+      {
+        "route": "/api/contacts/archive",
+        "sizeKB": 0.28,
+        "firstLoadJSKB": 102
+      },
+      {
+        "route": "/api/contacts/import",
+        "sizeKB": 0.28,
+        "firstLoadJSKB": 102
+      },
+      {
+        "route": "/api/editorial/checklist",
+        "sizeKB": 0.28,
+        "firstLoadJSKB": 102
+      },
+      {
+        "route": "/api/editorial/guide/coverage",
+        "sizeKB": 0.28,
+        "firstLoadJSKB": 102
+      },
+      {
+        "route": "/api/editorial/guide/draft",
+        "sizeKB": 0.28,
+        "firstLoadJSKB": 102
+      },
+      {
+        "route": "/api/editorial/guide/publish",
+        "sizeKB": 0.28,
+        "firstLoadJSKB": 102
+      },
+      {
+        "route": "/api/expense-reports/archive",
+        "sizeKB": 0.28,
+        "firstLoadJSKB": 102
+      },
+      {
+        "route": "/api/exports/closing-bundle-zip",
+        "sizeKB": 0.28,
+        "firstLoadJSKB": 102
+      },
+      {
+        "route": "/api/integrations/backup/dropbox/callback",
+        "sizeKB": 0.28,
+        "firstLoadJSKB": 102
+      },
+      {
+        "route": "/api/integrations/backup/dropbox/start",
+        "sizeKB": 0.28,
+        "firstLoadJSKB": 102
+      },
+      {
+        "route": "/api/integrations/backup/google-drive/callback",
+        "sizeKB": 0.28,
+        "firstLoadJSKB": 102
+      },
+      {
+        "route": "/api/integrations/backup/google-drive/start",
+        "sizeKB": 0.28,
+        "firstLoadJSKB": 102
+      },
+      {
+        "route": "/api/integrations/backup/run-now",
+        "sizeKB": 0.28,
+        "firstLoadJSKB": 102
+      },
+      {
+        "route": "/api/internal/demo/seed",
+        "sizeKB": 0.28,
+        "firstLoadJSKB": 102
+      },
+      {
+        "route": "/api/invitations/accept",
+        "sizeKB": 0.28,
+        "firstLoadJSKB": 102
+      },
+      {
+        "route": "/api/invitations/resolve",
+        "sizeKB": 0.28,
+        "firstLoadJSKB": 102
+      },
+      {
+        "route": "/api/pending-documents/relink-document",
+        "sizeKB": 0.28,
+        "firstLoadJSKB": 102
+      },
+      {
+        "route": "/api/projects/archive",
+        "sizeKB": 0.28,
+        "firstLoadJSKB": 102
+      },
+      {
+        "route": "/api/remittances/in/check",
+        "sizeKB": 0.28,
+        "firstLoadJSKB": 102
+      },
+      {
+        "route": "/api/remittances/in/process",
+        "sizeKB": 0.28,
+        "firstLoadJSKB": 102
+      },
+      {
+        "route": "/api/remittances/in/repair",
+        "sizeKB": 0.28,
+        "firstLoadJSKB": 102
+      },
+      {
+        "route": "/api/remittances/in/sanitize",
+        "sizeKB": 0.28,
+        "firstLoadJSKB": 102
+      },
+      {
+        "route": "/api/remittances/in/undo",
+        "sizeKB": 0.28,
+        "firstLoadJSKB": 102
+      },
+      {
+        "route": "/api/support/bot",
+        "sizeKB": 0.28,
+        "firstLoadJSKB": 102
+      },
+      {
+        "route": "/api/support/bot-feedback",
+        "sizeKB": 0.28,
+        "firstLoadJSKB": 102
+      },
+      {
+        "route": "/api/support/bot-questions/candidates",
+        "sizeKB": 0.28,
+        "firstLoadJSKB": 102
+      },
+      {
+        "route": "/api/support/bot-questions/export",
+        "sizeKB": 0.28,
+        "firstLoadJSKB": 102
+      },
+      {
+        "route": "/api/support/bot-questions/import",
+        "sizeKB": 0.28,
+        "firstLoadJSKB": 102
+      },
+      {
+        "route": "/api/support/kb/cards",
+        "sizeKB": 0.28,
+        "firstLoadJSKB": 102
+      },
+      {
+        "route": "/api/support/kb/cards/delete",
+        "sizeKB": 0.28,
+        "firstLoadJSKB": 102
+      },
+      {
+        "route": "/api/support/kb/cards/precheck-and-publish",
+        "sizeKB": 0.28,
+        "firstLoadJSKB": 102
+      },
+      {
+        "route": "/api/support/kb/cards/upsert",
+        "sizeKB": 0.28,
+        "firstLoadJSKB": 102
+      },
+      {
+        "route": "/api/support/kb/diagnostics",
+        "sizeKB": 0.28,
+        "firstLoadJSKB": 102
+      },
+      {
+        "route": "/api/support/kb/publish",
+        "sizeKB": 0.28,
+        "firstLoadJSKB": 102
+      },
+      {
+        "route": "/api/transactions/import",
+        "sizeKB": 0.28,
+        "firstLoadJSKB": 102
+      },
+      {
+        "route": "/contacte",
+        "sizeKB": 0.28,
+        "firstLoadJSKB": 102
+      },
+      {
+        "route": "/funcionalitats",
+        "sizeKB": 0.28,
+        "firstLoadJSKB": 102
+      },
+      {
+        "route": "/login",
+        "sizeKB": 0.28,
+        "firstLoadJSKB": 102
+      },
+      {
+        "route": "/manifest.webmanifest",
+        "sizeKB": 0.28,
+        "firstLoadJSKB": 102
+      },
+      {
+        "route": "/privacitat",
+        "sizeKB": 0.28,
+        "firstLoadJSKB": 102
+      },
+      {
+        "route": "/privacy",
+        "sizeKB": 0.28,
+        "firstLoadJSKB": 102
+      },
+      {
+        "route": "/public/[lang]/confidentialite",
+        "sizeKB": 0.28,
+        "firstLoadJSKB": 102
+      },
+      {
+        "route": "/public/[lang]/contacto",
+        "sizeKB": 0.28,
+        "firstLoadJSKB": 102
+      },
+      {
+        "route": "/public/[lang]/fonctionnalites",
+        "sizeKB": 0.28,
+        "firstLoadJSKB": 102
+      },
+      {
+        "route": "/public/[lang]/funcionalidades",
+        "sizeKB": 0.28,
+        "firstLoadJSKB": 102
+      },
+      {
+        "route": "/public/[lang]/privacidad",
+        "sizeKB": 0.28,
+        "firstLoadJSKB": 102
+      },
+      {
+        "route": "/public/[lang]/privacidade",
+        "sizeKB": 0.28,
+        "firstLoadJSKB": 102
+      },
+      {
+        "route": "/icon.png",
+        "sizeKB": 0,
+        "firstLoadJSKB": 0
+      }
+    ]
+  },
+  "raw": {
+    "rootMainFiles": [
+      "static/chunks/webpack-779bed78769817bb.js",
+      "static/chunks/4bd1b696-16dcc2bec6e1bff8.js",
+      "static/chunks/1255-378231d28d9fc1f6.js",
+      "static/chunks/main-app-edaddc977346d97d.js"
+    ],
+    "polyfillFiles": [
+      "static/chunks/polyfills-42372ed130431b0a.js"
+    ]
+  }
+}
