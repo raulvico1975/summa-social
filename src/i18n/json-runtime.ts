@@ -39,15 +39,18 @@ function normalizeLocale(language: string): SupportedLocale {
 }
 
 async function importLocalBundle(locale: SupportedLocale): Promise<JsonMessages> {
-  if (typeof window === 'undefined') {
-    return EMPTY_MESSAGES;
+  switch (locale) {
+    case 'ca':
+      return (await import('./locales/ca.json')).default as JsonMessages;
+    case 'es':
+      return (await import('./locales/es.json')).default as JsonMessages;
+    case 'fr':
+      return (await import('./locales/fr.json')).default as JsonMessages;
+    case 'pt':
+      return (await import('./locales/pt.json')).default as JsonMessages;
+    default:
+      return (await import('./locales/ca.json')).default as JsonMessages;
   }
-
-  const response = await fetch(`/i18n/${locale}.json`, { cache: 'force-cache' });
-  if (!response.ok) {
-    throw new Error(`Failed to load local bundle ${locale}: HTTP ${response.status}`);
-  }
-  return await response.json();
 }
 
 async function loadLocalBundle(language: string): Promise<JsonMessages> {
