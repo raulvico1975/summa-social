@@ -66,7 +66,7 @@ import {
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useTranslations } from '@/i18n';
-import { jsPDF } from 'jspdf';
+import type { jsPDF } from 'jspdf';
 import { useIsMobile } from '@/hooks/use-is-mobile';
 import { MobileListItem } from '@/components/mobile/mobile-list-item';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -79,6 +79,15 @@ import {
 import { cn } from '@/lib/utils';
 import { MOBILE_ACTIONS_BAR, MOBILE_CTA_PRIMARY, MOBILE_CTA_TRUNCATE } from '@/lib/ui/mobile-actions';
 import { isFiscalDonationCandidate } from '@/lib/fiscal/is-fiscal-donation-candidate';
+
+let jsPdfModulePromise: Promise<typeof import('jspdf')> | null = null;
+
+async function loadJsPdf() {
+  if (!jsPdfModulePromise) {
+    jsPdfModulePromise = import('jspdf');
+  }
+  return jsPdfModulePromise;
+}
 
 // Tipus per al resum de donacions per donant
 interface DonorSummary {
@@ -444,7 +453,8 @@ export function DonationCertificateGenerator() {
     return parts.join(', ');
   };
 
-  const generatePDF = (summary: DonorSummary): jsPDF => {
+  const generatePDF = async (summary: DonorSummary): Promise<jsPDF> => {
+    const { jsPDF } = await loadJsPdf();
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
@@ -669,8 +679,8 @@ export function DonationCertificateGenerator() {
   };
 
   // Genera el PDF i retorna el base64 (sense el prefix data:)
-  const generatePDFBase64 = (summary: DonorSummary): string => {
-    const doc = generatePDF(summary);
+  const generatePDFBase64 = async (summary: DonorSummary): Promise<string> => {
+    const doc = await generatePDF(summary);
     const pdfOutput = doc.output('datauristring');
     // Treure el prefix "data:application/pdf;filename=generated.pdf;base64,"
     const base64 = pdfOutput.split(',')[1];
@@ -692,7 +702,7 @@ export function DonationCertificateGenerator() {
         return;
       }
 
-      const pdfBase64 = generatePDFBase64(summary);
+      const pdfBase64 = await generatePDFBase64(summary);
 
       const response = await fetch('/api/certificates/send-email', {
         method: 'POST',
@@ -762,12 +772,12 @@ export function DonationCertificateGenerator() {
 
       for (let i = 0; i < withEmail.length; i += MAX_RECIPIENTS_PER_REQUEST) {
         const chunk = withEmail.slice(i, i + MAX_RECIPIENTS_PER_REQUEST);
-        const donorsData = chunk.map(summary => ({
+        const donorsData = await Promise.all(chunk.map(async (summary) => ({
           id: summary.donor.id,
           name: cleanName(summary.donor.name),
           email: summary.donor.email!,
-          pdfBase64: generatePDFBase64(summary),
-        }));
+          pdfBase64: await generatePDFBase64(summary),
+        })));
 
         const response = await fetch('/api/certificates/send-email', {
           method: 'POST',
@@ -870,8 +880,8 @@ export function DonationCertificateGenerator() {
     setIsPreviewOpen(true);
   };
 
-  const handleDownloadOne = (summary: DonorSummary) => {
-    const doc = generatePDF(summary);
+  const handleDownloadOne = async (summary: DonorSummary) => {
+    const doc = await generatePDF(summary);
     const fileName = `Certificat_${selectedYear}_${cleanName(summary.donor.name).replace(/\s+/g, '_')}.pdf`;
     doc.save(fileName);
     toast({ title: t.certificates.certificateGenerated, description: t.certificates.certificateGeneratedDescription(fileName) });
@@ -890,7 +900,7 @@ export function DonationCertificateGenerator() {
     try {
       for (let i = 0; i < selected.length; i++) {
         const summary = selected[i];
-        const doc = generatePDF(summary);
+        const doc = await generatePDF(summary);
         const fileName = `Certificat_${selectedYear}_${cleanName(summary.donor.name).replace(/\s+/g, '_')}.pdf`;
         doc.save(fileName);
         

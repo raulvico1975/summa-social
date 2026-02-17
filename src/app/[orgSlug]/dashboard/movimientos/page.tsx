@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { TransactionImporter } from '@/components/transaction-importer';
+import dynamic from 'next/dynamic';
 import { TransactionsTable } from '@/components/transactions-table';
 import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
 import { collection, query, where } from 'firebase/firestore';
@@ -16,6 +16,11 @@ import Link from 'next/link';
 import { Badge } from '@/components/ui/badge';
 import type { PendingDocument } from '@/lib/pending-documents';
 import type { ExpenseReport } from '@/lib/expense-reports';
+
+const TransactionImporter = dynamic(
+  () => import('@/components/transaction-importer').then((mod) => mod.TransactionImporter),
+  { ssr: false },
+);
 
 export default function MovimientosPage() {
   const { firestore } = useFirebase();
