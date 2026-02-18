@@ -27,6 +27,7 @@
     "i18n:check": "node scripts/i18n/validate-locales.mjs",
     "i18n:check-tr-keys": "node scripts/i18n/validate-tr-keys-exist-in-ca.mjs",
     "docs:check": "node scripts/validate-docs.mjs",
+    "agent:docs": "node agents/tools/docs-index.mjs",
     "check": "bash scripts/check.sh",
     "prepush": "bash scripts/prepush.sh",
     "verify:ci": "bash scripts/verify-ci.sh",

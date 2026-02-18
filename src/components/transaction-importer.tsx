@@ -37,6 +37,12 @@ import Link from 'next/link';
 import { suggestPendingDocumentMatches } from '@/lib/pending-documents';
 import { classifyTransactions, type ClassifiedRow } from '@/lib/transaction-dedupe';
 import { DedupeCandidateResolver } from '@/components/dedupe-candidate-resolver';
+import {
+  findHeaderRow,
+  findColumnIndexByKeywords,
+  findRawValueByKeywords,
+  normalizeCell,
+} from '@/lib/importers/bank/findHeaderRow';
 
 interface ImportTransactionsApiResponse {
   success: boolean;
@@ -114,22 +120,61 @@ async function fetchExistingTransactionsForDedupe(
 
 // ═══════════════════════════════════════════════════════════════════════════════
 
+const DATE_COLUMN_NAMES = [
+  'f. valor',
+  'f valor',
+  'fecha valor',
+  'fecha operación',
+  'fecha operacion',
+  'fecha',
+  'f. ejecución',
+  'f. ejecucion',
+  'f ejecucion',
+  'data',
+  'date',
+  'valor',
+];
+const DESCRIPTION_COLUMN_NAMES = [
+  'concepte',
+  'concepto',
+  'descripción',
+  'descripcion',
+  'descripció',
+  'descripcio',
+  'description',
+  'detalle',
+  'detall',
+];
+const AMOUNT_COLUMN_NAMES = ['import', 'importe', 'amount', 'cantidad', 'quantitat'];
+const BALANCE_COLUMN_NAMES = ['saldo', 'balance'];
+const OPERATION_DATE_COLUMN_NAMES = [
+  'f. ejecución',
+  'f. ejecucion',
+  'f ejecucion',
+  'fecha ejecución',
+  'fecha ejecucion',
+  'fecha operación',
+  'fecha operacion',
+  'operación',
+  'operacion',
+];
+const VALUE_DATE_COLUMN_NAMES = ['f. valor', 'f valor', 'fecha valor', 'valor'];
+const GENERIC_DATE_COLUMN_NAMES = ['fecha', 'data', 'date'];
+
+const LEGACY_HEADER_KEYWORDS = ['fecha', 'concepto', 'importe', 'descrip', 'amount'];
+
 const findColumnIndex = (header: string[], potentialNames: string[]): number => {
-    for (const name of potentialNames) {
-        const index = header.findIndex(h => h.toLowerCase().includes(name.toLowerCase()));
-        if (index !== -1) return index;
-    }
-    return -1;
-}
+  return findColumnIndexByKeywords(header, potentialNames);
+};
 
-// Keywords to identify the header row
-const headerKeywords = ['fecha', 'concepto', 'importe', 'descrip', 'amount'];
+const isLegacyHeaderRow = (row: unknown[]): boolean => {
+  const rowString = row.map((cell) => String(cell ?? '')).join(' ').toLowerCase();
+  const matches = LEGACY_HEADER_KEYWORDS.filter((keyword) => rowString.includes(keyword)).length;
+  return matches >= 2;
+};
 
-const isHeaderRow = (row: any[]): boolean => {
-    const rowString = row.join(' ').toLowerCase();
-    // A row is considered a header if it contains at least a few of the keywords
-    const matches = headerKeywords.filter(keyword => rowString.includes(keyword)).length;
-    return matches >= 2;
+const isRowCompletelyEmpty = (row: unknown[]): boolean => {
+  return row.every((cell) => normalizeCell(cell) === '');
 };
 
 
@@ -137,15 +182,7 @@ const isHeaderRow = (row: any[]): boolean => {
  * Cerca un valor en rawRow per nom de columna (fuzzy, case-insensitive substring)
  */
 const findRawValue = (rawRow: Record<string, any>, potentialNames: string[]): any => {
-  for (const name of potentialNames) {
-    if (rawRow[name] !== undefined && rawRow[name] !== null && rawRow[name] !== '') return rawRow[name];
-  }
-  const keys = Object.keys(rawRow);
-  for (const name of potentialNames) {
-    const key = keys.find(k => k.toLowerCase().includes(name.toLowerCase()));
-    if (key && rawRow[key] !== undefined && rawRow[key] !== null && rawRow[key] !== '') return rawRow[key];
-  }
-  return null;
+  return findRawValueByKeywords(rawRow as Record<string, unknown>, potentialNames);
 };
 
 /**
@@ -169,6 +206,8 @@ const parseSingleDate = (val: any): string | null => {
   }
   return isNaN(d.getTime()) ? null : d.toISOString().split('T')[0];
 };
+
+const isIsoDateOnly = (value: string): boolean => /^\d{4}-\d{2}-\d{2}$/.test(value);
 
 export function TransactionImporter({ availableCategories }: TransactionImporterProps) {
   const fileInputRef = React.useRef<HTMLInputElement>(null);
@@ -312,23 +351,33 @@ export function TransactionImporter({ availableCategories }: TransactionImporter
             throw new Error(t.importers.transaction.errors.emptyXlsx);
         }
 
+        const rows = (json as unknown[][]).map((row) => (Array.isArray(row) ? row : []));
+        const headerDetection = findHeaderRow(rows);
         let headerRowIndex = -1;
-        for(let i = 0; i < json.length; i++) {
-            if (isHeaderRow(json[i] as any[])) {
-                headerRowIndex = i;
-                break;
+        let usedHeuristicHeader = false;
+
+        if (headerDetection.index !== null) {
+          headerRowIndex = headerDetection.index;
+          usedHeuristicHeader = true;
+        } else {
+          // Guardrail: si la heurística no té prou confiança, mantenir detecció legacy
+          for (let i = 0; i < rows.length; i++) {
+            if (isLegacyHeaderRow(rows[i])) {
+              headerRowIndex = i;
+              break;
             }
+          }
         }
 
         if (headerRowIndex === -1) {
              throw new Error(t.importers.transaction.errors.headerNotFound);
         }
 
-        const header = (json[headerRowIndex] as string[]).map(h => String(h || '').trim());
+        const header = (rows[headerRowIndex] as string[]).map(h => String(h || '').trim());
 
-        const dateIndex = findColumnIndex(header, ['f. valor', 'fecha operación', 'fecha', 'f. ejecución', 'data']);
-        const conceptIndex = findColumnIndex(header, ['concepto', 'descripció', 'description']);
-        const amountIndex = findColumnIndex(header, ['importe', 'import', 'amount', 'quantitat']);
+        const dateIndex = findColumnIndex(header, DATE_COLUMN_NAMES);
+        const conceptIndex = findColumnIndex(header, DESCRIPTION_COLUMN_NAMES);
+        const amountIndex = findColumnIndex(header, AMOUNT_COLUMN_NAMES);
 
         if (dateIndex === -1 || conceptIndex === -1 || amountIndex === -1) {
             const missing = [
@@ -339,15 +388,17 @@ export function TransactionImporter({ availableCategories }: TransactionImporter
             throw new Error(t.importers.transaction.errors.requiredColumnsNotFound(missing));
         }
 
-        const dataRows = json.slice(headerRowIndex + 1);
+        const dataRows = usedHeuristicHeader
+          ? rows.slice(headerRowIndex + 1).filter((row) => !isRowCompletelyEmpty(row))
+          : rows.slice(headerRowIndex + 1);
         const parsedData = dataRows.map((row: any) => {
             // Preservar totes les columnes per enrichment
             const _rawRow: Record<string, any> = {};
-            header.forEach((h, idx) => { _rawRow[h] = row[idx]; });
+            header.forEach((h, idx) => { _rawRow[h] = row?.[idx]; });
             return {
-              Fecha: row[dateIndex],
-              Concepto: row[conceptIndex],
-              Importe: row[amountIndex],
+              Fecha: row?.[dateIndex],
+              Concepto: row?.[conceptIndex],
+              Importe: row?.[amountIndex],
               _rawRow,
             };
         });
@@ -427,12 +478,12 @@ export function TransactionImporter({ availableCategories }: TransactionImporter
 
       // Comprovar si almenys una fila té les columnes necessàries
       for (const row of data.slice(0, 5)) { // Només mirem les primeres 5 files
-        const dateValue = row.Fecha || row.fecha || row['Fecha Operación'] || row['fecha operación'] ||
-                          row['F. ejecución'] || row['F. valor'] || row['F. Valor'] || row['F. Ejecución'];
-        const descriptionValue = row.Concepto || row.concepto || row.description || row.descripción;
-        const amountValue = row.Importe || row.importe || row.amount;
+        const rawRow = row as Record<string, any>;
+        const dateValue = findRawValue(rawRow, [...VALUE_DATE_COLUMN_NAMES, ...OPERATION_DATE_COLUMN_NAMES, ...GENERIC_DATE_COLUMN_NAMES]);
+        const descriptionValue = findRawValue(rawRow, DESCRIPTION_COLUMN_NAMES);
+        const amountValue = findRawValue(rawRow, AMOUNT_COLUMN_NAMES);
 
-        if (dateValue && descriptionValue && amountValue !== undefined) {
+        if (dateValue && descriptionValue && amountValue !== undefined && amountValue !== null && amountValue !== '') {
           return true;
         }
       }
@@ -492,24 +543,27 @@ export function TransactionImporter({ availableCategories }: TransactionImporter
     try {
         // Parsejar files a transaccions, preservant rawRow per enrichment
         const allParsedWithRaw = data
-        .map((row: any, index: number) => {
+        .map((row: any) => {
             // rawRow: còpia per poder afegir _opDate/_valueDate sense mutar l'original
             const rawRow: Record<string, any> = { ...(row._rawRow || row) };
 
             // Detectar ambdues dates per separat (enrichment E1)
-            const valueDateRaw = findRawValue(rawRow, ['f. valor', 'fecha valor']);
-            const opDateRaw = findRawValue(rawRow, ['f. ejecución', 'fecha ejecución', 'fecha operación']);
-            const genericDateRaw = findRawValue(rawRow, ['fecha', 'data', 'date']);
+            const valueDateRaw = findRawValue(rawRow, VALUE_DATE_COLUMN_NAMES);
+            const opDateRaw = findRawValue(rawRow, OPERATION_DATE_COLUMN_NAMES);
+            const genericDateRaw = findRawValue(rawRow, GENERIC_DATE_COLUMN_NAMES);
             const dateValue = valueDateRaw || opDateRaw || genericDateRaw;
-            const descriptionValue = row.Concepto || row.concepto || row.description || row.descripción;
-            let amountValue = row.Importe || row.importe || row.amount;
+            const descriptionValueRaw = findRawValue(rawRow, DESCRIPTION_COLUMN_NAMES);
+            const descriptionValue = typeof descriptionValueRaw === 'string'
+              ? descriptionValueRaw.trim()
+              : String(descriptionValueRaw ?? '').trim();
+            let amountValue = findRawValue(rawRow, AMOUNT_COLUMN_NAMES);
 
             if (typeof amountValue === 'string') {
                 amountValue = amountValue.replace(/\./g, '').replace(',', '.');
             }
             const amount = parseFloat(amountValue);
 
-            if (!dateValue || !descriptionValue || isNaN(amount)) {
+            if (!dateValue || !descriptionValue || !Number.isFinite(amount)) {
                 return null;
             }
 
@@ -543,7 +597,7 @@ export function TransactionImporter({ availableCategories }: TransactionImporter
             let normalizedOpDate: string | undefined;
             if (opDateRaw) {
               const parsedOpDate = parseSingleDate(opDateRaw);
-              if (parsedOpDate) {
+              if (parsedOpDate && isIsoDateOnly(parsedOpDate)) {
                 rawRow._opDate = parsedOpDate;
                 normalizedOpDate = parsedOpDate;
               }
@@ -551,7 +605,7 @@ export function TransactionImporter({ availableCategories }: TransactionImporter
 
             // Enrichment: saldo/balance — parsejar format EU a number
             let parsedBalanceAfter: number | undefined;
-            const balanceRaw = findRawValue(rawRow, ['saldo', 'balance']);
+            const balanceRaw = findRawValue(rawRow, BALANCE_COLUMN_NAMES);
             if (balanceRaw !== null) {
               let balanceNum: number;
               if (typeof balanceRaw === 'number') {
@@ -560,7 +614,7 @@ export function TransactionImporter({ availableCategories }: TransactionImporter
                 const cleaned = String(balanceRaw).replace(/\./g, '').replace(',', '.');
                 balanceNum = parseFloat(cleaned);
               }
-              if (!isNaN(balanceNum)) {
+              if (Number.isFinite(balanceNum)) {
                 rawRow._balance = balanceNum;
                 parsedBalanceAfter = balanceNum;
               }
