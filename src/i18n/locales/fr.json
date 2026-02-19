@@ -2368,6 +2368,7 @@
   "movements.table.allExpensesHaveProof": "Toutes les dépenses ont un justificatif.",
   "movements.table.allExpensesHaveProofEmpty": "🎉 Toutes les dépenses ont un justificatif !",
   "movements.table.amount": "Montant",
+  "movements.table.balance": "Solde",
   "movements.table.applyFilters": "Appliquer",
   "movements.table.assign": "Attribuer",
   "movements.table.assignAffectedDonor": "Attribuer donateur concerné",

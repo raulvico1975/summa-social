@@ -53,6 +53,9 @@ interface TransactionRowMobileProps {
   onViewRemittanceDetail?: (txId: string) => void;
   onAttachDocument?: (txId: string) => void;
   t: {
+    amount: string;
+    balance: string;
+    noContact: string;
     returnBadge: string;
     commissionBadge: string;
     returnedDonation: string;
@@ -90,6 +93,8 @@ export const TransactionRowMobile = React.memo(function TransactionRowMobile({
   const isReturnFee = tx.transactionType === 'return_fee';
   const isReturnedDonation = tx.donationStatus === 'returned';
   const hasDocument = !!tx.document;
+  const hasBalanceAfter = typeof tx.balanceAfter === 'number' && Number.isFinite(tx.balanceAfter);
+  const balanceText = hasBalanceAfter ? formatCurrencyEU(Math.abs(tx.balanceAfter!)) : '—';
   const canSplitAmount =
     tx.amount > 0 &&
     !tx.isRemittance &&
@@ -165,26 +170,12 @@ export const TransactionRowMobile = React.memo(function TransactionRowMobile({
 
   return (
     <div className={`border rounded-lg p-3 ${bgClass}`}>
-      {/* Top row: Data + Import */}
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0 flex-1">
-          <div className="text-xs text-muted-foreground whitespace-nowrap">{formatDateShort(tx.date)}</div>
-          <div
-            className={`mt-1 text-sm leading-snug ${
-              isReturnedDonation ? 'text-gray-400 line-through' : 'text-foreground'
-            }`}
-            style={{
-              display: '-webkit-box',
-              WebkitLineClamp: 2,
-              WebkitBoxOrient: 'vertical',
-              overflow: 'hidden',
-            }}
-          >
-            {tx.note || tx.description}
-          </div>
-        </div>
-        <div
-          className={`text-sm font-medium whitespace-nowrap text-right ${
+      {/* Line 1: Data · Import · Saldo */}
+      <div className="flex flex-wrap items-center gap-1 text-xs">
+        <span className="text-muted-foreground whitespace-nowrap">{formatDateShort(tx.date)}</span>
+        <span className="text-muted-foreground/50">·</span>
+        <span
+          className={`font-medium whitespace-nowrap ${
             isReturnedDonation
               ? 'text-gray-400 line-through'
               : tx.amount > 0
@@ -192,8 +183,41 @@ export const TransactionRowMobile = React.memo(function TransactionRowMobile({
               : 'text-foreground'
           }`}
         >
-          {formatCurrencyEU(tx.amount)}
-        </div>
+          {t.amount}: {formatCurrencyEU(tx.amount)}
+        </span>
+        <span className="text-muted-foreground/50">·</span>
+        <span className="font-medium whitespace-nowrap text-foreground">
+          {t.balance}: {balanceText}
+        </span>
+      </div>
+
+      {/* Line 2: Concepte */}
+      <div className="mt-1 min-w-0">
+        <p
+          className={`text-sm truncate ${isReturnedDonation ? 'text-gray-400 line-through' : 'text-foreground'}`}
+          title={tx.description}
+        >
+          {tx.description}
+        </p>
+      </div>
+
+      {/* Line 3: Contacte + Categoria (chips) */}
+      <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
+        <Badge variant="secondary" className="max-w-[48%] text-xs py-0 px-1.5 font-normal">
+          <span className="truncate">{categoryDisplayName || '—'}</span>
+        </Badge>
+        <Badge variant="outline" className="max-w-[48%] text-xs py-0 px-1.5 font-normal">
+          <span className="inline-flex items-center gap-1 min-w-0">
+            <User className="h-3 w-3 shrink-0" />
+            {contactName ? (
+              <SummaTooltip content={contactName}>
+                <span className="truncate">{middleEllipsis(contactName)}</span>
+              </SummaTooltip>
+            ) : (
+              <span className="truncate">{t.noContact}</span>
+            )}
+          </span>
+        </Badge>
       </div>
 
       {/* Middle: Badges (type + remittance) */}
@@ -228,29 +252,6 @@ export const TransactionRowMobile = React.memo(function TransactionRowMobile({
           )}
         </div>
       )}
-
-      {/* Bottom meta row: Categoria + Contacte + Doc */}
-      <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-        {categoryDisplayName && (
-          <Badge variant="secondary" className="text-xs py-0 px-1.5 font-normal">
-            {categoryDisplayName}
-          </Badge>
-        )}
-        {contactName && (
-          <span className="inline-flex items-center gap-1">
-            <User className="h-3 w-3" />
-            <SummaTooltip content={contactName}>
-              <span className="max-w-[220px]">{middleEllipsis(contactName)}</span>
-            </SummaTooltip>
-          </span>
-        )}
-        {hasDocument && (
-          <span className="inline-flex items-center gap-1 text-muted-foreground">
-            <FileText className="h-3 w-3 fill-current" />
-            Doc
-          </span>
-        )}
-      </div>
 
       {/* Actions rail */}
       <div className="mt-2 flex justify-end gap-1 shrink-0">
