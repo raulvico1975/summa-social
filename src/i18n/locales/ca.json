@@ -2368,6 +2368,7 @@
   "movements.table.allExpensesHaveProof": "Totes les despeses tenen justificant.",
   "movements.table.allExpensesHaveProofEmpty": "🎉 Totes les despeses tenen justificant!",
   "movements.table.amount": "Import",
+  "movements.table.balance": "Saldo",
   "movements.table.applyFilters": "Aplicar",
   "movements.table.assign": "Assignar",
   "movements.table.assignAffectedDonor": "Assignar donant afectat",
