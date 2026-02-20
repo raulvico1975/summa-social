@@ -8,12 +8,23 @@ export function useTransactionFilters(
   transactions: Transaction[] | undefined,
   filter: DateFilterValue
 ) {
+  const getDisplayDate = (tx: Transaction): string => {
+    if (tx.operationDate) {
+      return tx.operationDate;
+    }
+
+    return (tx.date ?? '').slice(0, 10);
+  };
+
   const filteredTransactions = React.useMemo(() => {
     if (!transactions) return [];
     if (filter.type === 'all') return transactions;
 
     return transactions.filter((tx) => {
-      const txDate = new Date(tx.date);
+      const txDate = new Date(getDisplayDate(tx));
+      if (Number.isNaN(txDate.getTime())) {
+        return false;
+      }
 
       if (filter.type === 'year' && filter.year) {
         return txDate.getFullYear() === filter.year;

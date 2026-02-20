@@ -26,7 +26,14 @@ export interface ClassifiedRow {
   /** IDs dels existents que coincideixen (buit si NEW o intra-fitxer) */
   matchedExistingIds: string[];
   /** Dades bàsiques dels existents per mostrar a UI */
-  matchedExisting: Array<{ id: string; date: string; description: string; amount: number }>;
+  matchedExisting: Array<{
+    id: string;
+    date: string;
+    description: string;
+    amount: number;
+    operationDate?: string;
+    balanceAfter?: number;
+  }>;
   /** Fila original CSV/XLSX (totes les columnes) per enrichment i display */
   rawRow: Record<string, any>;
   /** Decisió de l'usuari per candidats: null = sense decidir */
@@ -140,7 +147,7 @@ function isRefKey(key: string): boolean {
 
 /**
  * Clau forta de dedupe amb saldo:
- * bankAccountId + balanceAfter + amount + (operationDate || date)
+ * bankAccountId + balanceAfter + amount + operationDate
  */
 function createBalanceAmountDateKey(tx: {
   date: string;
@@ -152,11 +159,14 @@ function createBalanceAmountDateKey(tx: {
   if (typeof tx.balanceAfter !== 'number' || !Number.isFinite(tx.balanceAfter)) {
     return null;
   }
+  if (!tx.operationDate) {
+    return null;
+  }
 
   const accountPrefix = tx.bankAccountId || 'no-account';
   const balanceAfterCents = normalizeAmountForDedupe(tx.balanceAfter);
   const amountCents = normalizeAmountForDedupe(tx.amount);
-  const dateKey = normalizeDateForDedupe(tx.operationDate || tx.date);
+  const dateKey = normalizeDateForDedupe(tx.operationDate);
 
   return `${accountPrefix}:bal:${balanceAfterCents}|${amountCents}|${dateKey}`;
 }
@@ -309,6 +319,8 @@ export function classifyTransactions(
             date: m.tx.date,
             description: m.tx.description,
             amount: m.tx.amount,
+            operationDate: m.tx.operationDate,
+            balanceAfter: m.tx.balanceAfter,
           })),
           rawRow,
           userDecision: null,
@@ -328,10 +340,10 @@ export function classifyTransactions(
       continue;
     }
 
-    // 3. Regla forta amb saldo: bankAccount + balanceAfter + amount + (operationDate || date)
+    // 3. Regla forta amb saldo: bankAccount + balanceAfter + amount + operationDate
     const balanceAmountDateKey = createBalanceAmountDateKey({
       date: tx.date,
-      operationDate: (tx as { operationDate?: string }).operationDate,
+      operationDate: tx.operationDate,
       amount: tx.amount,
       balanceAfter: (tx as { balanceAfter?: number }).balanceAfter,
       bankAccountId,
@@ -349,6 +361,8 @@ export function classifyTransactions(
             date: m.tx.date,
             description: m.tx.description,
             amount: m.tx.amount,
+            operationDate: m.tx.operationDate,
+            balanceAfter: m.tx.balanceAfter,
           })),
           rawRow,
           userDecision: null,
@@ -416,6 +430,8 @@ export function classifyTransactions(
         date: m.tx.date,
         description: m.tx.description,
         amount: m.tx.amount,
+        operationDate: m.tx.operationDate,
+        balanceAfter: m.tx.balanceAfter,
       })),
       rawRow,
       userDecision: null,

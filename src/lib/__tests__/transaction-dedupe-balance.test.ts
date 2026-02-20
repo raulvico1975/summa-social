@@ -68,7 +68,7 @@ describe('transaction dedupe with balanceAfter strong rule', () => {
     assert.equal(result[0].status, 'NEW');
   });
 
-  it('mateix saldo+amount però data diferent no és duplicate fort', () => {
+  it('mateix saldo+amount però data operació diferent no és duplicate fort', () => {
     const existing = [makeExisting({ id: 'tx-1', balanceAfter: 1000, operationDate: '2026-02-10' })];
     const parsed = [makeIncoming({ balanceAfter: 1000, operationDate: '2026-02-11' })];
 
@@ -79,14 +79,14 @@ describe('transaction dedupe with balanceAfter strong rule', () => {
     assert.notEqual(result[0].status, 'DUPLICATE_SAFE');
   });
 
-  it('operationDate present usa (operationDate || date) per fer match fort', () => {
-    const existing = [makeExisting({ id: 'tx-1', balanceAfter: 1000, operationDate: undefined, date: '2026-02-15T12:00:00.000Z' })];
-    const parsed = [makeIncoming({ balanceAfter: 1000, operationDate: '2026-02-15', date: '2026-02-10T00:00:00.000Z' })];
+  it('si falta operationDate en el moviment nou, no és duplicate fort', () => {
+    const existing = [makeExisting({ id: 'tx-1', balanceAfter: 1000, operationDate: undefined })];
+    const parsed = [makeIncoming({ balanceAfter: 1000, operationDate: undefined })];
 
     const result = classifyTransactions(parsed, existing, 'acc-1');
 
     assert.equal(result.length, 1);
-    assert.equal(result[0].status, 'DUPLICATE_SAFE');
-    assert.equal(result[0].reason, 'BALANCE_AMOUNT_DATE');
+    assert.equal(result[0].status, 'DUPLICATE_CANDIDATE');
+    assert.notEqual(result[0].reason, 'BALANCE_AMOUNT_DATE');
   });
 });

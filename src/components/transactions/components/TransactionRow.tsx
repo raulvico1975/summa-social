@@ -458,6 +458,7 @@ export const TransactionRow = React.memo(function TransactionRow({
 
   // Detecta si és una remesa de donacions processada (no devolucions)
   const isProcessedDonationRemittance = tx.isRemittance && tx.remittanceType !== 'returns';
+  const displayDate = tx.operationDate || tx.date;
 
   // Classes de la fila
   const rowClassName = `h-10 ${
@@ -482,7 +483,9 @@ export const TransactionRow = React.memo(function TransactionRow({
         </TableCell>
       )}
       {/* Date */}
-      <TableCell className="text-muted-foreground py-1 text-xs whitespace-nowrap">{formatDateShort(tx.date)}</TableCell>
+      <TableCell className="text-muted-foreground py-1 text-xs whitespace-nowrap">
+        {formatDateShort(displayDate)}
+      </TableCell>
 
       {/* Amount */}
       <TableCell
