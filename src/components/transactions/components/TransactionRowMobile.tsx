@@ -88,6 +88,7 @@ export const TransactionRowMobile = React.memo(function TransactionRowMobile({
   t,
 }: TransactionRowMobileProps) {
   const [isMenuOpen, setIsMenuOpen] = React.useState(false);
+  const displayDate = tx.operationDate || tx.date;
 
   const isReturn = tx.transactionType === 'return';
   const isReturnFee = tx.transactionType === 'return_fee';
@@ -172,7 +173,7 @@ export const TransactionRowMobile = React.memo(function TransactionRowMobile({
     <div className={`border rounded-lg p-3 ${bgClass}`}>
       {/* Line 1: Data · Import · Saldo */}
       <div className="flex flex-wrap items-center gap-1 text-xs">
-        <span className="text-muted-foreground whitespace-nowrap">{formatDateShort(tx.date)}</span>
+        <span className="text-muted-foreground whitespace-nowrap">{formatDateShort(displayDate)}</span>
         <span className="text-muted-foreground/50">·</span>
         <span
           className={`font-medium whitespace-nowrap ${
