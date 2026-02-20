@@ -1476,6 +1476,7 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
   const rowTranslations = React.useMemo(() => ({
     date: t.movements.table.date,
     amount: t.movements.table.amount,
+    balance: tr('movements.table.balance'),
     returnBadge: t.movements.table.returnBadge,
     returnAssignedTooltip: t.movements.table.returnAssignedTooltip,
     pendingDonorAssignment: t.movements.table.pendingDonorAssignment,
@@ -1517,6 +1518,7 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
       'Desfer remesa',
     moreOptionsAriaLabel: t.movements.table.moreOptionsAriaLabel,
     legacyCategory: t.movements?.table?.legacyCategory ?? 'Cal recategoritzar',
+    noContact: t.movements.table.noContact,
   }), [t, tr]);
 
   // Memoized filter translations
@@ -1815,8 +1817,8 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
           TAULA DE TRANSACCIONS (desktop/tablet) - >= 768px
           ═══════════════════════════════════════════════════════════════════════ */}
       {!isMobile && (
-        <div className="w-full rounded-md border table-scroll-stable overflow-x-auto [&>div]:overflow-visible">
-          <Table className="w-full">
+        <div className="w-full rounded-md border table-scroll-stable overflow-hidden [&>div]:overflow-visible [&>div]:overflow-x-hidden">
+          <Table className="w-full table-fixed">
             <TableHeader>
               <TableRow className="h-9">
                 {/* Checkbox columna - només visible per admin/user */}
@@ -1849,6 +1851,7 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
                   </button>
                 </TableHead>
                 <TableHead className="w-[110px] text-right py-2 whitespace-nowrap">{t.movements.table.amount}</TableHead>
+                <TableHead className="w-[120px] text-right py-2 whitespace-nowrap">{tr('movements.table.balance')}</TableHead>
                 <TableHead className="py-2 min-w-0">{t.movements.table.concept}</TableHead>
                 <TableHead className="w-[180px] py-2 hidden lg:table-cell">{t.movements.table.contact}</TableHead>
                 <TableHead className="w-[160px] py-2 hidden lg:table-cell">{t.movements.table.category}</TableHead>
@@ -1918,8 +1921,9 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
                   <TableRow key={`skeleton-${i}`}>
                     {canBulkEdit && <TableCell className="w-10"><Skeleton className="h-4 w-4" /></TableCell>}
                     <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+                    <TableCell className="text-right"><Skeleton className="ml-auto h-4 w-24" /></TableCell>
+                    <TableCell className="text-right"><Skeleton className="ml-auto h-4 w-24" /></TableCell>
                     <TableCell><Skeleton className="h-4 w-full max-w-[200px]" /></TableCell>
-                    <TableCell><Skeleton className="h-4 w-24" /></TableCell>
                     <TableCell><Skeleton className="h-4 w-16" /></TableCell>
                     <TableCell><Skeleton className="h-4 w-28" /></TableCell>
                     {showProjectColumn && <TableCell><Skeleton className="h-4 w-24" /></TableCell>}
@@ -1931,7 +1935,7 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
               {/* Empty state (only when not loading) */}
               {!isLoadingTransactions && filteredTransactions.length === 0 && (
                   <TableRow>
-                      <TableCell colSpan={(canBulkEdit ? 8 : 7) + (showProjectColumn ? 1 : 0)} className="p-0">
+                      <TableCell colSpan={(canBulkEdit ? 9 : 8) + (showProjectColumn ? 1 : 0)} className="p-0">
                         <EmptyState
                           icon={tableFilter === 'missing' ? FileX : tableFilter === 'returns' ? Undo : Search}
                           title={

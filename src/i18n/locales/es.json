@@ -2368,6 +2368,7 @@
   "movements.table.allExpensesHaveProof": "Todos los gastos tienen justificante.",
   "movements.table.allExpensesHaveProofEmpty": "🎉 ¡Todos los gastos tienen justificante!",
   "movements.table.amount": "Importe",
+  "movements.table.balance": "Saldo",
   "movements.table.applyFilters": "Aplicar",
   "movements.table.assign": "Asignar",
   "movements.table.assignAffectedDonor": "Asignar donante afectado",

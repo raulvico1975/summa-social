@@ -123,6 +123,7 @@ interface TransactionRowProps {
   t: {
     date: string;
     amount: string;
+    balance: string;
     returnBadge: string;
     returnAssignedTooltip: string;
     pendingDonorAssignment: string;
@@ -164,6 +165,7 @@ interface TransactionRowProps {
     reconcileSepa?: string;
     moreOptionsAriaLabel?: string;
     legacyCategory?: string;
+    noContact?: string;
   };
   getCategoryDisplayName: (category: string | null | undefined) => string;
 }
@@ -222,6 +224,8 @@ export const TransactionRow = React.memo(function TransactionRow({
 
   const isExpense = tx.amount < 0;
   const hasDocument = !!tx.document;
+  const hasBalanceAfter = typeof tx.balanceAfter === 'number' && Number.isFinite(tx.balanceAfter);
+  const balanceText = hasBalanceAfter ? formatCurrencyEU(Math.abs(tx.balanceAfter!)) : '—';
   const isReturn = tx.transactionType === 'return';
   const isReturnFee = tx.transactionType === 'return_fee';
   const isReturnedDonation = tx.donationStatus === 'returned';
@@ -490,6 +494,11 @@ export const TransactionRow = React.memo(function TransactionRow({
         {formatCurrencyEU(tx.amount)}
       </TableCell>
 
+      {/* Balance */}
+      <TableCell className="text-right font-mono py-1 text-[13px] whitespace-nowrap tabular-nums text-foreground w-[120px]">
+        {balanceText}
+      </TableCell>
+
       {/* Concept + Note + Badge + Mobile summary */}
       <TableCell className="min-w-0 py-1">
         <div className="space-y-0.5">
@@ -583,7 +592,7 @@ export const TransactionRow = React.memo(function TransactionRow({
                 </span>
               </SummaTooltip>
             ) : (
-              <span className="max-w-[180px]">Sense contacte</span>
+              <span className="max-w-[180px]">{t.noContact ?? 'Sense contacte'}</span>
             )}
           </div>
         </div>
