@@ -1,6 +1,8 @@
 'use client';
 
 import * as React from 'react';
+import { AlertTriangle } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
@@ -9,9 +11,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import {
   Table,
@@ -21,15 +20,13 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Label } from '@/components/ui/label';
-import { Info } from 'lucide-react';
 import { useTranslations } from '@/i18n';
 import type { ClassifiedRow } from '@/lib/transaction-dedupe';
 
 interface DedupeCandidateResolverProps {
   candidates: ClassifiedRow[];
   safeDuplicatesCount: number;
-  onResolved: (resolved: ClassifiedRow[]) => void;
+  onContinue: () => void;
   onCancel: () => void;
   open: boolean;
 }
@@ -37,206 +34,85 @@ interface DedupeCandidateResolverProps {
 export function DedupeCandidateResolver({
   candidates,
   safeDuplicatesCount,
-  onResolved,
+  onContinue,
   onCancel,
   open,
 }: DedupeCandidateResolverProps) {
   const { t } = useTranslations();
-  const [decisions, setDecisions] = React.useState<Map<number, 'import' | 'skip'>>(new Map());
 
-  // Reset decisions quan canvien els candidats
-  React.useEffect(() => {
-    setDecisions(new Map());
-  }, [candidates]);
-
-  const resolvedCount = decisions.size;
-  const totalCandidates = candidates.length;
-  const allResolved = resolvedCount === totalCandidates;
-
-  const toImportCount = Array.from(decisions.values()).filter(d => d === 'import').length;
-  const toSkipCount = Array.from(decisions.values()).filter(d => d === 'skip').length;
-
-  const handleDecision = (index: number, decision: 'import' | 'skip') => {
-    setDecisions(prev => {
-      const next = new Map(prev);
-      next.set(index, decision);
-      return next;
-    });
-  };
-
-  const handleBulkImport = () => {
-    const next = new Map<number, 'import' | 'skip'>();
-    candidates.forEach((_, i) => next.set(i, 'import'));
-    setDecisions(next);
-  };
-
-  const handleBulkSkip = () => {
-    const next = new Map<number, 'import' | 'skip'>();
-    candidates.forEach((_, i) => next.set(i, 'skip'));
-    setDecisions(next);
-  };
-
-  const handleClear = () => {
-    setDecisions(new Map());
-  };
-
-  const handleContinue = () => {
-    const resolved = candidates.map((c, i) => ({
-      ...c,
-      userDecision: decisions.get(i) ?? null,
-    }));
-    onResolved(resolved);
-  };
-
-  const formatDate = (dateStr: string) => {
+  const formatDate = (dateStr?: string) => {
+    if (!dateStr) return '—';
     try {
-      // Afegir hora per evitar desplaçament timezone en dates YYYY-MM-DD
-      const d = dateStr.includes('T') ? new Date(dateStr) : new Date(dateStr + 'T12:00:00');
-      return d.toLocaleDateString('ca-ES');
+      return new Date(dateStr).toLocaleDateString('ca-ES');
     } catch {
       return dateStr;
     }
   };
 
-  const formatAmount = (amount: number) => {
-    return new Intl.NumberFormat('ca-ES', { style: 'currency', currency: 'EUR' }).format(amount);
+  const formatAmount = (value?: number) => {
+    if (typeof value !== 'number' || !Number.isFinite(value)) return '—';
+    return new Intl.NumberFormat('ca-ES', {
+      style: 'currency',
+      currency: 'EUR',
+    }).format(value);
   };
 
-  const truncate = (str: string, max: number) => {
-    if (str.length <= max) return str;
-    return str.slice(0, max) + '…';
-  };
-
-  // Columnes opcionals: només mostrar si algun candidat les té
-  const hasOpDate = candidates.some(c => c.rawRow._opDate);
-  const hasBalance = candidates.some(c => typeof c.rawRow._balance === 'number');
-
-  if (totalCandidates === 0) return null;
+  if (!open || candidates.length === 0) return null;
 
   return (
-    <Dialog open={open} onOpenChange={(isOpen) => { if (!isOpen) onCancel(); }}>
-      <DialogContent className={hasOpDate || hasBalance ? 'max-w-5xl' : 'max-w-4xl'}>
+    <Dialog open={open} onOpenChange={(value) => {
+      if (!value) {
+        onCancel();
+      }
+    }}>
+      <DialogContent className="max-w-3xl">
         <DialogHeader>
           <DialogTitle>
-            {t.importers?.transaction?.dedupe?.candidateDialogTitle ?? 'Possibles duplicats trobats'}
+            {'Possibles duplicats detectats'}
           </DialogTitle>
           <DialogDescription>
-            {t.importers?.transaction?.dedupe?.candidateDialogDescription?.(totalCandidates)
-              ?? `S'han trobat ${totalCandidates} moviments que coincideixen amb transaccions existents. Revisa cada un i decideix si s'ha d'importar o ometre.`}
+            {`S'han detectat ${candidates.length} possibles duplicats. Es deixaran importar amb avis d'incidència.`}
           </DialogDescription>
         </DialogHeader>
 
         {safeDuplicatesCount > 0 && (
-          <div className="flex items-center gap-2 rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-800 dark:border-blue-800 dark:bg-blue-950 dark:text-blue-200">
-            <Info className="h-4 w-4 flex-shrink-0" />
-            <span>
-              {t.importers?.transaction?.dedupe?.safeDupesSkipped?.(safeDuplicatesCount)
-                ?? `${safeDuplicatesCount} duplicats segurs omesos automàticament.`}
-            </span>
+          <div className="rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-800 dark:border-blue-800 dark:bg-blue-950 dark:text-blue-200">
+            <p className="flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4" />
+              {`${safeDuplicatesCount} duplicats marcats com segurs (DUPLICATE_SAFE) — es deixen importar.`}
+            </p>
           </div>
         )}
 
-        <ScrollArea className="max-h-[400px] rounded-md border">
+        <ScrollArea className="max-h-[380px] rounded-md border">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-[90px]">
-                  {t.importers?.transaction?.dedupe?.columnDate ?? 'Data'}
-                </TableHead>
-                {hasOpDate && (
-                  <TableHead className="w-[80px]">
-                    {t.importers?.transaction?.dedupe?.executionDate ?? 'F. exec.'}
-                  </TableHead>
-                )}
-                <TableHead className="w-[90px] text-right">
-                  {t.importers?.transaction?.dedupe?.columnAmount ?? 'Import'}
-                </TableHead>
-                {hasBalance && (
-                  <TableHead className="w-[100px] text-right">
-                    {t.importers?.transaction?.dedupe?.balance ?? 'Saldo'}
-                  </TableHead>
-                )}
-                <TableHead>
-                  {t.importers?.transaction?.dedupe?.columnDescription ?? 'Descripció'}
-                </TableHead>
-                <TableHead>
-                  {t.importers?.transaction?.dedupe?.columnExisting ?? 'Ja existent'}
-                </TableHead>
-                <TableHead className="w-[160px]">
-                  {t.importers?.transaction?.dedupe?.columnDecision ?? 'Decisió'}
-                </TableHead>
+                <TableHead className="w-[130px]">Data</TableHead>
+                <TableHead className="w-[120px] text-right">Import</TableHead>
+                <TableHead className="w-[120px] text-right">Saldo (nou)</TableHead>
+                <TableHead className="w-[120px] text-right">Saldo (existent)</TableHead>
+                <TableHead>Descripció</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {candidates.map((candidate, index) => {
-                const decision = decisions.get(index);
-                const firstMatch = candidate.matchedExisting[0];
-                const extraCount = candidate.matchedExisting.length - 1;
-
+                const existing = candidate.matchedExisting[0];
                 return (
-                  <TableRow
-                    key={index}
-                    className={
-                      decision === 'import'
-                        ? 'bg-green-50 dark:bg-green-950/30'
-                        : decision === 'skip'
-                          ? 'bg-red-50 dark:bg-red-950/30'
-                          : ''
-                    }
-                  >
-                    <TableCell className="text-xs">
-                      {formatDate(candidate.tx.date)}
+                  <TableRow key={`${candidate.tx.description}-${candidate.tx.date}-${index}`}>
+                    <TableCell className="whitespace-nowrap text-xs">
+                      {formatDate(candidate.tx.operationDate ?? candidate.tx.date)}
                     </TableCell>
-                    {hasOpDate && (
-                      <TableCell className="text-xs">
-                        {candidate.rawRow._opDate ? formatDate(candidate.rawRow._opDate) : ''}
-                      </TableCell>
-                    )}
-                    <TableCell className="text-right text-xs font-mono">
+                    <TableCell className="whitespace-nowrap text-right font-mono text-xs">
                       {formatAmount(candidate.tx.amount)}
                     </TableCell>
-                    {hasBalance && (
-                      <TableCell className="text-right text-xs font-mono">
-                        {typeof candidate.rawRow._balance === 'number'
-                          ? formatAmount(candidate.rawRow._balance)
-                          : ''}
-                      </TableCell>
-                    )}
-                    <TableCell className="text-xs" title={candidate.tx.description}>
-                      {truncate(candidate.tx.description, 50)}
+                    <TableCell className="whitespace-nowrap text-right font-mono text-xs">
+                      {formatAmount(candidate.tx.balanceAfter)}
                     </TableCell>
-                    <TableCell className="text-xs text-muted-foreground">
-                      {firstMatch && (
-                        <span title={firstMatch.description}>
-                          {formatDate(firstMatch.date)} · {truncate(firstMatch.description, 30)}
-                          {extraCount > 0 && (
-                            <Badge variant="secondary" className="ml-1 text-[10px]">
-                              +{extraCount}
-                            </Badge>
-                          )}
-                        </span>
-                      )}
+                    <TableCell className="whitespace-nowrap text-right font-mono text-xs">
+                      {formatAmount(existing?.balanceAfter)}
                     </TableCell>
-                    <TableCell>
-                      <RadioGroup
-                        value={decision ?? ''}
-                        onValueChange={(val) => handleDecision(index, val as 'import' | 'skip')}
-                        className="flex gap-3"
-                      >
-                        <div className="flex items-center space-x-1">
-                          <RadioGroupItem value="import" id={`import-${index}`} />
-                          <Label htmlFor={`import-${index}`} className="text-xs cursor-pointer">
-                            {t.importers?.transaction?.dedupe?.importAction ?? 'Importar'}
-                          </Label>
-                        </div>
-                        <div className="flex items-center space-x-1">
-                          <RadioGroupItem value="skip" id={`skip-${index}`} />
-                          <Label htmlFor={`skip-${index}`} className="text-xs cursor-pointer">
-                            {t.importers?.transaction?.dedupe?.skipAction ?? 'Ometre'}
-                          </Label>
-                        </div>
-                      </RadioGroup>
-                    </TableCell>
+                    <TableCell className="text-xs">{candidate.tx.description}</TableCell>
                   </TableRow>
                 );
               })}
@@ -244,35 +120,12 @@ export function DedupeCandidateResolver({
           </Table>
         </ScrollArea>
 
-        {/* Bulk actions + comptador */}
-        <div className="flex items-center justify-between">
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={handleBulkImport}>
-              {t.importers?.transaction?.dedupe?.importAll ?? 'Importar tots'}
-            </Button>
-            <Button variant="outline" size="sm" onClick={handleBulkSkip}>
-              {t.importers?.transaction?.dedupe?.skipAll ?? 'Ometre tots'}
-            </Button>
-            <Button variant="ghost" size="sm" onClick={handleClear}>
-              {t.importers?.transaction?.dedupe?.clearAll ?? 'Netejar'}
-            </Button>
-          </div>
-          <span className="text-sm text-muted-foreground">
-            {t.importers?.transaction?.dedupe?.resolvedCount?.(resolvedCount, totalCandidates)
-              ?? `${resolvedCount} de ${totalCandidates} resolts`}
-          </span>
-        </div>
-
         <DialogFooter>
           <Button variant="outline" onClick={onCancel}>
-            {t.importers?.transaction?.dedupe?.cancelImport ?? 'Cancel·lar importació'}
+            {t.importers?.transaction?.cancel ?? 'Cancel·lar'}
           </Button>
-          <Button onClick={handleContinue} disabled={!allResolved}>
-            {allResolved
-              ? (t.importers?.transaction?.dedupe?.continueButton?.(toImportCount, toSkipCount)
-                  ?? `Continuar (${toImportCount} per importar, ${toSkipCount} per ometre)`)
-              : (t.importers?.transaction?.dedupe?.resolvedCount?.(resolvedCount, totalCandidates)
-                  ?? `${resolvedCount} de ${totalCandidates} resolts`)}
+          <Button onClick={onContinue}>
+            {t.common?.continue ?? 'Continuar'}
           </Button>
         </DialogFooter>
       </DialogContent>

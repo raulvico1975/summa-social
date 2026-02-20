@@ -120,6 +120,12 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
   const { toast } = useToast();
   const locale = language === 'es' ? 'es-ES' : 'ca-ES';
   const isMobile = useIsMobile();
+  const getDisplayDate = React.useCallback((tx: Transaction): string => {
+    if (tx.operationDate) {
+      return tx.operationDate;
+    }
+    return (tx.date ?? '').slice(0, 10);
+  }, []);
 
   // SuperAdmin detection per bulk mode
   const isSuperAdmin = user?.uid === SUPER_ADMIN_UID;
@@ -562,7 +568,7 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
     if (!tx) return;
 
     const suggestedName = buildDocumentFilename({
-      dateISO: tx.date ?? new Date().toISOString().split('T')[0],
+      dateISO: getDisplayDate(tx) || new Date().toISOString().split('T')[0],
       concept: getConceptForFilename(tx),
       originalName: file.name,
     });
@@ -682,7 +688,7 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
 
     // Ordenar remeses per data descendent (més recents primer)
     const sortedRemittances = [...pendingRemittances].sort((a, b) =>
-      new Date(b.date).getTime() - new Date(a.date).getTime()
+      new Date(getDisplayDate(b)).getTime() - new Date(getDisplayDate(a)).getTime()
     );
 
     return {
@@ -857,11 +863,11 @@ export function TransactionsTable({ initialDateFilter = null }: TransactionsTabl
 
     // Ordenar per data descendent (més recents primer)
     return [...result].sort((a, b) => {
-      const dateA = new Date(a.date).getTime();
-      const dateB = new Date(b.date).getTime();
+      const dateA = new Date(getDisplayDate(a)).getTime();
+      const dateB = new Date(getDisplayDate(b)).getTime();
       return sortDateAsc ? dateA - dateB : dateB - dateA;
     });
-  }, [transactions, tableFilter, expensesWithoutDoc, returnTransactions, uncategorizedTransactions, noContactTransactions, donationsNoContactTransactions, sortDateAsc, searchQuery, contactMap, projectMap, getCategoryDisplayName, hideRemittanceItems, contactIdFilter, donorMembershipMap, sourceFilter, bankAccountFilter]);
+  }, [transactions, tableFilter, expensesWithoutDoc, returnTransactions, uncategorizedTransactions, noContactTransactions, donationsNoContactTransactions, sortDateAsc, searchQuery, contactMap, projectMap, getCategoryDisplayName, hideRemittanceItems, contactIdFilter, donorMembershipMap, sourceFilter, bankAccountFilter, getDisplayDate]);
 
   // ═══════════════════════════════════════════════════════════════════════════
   // RESUM FILTRAT

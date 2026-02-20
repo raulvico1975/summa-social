@@ -66,14 +66,33 @@ interface TransactionImporterProps {
 /**
  * Calcula rang de dates (YYYY-MM-DD) d'un array de transaccions parsejades
  */
-function getDateRangeFromParsedRows(txs: Array<{ date: string }>): { minDate: string; maxDate: string } | null {
-  const dates = txs
-    .map(tx => tx.date.split('T')[0]) // Normalitzar a YYYY-MM-DD
+function getDateRangeFromParsedRows(
+  txs: Array<{ date: string; operationDate?: string }>
+): { minDate: string; maxDate: string } | null {
+  const rangeValues = txs
+    .map((tx) => (tx.operationDate ? tx.operationDate : tx.date).split('T')[0])
     .filter(Boolean)
     .sort();
-  if (dates.length === 0) return null;
-  return { minDate: dates[0], maxDate: dates[dates.length - 1] };
+  if (rangeValues.length === 0) return null;
+
+  return { minDate: rangeValues[0], maxDate: rangeValues[rangeValues.length - 1] };
 }
+
+function parseAmount(value: unknown): number {
+  if (typeof value === 'number') {
+    return value;
+  }
+
+  if (typeof value !== 'string') return NaN;
+  const normalized = value.replace(/\./g, '').replace(',', '.');
+  return parseFloat(normalized);
+}
+
+function parseOperationDate(rawDate: unknown): string | null {
+  const parsed = parseSingleDate(rawDate);
+  return parsed && isIsoDateOnly(parsed) ? parsed : null;
+}
+
 
 /**
  * Fetch global de transaccions existents per (orgId, bankAccountId, rang de dates)
@@ -230,7 +249,7 @@ export function TransactionImporter({ availableCategories }: TransactionImporter
   const { firestore, auth } = useFirebase();
   const { organizationId } = useCurrentOrganization();
   const { buildUrl } = useOrgUrl();
-  const { t } = useTranslations();
+  const { t, tr } = useTranslations();
 
   // Bank accounts
   const { bankAccounts, defaultAccountId, isLoading: isLoadingBankAccounts } = useBankAccounts();
@@ -375,13 +394,14 @@ export function TransactionImporter({ availableCategories }: TransactionImporter
 
         const header = (rows[headerRowIndex] as string[]).map(h => String(h || '').trim());
 
-        const dateIndex = findColumnIndex(header, DATE_COLUMN_NAMES);
+        const operationDateIndex = findColumnIndex(header, OPERATION_DATE_COLUMN_NAMES);
+        const valueDateIndex = findColumnIndex(header, [...VALUE_DATE_COLUMN_NAMES, ...GENERIC_DATE_COLUMN_NAMES]);
         const conceptIndex = findColumnIndex(header, DESCRIPTION_COLUMN_NAMES);
         const amountIndex = findColumnIndex(header, AMOUNT_COLUMN_NAMES);
 
-        if (dateIndex === -1 || conceptIndex === -1 || amountIndex === -1) {
+        if (operationDateIndex === -1 || conceptIndex === -1 || amountIndex === -1) {
             const missing = [
-                ...(dateIndex === -1 ? ['Fecha'] : []),
+                ...(operationDateIndex === -1 ? ['F. ejecución'] : []),
                 ...(conceptIndex === -1 ? ['Concepto'] : []),
                 ...(amountIndex === -1 ? ['Importe'] : [])
             ].join(', ');
@@ -396,7 +416,8 @@ export function TransactionImporter({ availableCategories }: TransactionImporter
             const _rawRow: Record<string, any> = {};
             header.forEach((h, idx) => { _rawRow[h] = row?.[idx]; });
             return {
-              Fecha: row?.[dateIndex],
+              Fecha: row?.[operationDateIndex],
+              Valor: row?.[valueDateIndex],
               Concepto: row?.[conceptIndex],
               Importe: row?.[amountIndex],
               _rawRow,
@@ -479,11 +500,16 @@ export function TransactionImporter({ availableCategories }: TransactionImporter
       // Comprovar si almenys una fila té les columnes necessàries
       for (const row of data.slice(0, 5)) { // Només mirem les primeres 5 files
         const rawRow = row as Record<string, any>;
-        const dateValue = findRawValue(rawRow, [...VALUE_DATE_COLUMN_NAMES, ...OPERATION_DATE_COLUMN_NAMES, ...GENERIC_DATE_COLUMN_NAMES]);
+        const operationDateValue = parseOperationDate(findRawValue(rawRow, OPERATION_DATE_COLUMN_NAMES));
         const descriptionValue = findRawValue(rawRow, DESCRIPTION_COLUMN_NAMES);
         const amountValue = findRawValue(rawRow, AMOUNT_COLUMN_NAMES);
+        const amount = parseAmount(amountValue);
 
-        if (dateValue && descriptionValue && amountValue !== undefined && amountValue !== null && amountValue !== '') {
+        if (
+          operationDateValue &&
+          descriptionValue &&
+          Number.isFinite(amount)
+        ) {
           return true;
         }
       }
@@ -563,7 +589,22 @@ export function TransactionImporter({ availableCategories }: TransactionImporter
             }
             const amount = parseFloat(amountValue);
 
+            const hasContent = Boolean(descriptionValue) || Number.isFinite(amount) || Boolean(opDateRaw);
+            const parsedOpDate = parseOperationDate(opDateRaw);
+
             if (!dateValue || !descriptionValue || !Number.isFinite(amount)) {
+              if (!hasContent) {
+                return null;
+              }
+
+              throw new Error(t.importers.transaction.errors.cannotProcessContent);
+            }
+
+            if (!parsedOpDate) {
+              throw new Error(tr('import.errors.operationDateRequired'));
+            }
+
+            if (!dateValue) {
                 return null;
             }
 
@@ -594,14 +635,8 @@ export function TransactionImporter({ availableCategories }: TransactionImporter
             }
 
             // Enrichment: executionDate (F. ejecución) — sempre que existeixi
-            let normalizedOpDate: string | undefined;
-            if (opDateRaw) {
-              const parsedOpDate = parseSingleDate(opDateRaw);
-              if (parsedOpDate && isIsoDateOnly(parsedOpDate)) {
-                rawRow._opDate = parsedOpDate;
-                normalizedOpDate = parsedOpDate;
-              }
-            }
+            const normalizedOpDate = parsedOpDate;
+            rawRow._opDate = normalizedOpDate;
 
             // Enrichment: saldo/balance — parsejar format EU a number
             let parsedBalanceAfter: number | undefined;
@@ -634,14 +669,14 @@ export function TransactionImporter({ availableCategories }: TransactionImporter
                 bankAccountId: bankAccountId ?? null,
                 source: 'bank' as const,
                 ...(parsedBalanceAfter !== undefined && Number.isFinite(parsedBalanceAfter) ? { balanceAfter: parsedBalanceAfter } : {}),
-                ...(normalizedOpDate ? { operationDate: normalizedOpDate } : {}),
+                operationDate: normalizedOpDate,
             } as Omit<Transaction, 'id'>;
 
             return { tx, rawRow };
         })
         .filter((item): item is { tx: Omit<Transaction, 'id'>; rawRow: Record<string, any> } => item !== null);
 
-        // Classificar amb dedupe 3 estats
+        // Classificar amb dedupe (Mode A: cap bloqueig)
         const dateRange = getDateRangeFromParsedRows(allParsedWithRaw.map(r => r.tx));
         if (!dateRange) {
             toast({ variant: 'destructive', title: t.importers.transaction.errors.processingError, description: 'No s\'han trobat dates vàlides al fitxer' });
@@ -684,18 +719,24 @@ export function TransactionImporter({ availableCategories }: TransactionImporter
             return;
         }
 
-        // Sense candidats: executar directament amb les NEW
-        const duplicateSkippedCount = safeDupes.length;
+        const transactionsToImport = [...newTxs.map(c => c.tx), ...safeDupes.map(c => c.tx)];
+
+        // Sense candidats: executar directament (inclou DUPLICATE_SAFE com a avisos)
+        if (transactionsToImport.length > 0) {
+            executeImport(transactionsToImport, bankAccountId, fileName, data.length, {
+                duplicateSkippedCount: 0,
+            });
+            return;
+        }
+
         if (newTxs.length > 0) {
             executeImport(newTxs.map(c => c.tx), bankAccountId, fileName, data.length, {
-                duplicateSkippedCount,
+                duplicateSkippedCount: 0,
             });
         } else {
             toast({
-                title: duplicateSkippedCount > 0 ? t.importers.transaction.noNewTransactions : t.importers.transaction.noTransactionsFound,
-                description: duplicateSkippedCount > 0
-                    ? t.importers.transaction.duplicatesOmitted(duplicateSkippedCount)
-                    : t.importers.transaction.noValidTransactions,
+                title: safeDupes.length > 0 ? t.importers.transaction.noNewTransactions : t.importers.transaction.noTransactionsFound,
+                description: t.importers.transaction.noValidTransactions,
             });
             setIsImporting(false);
         }
@@ -714,7 +755,7 @@ export function TransactionImporter({ availableCategories }: TransactionImporter
   // HANDLER: Resolució de candidats
   // ═══════════════════════════════════════════════════════════════════════════════
 
-  const handleCandidatesResolved = (resolved: ClassifiedRow[]) => {
+  const handleCandidatesContinue = () => {
     setIsCandidateDialogOpen(false);
 
     if (!pendingImportContext || !classifiedResults) {
@@ -722,18 +763,21 @@ export function TransactionImporter({ availableCategories }: TransactionImporter
       return;
     }
 
-    const userImported = resolved.filter(c => c.userDecision === 'import');
-    const userSkipped = resolved.filter(c => c.userDecision === 'skip');
+    const candidates = classifiedResults.filter(c => c.status === 'DUPLICATE_CANDIDATE');
     const newTxs = classifiedResults.filter(c => c.status === 'NEW');
     const safeDupes = classifiedResults.filter(c => c.status === 'DUPLICATE_SAFE');
 
-    const transactionsToImport = [...newTxs.map(c => c.tx), ...userImported.map(c => c.tx)];
+    const transactionsToImport = [
+      ...newTxs.map(c => c.tx),
+      ...safeDupes.map(c => c.tx),
+      ...candidates.map(c => c.tx),
+    ];
 
     const stats = {
-      duplicateSkippedCount: safeDupes.length,
-      candidateCount: resolved.length,
-      candidateUserImportedCount: userImported.length,
-      candidateUserSkippedCount: userSkipped.length,
+      duplicateSkippedCount: 0,
+      candidateCount: candidates.length,
+      candidateUserImportedCount: candidates.length,
+      candidateUserSkippedCount: 0,
     };
 
     if (transactionsToImport.length > 0) {
@@ -745,10 +789,9 @@ export function TransactionImporter({ availableCategories }: TransactionImporter
         stats
       );
     } else {
-      const totalSkipped = safeDupes.length + userSkipped.length;
       toast({
         title: t.importers.transaction.noNewTransactions,
-        description: t.importers.transaction.duplicatesOmitted(totalSkipped),
+        description: t.importers.transaction.noValidTransactions,
       });
       setClassifiedResults(null);
       setPendingImportContext(null);
@@ -967,7 +1010,7 @@ export function TransactionImporter({ availableCategories }: TransactionImporter
         }
 
         // Missatge d'èxit
-        const totalDuplicatesSkipped = stats.duplicateSkippedCount + (stats.candidateUserSkippedCount ?? 0);
+          const totalDuplicatesSkipped = stats.duplicateSkippedCount + (stats.candidateUserSkippedCount ?? 0);
         const createdCount = result.createdCount ?? transactionsToProcess.length;
 
         if (result.idempotent) {
@@ -1155,7 +1198,7 @@ export function TransactionImporter({ availableCategories }: TransactionImporter
         open={isCandidateDialogOpen}
         candidates={classifiedResults?.filter(c => c.status === 'DUPLICATE_CANDIDATE') ?? []}
         safeDuplicatesCount={classifiedResults?.filter(c => c.status === 'DUPLICATE_SAFE').length ?? 0}
-        onResolved={handleCandidatesResolved}
+        onContinue={handleCandidatesContinue}
         onCancel={handleCandidatesCancelled}
       />
     </>

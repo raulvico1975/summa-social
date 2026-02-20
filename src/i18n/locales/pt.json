@@ -2188,6 +2188,7 @@
   "importers.transaction.errors.emptyXlsx": "L'arxiu XLSX està buit o no té un format vàlid.",
   "importers.transaction.errors.headerNotFound": "No s'ha pogut trobar la fila de capçalera a l'arxiu.",
   "importers.transaction.errors.importError": "Error d'Importació",
+  "import.errors.operationDateRequired": "L'extracte ha d'incloure la Data d'operació (F. execució).",
   "importers.transaction.errors.processingError": "Error de Processament",
   "importers.transaction.errors.readError": "Error de Lectura",
   "importers.transaction.errors.unsupportedFormat": "Format no suportat",

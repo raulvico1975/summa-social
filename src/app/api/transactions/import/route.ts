@@ -54,7 +54,7 @@ interface ImportTransactionInput {
   description: string;
   amount: number;
   balanceAfter?: number;
-  operationDate?: string;
+  operationDate: string;
   category?: string | null;
   document?: string | null;
   contactId?: string | null;
@@ -73,6 +73,10 @@ interface ImportTransactionsRequest {
   stats: ImportRequestStats;
   transactions: ImportTransactionInput[];
 }
+
+type NormalizedTransactionInputResult =
+  | { ok: true; tx: CanonicalBankImportTx }
+  | { ok: false; error: string; code: string };
 
 interface CreatedTransaction {
   id: string;
@@ -225,38 +229,78 @@ function normalizeIsoDateOnly(dateValue: string | undefined): string | null {
 
 function normalizeTransactionInput(
   tx: ImportTransactionInput,
-  bankAccountId: string
-): CanonicalBankImportTx | null {
-  if (!tx || typeof tx !== 'object') return null;
-  if (typeof tx.date !== 'string' || !tx.date.trim()) return null;
-  if (typeof tx.description !== 'string' || !tx.description.trim()) return null;
-  if (typeof tx.amount !== 'number' || !Number.isFinite(tx.amount)) return null;
+  bankAccountId: string,
+  index: number
+): NormalizedTransactionInputResult {
+  if (!tx || typeof tx !== 'object') {
+    return {
+      ok: false,
+      error: `transactions[${index}] ha de ser un objecte vàlid`,
+      code: 'INVALID_TRANSACTION',
+    };
+  }
+  if (typeof tx.date !== 'string' || !tx.date.trim()) {
+    return {
+      ok: false,
+      error: `transactions[${index}] ha de tenir date vàlida`,
+      code: 'INVALID_DATE',
+    };
+  }
+  if (typeof tx.description !== 'string' || !tx.description.trim()) {
+    return {
+      ok: false,
+      error: `transactions[${index}] ha de tenir description vàlida`,
+      code: 'INVALID_DESCRIPTION',
+    };
+  }
+  if (typeof tx.amount !== 'number' || !Number.isFinite(tx.amount)) {
+    return {
+      ok: false,
+      error: `transactions[${index}] ha de tenir amount vàlid`,
+      code: 'INVALID_AMOUNT',
+    };
+  }
+
+  const operationDate = normalizeIsoDateOnly(tx.operationDate);
+  if (!operationDate) {
+    return {
+      ok: false,
+      error: `transactions[${index}] cal Data d'operació (F. execució)`,
+      code: 'OPERATION_DATE_REQUIRED',
+    };
+  }
 
   const dateObj = new Date(tx.date);
   if (Number.isNaN(dateObj.getTime())) {
-    return null;
+    return {
+      ok: false,
+      error: `transactions[${index}] date invàlida`,
+      code: 'INVALID_DATE',
+    };
   }
 
   const transactionType: TransactionType = tx.transactionType ?? 'normal';
   const contactType: ContactType | null = tx.contactType ?? null;
-  const operationDate = normalizeIsoDateOnly(tx.operationDate);
   const balanceAfter = typeof tx.balanceAfter === 'number' && Number.isFinite(tx.balanceAfter)
     ? tx.balanceAfter
     : undefined;
 
   return {
-    date: dateObj.toISOString(),
-    description: normalizeBankDescription(tx.description),
-    amount: tx.amount,
-    ...(balanceAfter !== undefined ? { balanceAfter } : {}),
-    ...(operationDate ? { operationDate } : {}),
-    category: tx.category ?? null,
-    document: null,
-    contactId: tx.contactId ?? null,
-    contactType,
-    transactionType,
-    bankAccountId,
-    source: 'bank',
+    ok: true,
+    tx: {
+      date: dateObj.toISOString(),
+      description: normalizeBankDescription(tx.description),
+      amount: tx.amount,
+      ...(balanceAfter !== undefined ? { balanceAfter } : {}),
+      ...(operationDate ? { operationDate } : {}),
+      category: tx.category ?? null,
+      document: null,
+      contactId: tx.contactId ?? null,
+      contactType,
+      transactionType,
+      bankAccountId,
+      source: 'bank',
+    }
   };
 }
 
@@ -375,9 +419,25 @@ export async function POST(
   const accessError = requireOperationalAccess(membership);
   if (accessError) return accessError as NextResponse<ImportTransactionsResponse>;
 
-  const normalizedTransactions = parsedBody.transactions
-    .map((tx) => normalizeTransactionInput(tx, parsedBody.bankAccountId))
-    .filter((tx): tx is CanonicalBankImportTx => tx !== null);
+  const normalizedTransactions: CanonicalBankImportTx[] = [];
+
+  for (let i = 0; i < parsedBody.transactions.length; i++) {
+    const tx = parsedBody.transactions[i] as ImportTransactionInput;
+    const normalized = normalizeTransactionInput(tx, parsedBody.bankAccountId, i);
+
+    if (!normalized.ok) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: normalized.error,
+          code: normalized.code,
+        },
+        { status: 400 }
+      );
+    }
+
+    normalizedTransactions.push(normalized.tx);
+  }
 
   if (normalizedTransactions.length === 0) {
     return NextResponse.json(
