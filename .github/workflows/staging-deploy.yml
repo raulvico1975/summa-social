@@ -94,7 +94,7 @@ jobs:
       - name: Deploy to Firebase App Hosting (staging)
         run: |
           set -euo pipefail
-          npx firebase-tools deploy --project "${STAGING_PROJECT_ID}" --only apphosting
+          npx firebase-tools deploy --project "${STAGING_PROJECT_ID}"
 
       - name: Smoke tests
         id: smoke
