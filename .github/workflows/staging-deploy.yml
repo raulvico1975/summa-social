@@ -37,9 +37,6 @@ jobs:
       - name: Install deps
         run: npm ci
 
-      - name: Build app
-        run: npm run build
-
       - name: Resolve staging target + guardrails
         run: |
           set -euo pipefail
@@ -63,6 +60,12 @@ jobs:
           STAGING_URL="https://${EXPECTED_STAGING_DOMAIN}"
           echo "EXPECTED_STAGING_DOMAIN=${EXPECTED_STAGING_DOMAIN}" >> "$GITHUB_ENV"
           echo "STAGING_URL=${STAGING_URL}" >> "$GITHUB_ENV"
+
+      - name: Build app
+        env:
+          NEXT_PUBLIC_FIREBASE_API_KEY: ${{ secrets.STAGING_NEXT_PUBLIC_FIREBASE_API_KEY }}
+          NEXT_PUBLIC_FIREBASE_PROJECT_ID: ${{ vars.STAGING_PROJECT_ID }}
+        run: npm run build
 
       - name: Authenticate Firebase (staging)
         run: |
