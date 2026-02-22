@@ -1,5 +1,9 @@
 # STAGING — Summa Social (aïllat)
 
+Lectura ràpida:
+- Tècnic consolidat: `docs/AGENT-STAGING-BRIDGE-TECNIC.md`
+- No tècnic (Raül): `docs/RAUL-RESUM-OPERATIU.md`
+
 ## Què és
 Aquest entorn és un staging separat per validar canvis abans de publicar a producció.
 Objectiu: provar funcionalitats a `https://bot.summasocial.app` sense risc sobre dades ni serveis reals.

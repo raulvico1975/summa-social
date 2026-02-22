@@ -2,6 +2,10 @@
 
 Bridge local per enviar ordres a Codex sense copy/paste, amb govern estricte.
 
+Lectura ràpida:
+- Tècnic consolidat: `docs/AGENT-STAGING-BRIDGE-TECNIC.md`
+- No tècnic (Raül): `docs/RAUL-RESUM-OPERATIU.md`
+
 ## Ús
 
 ```bash

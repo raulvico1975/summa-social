@@ -4,6 +4,10 @@
 **Data:** 2026-02-16
 **Autor:** Raül Vico (CEO/CTO)
 
+**Complementaris:**
+- `docs/AGENT-STAGING-BRIDGE-TECNIC.md`
+- `docs/RAUL-RESUM-OPERATIU.md`
+
 ---
 
 ## 0. Principis no negociables
