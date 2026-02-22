@@ -18,6 +18,15 @@ const TELEGRAM_MAX_TEXT = 3900;
 const TELEGRAM_PREFIX_REGEX = /^\s*(inicia\s*:|house\b\s*:)/i;
 const TELEGRAM_POLL_INTERVAL_MS = 2500;
 const HOUSE_PREFIX_REGEX = /^\s*House\b/i;
+const DEFAULT_CODEX_EXEC_TIMEOUT_MS = 1000 * 60 * 3;
+const CODEX_EXEC_TIMEOUT_MS = (() => {
+  const raw = process.env.CODEX_BRIDGE_CODEX_TIMEOUT_MS || "";
+  const parsed = Number.parseInt(String(raw).trim(), 10);
+  if (Number.isFinite(parsed) && parsed >= 1000) {
+    return parsed;
+  }
+  return DEFAULT_CODEX_EXEC_TIMEOUT_MS;
+})();
 const CODEX_CLI_FALLBACKS = [
   "/Applications/Codex.app/Contents/Resources/codex",
   "/usr/local/bin/codex",
@@ -91,11 +100,23 @@ function run(command, args, options = {}) {
 function runSafe(command, args, options = {}) {
   const result = run(command, args, options);
   if (result.error) {
+    const timedOut =
+      result.error?.code === "ETIMEDOUT" ||
+      /timed out/i.test(result.error?.message || "");
+    const stderrParts = [];
+    if (result.error?.message) {
+      stderrParts.push(result.error.message);
+    }
+    if (result.stderr) {
+      stderrParts.push(result.stderr);
+    }
     return {
       ok: false,
-      exitCode: -1,
+      exitCode: result.status ?? -1,
       stdout: result.stdout || "",
-      stderr: result.error.message,
+      stderr: stderrParts.join("\n").trim(),
+      signal: result.signal ?? null,
+      timedOut,
     };
   }
   return {
@@ -103,6 +124,8 @@ function runSafe(command, args, options = {}) {
     exitCode: result.status ?? -1,
     stdout: result.stdout || "",
     stderr: result.stderr || "",
+    signal: result.signal ?? null,
+    timedOut: false,
   };
 }
 
@@ -853,7 +876,7 @@ function executeCodex(order, worktreePath) {
     {
       cwd: CONTROL_REPO,
       input: prompt,
-      timeout: 1000 * 60 * 20,
+      timeout: CODEX_EXEC_TIMEOUT_MS,
       maxBuffer: 1024 * 1024 * 50,
     },
   );
@@ -898,7 +921,7 @@ function statusPayloadBase(startedAt, order) {
       "git -C <repo> rev-parse --abbrev-ref HEAD",
       "git -C <repo> status --porcelain --untracked-files=normal",
       "bash scripts/worktree.sh create",
-      "codex exec -C <worktree> --sandbox workspace-write -o tmp/bridge/outbox.txt -",
+      `codex exec -C <worktree> --sandbox workspace-write -o tmp/bridge/outbox.txt - (timeout=${CODEX_EXEC_TIMEOUT_MS}ms)`,
     ],
   };
 }
@@ -1021,8 +1044,18 @@ function processOrder(order) {
     const controlAfter = gitState(CONTROL_REPO);
 
     const violations = [];
+    const warnings = [];
     if (codex.exitCode !== 0) {
-      violations.push(`codex exec exit=${codex.exitCode}`);
+      const suffix = codex.timedOut
+        ? " (timeout)"
+        : codex.signal
+          ? ` (signal=${codex.signal})`
+          : "";
+      if (codex.timedOut && hasSummary) {
+        warnings.push(`codex exec exit=${codex.exitCode}${suffix} pero outbox complet`);
+      } else {
+        violations.push(`codex exec exit=${codex.exitCode}${suffix}`);
+      }
     }
     if (!hasSummary) {
       violations.push("sortida sense bloc RESUM CEO (OBLIGATORI)");
@@ -1052,6 +1085,8 @@ function processOrder(order) {
         gitAfter: { control: controlAfter, worktree: worktreeAfter },
         codex: {
           exitCode: codex.exitCode,
+          signal: codex.signal,
+          timedOut: codex.timedOut,
           stdoutTail: codex.stdout.slice(-4000),
           stderrTail: codex.stderr.slice(-4000),
         },
@@ -1062,12 +1097,14 @@ function processOrder(order) {
       status: "SUCCESS",
       reason: "ordre processada correctament",
       notifyTelegram: true,
-      guardrails: { policyViolations: [] },
+      guardrails: { policyViolations: [], warnings },
       worktree: created,
       gitBefore: { control: controlBefore, worktree: worktreeBefore },
       gitAfter: { control: controlAfter, worktree: worktreeAfter },
       codex: {
         exitCode: codex.exitCode,
+        signal: codex.signal,
+        timedOut: codex.timedOut,
         stdoutTail: codex.stdout.slice(-4000),
         stderrTail: codex.stderr.slice(-4000),
       },
