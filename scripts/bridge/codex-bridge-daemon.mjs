@@ -15,7 +15,7 @@ const LABEL = "com.summa.codexbridge";
 const TELEGRAM_CHAT_ID = "68198321";
 const TELEGRAM_MAX_LINES = 20;
 const TELEGRAM_MAX_TEXT = 3900;
-const TELEGRAM_PREFIX_REGEX = /^\s*(inicia\s*:|house\b\s*:)/i;
+const TELEGRAM_PREFIX_REGEX = /^\s*(inicia|implementa|hotfix|refactor|house)\b(?:\s*:)?\s*/i;
 const TELEGRAM_POLL_INTERVAL_MS = 2500;
 const TELEGRAM_CURL_MAX_TIME_SECONDS = 12;
 const TELEGRAM_CURL_CONNECT_TIMEOUT_SECONDS = 5;
@@ -232,24 +232,74 @@ function firstOutboxLines(outbox, maxLines = TELEGRAM_MAX_LINES) {
   return outbox.split(/\r?\n/).slice(0, maxLines).join("\n").trim();
 }
 
-function buildTechnicalTelegramMessage(result, outbox) {
+function cleanOutboxPreview(outbox) {
+  const raw = firstOutboxLines(outbox);
+  return raw
+    .replace(/BLOCKED_SAFE:\s*/gi, "")
+    .replace(/\bcodex\/[^\s]+/gi, "una branca de feina")
+    .replace(/\bworktree\b/gi, "espai de feina")
+    .replace(/\brepo(sitori)?\b/gi, "projecte")
+    .trim();
+}
+
+function plainReasonFromResult(result, outbox) {
+  const haystack = `${result?.reason || ""}\n${outbox || ""}`.toLowerCase();
+  if (haystack.includes("risc alt detectat")) {
+    return "He aturat la comanda perquè podia tocar una zona sensible del negoci.";
+  }
+  if (haystack.includes("repositori de control no net")) {
+    return "Hi ha canvis pendents al projecte principal i, per seguretat, no avanço fins que estigui net.";
+  }
+  if (haystack.includes("repositori de control no esta a main")) {
+    return "He aturat la comanda perquè el projecte principal no estava al punt de partida correcte.";
+  }
+  if (haystack.includes("ordre prohibida detectada")) {
+    return "Aquesta ordre inclou una acció bloquejada per seguretat i no s'ha executat.";
+  }
+  if (haystack.includes("error creant worktree") || haystack.includes("worktree fora de codex")) {
+    return "No he pogut preparar un espai de feina nou per aquesta ordre.";
+  }
+  if (haystack.includes("sortida sense bloc resum ceo")) {
+    return "He aturat el procés perquè faltava el resum obligatori per prendre decisions.";
+  }
+  if (haystack.includes("codex exec exit=") || haystack.includes("timeout")) {
+    return "La tasca s'ha tallat abans d'acabar i no he aplicat canvis finals.";
+  }
+  if (haystack.includes("control brut despres de l'execucio")) {
+    return "S'han detectat canvis no previstos al projecte principal i ho he aturat.";
+  }
+  return "";
+}
+
+function buildPlainTelegramMessage(result, outbox) {
   const lines = [];
-  lines.push(`Bridge daemon ${LABEL}`);
-  lines.push(`Estat: ${result.status ?? "ERROR"}`);
-  if (result.worktree?.branch) {
-    lines.push(`Worktree: ${result.worktree.branch}`);
-  } else if (result.worktree?.worktreePath) {
-    lines.push(`Worktree: ${path.basename(result.worktree.worktreePath)}`);
+  const status = result?.status || "ERROR";
+
+  if (status === "SUCCESS") {
+    lines.push("Fet. La teva ordre s'ha processat correctament.");
+  } else if (status === "BLOCKED_SAFE") {
+    lines.push("He aturat aquesta ordre per seguretat abans de tocar res delicat.");
   } else {
-    lines.push("Worktree: no creat");
+    lines.push("No he pogut completar l'ordre per un problema intern.");
   }
-  lines.push("");
-  if (outbox.trim()) {
-    lines.push(`Outbox (primeres ${TELEGRAM_MAX_LINES} linies):`);
-    lines.push(firstOutboxLines(outbox));
-  } else {
-    lines.push("Outbox: no disponible");
+
+  const reason = plainReasonFromResult(result, outbox);
+  if (reason) {
+    lines.push(reason);
   }
+
+  const preview = cleanOutboxPreview(outbox);
+  if (preview) {
+    lines.push("");
+    lines.push("Resum:");
+    lines.push(preview);
+  }
+
+  if (status !== "SUCCESS") {
+    lines.push("");
+    lines.push("Si vols, et dic el següent pas concret en una sola frase.");
+  }
+
   return trimTelegramText(lines.join("\n").trim());
 }
 
@@ -259,7 +309,7 @@ function buildTelegramMessage(result) {
   if (resumBlock) {
     return trimTelegramText(resumBlock);
   }
-  return buildTechnicalTelegramMessage(result, outbox);
+  return buildPlainTelegramMessage(result, outbox);
 }
 
 function baseTelegramCurlArgs() {
@@ -448,7 +498,21 @@ function getTelegramUpdates(offset) {
   };
 }
 
-function extractTelegramOrder(update) {
+function buildTelegramUsageMessage() {
+  return [
+    "Format comandes Telegram:",
+    "- Inicia: <ordre>",
+    "- Implementa: <ordre>",
+    "- Hotfix: <ordre>",
+    "- Refactor: <ordre>",
+    "- House: <ordre housekeeping>",
+    "",
+    "Exemple:",
+    "Inicia: revisa l'estat del repo i proposa següent pas",
+  ].join("\n");
+}
+
+function extractTelegramCommand(update) {
   const message = update?.message ?? null;
   if (!message) {
     return null;
@@ -464,11 +528,10 @@ function extractTelegramOrder(update) {
   }
 
   const text = message.text.trim();
-  if (!TELEGRAM_PREFIX_REGEX.test(text)) {
-    return null;
-  }
+  const isOrder = TELEGRAM_PREFIX_REGEX.test(text);
 
   return {
+    type: isOrder ? "order" : "help",
     order: text,
     chatId,
     updateId: Number(update.update_id) || 0,
@@ -512,8 +575,20 @@ function pollTelegramCommands() {
         maxUpdateId = updateId;
       }
 
-      const extracted = extractTelegramOrder(update);
+      const extracted = extractTelegramCommand(update);
       if (!extracted) {
+        continue;
+      }
+
+      if (extracted.type === "help") {
+        const helpMsg = buildTelegramUsageMessage();
+        const helpSent = sendTelegramMessage(helpMsg);
+        if (helpSent.ok) {
+          logLine(`telegram ajuda enviada (update=${extracted.updateId})`);
+        } else {
+          logLine(`telegram ajuda no enviada: ${helpSent.reason}`);
+        }
+        processed += 1;
         continue;
       }
 
@@ -856,6 +931,9 @@ RESUM CEO (OBLIGATORI)
 - Risc i control:
 - Seguent pas recomanat:
 7) Encara que no demanis OK, imprimeix igualment el bloc RESUM CEO (OBLIGATORI) al final.
+8) Escriu tota la resposta en catala planer i NO tecnic.
+9) Evita termes tecnics com worktree, branca, commit, deploy, upstream, CLI o daemon.
+10) Si cal esmentar un terme tecnic, explica'l amb paraules simples.
 
 ORDRE:
 ${order}
@@ -1180,7 +1258,7 @@ function tick() {
 function main() {
   if (process.argv.includes("--telegram-test")) {
     const sent = sendTelegramMessage(
-      `Bridge daemon ${LABEL}\nEstat: SUCCESS\nWorktree: prova\nOutbox: prova telegram`,
+      "Prova correcta. El canal de Telegram esta actiu i preparat.",
     );
     if (!sent.ok) {
       fail(`TEST TELEGRAM ERROR: ${sent.reason}`);

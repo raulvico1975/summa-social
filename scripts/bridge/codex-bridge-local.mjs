@@ -244,10 +244,7 @@ function createCodexWorktree() {
 }
 
 function ensureCodexWorktree() {
-  const existing = findLatestCodexWorktree();
-  if (existing) {
-    return { ...existing, createdNow: false };
-  }
+  // Per govern operatiu, cada ordre ha d'obrir sempre un worktree nou i independent.
   return createCodexWorktree();
 }
 
@@ -396,6 +393,9 @@ RESUM CEO (OBLIGATORI)
 - Següent pas recomanat:
 7) Encara que no demanis OK, imprimeix igualment el bloc RESUM CEO (OBLIGATORI) al final.
 8) No toquis el flux de deploy existent.
+9) Escriu tota la resposta en català planer i no tècnic.
+10) Evita paraules tècniques com worktree, branca, commit, deploy, upstream, CLI o daemon.
+11) Si n'has d'usar alguna, explica-la amb paraules simples.
 
 PERMISOS TEMPORALS PER AQUESTA ORDRE:
 - Permís acabat: ${acabatAllowed ? "SI (keyword validada)" : "NO"}
