@@ -17,6 +17,8 @@ const TELEGRAM_MAX_LINES = 20;
 const TELEGRAM_MAX_TEXT = 3900;
 const TELEGRAM_PREFIX_REGEX = /^\s*(inicia\s*:|house\b\s*:)/i;
 const TELEGRAM_POLL_INTERVAL_MS = 2500;
+const TELEGRAM_CURL_MAX_TIME_SECONDS = 12;
+const TELEGRAM_CURL_CONNECT_TIMEOUT_SECONDS = 5;
 const HOUSE_PREFIX_REGEX = /^\s*House\b/i;
 const DEFAULT_CODEX_EXEC_TIMEOUT_MS = 1000 * 60 * 3;
 const CODEX_EXEC_TIMEOUT_MS = (() => {
@@ -260,6 +262,22 @@ function buildTelegramMessage(result) {
   return buildTechnicalTelegramMessage(result, outbox);
 }
 
+function baseTelegramCurlArgs() {
+  return [
+    "--http1.1",
+    "--ipv4",
+    "--connect-timeout",
+    String(TELEGRAM_CURL_CONNECT_TIMEOUT_SECONDS),
+    "--max-time",
+    String(TELEGRAM_CURL_MAX_TIME_SECONDS),
+    "--retry",
+    "2",
+    "--retry-delay",
+    "1",
+    "--retry-connrefused",
+  ];
+}
+
 function sendTelegramMessage(text) {
   const token = getTelegramToken();
   if (!token) {
@@ -274,6 +292,7 @@ function sendTelegramMessage(text) {
     "curl",
     [
       "-sS",
+      ...baseTelegramCurlArgs(),
       "-X",
       "POST",
       url,
@@ -381,6 +400,7 @@ function getTelegramUpdates(offset) {
     "curl",
     [
       "-sS",
+      ...baseTelegramCurlArgs(),
       "-X",
       "POST",
       url,
