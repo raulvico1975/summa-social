@@ -5,12 +5,15 @@
 - L'agent pot preparar canvis i provar-los en staging.
 - Producció continua sota control humà i manual.
 - El bridge local ja es pot usar de forma controlada i temporal.
+- També el pots usar des del mòbil via Telegram.
 
 ## Què et garanteix aquest model
 - Els canvis de prova van a un entorn separat, no al sistema real.
 - Les credencials de proves i de producció no es barregen.
 - Qualsevol execució de l'agent deixa traça verificable.
 - Les accions sensibles estan bloquejades si no dones l'autorització explícita.
+- Cada ordre crea un espai de feina nou i independent (no reutilitza l'anterior).
+- Les respostes de Telegram es mostren en llenguatge planer.
 
 ## Què no pot passar (amb la configuració actual)
 - L'agent no pot desplegar automàticament a producció.
@@ -25,6 +28,16 @@
    - `node scripts/bridge/codex-bridge-local.mjs "Inicia: <ordre>"`
 3. Tanques l'accés:
    - `node scripts/bridge/codex-bridge-local.mjs --disable`
+
+## Com s'utilitza des del mòbil (Telegram)
+1. Escrius una ordre amb prefix:
+   - `Inicia: <ordre>`
+   - `Implementa: <ordre>`
+   - `Hotfix: <ordre>`
+   - `Refactor: <ordre>`
+   - `House: <ordre>`
+2. El bot et respon amb resum no tècnic.
+3. Si l'ordre no té format correcte, et torna la guia curta de format.
 
 ## Com saber que ha anat bé
 - El bridge respon amb `OK: bridge completat ...`

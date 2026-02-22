@@ -59,7 +59,7 @@ S'espera a `tmp/bridge/last-run.json`:
 
 ## Notes operatives
 
-- El bridge intenta reutilitzar l'últim worktree `codex/*`; si no existeix, en crea un.
+- Cada ordre obre sempre un worktree `codex/*` nou i independent.
 - Si `codex exec` no pot executar-se, l'ordre queda en cua i es registra a `last-run.json`.
 - Kill switch `tmp/bridge/DISABLED`:
   - Bloqueja execució normal i `--queue-only` amb `BLOCKED_SAFE`.
@@ -68,3 +68,11 @@ S'espera a `tmp/bridge/last-run.json`:
 - Finestra temporal `tmp/bridge/ENABLED_UNTIL`:
   - `--enable-minutes <N>` habilita execució fins al timestamp guardat.
   - Quan expira, el bridge torna a `BLOCKED_SAFE` i reactiva `DISABLED`.
+
+## Telegram (mòbil)
+
+- El daemon escolta ordres des de Telegram en un xat autoritzat.
+- Prefixos admesos: `Inicia`, `Implementa`, `Hotfix`, `Refactor`, `House` (amb `:` opcional).
+- Si el missatge no segueix format, el bot respon amb ajuda de format.
+- Les respostes es retornen en llenguatge planer (no tècnic).
+- Si el repositori de control no està net o no està a `main`, el bot atura l'ordre per seguretat.
