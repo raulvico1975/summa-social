@@ -21,6 +21,26 @@ Sortides del bridge:
 - `tmp/bridge/outbox.txt`
 - `tmp/bridge/last-run.json`
 
+## Prova ràpida
+
+```bash
+# 1) Validar CLI
+node scripts/bridge/codex-bridge-local.mjs --help
+
+# 2) Execució safe
+node scripts/bridge/codex-bridge-local.mjs "Inicia: prova bridge control"
+
+# 3) Validar traça
+cat tmp/bridge/last-run.json
+```
+
+S'espera a `tmp/bridge/last-run.json`:
+- `mode: "codex-exec"`
+- `codex.exitCode: 0`
+- `guardrails.policyViolations: []`
+- `guardrails.mandatorySummaryPresent: true`
+- `files.lastRun` apuntant al mateix `tmp/bridge/last-run.json`
+
 ## Prohibit (guardrails)
 
 - Executar res si el repositori de control no està a `main` o no està net.
@@ -35,3 +55,7 @@ Sortides del bridge:
 
 - El bridge intenta reutilitzar l'últim worktree `codex/*`; si no existeix, en crea un.
 - Si `codex exec` no pot executar-se, l'ordre queda en cua i es registra a `last-run.json`.
+- Kill switch `tmp/bridge/DISABLED`:
+  - Bloqueja execució normal i `--queue-only` amb `BLOCKED_SAFE`.
+  - `--help` continua disponible per diagnòstic.
+  - Es reactiva eliminant el fitxer `DISABLED`.
