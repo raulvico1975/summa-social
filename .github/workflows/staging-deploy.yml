@@ -19,7 +19,7 @@ concurrency:
 
 jobs:
   deploy-staging:
-    if: github.event_name == 'push' || startsWith(github.head_ref, 'codex/')
+    if: ${{ github.repository == 'raulvico1975/summa-social' && (github.event_name == 'push' || startsWith(github.head_ref, 'codex/')) }}
     runs-on: ubuntu-latest
     env:
       STAGING_PROJECT_ID: ${{ vars.STAGING_PROJECT_ID }}
@@ -46,6 +46,10 @@ jobs:
           set -euo pipefail
           if [[ -z "${STAGING_PROJECT_ID:-}" ]]; then
             echo "Missing repository variable STAGING_PROJECT_ID."
+            exit 1
+          fi
+          if [[ "${STAGING_PROJECT_ID}" = "summa-social" ]]; then
+            echo "ERROR: staging apunta a prod"
             exit 1
           fi
           if [[ "${STAGING_PROJECT_ID}" == "summa-social" ]]; then

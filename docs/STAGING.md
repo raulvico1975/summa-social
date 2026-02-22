@@ -111,4 +111,15 @@ Cal crear, al projecte staging, aquests secrets usats per App Hosting:
 ## Estat actual d'implementació
 - Part de repositori/CI: preparada.
 - Banner visual de staging: implementat (detecta `NEXT_PUBLIC_ENV=staging` o `NEXT_PUBLIC_FIREBASE_PROJECT_ID` amb `staging`).
-- Part cloud: pendent de backend App Hosting + custom domain/DNS + secrets a Secret Manager del projecte staging.
+- Part cloud: operativa i validada.
+
+## Estat operatiu (validat)
+- Projecte: `summa-social-staging`
+- Backend: `summa-social-bot` (`us-central1`)
+- Domini: `https://bot.summasocial.app`
+- Auth: GitHub OIDC (WIF)
+- Secrets: Cloud Secret Manager (7/7)
+- Pipeline: `PR codex/* -> staging only`
+- Producció: manual, fora de WIF
+- Data validació: `2026-02-22`
+- Run validat: `22272943850`
