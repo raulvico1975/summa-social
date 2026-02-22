@@ -54,9 +54,18 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || '';
+  const isStagingEnv =
+    process.env.NEXT_PUBLIC_ENV === 'staging' || projectId.includes('staging');
+
   return (
     <html lang="ca" className={`${inter.variable} h-full overflow-x-hidden`} suppressHydrationWarning>
       <body className="h-full overflow-x-hidden font-sans antialiased" suppressHydrationWarning>
+        {isStagingEnv ? (
+          <div className="w-full bg-amber-400 px-3 py-1 text-center text-xs font-semibold text-black">
+            STAGING · Entorn de proves aillat · No produccio
+          </div>
+        ) : null}
         <FirebaseClientProvider>
           <TranslationsProvider>
             <IdleLogoutProvider idleMs={30 * 60 * 1000} warnMs={60 * 1000}>
