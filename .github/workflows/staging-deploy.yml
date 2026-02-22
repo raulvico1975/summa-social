@@ -25,6 +25,7 @@ jobs:
       STAGING_PROJECT_ID: ${{ vars.STAGING_PROJECT_ID }}
       EXPECTED_STAGING_DOMAIN: ${{ vars.STAGING_DOMAIN }}
       DEFAULT_STAGING_DOMAIN: bot.summasocial.app
+      STAGING_BACKEND_ID: summa-social-bot
       WIF_PROVIDER: ${{ vars.GCP_WIF_PROVIDER }}
       WIF_SERVICE_ACCOUNT: ${{ vars.GCP_WIF_SERVICE_ACCOUNT }}
 
@@ -61,6 +62,10 @@ jobs:
           fi
           if [[ "${WIF_SERVICE_ACCOUNT}" == *"@summa-social.iam.gserviceaccount.com" ]]; then
             echo "Blocked: WIF service account points to production project."
+            exit 1
+          fi
+          if [[ "${STAGING_BACKEND_ID}" != "summa-social-bot" ]]; then
+            echo "Blocked: staging backend must be summa-social-bot (got ${STAGING_BACKEND_ID})."
             exit 1
           fi
 
@@ -118,10 +123,35 @@ jobs:
               secret: RESEND_API_KEY_STAGING
           EOF
 
+      - name: Generate Firebase deploy config (apphosting only)
+        run: |
+          set -euo pipefail
+          cat > firebase.apphosting.deploy.json <<EOF
+          {
+            "apphosting": {
+              "backendId": "${STAGING_BACKEND_ID}",
+              "rootDir": ".",
+              "ignore": [
+                "**/node_modules/**",
+                "**/.git/**",
+                "firebase-debug.log",
+                "firebase-debug.*.log",
+                ".next/**",
+                "tmp/**",
+                "coverage/**"
+              ]
+            }
+          }
+          EOF
+
       - name: Deploy to Firebase App Hosting (staging)
         run: |
           set -euo pipefail
-          npx firebase-tools deploy --project "${STAGING_PROJECT_ID}" --non-interactive
+          npx firebase-tools deploy \
+            --config firebase.apphosting.deploy.json \
+            --only apphosting \
+            --project "${STAGING_PROJECT_ID}" \
+            --non-interactive
 
       - name: Smoke tests
         id: smoke

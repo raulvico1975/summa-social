@@ -57,6 +57,7 @@ El workflow comprova:
 - El job falla si el domini staging no és `bot.summasocial.app`.
 - El job falla si falten `GCP_WIF_PROVIDER` o `GCP_WIF_SERVICE_ACCOUNT`.
 - El job falla si `GCP_WIF_SERVICE_ACCOUNT` apunta a `summa-social`.
+- El deploy CI és només `apphosting` (backend `summa-social-bot`) amb config temporal dedicada.
 - No modificar workflows de producció per activar staging.
 
 ## Secrets necessaris a GitHub
