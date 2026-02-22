@@ -18,6 +18,10 @@ const TELEGRAM_MAX_TEXT = 3900;
 const TELEGRAM_PREFIX_REGEX = /^\s*(inicia\s*:|house\b\s*:)/i;
 const TELEGRAM_POLL_INTERVAL_MS = 2500;
 const HOUSE_PREFIX_REGEX = /^\s*House\b/i;
+const CODEX_CLI_FALLBACKS = [
+  "/Applications/Codex.app/Contents/Resources/codex",
+  "/usr/local/bin/codex",
+];
 
 const RISK_ALT_PATTERNS = [
   /\bfiscal\b/i,
@@ -821,9 +825,19 @@ FORMAT FINAL:
 }
 
 function executeCodex(order, worktreePath) {
+  const codexBinary = resolveCodexBinary();
+  if (!codexBinary) {
+    return {
+      ok: false,
+      exitCode: -1,
+      stdout: "",
+      stderr: "codex-cli-not-found",
+    };
+  }
+
   const prompt = buildPrompt(order, worktreePath);
   return runSafe(
-    "codex",
+    codexBinary,
     [
       "exec",
       "-C",
@@ -843,6 +857,22 @@ function executeCodex(order, worktreePath) {
       maxBuffer: 1024 * 1024 * 50,
     },
   );
+}
+
+function resolveCodexBinary() {
+  const probe = runSafe("which", ["codex"]);
+  const fromPath = (probe.stdout || "").trim();
+  if (probe.ok && fromPath) {
+    return fromPath;
+  }
+
+  for (const candidate of CODEX_CLI_FALLBACKS) {
+    if (fs.existsSync(candidate)) {
+      return candidate;
+    }
+  }
+
+  return "";
 }
 
 function readOutbox() {
