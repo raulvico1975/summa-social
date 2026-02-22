@@ -15,6 +15,7 @@ Objectiu: provar funcionalitats a `https://bot.summasocial.app` sense risc sobre
 - Backend App Hosting: `summa-social-bot` (staging).
 - Domini de staging: `bot.summasocial.app`.
 - Service account per deploy: exclusiva de staging.
+- Autenticació CI: Workload Identity Federation (OIDC), sense claus JSON persistents a GitHub.
 - Secrets App Hosting: `GOOGLE_API_KEY_STAGING`, `RESEND_API_KEY_STAGING` (staging only).
 
 ## Fitxers de suport
@@ -40,7 +41,7 @@ El workflow comprova:
 
 ## Com apagar o eliminar staging
 ### Apagar temporalment
-- Desactivar workflow `Deploy Staging` a GitHub Actions o bloquejar secret `FIREBASE_SERVICE_ACCOUNT_STAGING`.
+- Desactivar workflow `Deploy Staging` a GitHub Actions o buidar la variable `GCP_WIF_PROVIDER`.
 
 ### Eliminar completament
 1. Eliminar backend App Hosting `summa-social-bot` del projecte staging.
@@ -54,20 +55,19 @@ El workflow comprova:
 - `STAGING_PROJECT_ID` es llegeix de GitHub Actions Variables (`vars.STAGING_PROJECT_ID`).
 - El job falla si detecta `summa-social` com a target.
 - El job falla si el domini staging no és `bot.summasocial.app`.
-- El job falla si `NEXT_PUBLIC_FIREBASE_PROJECT_ID` no coincideix amb `STAGING_PROJECT_ID`.
+- El job falla si falten `GCP_WIF_PROVIDER` o `GCP_WIF_SERVICE_ACCOUNT`.
+- El job falla si `GCP_WIF_SERVICE_ACCOUNT` apunta a `summa-social`.
 - No modificar workflows de producció per activar staging.
 
 ## Secrets necessaris a GitHub
-- `FIREBASE_SERVICE_ACCOUNT_STAGING` (JSON de service account de staging)
-- `STAGING_NEXT_PUBLIC_FIREBASE_API_KEY`
-- `STAGING_NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN`
-- `STAGING_NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET`
-- `STAGING_NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID`
-- `STAGING_NEXT_PUBLIC_FIREBASE_APP_ID`
+- Cap (model WIF/OIDC).
+- Prohibit guardar claus JSON de service account a GitHub.
 
 ## Variables necessàries a GitHub
 - `STAGING_PROJECT_ID` = ID real del projecte staging (ex: `summa-social-staging`).
 - `STAGING_DOMAIN` = `bot.summasocial.app`.
+- `GCP_WIF_PROVIDER` = `projects/<PROJECT_NUMBER>/locations/global/workloadIdentityPools/<POOL_ID>/providers/<PROVIDER_ID>`.
+- `GCP_WIF_SERVICE_ACCOUNT` = `github-staging-deploy@<PROJECT_ID>.iam.gserviceaccount.com`.
 
 ## Bloqueig IAM detectat (2026-02-21)
 - Parent real de prod (`summa-social`): `organization/549497216100`.
@@ -80,11 +80,26 @@ El workflow comprova:
 2. Habilitar Firebase al projecte nou i activar App Hosting, Firestore, Auth i Storage.
 3. Si l'ID final no és `summa-social-staging`, actualitzar `STAGING_PROJECT_ID` a GitHub Variables.
 
-## Secrets via UI de GitHub (sense `gh auth`)
+## Variables via UI de GitHub (sense `gh auth`)
 1. GitHub repo → Settings → Secrets and variables → Actions.
-2. Crear secret `FIREBASE_SERVICE_ACCOUNT_STAGING` amb el JSON sencer de la service account de staging.
-3. Crear els secrets `STAGING_NEXT_PUBLIC_FIREBASE_*`.
-4. Crear les variables `STAGING_PROJECT_ID` i `STAGING_DOMAIN`.
+2. Crear variables: `STAGING_PROJECT_ID`, `STAGING_DOMAIN`, `GCP_WIF_PROVIDER`, `GCP_WIF_SERVICE_ACCOUNT`.
+3. No crear secrets de deploy a GitHub.
+
+## Secrets a Cloud Secret Manager (projecte staging)
+Cal crear, al projecte staging, aquests secrets usats per App Hosting:
+- `NEXT_PUBLIC_FIREBASE_API_KEY_STAGING`
+- `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN_STAGING`
+- `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET_STAGING`
+- `NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID_STAGING`
+- `NEXT_PUBLIC_FIREBASE_APP_ID_STAGING`
+- `GOOGLE_API_KEY_STAGING`
+- `RESEND_API_KEY_STAGING`
+
+## Configuració WIF (OIDC) resumida
+1. Crear SA staging (ex: `github-staging-deploy`) al projecte staging.
+2. Assignar rols mínims al projecte staging (`roles/firebase.admin`, `roles/run.admin`, `roles/iam.serviceAccountUser`).
+3. Crear Workload Identity Pool + Provider OIDC de GitHub (`token.actions.githubusercontent.com`) restringit al repo `raulvico1975/summa-social`.
+4. Donar `roles/iam.workloadIdentityUser` sobre la SA al `principalSet` del repositori.
 
 ## Domini `bot.summasocial.app` (operatiu)
 1. Crear backend App Hosting `summa-social-bot` al projecte staging.
@@ -95,4 +110,4 @@ El workflow comprova:
 ## Estat actual d'implementació
 - Part de repositori/CI: preparada.
 - Banner visual de staging: implementat (detecta `NEXT_PUBLIC_ENV=staging` o `NEXT_PUBLIC_FIREBASE_PROJECT_ID` amb `staging`).
-- Part cloud: pendent de permisos IAM per crear projecte i de configuració manual de secrets/domini.
+- Part cloud: pendent de backend App Hosting + custom domain/DNS + secrets a Secret Manager del projecte staging.
