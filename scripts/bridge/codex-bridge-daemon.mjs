@@ -228,6 +228,54 @@ function extractResumCeoBlock(outbox) {
   return block.join("\n").trim();
 }
 
+function extractFriendlyResum(outbox) {
+  const block = extractResumCeoBlock(outbox);
+  if (!block) {
+    return "";
+  }
+
+  const lines = block.split(/\r?\n/);
+  const friendly = [];
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed.startsWith("-")) {
+      continue;
+    }
+
+    const item = trimmed.replace(/^-+\s*/, "").trim();
+    const sep = item.indexOf(":");
+    const key = (sep >= 0 ? item.slice(0, sep) : item).trim().toLowerCase();
+    const value = (sep >= 0 ? item.slice(sep + 1) : "").trim();
+    if (!value) {
+      continue;
+    }
+
+    if (key.includes("estat final")) {
+      continue;
+    }
+    if (key.includes("que s'ha fet") || key.includes("què s'ha fet")) {
+      friendly.push(`Què he fet: ${value}`);
+      continue;
+    }
+    if (key.includes("implicacio") || key.includes("implicació")) {
+      friendly.push(`Per què t'importa: ${value}`);
+      continue;
+    }
+    if (key.includes("risc")) {
+      friendly.push(`Risc i control: ${value}`);
+      continue;
+    }
+    if (key.includes("seguent pas") || key.includes("següent pas")) {
+      friendly.push(`Pas següent: ${value}`);
+      continue;
+    }
+
+    friendly.push(value);
+  }
+
+  return friendly.join("\n").trim();
+}
+
 function firstOutboxLines(outbox, maxLines = TELEGRAM_MAX_LINES) {
   return outbox.split(/\r?\n/).slice(0, maxLines).join("\n").trim();
 }
@@ -288,11 +336,18 @@ function buildPlainTelegramMessage(result, outbox) {
     lines.push(reason);
   }
 
-  const preview = cleanOutboxPreview(outbox);
-  if (preview) {
+  const friendlyResum = extractFriendlyResum(outbox);
+  if (friendlyResum) {
     lines.push("");
     lines.push("Resum:");
-    lines.push(preview);
+    lines.push(friendlyResum);
+  } else {
+    const preview = cleanOutboxPreview(outbox);
+    if (preview) {
+      lines.push("");
+      lines.push("Resum:");
+      lines.push(preview);
+    }
   }
 
   if (status !== "SUCCESS") {
@@ -305,10 +360,6 @@ function buildPlainTelegramMessage(result, outbox) {
 
 function buildTelegramMessage(result) {
   const outbox = readOutbox();
-  const resumBlock = extractResumCeoBlock(outbox);
-  if (resumBlock) {
-    return trimTelegramText(resumBlock);
-  }
   return buildPlainTelegramMessage(result, outbox);
 }
 
