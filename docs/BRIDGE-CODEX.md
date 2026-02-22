@@ -2,7 +2,7 @@
 
 Bridge local per enviar ordres a Codex sense copy/paste, amb govern estricte.
 
-## Ús (màxim 3 comandes)
+## Ús
 
 ```bash
 # 1) Executar ordre (auto: desa inbox + llança codex exec)
@@ -11,9 +11,11 @@ node scripts/bridge/codex-bridge-local.mjs "Inicia: <ordre>"
 # 2) Només cua (desa inbox, no executa Codex)
 node scripts/bridge/codex-bridge-local.mjs --queue-only "Inicia: <ordre>"
 
-# 3) Kill switch (desactivar/activar)
-touch tmp/bridge/DISABLED   # desactiva
-rm -f tmp/bridge/DISABLED   # reactiva
+# 3) Habilitar temporalment execució (recomanat)
+node scripts/bridge/codex-bridge-local.mjs --enable-minutes 30
+
+# 4) Desactivar immediatament
+node scripts/bridge/codex-bridge-local.mjs --disable
 ```
 
 Sortides del bridge:
@@ -58,4 +60,7 @@ S'espera a `tmp/bridge/last-run.json`:
 - Kill switch `tmp/bridge/DISABLED`:
   - Bloqueja execució normal i `--queue-only` amb `BLOCKED_SAFE`.
   - `--help` continua disponible per diagnòstic.
-  - Es reactiva eliminant el fitxer `DISABLED`.
+  - `--disable` crea `DISABLED` i esborra `ENABLED_UNTIL`.
+- Finestra temporal `tmp/bridge/ENABLED_UNTIL`:
+  - `--enable-minutes <N>` habilita execució fins al timestamp guardat.
+  - Quan expira, el bridge torna a `BLOCKED_SAFE` i reactiva `DISABLED`.

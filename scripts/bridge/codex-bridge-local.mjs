@@ -10,6 +10,7 @@ const INBOX_FILE = path.join(BRIDGE_DIR, "inbox.txt");
 const OUTBOX_FILE = path.join(BRIDGE_DIR, "outbox.txt");
 const LAST_RUN_FILE = path.join(BRIDGE_DIR, "last-run.json");
 const KILL_SWITCH_FILE = path.join(BRIDGE_DIR, "DISABLED");
+const ENABLED_UNTIL_FILE = path.join(BRIDGE_DIR, "ENABLED_UNTIL");
 
 const CEO_ACABAT_KEYWORD = "CEO_OK_ACABAT";
 const CEO_PUBLICA_KEYWORD = "CEO_OK_PUBLICA";
@@ -20,6 +21,8 @@ function usage() {
     "  node scripts/bridge/codex-bridge-local.mjs \"<ordre>\"",
     "  node scripts/bridge/codex-bridge-local.mjs --queue-only \"<ordre>\"",
     "  echo \"<ordre>\" | node scripts/bridge/codex-bridge-local.mjs --stdin",
+    "  node scripts/bridge/codex-bridge-local.mjs --enable-minutes 30",
+    "  node scripts/bridge/codex-bridge-local.mjs --disable",
     "",
     "Keywords CEO obligatòries per ordres sensibles:",
     `  - ${CEO_ACABAT_KEYWORD} (per permetre 'acabat')`,
@@ -35,6 +38,8 @@ function fail(message, code = 1) {
 function parseArgs(argv) {
   let queueOnly = false;
   let fromStdin = false;
+  let disableBridge = false;
+  let enableMinutes = null;
   const parts = [];
 
   for (let i = 0; i < argv.length; i += 1) {
@@ -51,7 +56,38 @@ function parseArgs(argv) {
       fromStdin = true;
       continue;
     }
+    if (token === "--disable") {
+      disableBridge = true;
+      continue;
+    }
+    if (token === "--enable-minutes") {
+      const raw = argv[i + 1];
+      if (!raw) {
+        fail(`Falta el valor de --enable-minutes.\n\n${usage()}`);
+      }
+      const parsed = Number.parseInt(raw, 10);
+      if (!Number.isInteger(parsed) || parsed <= 0) {
+        fail(`Valor invàlid per --enable-minutes: ${raw}. Ha de ser un enter > 0.`);
+      }
+      enableMinutes = parsed;
+      i += 1;
+      continue;
+    }
     parts.push(token);
+  }
+
+  const controlOps = Number(disableBridge) + Number(enableMinutes !== null);
+  if (controlOps > 1) {
+    fail("No es poden combinar --disable i --enable-minutes.");
+  }
+  if (controlOps === 1) {
+    if (queueOnly || fromStdin || parts.length > 0) {
+      fail("Les opcions --disable/--enable-minutes no admeten ordre ni --queue-only/--stdin.");
+    }
+    if (disableBridge) {
+      return { mode: "disable" };
+    }
+    return { mode: "enable", enableMinutes };
   }
 
   let order = "";
@@ -66,7 +102,7 @@ function parseArgs(argv) {
     fail(`Falta l'ordre.\n\n${usage()}`);
   }
 
-  return { order, queueOnly };
+  return { mode: "run", order, queueOnly };
 }
 
 function run(command, args, options = {}) {
@@ -118,9 +154,7 @@ function preflightControlRepo() {
     fail(`BLOCKED_SAFE: Executa aquest bridge des de ${CONTROL_REPO}. cwd actual: ${cwd}`);
   }
 
-  if (fs.existsSync(KILL_SWITCH_FILE)) {
-    fail(`BLOCKED_SAFE: bridge desactivat via kill switch (${KILL_SWITCH_FILE}).`);
-  }
+  const activation = assertBridgeEnabledForRun();
 
   const state = gitState(CONTROL_REPO);
   if (state.branch !== "main") {
@@ -130,7 +164,10 @@ function preflightControlRepo() {
     const firstLine = state.porcelain.split("\n").filter(Boolean).slice(0, 1).join("");
     fail(`BLOCKED_SAFE: el repositori de control ha d'estar net. Exemple pendent: ${firstLine}`);
   }
-  return state;
+  return {
+    ...state,
+    bridgeEnabledUntil: activation.untilIso,
+  };
 }
 
 function findLatestCodexWorktree() {
@@ -249,6 +286,82 @@ function ensureBridgeDir() {
   fs.mkdirSync(BRIDGE_DIR, { recursive: true });
 }
 
+function writeKillSwitch(reason = "disabled") {
+  ensureBridgeDir();
+  fs.writeFileSync(KILL_SWITCH_FILE, `${reason}\n`, "utf8");
+}
+
+function removeFileIfExists(targetPath) {
+  if (fs.existsSync(targetPath)) {
+    fs.unlinkSync(targetPath);
+  }
+}
+
+function readEnabledUntil() {
+  if (!fs.existsSync(ENABLED_UNTIL_FILE)) {
+    return null;
+  }
+  const raw = fs.readFileSync(ENABLED_UNTIL_FILE, "utf8").trim();
+  if (!raw) {
+    return { valid: false, raw };
+  }
+  const ms = Date.parse(raw);
+  if (Number.isNaN(ms)) {
+    return { valid: false, raw };
+  }
+  return {
+    valid: true,
+    raw,
+    ms,
+    expired: ms <= Date.now(),
+  };
+}
+
+function setEnabledMinutes(minutes) {
+  ensureBridgeDir();
+  const untilMs = Date.now() + minutes * 60 * 1000;
+  const untilIso = new Date(untilMs).toISOString();
+  fs.writeFileSync(ENABLED_UNTIL_FILE, `${untilIso}\n`, "utf8");
+  removeFileIfExists(KILL_SWITCH_FILE);
+  return untilIso;
+}
+
+function disableBridgeNow() {
+  writeKillSwitch("disabled_by_flag");
+  removeFileIfExists(ENABLED_UNTIL_FILE);
+}
+
+function assertBridgeEnabledForRun() {
+  ensureBridgeDir();
+
+  if (fs.existsSync(KILL_SWITCH_FILE)) {
+    fail(`BLOCKED_SAFE: bridge desactivat via kill switch (${KILL_SWITCH_FILE}).`);
+  }
+
+  const enabled = readEnabledUntil();
+  if (!enabled) {
+    writeKillSwitch("disabled_by_default");
+    fail(
+      "BLOCKED_SAFE: bridge desactivat per defecte. Executa --enable-minutes <N> per habilitar temporalment.",
+    );
+  }
+  if (!enabled.valid) {
+    writeKillSwitch("invalid_enabled_until");
+    fail(
+      `BLOCKED_SAFE: ${ENABLED_UNTIL_FILE} invàlid. Executa --enable-minutes <N> per regenerar-lo.`,
+    );
+  }
+  if (enabled.expired) {
+    removeFileIfExists(ENABLED_UNTIL_FILE);
+    writeKillSwitch("enabled_window_expired");
+    fail(
+      "BLOCKED_SAFE: finestra temporal expirada. Executa --enable-minutes <N> per reactivar el bridge.",
+    );
+  }
+
+  return { untilIso: enabled.raw };
+}
+
 function writeInbox(order, context) {
   const lines = [
     `timestamp=${new Date().toISOString()}`,
@@ -342,7 +455,23 @@ function writeLastRun(payload) {
 
 function main() {
   const startedAt = new Date();
-  const { order, queueOnly } = parseArgs(process.argv.slice(2));
+  const args = parseArgs(process.argv.slice(2));
+  ensureBridgeDir();
+
+  if (args.mode === "enable") {
+    const untilIso = setEnabledMinutes(args.enableMinutes);
+    process.stdout.write(
+      `OK: bridge habilitat temporalment fins a ${untilIso} (${args.enableMinutes} min).\n`,
+    );
+    return;
+  }
+  if (args.mode === "disable") {
+    disableBridgeNow();
+    process.stdout.write(`OK: bridge desactivat (${KILL_SWITCH_FILE}).\n`);
+    return;
+  }
+
+  const { order, queueOnly } = args;
 
   const controlBefore = preflightControlRepo();
   const policy = enforceOrderGuardrails(order);
@@ -355,7 +484,6 @@ function main() {
     );
   }
 
-  ensureBridgeDir();
   writeInbox(order, worktree);
 
   let mode = "queue-only";
