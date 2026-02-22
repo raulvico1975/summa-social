@@ -122,4 +122,29 @@ Cal crear, al projecte staging, aquests secrets usats per App Hosting:
 - Pipeline: `PR codex/* -> staging only`
 - Producció: manual, fora de WIF
 - Data validació: `2026-02-22`
-- Run validat: `22272943850`
+- Run validat: `22274363002`
+
+## Least privilege final (staging)
+- Service account de deploy: `github-staging-deploy@summa-social-staging.iam.gserviceaccount.com`
+- Rols finals al projecte `summa-social-staging`:
+  - `roles/firebase.admin`
+  - `roles/firebaseapphosting.admin`
+  - `roles/iam.serviceAccountUser`
+  - `roles/resourcemanager.projectIamAdmin`
+  - `roles/run.admin`
+  - `roles/serviceusage.serviceUsageConsumer`
+  - `roles/storage.admin`
+- `roles/iam.serviceAccountAdmin` retirat.
+- Validació de regressió: run `22274363002` en verd després de retirar `roles/iam.serviceAccountAdmin`.
+- `roles/serviceusage.serviceUsageConsumer` és necessari per evitar el 403 de `serviceusage.services.use` durant deploy.
+
+## Checklist operativa ràpida
+1. Si falla auth WIF:
+   - Revisar variables de repo: `STAGING_PROJECT_ID`, `STAGING_DOMAIN`, `GCP_WIF_PROVIDER`, `GCP_WIF_SERVICE_ACCOUNT`.
+   - Verificar `permissions: id-token: write` al workflow.
+2. Si falla deploy amb 403:
+   - Llegir el permís exacte de l'error.
+   - Afegir només el rol/permís mínim al projecte `summa-social-staging` (mai a prod).
+3. Si falla runtime (5xx):
+   - Verificar secrets a Cloud Secret Manager (noms exactes i versions amb valor).
+   - Confirmar que el backend App Hosting té accés de lectura als secrets de staging.
