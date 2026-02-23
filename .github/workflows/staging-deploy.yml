@@ -1,0 +1,245 @@
+name: Deploy Staging
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+  push:
+    branches:
+      - codex/**
+
+permissions:
+  contents: read
+  pull-requests: write
+  id-token: write
+
+concurrency:
+  group: staging-deploy-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  deploy-staging:
+    if: ${{ github.repository == 'raulvico1975/summa-social' && (github.event_name == 'push' || startsWith(github.head_ref, 'codex/')) }}
+    runs-on: ubuntu-latest
+    env:
+      STAGING_PROJECT_ID: ${{ vars.STAGING_PROJECT_ID }}
+      EXPECTED_STAGING_DOMAIN: ${{ vars.STAGING_DOMAIN }}
+      DEFAULT_STAGING_DOMAIN: bot.summasocial.app
+      STAGING_BACKEND_ID: summa-social-bot
+      WIF_PROVIDER: ${{ vars.GCP_WIF_PROVIDER }}
+      WIF_SERVICE_ACCOUNT: ${{ vars.GCP_WIF_SERVICE_ACCOUNT }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install deps
+        run: npm ci
+
+      - name: Resolve staging target + guardrails
+        run: |
+          set -euo pipefail
+          if [[ -z "${STAGING_PROJECT_ID:-}" ]]; then
+            echo "Missing repository variable STAGING_PROJECT_ID."
+            exit 1
+          fi
+          if [[ "${STAGING_PROJECT_ID}" = "summa-social" ]]; then
+            echo "ERROR: staging apunta a prod"
+            exit 1
+          fi
+          if [[ "${STAGING_PROJECT_ID}" == "summa-social" ]]; then
+            echo "Blocked: STAGING_PROJECT_ID points to production."
+            exit 1
+          fi
+          if [[ -z "${WIF_PROVIDER:-}" ]]; then
+            echo "Missing repository variable GCP_WIF_PROVIDER."
+            exit 1
+          fi
+          if [[ -z "${WIF_SERVICE_ACCOUNT:-}" ]]; then
+            echo "Missing repository variable GCP_WIF_SERVICE_ACCOUNT."
+            exit 1
+          fi
+          if [[ "${WIF_SERVICE_ACCOUNT}" == *"@summa-social.iam.gserviceaccount.com" ]]; then
+            echo "Blocked: WIF service account points to production project."
+            exit 1
+          fi
+          if [[ "${STAGING_BACKEND_ID}" != "summa-social-bot" ]]; then
+            echo "Blocked: staging backend must be summa-social-bot (got ${STAGING_BACKEND_ID})."
+            exit 1
+          fi
+
+          if [[ -z "${EXPECTED_STAGING_DOMAIN:-}" ]]; then
+            EXPECTED_STAGING_DOMAIN="${DEFAULT_STAGING_DOMAIN}"
+          fi
+          if [[ "${EXPECTED_STAGING_DOMAIN}" != "bot.summasocial.app" ]]; then
+            echo "Blocked: staging domain must be bot.summasocial.app (got ${EXPECTED_STAGING_DOMAIN})."
+            exit 1
+          fi
+
+          STAGING_URL="https://${EXPECTED_STAGING_DOMAIN}"
+          echo "EXPECTED_STAGING_DOMAIN=${EXPECTED_STAGING_DOMAIN}" >> "$GITHUB_ENV"
+          echo "STAGING_URL=${STAGING_URL}" >> "$GITHUB_ENV"
+
+      - name: Build app
+        env:
+          # Build-time minimum values only. Runtime values are injected by App Hosting secrets.
+          NEXT_PUBLIC_FIREBASE_API_KEY: ci-staging-build-placeholder
+          NEXT_PUBLIC_FIREBASE_PROJECT_ID: ${{ vars.STAGING_PROJECT_ID }}
+        run: npm run build
+
+      - name: Authenticate Google Cloud (WIF)
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}
+          service_account: ${{ vars.GCP_WIF_SERVICE_ACCOUNT }}
+          create_credentials_file: true
+
+      - name: Generate staging App Hosting config
+        run: |
+          set -euo pipefail
+
+          cat > apphosting.yaml <<EOF
+          runConfig:
+            maxInstances: 3
+          env:
+            - variable: NEXT_PUBLIC_FIREBASE_PROJECT_ID
+              value: ${STAGING_PROJECT_ID}
+            - variable: NEXT_PUBLIC_ENV
+              value: staging
+            - variable: NEXT_PUBLIC_FIREBASE_API_KEY
+              secret: NEXT_PUBLIC_FIREBASE_API_KEY_STAGING
+            - variable: NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
+              secret: NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN_STAGING
+            - variable: NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
+              secret: NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET_STAGING
+            - variable: NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
+              secret: NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID_STAGING
+            - variable: NEXT_PUBLIC_FIREBASE_APP_ID
+              secret: NEXT_PUBLIC_FIREBASE_APP_ID_STAGING
+            - variable: GOOGLE_API_KEY
+              secret: GOOGLE_API_KEY_STAGING
+            - variable: RESEND_API_KEY
+              secret: RESEND_API_KEY_STAGING
+          EOF
+
+      - name: Generate Firebase deploy config (apphosting only)
+        run: |
+          set -euo pipefail
+          cat > firebase.apphosting.deploy.json <<EOF
+          {
+            "apphosting": {
+              "backendId": "${STAGING_BACKEND_ID}",
+              "rootDir": ".",
+              "ignore": [
+                "**/node_modules/**",
+                "**/.git/**",
+                "firebase-debug.log",
+                "firebase-debug.*.log",
+                ".next/**",
+                "tmp/**",
+                "coverage/**"
+              ]
+            }
+          }
+          EOF
+
+      - name: Deploy to Firebase App Hosting (staging)
+        run: |
+          set -euo pipefail
+          npx firebase-tools deploy \
+            --config firebase.apphosting.deploy.json \
+            --only apphosting \
+            --project "${STAGING_PROJECT_ID}" \
+            --non-interactive
+
+      - name: Smoke tests
+        id: smoke
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+          test_success() {
+            local url="$1"
+            local code
+            code="$(curl -sS -o /dev/null -w "%{http_code}" "$url")"
+            if [[ "$code" =~ ^5 ]]; then
+              echo "Smoke FAIL: $url returned server error $code"
+              exit 1
+            fi
+            curl -fsS -L "$url" >/dev/null
+            echo "Smoke PASS: $url ($code)"
+          }
+
+          test_success "${STAGING_URL}"
+          test_success "${STAGING_URL}/ca"
+
+          login_code="$(curl -sS -o /dev/null -w "%{http_code}" "${STAGING_URL}/login")"
+          if [[ "${login_code}" == "404" ]]; then
+            echo "Smoke SKIP: ${STAGING_URL}/login (404)"
+          else
+            test_success "${STAGING_URL}/login"
+          fi
+
+          end=$((SECONDS + 60))
+          while [[ $SECONDS -lt $end ]]; do
+            code="$(curl -sS -o /dev/null -w "%{http_code}" "${STAGING_URL}/ca")"
+            if [[ "$code" =~ ^5 ]]; then
+              echo "Smoke FAIL: 5xx detected during 60s check ($code)"
+              exit 1
+            fi
+            sleep 10
+          done
+
+          echo "Smoke PASS: no 5xx in 60s window"
+          {
+            echo "### Smoke tests (staging)"
+            echo ""
+            echo "- URL: ${STAGING_URL}"
+            echo "- GET /: PASS"
+            echo "- GET /ca: PASS"
+            if [[ "${login_code}" == "404" ]]; then
+              echo "- GET /login: SKIP (404)"
+            else
+              echo "- GET /login: PASS"
+            fi
+            echo "- 60s no 5xx: PASS"
+            echo "- Logs: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: PR staging report
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const smokeOutcome = '${{ steps.smoke.outcome }}';
+            const smokeText = smokeOutcome === 'success' ? 'PASS' : 'FAIL';
+            const runUrl = `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const body = [
+              '### Staging Deploy Report',
+              '',
+              `- URL: https://bot.summasocial.app`,
+              `- Project: ${process.env.STAGING_PROJECT_ID}`,
+              `- Smoke tests: **${smokeText}**`,
+              `- Logs: ${runUrl}`,
+              '- Guardrails: project staging obligatori, domini staging obligatori, zero referències a prod',
+              '',
+              'Checklist:',
+              '- [ ] Home carrega',
+              '- [ ] Ruta /ca carrega',
+              '- [ ] Login demo (si aplica)',
+              '- [ ] Flux funcional validat per Raül'
+            ].join('\n');
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.payload.pull_request.number,
+              body
+            });
+
+      - name: Fail if smoke tests failed
+        if: steps.smoke.outcome != 'success'
+        run: exit 1
