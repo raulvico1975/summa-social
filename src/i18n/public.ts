@@ -569,7 +569,8 @@ const ca: PublicTranslations = {
     heroTagline: 'Gestió econòmica i fiscal per a entitats no lucratives.',
     hero: {
       visualAlt: 'Captura de pantalla de Summa Social',
-      bridgeLine: 'Tot queda alineat sense haver-hi de pensar cada vegada.',
+      bridgeLine:
+        "A final d'any, la junta demana comptes. Amb Summa, les dades ja hi són — ordenades, coherents i llestes per presentar.",
     },
     nav: {
       conciliation: 'Conciliació',
@@ -654,7 +655,7 @@ const ca: PublicTranslations = {
       },
       step2: {
         title: 'Gestiona',
-        description: 'Classifica moviments (ara amb IA), genera remeses i controla cada euro amb criteri.',
+        description: 'Classifica moviments amb assistència automàtica — tu revises i confirmes.',
       },
       step3: {
         title: 'Compleix',
@@ -687,7 +688,8 @@ const ca: PublicTranslations = {
     profiles: {
       admin: {
         title: 'Per a administradors i tresoreria',
-        description: "Control complet de la gestió econòmica diària: conciliació, remeses, despeses i documentació. Tot en un sol lloc, amb criteri i sense complicacions.",
+        description:
+          'Conciliació, remeses i fiscalitat: cada peça en el seu lloc, sense reconstruir res a posteriori.',
       },
       projects: {
         title: 'Per a gestors de projectes',
@@ -704,8 +706,9 @@ const ca: PublicTranslations = {
       imageAlt: 'Il·lustració del procés de treball de Summa Social',
     },
     finalCta: {
-      title: 'Comença avui',
-      subtitle: "Summa Social t'ajuda a portar ordre i control a la gestió econòmica de la teva entitat.",
+      title: 'Valora si Summa encaixa amb la teva entitat',
+      subtitle:
+        "El Model 182, els certificats de donació, els informes de junta: surten del que ja has registrat durant l'any. Sense doble feina. Contacta'ns per veure si encaixa.",
       cta: 'Entrar',
     },
   },
