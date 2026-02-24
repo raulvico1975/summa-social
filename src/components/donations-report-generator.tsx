@@ -43,7 +43,7 @@ import {
 import type { Donor, Transaction, AnyContact } from '@/lib/data';
 import { formatCurrencyEU, normalizeTaxId, removeAccents } from '@/lib/normalize';
 import { useToast } from '@/hooks/use-toast';
-import { generateModel182AEATFile, encodeLatin1, type AEATExcludedDonor } from '@/lib/model182-aeat';
+import { encodeLatin1, type AEATExcludedDonor, type AEATExportResult } from '@/lib/model182-aeat';
 import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
 import { collection } from 'firebase/firestore';
 import { useTranslations } from '@/i18n';
@@ -172,7 +172,7 @@ interface ReportStats {
 }
 
 export function DonationsReportGenerator() {
-  const { firestore } = useFirebase();
+  const { firestore, auth } = useFirebase();
   const { organizationId, organization } = useCurrentOrganization();
   const { can } = usePermissions();
   const { t } = useTranslations();
@@ -520,7 +520,7 @@ export function DonationsReportGenerator() {
    * - Errors de donants → Dialog amb opcions (CSV exclosos, exportar igualment, cancel·lar)
    * - Si 0 donants vàlids → error
    */
-  const handleExportAEAT = () => {
+  const handleExportAEAT = async () => {
     if (!canGenerateModel182 || !canExportReports) {
       toast({ variant: 'destructive', title: t.common.error, description: 'No tens permisos per exportar informes.' });
       return;
@@ -529,27 +529,34 @@ export function DonationsReportGenerator() {
       toast({ variant: 'destructive', title: t.reports.noDataToExport, description: t.reports.noDataToExportDescription });
       return;
     }
-
-    if (!organization) {
+    if (!organizationId) {
       toast({ variant: 'destructive', title: t.reports.exportAEATMissingData, description: "No s'ha pogut carregar l'organització." });
       return;
     }
 
-    // Transformar reportData al format esperat per generateModel182AEATFile
-    const aeatReportData = reportData.map(row => ({
-      donor: {
-        name: row.donorName,
-        taxId: row.donorTaxId,
-        zipCode: row.donorZipCode,
-        donorType: row.donorNaturaleza === 'J' ? 'company' as const : 'individual' as const,
-      },
-      totalAmount: row.totalAmount,
-      previousYearAmount: row.valor1,
-      twoYearsAgoAmount: row.valor2,
-    }));
-
-    // Generar fitxer AEAT
-    const result = generateModel182AEATFile(organization, aeatReportData, parseInt(selectedYear, 10));
+    // Crida server-side: el servidor llegeix Firestore, computa i genera
+    let result: AEATExportResult;
+    try {
+      const idToken = await auth.currentUser?.getIdToken();
+      const res = await fetch('/api/fiscal/model182/generate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(idToken ? { Authorization: `Bearer ${idToken}` } : {}),
+        },
+        body: JSON.stringify({ orgId: organizationId, year: parseInt(selectedYear, 10) }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        const code = err?.error ?? res.status;
+        toast({ variant: 'destructive', title: t.reports.exportAEATMissingData, description: `Error ${code}` });
+        return;
+      }
+      result = await res.json();
+    } catch {
+      toast({ variant: 'destructive', title: t.reports.exportAEATMissingData, description: "No s'ha pogut connectar amb el servidor." });
+      return;
+    }
 
     // 1. Errors d'organització o cap donant vàlid → bloquejants
     if (result.errors.length > 0) {

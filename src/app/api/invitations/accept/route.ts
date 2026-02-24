@@ -9,6 +9,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { FieldValue } from 'firebase-admin/firestore';
 import { getAdminDb, verifyIdToken } from '@/lib/api/admin-sdk';
+import { ROLE_DEFAULT_CAPABILITIES } from '@/lib/permissions';
+import type { OrganizationRole } from '@/lib/data';
 
 interface AcceptRequest {
   invitationId: string;
@@ -78,8 +80,9 @@ export async function POST(
     // 4. Batch: crear membre + marcar invitació com usada
     const batch = db.batch();
 
-    // 4a. Crear membre
+    // 4a. Crear membre (amb capabilities D1 per enforçament Firestore Rules)
     const memberRef = db.doc(`organizations/${organizationId}/members/${authResult.uid}`);
+    const memberRole = role as OrganizationRole;
     batch.set(memberRef, {
       userId: authResult.uid,
       email,
@@ -87,6 +90,7 @@ export async function POST(
       role,
       joinedAt: new Date().toISOString(),
       invitationId,
+      capabilities: memberRole === 'admin' ? {} : ROLE_DEFAULT_CAPABILITIES[memberRole] ?? { 'moviments.read': true },
     });
 
     // 4b. Marcar invitació com usada

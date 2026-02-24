@@ -55,7 +55,6 @@ import {
   type CandidateTransaction,
 } from '@/lib/reports/model347';
 import {
-  generateModel347AEATFile,
   encodeLatin1,
   type AEAT347ExcludedSupplier,
   type AEAT347ExportResult,
@@ -66,7 +65,7 @@ import {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 export function SuppliersReportGenerator() {
-  const { firestore } = useFirebase();
+  const { firestore, auth } = useFirebase();
   const { organizationId, organization } = useCurrentOrganization();
   const { can } = usePermissions();
   const { t } = useTranslations();
@@ -304,19 +303,39 @@ export function SuppliersReportGenerator() {
   };
 
   // ── Export AEAT ──
-  const handleExportAEAT = () => {
+  const handleExportAEAT = async () => {
     if (!canGenerateModel347 || !canExportReports) {
       toast({ variant: 'destructive', title: t.common.error, description: 'No tens permisos per exportar informes.' });
       return;
     }
-    if (!organization) return;
+    if (!organizationId) return;
 
-    const result = generateModel347AEATFile(
-      organization,
-      effectiveExpenses,
-      effectiveIncome,
-      parseInt(selectedYear, 10)
-    );
+    let result: AEAT347ExportResult;
+    try {
+      const idToken = await auth.currentUser?.getIdToken();
+      const res = await fetch('/api/fiscal/model347/generate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${idToken}`,
+        },
+        body: JSON.stringify({
+          orgId: organizationId,
+          year: parseInt(selectedYear, 10),
+          excludedTxIds: Array.from(excludedTxIds),
+          excludedSupplierKeys: Array.from(excludedSupplierKeys),
+        }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        toast({ variant: 'destructive', title: t.common.error, description: err.error ?? `Error ${res.status}` });
+        return;
+      }
+      result = (await res.json()) as AEAT347ExportResult;
+    } catch {
+      toast({ variant: 'destructive', title: t.common.error, description: 'Error de connexió en generar el fitxer.' });
+      return;
+    }
 
     // Errors bloquejants
     if (result.errors.length > 0) {
