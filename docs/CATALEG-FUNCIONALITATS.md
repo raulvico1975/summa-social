@@ -20,6 +20,5 @@
 
 - Manual usuari: `docs/manual-usuari-summa-social.md`
 - FAQ: `docs/FAQ_SUMMA_SOCIAL.md`
-- Context tècnic ampliat: `docs/CONTEXT-SUMMA-SOCIAL.md`
-- Referència mestra: `docs/SUMMA-SOCIAL-REFERENCIA-COMPLETA.md`
+- Referència mestra (context tècnic complet): `docs/SUMMA-SOCIAL-REFERENCIA-COMPLETA.md`
 - Historial de canvis: `docs/CHANGELOG.md`

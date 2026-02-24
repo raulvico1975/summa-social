@@ -200,13 +200,9 @@ npm run publica
 
 **Important:** `npm run publica` només es pot executar des del repositori de control (`/Users/raulvico/Documents/summa-social`) a la branca `main`.
 
-```bash
-npm run deploy
-```
+`npm run publica` executa el ritual de deploy complet de forma seqüencial i bloquejant. No cal recordar comandes git ni passos manuals.
 
-Això executa `scripts/deploy.sh`, un script que fa tot el ritual de deploy de forma seqüencial i bloquejant. No cal recordar comandes git ni passos manuals.
-
-**Què fa el script (en ordre):**
+**Què fa en ordre:**
 1. Comprova que estàs a `main` i que no hi ha canvis pendents
 2. Actualitza totes les branques (`main`, `prod`)
 3. Mostra els fitxers canviats i el nivell de risc
@@ -222,7 +218,7 @@ Per defecte, si no es defineixen URLs de comprovació, el sistema intenta deduir
 
 **Si falla:**
 - Conflicte de merge → el script aborta i torna a `main`. Resol el conflicte manualment.
-- Verificació falla → corregeix els errors i torna a executar `npm run deploy`.
+- Verificació falla → corregeix els errors i torna a executar `npm run publica`.
 - Si no es pot expressar impacte en llenguatge de negoci → bloqueja `BLOCKED_SAFE`.
 
 **Important (preguntes humanes):**

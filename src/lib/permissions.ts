@@ -190,3 +190,15 @@ export function canUseProjectModule(permissions: PermissionMap): boolean {
 export function can(permission: PermissionKey, permissions: PermissionMap): boolean {
   return permissions[permission] === true;
 }
+
+/**
+ * Capabilities per defecte que s'escriuen al document Firestore del membre
+ * quan es crea o actualitza el seu rol.
+ * Política D1 (conservador, opt-in): només moviments.read per defecte.
+ * Qualsevol capacitat fiscal/export/edició s'ha de concedir explícitament.
+ */
+export const ROLE_DEFAULT_CAPABILITIES: Record<OrganizationRole, Record<string, boolean>> = {
+  admin: {},  // admin fa bypass per rol a les Rules — no cal omplir
+  user: { 'moviments.read': true },
+  viewer: { 'moviments.read': true },
+};

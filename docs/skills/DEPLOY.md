@@ -12,10 +12,10 @@ Un **deploy verificat** és un commit servit per Firebase App Hosting des de la 
 **Requisit previ:** el CEO ha donat l'ordre explícita `"Autoritzo deploy"`.
 
 ```bash
-npm run deploy
+npm run publica
 ```
 
-Això executa `scripts/deploy.sh`, un script determinista que fa tot el ritual:
+Això executa el ritual de deploy complet de forma determinista i bloquejant:
 1. Preflight git (branca=main, working tree net, pull ff-only)
 2. Detectar canvis i classificar risc
 3. Verificació fiscal (bloquejant si toca àrea fiscal)

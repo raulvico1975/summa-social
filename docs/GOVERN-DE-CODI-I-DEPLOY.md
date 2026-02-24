@@ -5,8 +5,7 @@
 **Autor:** Raül Vico (CEO/CTO)
 
 **Complementaris:**
-- `docs/AGENT-STAGING-BRIDGE-TECNIC.md`
-- `docs/RAUL-RESUM-OPERATIU.md`
+- `docs/OPENCLAW-MIRROR.md`
 
 ---
 
@@ -275,7 +274,6 @@ Aquest document conté:
 Només si:
 - **Equip 3+ devs** → afegir PRs obligatoris
 - **CI/CD automatitzat** → afegir protecció de branques
-- **Staging necessari** → afegir branca `staging` entre `main` i `prod`
 
 Fins llavors: **simplicitat i disciplina > automatització**.
 
