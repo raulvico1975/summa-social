@@ -25,8 +25,34 @@ service cloud.firestore {
     }
 
     function hasOrgInProfile(orgId) {
-      return isSignedIn() && 
+      return isSignedIn() &&
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.organizationId == orgId;
+    }
+
+    // ───────────────────────────────────────────────────────────────────────
+    // CAPABILITY HELPERS (D1 — fail-closed)
+    // Comprova el camp capabilities del membre (map<string, bool>).
+    // Admin: bypass total per rol. Sense capabilities → false (fail-closed).
+    // ───────────────────────────────────────────────────────────────────────
+
+    function hasCapability(orgId, permKey) {
+      if (request.auth == null) return false;
+      let memberRef = /databases/$(database)/documents/organizations/$(orgId)/members/$(request.auth.uid);
+      if (!exists(memberRef)) return false;
+      let m = get(memberRef).data;
+      if (m.role == 'admin') return true;
+      return m.get('capabilities', {}).get(permKey, false) == true;
+    }
+
+    function hasProjectCapability(orgId) {
+      if (request.auth == null) return false;
+      let memberRef = /databases/$(database)/documents/organizations/$(orgId)/members/$(request.auth.uid);
+      if (!exists(memberRef)) return false;
+      let m = get(memberRef).data;
+      if (m.role == 'admin') return true;
+      let caps = m.get('capabilities', {});
+      return caps.get('projectes.manage', false) == true
+          || caps.get('projectes.expenseInput', false) == true;
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -233,7 +259,8 @@ service cloud.firestore {
       // ─────────────────────────────────────────────────────────────────────
 
       match /transactions/{transactionId} {
-        allow read: if isSuperAdmin() || isMemberOf(orgId);
+        // SECURITY FIX: enforça moviments.read a capa de dades (capabilities D1)
+        allow read: if isSuperAdmin() || hasCapability(orgId, 'moviments.read');
 
         // P1 FIX: Validació de camps crítics
         // Fase 1: Només valida tipus (amount és number, date és string)
@@ -462,7 +489,8 @@ service cloud.firestore {
 
       match /projectModule/{document=**} {
         allow read: if isMemberOf(orgId) || hasOrgInProfile(orgId) || isSuperAdmin();
-        allow write: if (isMemberOf(orgId) && getMemberRole(orgId) in ['admin', 'user']) || isSuperAdmin();
+        // SECURITY FIX: enforça projectes.manage o projectes.expenseInput (capabilities D1)
+        allow write: if isSuperAdmin() || hasProjectCapability(orgId);
       }
 
       // ─────────────────────────────────────────────────────────────────────
