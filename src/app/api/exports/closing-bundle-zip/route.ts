@@ -4,15 +4,18 @@
  * Reexpedeix la petició a la Cloud Function i retorna l'stream del ZIP.
  */
 
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
+import { getAdminDb, validateUserMembership, verifyIdToken } from '@/lib/api/admin-sdk';
+import { requirePermission } from '@/lib/api/require-permission';
 
 const REGION = 'europe-west1';
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
-    // 1. Obtenir token del header Authorization
+    // 1. Obtenir token del header Authorization + validar usuari
     const authHeader = request.headers.get('Authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
+    const authResult = await verifyIdToken(request);
+    if (!authHeader?.startsWith('Bearer ') || !authResult) {
       return NextResponse.json(
         { code: 'UNAUTHENTICATED', message: 'Token no proporcionat' },
         { status: 401 }
@@ -29,6 +32,23 @@ export async function POST(request: Request) {
         { status: 400 }
       );
     }
+
+    const payload = body as Record<string, unknown>;
+    const orgId = typeof payload.orgId === 'string' ? payload.orgId.trim() : '';
+    if (!orgId) {
+      return NextResponse.json(
+        { code: 'INVALID_REQUEST', message: 'orgId obligatori' },
+        { status: 400 }
+      );
+    }
+
+    const db = getAdminDb();
+    const membership = await validateUserMembership(db, authResult.uid, orgId);
+    const denied = requirePermission(membership, {
+      code: 'INFORMES_EXPORTAR_REQUIRED',
+      check: (permissions) => permissions['informes.exportar'],
+    });
+    if (denied) return denied;
 
     // 3. Construir URL de la Cloud Function
     const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;

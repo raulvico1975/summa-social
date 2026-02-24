@@ -18,7 +18,7 @@ import {
   validateUserMembership,
   BATCH_SIZE,
 } from '@/lib/api/admin-sdk';
-import { requireOperationalAccess } from '@/lib/api/require-operational-access';
+import { requirePermission } from '@/lib/api/require-permission';
 import { normalizeBankDescription } from '@/lib/normalize';
 import {
   computeBankImportHash,
@@ -416,7 +416,10 @@ export async function POST(
 
   const db = getAdminDb();
   const membership = await validateUserMembership(db, authResult.uid, parsedBody.orgId);
-  const accessError = requireOperationalAccess(membership);
+  const accessError = requirePermission(membership, {
+    code: 'MOVIMENTS_IMPORTAR_EXTRACTES_REQUIRED',
+    check: (permissions) => permissions['moviments.importarExtractes'],
+  });
   if (accessError) return accessError as NextResponse<ImportTransactionsResponse>;
 
   const normalizedTransactions: CanonicalBankImportTx[] = [];

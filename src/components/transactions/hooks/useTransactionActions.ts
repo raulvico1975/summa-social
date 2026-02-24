@@ -45,6 +45,7 @@ interface UseTransactionActionsParams {
   availableCategories?: Category[] | null;
   firestore?: Firestore | null;
   userId?: string | null;
+  canEditMovements?: boolean;
 }
 
 interface UseTransactionActionsReturn {
@@ -150,6 +151,7 @@ export function useTransactionActions({
   availableCategories,
   firestore,
   userId,
+  canEditMovements = true,
 }: UseTransactionActionsParams): UseTransactionActionsReturn {
   const { toast } = useToast();
   const { t } = useTranslations();
@@ -180,20 +182,32 @@ export function useTransactionActions({
   const [newContactType, setNewContactType] = React.useState<'donor' | 'supplier'>('donor');
   const [newContactTransactionId, setNewContactTransactionId] = React.useState<string | null>(null);
 
+  const ensureCanEdit = React.useCallback((): boolean => {
+    if (canEditMovements) return true;
+    toast({
+      variant: 'destructive',
+      title: t.common.error,
+      description: 'No tens permisos per editar moviments.',
+    });
+    return false;
+  }, [canEditMovements, toast, t.common.error]);
+
   // ═══════════════════════════════════════════════════════════════════════════
   // NOTE SETTER (for InlineNoteEditor component)
   // ═══════════════════════════════════════════════════════════════════════════
 
   const handleSetNote = React.useCallback((txId: string, note: string) => {
+    if (!ensureCanEdit()) return;
     if (!transactionsCollection) return;
     updateDocumentNonBlocking(doc(transactionsCollection, txId), { note: note || null });
-  }, [transactionsCollection]);
+  }, [ensureCanEdit, transactionsCollection]);
 
   // ═══════════════════════════════════════════════════════════════════════════
   // PROPERTY SETTERS
   // ═══════════════════════════════════════════════════════════════════════════
 
   const handleSetCategory = React.useCallback((txId: string, categoryId: string) => {
+    if (!ensureCanEdit()) return;
     if (!transactionsCollection) return;
 
     if (!availableCategories) {
@@ -216,9 +230,10 @@ export function useTransactionActions({
     }
 
     updateDocumentNonBlocking(doc(transactionsCollection, txId), { category: categoryId });
-  }, [transactionsCollection, transactions, availableCategories, toast, t]);
+  }, [ensureCanEdit, transactionsCollection, transactions, availableCategories, toast, t]);
 
   const handleSetContact = React.useCallback((txId: string, newContactId: string | null, contactType?: ContactType) => {
+    if (!ensureCanEdit()) return;
     if (!transactionsCollection) return;
 
     const updates: Record<string, unknown> = {
@@ -239,18 +254,20 @@ export function useTransactionActions({
     }
 
     updateDocumentNonBlocking(doc(transactionsCollection, txId), updates);
-  }, [transactionsCollection, availableContacts, availableCategories, transactions]);
+  }, [ensureCanEdit, transactionsCollection, availableContacts, availableCategories, transactions]);
 
   const handleSetProject = React.useCallback((txId: string, newProjectId: string | null) => {
+    if (!ensureCanEdit()) return;
     if (!transactionsCollection) return;
     updateDocumentNonBlocking(doc(transactionsCollection, txId), { projectId: newProjectId });
-  }, [transactionsCollection]);
+  }, [ensureCanEdit, transactionsCollection]);
 
   // ═══════════════════════════════════════════════════════════════════════════
   // DOCUMENT UPLOAD
   // ═══════════════════════════════════════════════════════════════════════════
 
   const handleAttachDocument = React.useCallback((transactionId: string) => {
+    if (!ensureCanEdit()) return;
     if (!organizationId || !transactionsCollection) {
       const errorMsg = t.movements.table.organizationNotIdentified;
       toast({ variant: 'destructive', title: t.common.error, description: errorMsg });
@@ -338,7 +355,7 @@ export function useTransactionActions({
       document.body.appendChild(fileInput);
       fileInput.click();
     }, 100);
-  }, [organizationId, transactionsCollection, storage, toast, t]);
+  }, [ensureCanEdit, organizationId, transactionsCollection, storage, toast, t]);
 
   // ═══════════════════════════════════════════════════════════════════════════
   // DOCUMENT ATTACH WITH EXPLICIT FILENAME (called from TransactionsTable dialog)
@@ -349,6 +366,7 @@ export function useTransactionActions({
     file: File,
     overrideFilename: string,
   ) => {
+    if (!ensureCanEdit()) return;
     if (!organizationId || !firestore) {
       toast({ variant: 'destructive', title: t.common.error, description: t.movements.table.organizationNotIdentified });
       return;
@@ -396,7 +414,7 @@ export function useTransactionActions({
     } finally {
       setDocLoadingStates(prev => ({ ...prev, [transactionId]: false }));
     }
-  }, [organizationId, firestore, storage, transactions, toast, t]);
+  }, [ensureCanEdit, organizationId, firestore, storage, transactions, toast, t]);
 
   // ═══════════════════════════════════════════════════════════════════════════
   // DOCUMENT DELETE
@@ -408,6 +426,7 @@ export function useTransactionActions({
   }, []);
 
   const handleDeleteDocConfirm = React.useCallback(async () => {
+    if (!ensureCanEdit()) return;
     if (!transactionToDeleteDoc || !transactionsCollection || !organizationId || !firestore) {
       setIsDeleteDocDialogOpen(false);
       setTransactionToDeleteDoc(null);
@@ -489,7 +508,7 @@ export function useTransactionActions({
       setIsDeleteDocDialogOpen(false);
       setTransactionToDeleteDoc(null);
     }
-  }, [transactionToDeleteDoc, transactionsCollection, organizationId, firestore, storage, toast, t]);
+  }, [ensureCanEdit, transactionToDeleteDoc, transactionsCollection, organizationId, firestore, storage, toast, t]);
 
   const handleCloseDeleteDocDialog = React.useCallback(() => {
     setIsDeleteDocDialogOpen(false);
@@ -508,11 +527,13 @@ export function useTransactionActions({
   // ═══════════════════════════════════════════════════════════════════════════
 
   const handleEditClick = React.useCallback((transaction: Transaction) => {
+    if (!ensureCanEdit()) return;
     setEditingTransaction(transaction);
     setIsEditDialogOpen(true);
-  }, []);
+  }, [ensureCanEdit]);
 
   const handleSaveEdit = React.useCallback((formData: EditFormData) => {
+    if (!ensureCanEdit()) return;
     if (!editingTransaction || !transactionsCollection) return;
 
     const selectedContact = formData.contactId
@@ -531,7 +552,7 @@ export function useTransactionActions({
     toast({ title: t.movements.table.transactionUpdated });
     setIsEditDialogOpen(false);
     setEditingTransaction(null);
-  }, [editingTransaction, transactionsCollection, availableContacts, toast, t]);
+  }, [ensureCanEdit, editingTransaction, transactionsCollection, availableContacts, toast, t]);
 
   const handleCloseEditDialog = React.useCallback(() => {
     setIsEditDialogOpen(false);
@@ -543,11 +564,13 @@ export function useTransactionActions({
   // ═══════════════════════════════════════════════════════════════════════════
 
   const handleDeleteClick = React.useCallback((transaction: Transaction) => {
+    if (!ensureCanEdit()) return;
     setTransactionToDelete(transaction);
     setIsDeleteDialogOpen(true);
-  }, []);
+  }, [ensureCanEdit]);
 
   const handleDeleteConfirm = React.useCallback(async () => {
+    if (!ensureCanEdit()) return;
     if (!transactionToDelete || !transactionsCollection) {
       setIsDeleteDialogOpen(false);
       setTransactionToDelete(null);
@@ -614,7 +637,7 @@ export function useTransactionActions({
 
     setIsDeleteDialogOpen(false);
     setTransactionToDelete(null);
-  }, [transactionToDelete, transactionsCollection, firestore, organizationId, userId, toast, t]);
+  }, [ensureCanEdit, transactionToDelete, transactionsCollection, firestore, organizationId, userId, toast, t]);
 
   const handleCloseDeleteDialog = React.useCallback(() => {
     setIsDeleteDialogOpen(false);
@@ -626,12 +649,14 @@ export function useTransactionActions({
   // ═══════════════════════════════════════════════════════════════════════════
 
   const handleOpenNewContactDialog = React.useCallback((txId: string, type: 'donor' | 'supplier') => {
+    if (!ensureCanEdit()) return;
     setNewContactTransactionId(txId);
     setNewContactType(type);
     setIsNewContactDialogOpen(true);
-  }, []);
+  }, [ensureCanEdit]);
 
   const handleSaveNewContact = React.useCallback((formData: NewContactFormData) => {
+    if (!ensureCanEdit()) return;
     // Only name is required
     if (!formData.name) {
       toast({ variant: 'destructive', title: t.common.error, description: t.donors.errorNameRequired });
@@ -683,6 +708,7 @@ export function useTransactionActions({
     setIsNewContactDialogOpen(false);
     setNewContactTransactionId(null);
   }, [
+    ensureCanEdit,
     newContactType,
     newContactTransactionId,
     contactsCollection,
