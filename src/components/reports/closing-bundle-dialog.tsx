@@ -23,7 +23,6 @@ import { useTranslations } from '@/i18n';
 import { useFirebase } from '@/firebase';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
 import { useToast } from '@/hooks/use-toast';
-import { usePermissions } from '@/hooks/use-permissions';
 import {
   type PeriodOption,
   type ClosingBundleError,
@@ -40,9 +39,7 @@ export function ClosingBundleDialog({ open, onOpenChange }: ClosingBundleDialogP
   const { t } = useTranslations();
   const { user } = useFirebase();
   const { organizationId } = useCurrentOrganization();
-  const { can } = usePermissions();
   const { toast } = useToast();
-  const canExportReports = can('informes.exportar');
 
   const [periodOption, setPeriodOption] = React.useState<PeriodOption>('current_year');
   const [customDateFrom, setCustomDateFrom] = React.useState('');
@@ -71,14 +68,6 @@ export function ClosingBundleDialog({ open, onOpenChange }: ClosingBundleDialogP
   }, [periodOption, customDateFrom, customDateTo]);
 
   const handleGenerate = async () => {
-    if (!canExportReports) {
-      toast({
-        variant: 'destructive',
-        title: t.common.error,
-        description: 'No tens permisos per exportar informes.',
-      });
-      return;
-    }
     if (!user || !organizationId) {
       toast({
         variant: 'destructive',
@@ -245,7 +234,7 @@ export function ClosingBundleDialog({ open, onOpenChange }: ClosingBundleDialogP
         <div className="flex justify-end">
           <Button
             onClick={handleGenerate}
-            disabled={isGenerating || !isCustomValid || !canExportReports}
+            disabled={isGenerating || !isCustomValid}
           >
             {isGenerating ? (
               <>

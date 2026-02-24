@@ -101,7 +101,6 @@ import { detectLegacyCategoryTransactions, logLegacyCategorySummary } from '@/li
 
 interface TransactionsTableProps {
   initialDateFilter?: DateFilterValue | null;
-  canEditMovements?: boolean;
 }
 
 const RemittanceSplitter = dynamic(
@@ -114,9 +113,9 @@ const ReturnImporter = dynamic(
   { ssr: false },
 );
 
-export function TransactionsTable({ initialDateFilter = null, canEditMovements = true }: TransactionsTableProps = {}) {
+export function TransactionsTable({ initialDateFilter = null }: TransactionsTableProps = {}) {
   const { firestore, user, storage } = useFirebase();
-  const { organizationId } = useCurrentOrganization();
+  const { organizationId, userRole } = useCurrentOrganization();
   const { t, language, tr } = useTranslations();
   const { toast } = useToast();
   const locale = language === 'es' ? 'es-ES' : 'ca-ES';
@@ -222,7 +221,7 @@ export function TransactionsTable({ initialDateFilter = null, canEditMovements =
   // ═══════════════════════════════════════════════════════════════════════════
   // SELECCIÓ MÚLTIPLE (bulk actions)
   // ═══════════════════════════════════════════════════════════════════════════
-  const canBulkEdit = canEditMovements;
+  const canBulkEdit = userRole === 'admin' || userRole === 'user';
   const [selectedIds, setSelectedIds] = React.useState<Set<string>>(new Set());
   const [isBulkCategoryDialogOpen, setIsBulkCategoryDialogOpen] = React.useState(false);
   const [bulkCategoryId, setBulkCategoryId] = React.useState<string | null>(null);
@@ -546,7 +545,6 @@ export function TransactionsTable({ initialDateFilter = null, canEditMovements =
     availableCategories,
     firestore,
     userId: user?.uid,
-    canEditMovements,
   });
 
   // ═══════════════════════════════════════════════════════════════════════════

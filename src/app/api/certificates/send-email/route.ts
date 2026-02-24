@@ -6,7 +6,7 @@ import {
   validateUserMembership,
   verifyIdToken,
 } from '@/lib/api/admin-sdk';
-import { requirePermission } from '@/lib/api/require-permission';
+import { requireOperationalAccess } from '@/lib/api/require-operational-access';
 import type { OrganizationLanguage } from '@/lib/data';
 
 const MAX_RECIPIENTS_PER_REQUEST = 20;
@@ -400,10 +400,7 @@ export async function POST(request: NextRequest) {
 
     const db = getAdminDb();
     const membership = await validateUserMembership(db, authResult.uid, organizationId);
-    const accessError = requirePermission(membership, {
-      code: 'FISCAL_CERTIFICATS_GENERAR_REQUIRED',
-      check: (permissions) => permissions['fiscal.certificats.generar'],
-    });
+    const accessError = requireOperationalAccess(membership);
     if (accessError) {
       return accessError;
     }

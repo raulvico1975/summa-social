@@ -64,6 +64,7 @@ Registre cronologic de desplegaments a produccio.
 | 2026-02-17 22:06 | 85892a1 | MITJA | No | 10 | OK |
 | 2026-02-18 14:51 | 4dd1517 | MITJA | Si | 9 | OK |
 | 2026-02-23 16:44 | c971139 | MITJA | No | 17 | OK |
+| 2026-02-24 12:48 | 84873cf | ALT | Si | 38 | OK |
 ## Decisions humanes (negoci)
 
 | Data | SHA | human_question_reason | business_impact | decision_taken |
@@ -81,3 +82,5 @@ Registre cronologic de desplegaments a produccio.
 | 2026-02-16 17:54 | db4713c | SKIPPED_NO_BUCKET | - |
 | 2026-02-17 21:53 | cee7133 | Risc ALT residual després de verificacions automàtiques. | podria alterar imports de donacions o devolucions, i l'entitat podria veure totals incorrectes en certificats o informes fiscals. | B_DEPLOY_WITH_VISIBLE_RISK |
 | 2026-02-17 21:53 | cee7133 | SKIPPED_NO_BUCKET | - |
+| 2026-02-24 12:48 | 84873cf | Risc ALT residual després de verificacions automàtiques. | podria canviar qui veu o edita informació sensible, i l'entitat podria tenir accessos no esperats. | B_DEPLOY_WITH_VISIBLE_RISK |
+| 2026-02-24 12:48 | 84873cf | SKIPPED_NO_BUCKET | - |
