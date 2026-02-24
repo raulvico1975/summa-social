@@ -12,6 +12,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { FolderKanban, Lock, Settings } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
+import { usePermissions } from '@/hooks/use-permissions';
 
 interface ProjectModuleLayoutProps {
   children: React.ReactNode;
@@ -23,6 +24,7 @@ export default function ProjectModuleLayout({ children }: ProjectModuleLayoutPro
   const { buildUrl } = useOrgUrl();
   const { toast } = useToast();
   const router = useRouter();
+  const { can, canUseProjectModule } = usePermissions();
   const [isActivating, setIsActivating] = React.useState(false);
 
   // Feature flag: Mòdul Projectes
@@ -59,6 +61,21 @@ export default function ProjectModuleLayout({ children }: ProjectModuleLayoutPro
       setIsActivating(false);
     }
   };
+
+  if (!can('sections.projectes')) {
+    return (
+      <div className="flex min-h-[50vh] items-center justify-center p-4">
+        <Card className="max-w-md">
+          <CardHeader>
+            <CardTitle>Acces restringit</CardTitle>
+            <CardDescription>
+              Aquesta seccio esta desactivada per aquest usuari.
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      </div>
+    );
+  }
 
   // Si el mòdul no està activat, mostrar pantalla de bloqueig
   if (!isProjectModuleEnabled) {
@@ -113,6 +130,21 @@ export default function ProjectModuleLayout({ children }: ProjectModuleLayoutPro
               Anar a Configuració
             </Button>
           </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (!canUseProjectModule) {
+    return (
+      <div className="flex min-h-[50vh] items-center justify-center p-4">
+        <Card className="max-w-md">
+          <CardHeader>
+            <CardTitle>Acces restringit</CardTitle>
+            <CardDescription>
+              No tens permisos per operar al modul de Projectes.
+            </CardDescription>
+          </CardHeader>
         </Card>
       </div>
     );
