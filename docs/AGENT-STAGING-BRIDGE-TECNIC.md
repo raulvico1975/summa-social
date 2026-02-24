@@ -44,9 +44,10 @@ Referència detallada: `docs/STAGING.md`.
 - Job limitat al repo `raulvico1975/summa-social`.
 
 ### 4) Least privilege (staging)
-- `roles/iam.serviceAccountAdmin` retirat.
+- `roles/iam.serviceAccountAdmin` prohibit per CI.
+- Permís IAM mínim per App Hosting bootstrap: `roles/iam.serviceAccountCreator`.
 - Rol addicional necessari: `roles/serviceusage.serviceUsageConsumer`.
-- Validat amb run verd posterior a la retirada del rol admin.
+- Regla: no escalar a rols admin; afegir permisos de forma incremental i justificada.
 
 Detall de rols i checklists: `docs/STAGING.md`.
 

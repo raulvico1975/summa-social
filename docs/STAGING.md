@@ -133,13 +133,15 @@ Cal crear, al projecte staging, aquests secrets usats per App Hosting:
 - Rols finals al projecte `summa-social-staging`:
   - `roles/firebase.admin`
   - `roles/firebaseapphosting.admin`
+  - `roles/iam.serviceAccountCreator`
   - `roles/iam.serviceAccountUser`
   - `roles/resourcemanager.projectIamAdmin`
   - `roles/run.admin`
   - `roles/serviceusage.serviceUsageConsumer`
   - `roles/storage.admin`
-- `roles/iam.serviceAccountAdmin` retirat.
-- Validació de regressió: run `22274363002` en verd després de retirar `roles/iam.serviceAccountAdmin`.
+- `roles/iam.serviceAccountAdmin` està prohibit per CI.
+- Regla de govern: no usar `serviceAccountAdmin` en pipelines; afegir permisos IAM només un a un i justificats.
+- Si el deploy App Hosting demana `iam.serviceAccounts.create`, usar `roles/iam.serviceAccountCreator` (no admin).
 - `roles/serviceusage.serviceUsageConsumer` és necessari per evitar el 403 de `serviceusage.services.use` durant deploy.
 
 ## Checklist operativa ràpida
