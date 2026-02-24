@@ -3,6 +3,8 @@
 import dynamic from 'next/dynamic';
 import { ClosingBundleCard } from '@/components/reports/closing-bundle-card';
 import { useTranslations } from '@/i18n';
+import { usePermissions } from '@/hooks/use-permissions';
+import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
 const DonationsReportGenerator = dynamic(
   () => import('@/components/donations-report-generator').then((mod) => mod.DonationsReportGenerator),
@@ -21,6 +23,21 @@ const DonationCertificateGenerator = dynamic(
 
 export default function ReportsPage() {
     const { t } = useTranslations();
+    const { can } = usePermissions();
+
+  if (!can('sections.informes')) {
+    return (
+      <div className="flex min-h-[50vh] items-center justify-center">
+        <Card className="max-w-md">
+          <CardHeader>
+            <CardTitle>Acces restringit</CardTitle>
+            <CardDescription>No tens permisos per accedir a Informes.</CardDescription>
+          </CardHeader>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div>

@@ -16,6 +16,7 @@ import Link from 'next/link';
 import { Badge } from '@/components/ui/badge';
 import type { PendingDocument } from '@/lib/pending-documents';
 import type { ExpenseReport } from '@/lib/expense-reports';
+import { usePermissions } from '@/hooks/use-permissions';
 
 const TransactionImporter = dynamic(
   () => import('@/components/transaction-importer').then((mod) => mod.TransactionImporter),
@@ -25,9 +26,12 @@ const TransactionImporter = dynamic(
 export default function MovimientosPage() {
   const { firestore } = useFirebase();
   const { organizationId, organization } = useCurrentOrganization();
+  const { can } = usePermissions();
   const { t } = useTranslations();
   const searchParams = useSearchParams();
   const initialPeriodFilter = React.useMemo(() => fromPeriodQuery(searchParams), [searchParams]);
+  const canImportExtracts = can('moviments.importarExtractes');
+  const canEditMovements = can('moviments.editar');
 
   // Feature flag: Documents pendents
   const isPendingDocsEnabled = organization?.features?.pendingDocs ?? false;
@@ -78,7 +82,7 @@ export default function MovimientosPage() {
           <p className="text-muted-foreground">{t.movements.description}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <TransactionImporter availableCategories={categories} />
+          {canImportExtracts && <TransactionImporter availableCategories={categories} />}
           {isPendingDocsEnabled && (
             <>
               <Button variant="outline" asChild>
@@ -112,7 +116,10 @@ export default function MovimientosPage() {
         <p>{t.common.loading}</p>
       ) : (
         <div className="w-full">
-          <TransactionsTable initialDateFilter={initialPeriodFilter ?? undefined} />
+          <TransactionsTable
+            initialDateFilter={initialPeriodFilter ?? undefined}
+            canEditMovements={canEditMovements}
+          />
         </div>
       )}
     </div>

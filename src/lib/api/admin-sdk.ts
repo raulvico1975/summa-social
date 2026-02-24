@@ -115,6 +115,8 @@ export async function verifyIdToken(request: NextRequest): Promise<AuthResult | 
 export interface MembershipValidation {
   valid: boolean;
   role: 'admin' | 'user' | 'viewer' | null;
+  userOverrides: { deny?: string[] } | null;
+  userGrants: string[] | null;
 }
 
 /**
@@ -139,16 +141,22 @@ export async function validateUserMembership(
     return {
       valid: true,
       role: (data?.role as 'admin' | 'user' | 'viewer') ?? 'viewer',
+      userOverrides: data?.userOverrides && typeof data.userOverrides === 'object'
+        ? (data.userOverrides as { deny?: string[] })
+        : null,
+      userGrants: Array.isArray(data?.userGrants)
+        ? data.userGrants.filter((value): value is string => typeof value === 'string')
+        : null,
     };
   }
 
   // SuperAdmin bypass: accés admin a totes les organitzacions
   const superAdminSnap = await db.doc(`systemSuperAdmins/${uid}`).get();
   if (superAdminSnap.exists) {
-    return { valid: true, role: 'admin' };
+    return { valid: true, role: 'admin', userOverrides: null, userGrants: null };
   }
 
-  return { valid: false, role: null };
+  return { valid: false, role: null, userOverrides: null, userGrants: null };
 }
 
 // =============================================================================

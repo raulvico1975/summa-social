@@ -51,6 +51,7 @@ import { MobileListItem } from '@/components/mobile/mobile-list-item';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { MOBILE_ACTIONS_BAR, MOBILE_CTA_PRIMARY } from '@/lib/ui/mobile-actions';
+import { MembersUserPermissionsDialog } from '@/components/members-user-permissions-dialog';
 
 export function MembersManager() {
   const { firestore, user } = useFirebase();
@@ -95,6 +96,7 @@ export function MembersManager() {
   const [isInviteDialogOpen, setIsInviteDialogOpen] = React.useState(false);
   const [isImporterOpen, setIsImporterOpen] = React.useState(false);
   const [memberToDelete, setMemberToDelete] = React.useState<OrganizationMember | null>(null);
+  const [memberToEditPermissions, setMemberToEditPermissions] = React.useState<OrganizationMember | null>(null);
   const [invitationToDelete, setInvitationToDelete] = React.useState<Invitation | null>(null);
   const [isProcessing, setIsProcessing] = React.useState(false);
 
@@ -295,6 +297,12 @@ export function MembersManager() {
                                 <Eye className="mr-2 h-4 w-4" />
                                 {t.members.roleViewer}
                               </DropdownMenuItem>
+                              {member.role === 'user' && (
+                                <DropdownMenuItem onClick={() => setMemberToEditPermissions(member)}>
+                                  <Shield className="mr-2 h-4 w-4" />
+                                  Permisos
+                                </DropdownMenuItem>
+                              )}
                               <DropdownMenuSeparator />
                               <DropdownMenuItem
                                 onClick={() => setMemberToDelete(member)}
@@ -374,6 +382,12 @@ export function MembersManager() {
                                     </Button>
                                   </DropdownMenuTrigger>
                                   <DropdownMenuContent align="end">
+                                    {member.role === 'user' && (
+                                      <DropdownMenuItem onClick={() => setMemberToEditPermissions(member)}>
+                                        <Shield className="mr-2 h-4 w-4" />
+                                        Permisos
+                                      </DropdownMenuItem>
+                                    )}
                                     <DropdownMenuItem
                                       onClick={() => setMemberToDelete(member)}
                                       className="text-destructive"
@@ -528,6 +542,14 @@ export function MembersManager() {
       <MemberInviterImporter
         open={isImporterOpen}
         onOpenChange={setIsImporterOpen}
+      />
+
+      <MembersUserPermissionsDialog
+        open={!!memberToEditPermissions}
+        onOpenChange={(open) => {
+          if (!open) setMemberToEditPermissions(null);
+        }}
+        member={memberToEditPermissions}
       />
     </>
   );

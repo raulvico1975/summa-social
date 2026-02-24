@@ -42,6 +42,7 @@ import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
 import { collection } from 'firebase/firestore';
 import { useTranslations } from '@/i18n';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
+import { usePermissions } from '@/hooks/use-permissions';
 import { useIsMobile } from '@/hooks/use-is-mobile';
 import { MobileListItem } from '@/components/mobile/mobile-list-item';
 import { cn } from '@/lib/utils';
@@ -67,8 +68,11 @@ import {
 export function SuppliersReportGenerator() {
   const { firestore } = useFirebase();
   const { organizationId, organization } = useCurrentOrganization();
+  const { can } = usePermissions();
   const { t } = useTranslations();
   const isMobile = useIsMobile();
+  const canGenerateModel347 = can('fiscal.model347.generar');
+  const canExportReports = can('informes.exportar');
 
   // ── Queries Firestore ──
   const transactionsQuery = useMemoFirebase(
@@ -154,6 +158,10 @@ export function SuppliersReportGenerator() {
 
   // ── Handlers ──
   const handleGenerate = () => {
+    if (!canGenerateModel347) {
+      toast({ variant: 'destructive', title: t.common.error, description: 'No tens permisos per generar el model 347.' });
+      return;
+    }
     if (!activeTxs.length || !contacts) {
       toast({ variant: 'destructive', title: t.reports.dataNotAvailable, description: t.reports.dataNotAvailableDescription });
       return;
@@ -253,6 +261,10 @@ export function SuppliersReportGenerator() {
 
   // ── Export CSV ──
   const handleExportCSV = () => {
+    if (!canGenerateModel347 || !canExportReports) {
+      toast({ variant: 'destructive', title: t.common.error, description: 'No tens permisos per exportar informes.' });
+      return;
+    }
     const allRows = [
       ...effectiveExpenses.map(a => ({ ...a, tipo: t.reports.model347TypeExpense })),
       ...effectiveIncome.map(a => ({ ...a, tipo: t.reports.model347TypeIncome })),
@@ -293,6 +305,10 @@ export function SuppliersReportGenerator() {
 
   // ── Export AEAT ──
   const handleExportAEAT = () => {
+    if (!canGenerateModel347 || !canExportReports) {
+      toast({ variant: 'destructive', title: t.common.error, description: 'No tens permisos per exportar informes.' });
+      return;
+    }
     if (!organization) return;
 
     const result = generateModel347AEATFile(
@@ -407,14 +423,14 @@ export function SuppliersReportGenerator() {
                 ))}
               </SelectContent>
             </Select>
-            <Button onClick={handleGenerate} className={MOBILE_CTA_PRIMARY}>
+            <Button onClick={handleGenerate} className={MOBILE_CTA_PRIMARY} disabled={!canGenerateModel347}>
               {t.reports.generate}
             </Button>
-            <Button variant="outline" onClick={handleExportCSV} disabled={!hasData} className={MOBILE_CTA_PRIMARY}>
+            <Button variant="outline" onClick={handleExportCSV} disabled={!hasData || !canGenerateModel347 || !canExportReports} className={MOBILE_CTA_PRIMARY}>
               <Download className="mr-2 h-4 w-4" />
               {t.reports.exportCsv}
             </Button>
-            <Button variant="outline" onClick={handleExportAEAT} disabled={!hasData} className={MOBILE_CTA_PRIMARY} title={t.reports.model347ExportAEATTooltip}>
+            <Button variant="outline" onClick={handleExportAEAT} disabled={!hasData || !canGenerateModel347 || !canExportReports} className={MOBILE_CTA_PRIMARY} title={t.reports.model347ExportAEATTooltip}>
               <FileText className="mr-2 h-4 w-4" />
               {t.reports.model347ExportAEAT}
             </Button>
