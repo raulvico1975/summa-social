@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAdminDb, validateUserMembership, verifyIdToken } from '@/lib/api/admin-sdk';
 import { requirePermission } from '@/lib/api/require-permission';
-import { canAccessMovimentsRoute } from '@/lib/permissions';
 
 const DEFAULT_LIMIT = 100;
 const MAX_LIMIT = 300;
@@ -29,7 +28,8 @@ export async function GET(request: NextRequest) {
   const membership = await validateUserMembership(db, authResult.uid, orgId);
   const denied = requirePermission(membership, {
     code: 'MOVIMENTS_ROUTE_REQUIRED',
-    check: (permissions) => canAccessMovimentsRoute(permissions),
+    // Guard crític d'API: /moviments només amb secció i lectura bancària.
+    check: (permissions) => permissions['sections.moviments'] && permissions['moviments.read'],
   });
   if (denied) return denied;
 
