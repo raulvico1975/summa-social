@@ -40,7 +40,7 @@ git push origin main
 ### Deploy manual (quan ritual automàtic falla)
 
 ```bash
-# Si npm run deploy falla, executar passos manualment:
+# Si npm run publica falla, executar passos manualment:
 
 # 1. main → prod
 git checkout prod
@@ -231,51 +231,6 @@ Crear/actualitzar `docs/DEPLOY-INCIDENTS.md`:
 - Aplicar fix
 - Executar smoke tests complets
 - Només llavors: autoritzar deploy
-
----
-
-## Rollback PR3/PR3.1 — Bot KB versionada
-
-**Context:** Sistema de bot amb KB versionada (filesystem + Storage merge)
-
-### Components afectats
-
-- `src/app/api/support/bot/route.ts` — Bot API (hard fallback + lang normalization)
-- `src/app/api/support/kb/diagnostics/route.ts` — Diagnostics API (SuperAdmin-only)
-- `src/components/super-admin/kb-runtime-diagnostics.tsx` — Diagnostics UI
-- `src/lib/support/load-kb-runtime.ts` — Runtime loader amb cache versionat
-- Firestore: `system/supportKb` (document amb `version`, `updatedAt`, `updatedBy`)
-- Storage: `support-kb/kb.json` (KB cards override)
-
-### Rollback ràpid per component
-
-| Component | Rollback | Temps |
-|-----------|----------|-------|
-| **Bot API** | Escenari 1 (revert bot route) | 3-5 min |
-| **Diagnostics API** | Escenari 2 (revert diagnostics route) | 3-5 min |
-| **Storage JSON** | Escenari 3 (restaurar kb.json) | 5-7 min |
-| **Cache version** | Escenari 5 (incrementar version) | 1 min |
-| **Tot complet** | Rollback complet (reset a pre-PR3) | 10-15 min |
-
-### Verificació específica PR3/PR3.1
-
-**Després de rollback:**
-
-1. **Bot funcional:**
-   - Pregunta coneguda → resposta correcta
-   - Pregunta desconeguda → fallback correcte (NO `AI_ERROR`)
-
-2. **Idiomes:**
-   - CA/ES/FR/PT → respostes coherents amb mapping
-
-3. **Diagnòstics (si aplica):**
-   - `/admin` mostra targeta KB Runtime
-   - Versió, Storage state visibles
-
-4. **Logs nets:**
-   - Cap `[bot] retrieveCard error:`
-   - Cap `[load-kb-runtime] JSON parse error:`
-   - Alguns `[bot] reformatter failed` són acceptables (si LLM falla)
 
 ---
 

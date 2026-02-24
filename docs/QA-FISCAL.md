@@ -10,7 +10,7 @@
 Aquest checklist assegura que els fluxos fiscals crítics no tenen regressions abans d'anar a producció.
 
 **Quan executar-lo:**
-- Abans de qualsevol push a prod (via `npm run deploy`) que toqui codi fiscal
+- Abans de qualsevol push a prod (via `npm run publica`) que toqui codi fiscal
 - Després de canvis a `ReturnImporter`, `RemittanceProcessor`, `fiscal-*.ts`, `certificate-*.ts`
 - Abans de deploy que afecti moviments o donants
 

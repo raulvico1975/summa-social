@@ -98,11 +98,15 @@ Indicadors de llibreries pesades al `sources[]` (xlsx/pdf/charts/editor/firebase
 1. `src/i18n/json-runtime.ts` importa de forma estàtica `ca/es/fr/pt` (`./locales/*.json`), i la suma d'aquests fitxers és ~`1.15 MB`; això encaixa amb la mida del chunk 5823.
 2. El chunk també inclou codi de `src/lib/system-incidents.ts` i `src/hooks/use-toast.ts`, que enllaça codi d'incidents/admin dins el mateix paquet carregat a `/admin`.
 
-### Fix mínim recomanat (sense implementar encara)
+### Fix mínim recomanat (estat feb 2026)
 
-- `lazy import`: carregar bundle d'idioma sota demanda (no importar `ca/es/fr/pt` tots al mateix mòdul client d'entrada).
-- `split component`: a `/admin`, carregar seccions pesades (diagnòstic/incidents/ajudes) només quan s'obren.
-- `server-only` quan sigui viable: moure lògica/textos de suport que no calen al client cap a API/server layer i retornar només el payload mínim al frontend.
+- `lazy import`: carregar bundle d'idioma sota demanda (no importar `ca/es/fr/pt` tots al mateix mòdul client d'entrada). **Pendent.**
+- `split component`: a `/admin`, carregar seccions pesades (diagnòstic/incidents/ajudes) només quan s'obren. **Pendent.**
+- `server-only` quan sigui viable: moure lògica/textos de suport cap a API/server layer. **Pendent.**
+
+**Millores implementades (v1 → post-split, feb 2026):**
+- `xlsx` i `jspdf` convertits a `import()` dinàmic dins handlers (lazy loading sota demanda)
+- Reducció First Load JS: `/informes` −42%, `/movimientos` −25%
 
 ## Components sospitosos
 
