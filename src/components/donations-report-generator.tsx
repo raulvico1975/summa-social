@@ -48,7 +48,6 @@ import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
 import { collection } from 'firebase/firestore';
 import { useTranslations } from '@/i18n';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
-import { usePermissions } from '@/hooks/use-permissions';
 import { useIsMobile } from '@/hooks/use-is-mobile';
 import { MobileListItem } from '@/components/mobile/mobile-list-item';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -174,11 +173,8 @@ interface ReportStats {
 export function DonationsReportGenerator() {
   const { firestore } = useFirebase();
   const { organizationId, organization } = useCurrentOrganization();
-  const { can } = usePermissions();
   const { t } = useTranslations();
   const isMobile = useIsMobile();
-  const canGenerateModel182 = can('fiscal.model182.generar');
-  const canExportReports = can('informes.exportar');
 
   // HOTFIX: Treure where('archivedAt','==',null) de query perquè moltes tx legacy
   // no tenen el camp archivedAt. Filtrem client-side amb tolerància (!tx.archivedAt).
@@ -230,10 +226,6 @@ export function DonationsReportGenerator() {
   }, [activeTxs]);
   
   const handleGenerateReport = () => {
-    if (!canGenerateModel182) {
-      toast({ variant: 'destructive', title: t.common.error, description: 'No tens permisos per generar el model 182.' });
-      return;
-    }
     setIsLoading(true);
 
     // HOTFIX: Usar activeTxs (filtrat client-side) en lloc de transactions raw
@@ -379,10 +371,6 @@ export function DonationsReportGenerator() {
   };
 
   const handleExportExcel = async () => {
-    if (!canGenerateModel182 || !canExportReports) {
-      toast({ variant: 'destructive', title: t.common.error, description: 'No tens permisos per exportar informes.' });
-      return;
-    }
     if (reportData.length === 0) {
       toast({ variant: 'destructive', title: t.reports.noDataToExport, description: t.reports.noDataToExportDescription });
       return;
@@ -445,10 +433,6 @@ export function DonationsReportGenerator() {
    * No substitueix l'export estàndard
    */
   const handleExportGestoria = async () => {
-    if (!canGenerateModel182 || !canExportReports) {
-      toast({ variant: 'destructive', title: t.common.error, description: 'No tens permisos per exportar informes.' });
-      return;
-    }
     if (reportData.length === 0) {
       toast({ variant: 'destructive', title: t.reports.noDataToExport, description: t.reports.noDataToExportDescription });
       return;
@@ -521,10 +505,6 @@ export function DonationsReportGenerator() {
    * - Si 0 donants vàlids → error
    */
   const handleExportAEAT = () => {
-    if (!canGenerateModel182 || !canExportReports) {
-      toast({ variant: 'destructive', title: t.common.error, description: 'No tens permisos per exportar informes.' });
-      return;
-    }
     if (reportData.length === 0) {
       toast({ variant: 'destructive', title: t.reports.noDataToExport, description: t.reports.noDataToExportDescription });
       return;
@@ -697,7 +677,7 @@ export function DonationsReportGenerator() {
                         ))}
                     </SelectContent>
                 </Select>
-                <Button onClick={handleGenerateReport} disabled={isLoading || !canGenerateModel182} className={MOBILE_CTA_PRIMARY}>
+                <Button onClick={handleGenerateReport} disabled={isLoading} className={MOBILE_CTA_PRIMARY}>
                     {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                     {t.reports.generate}
                 </Button>
@@ -705,7 +685,7 @@ export function DonationsReportGenerator() {
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <Button onClick={handleExportAEAT} disabled={reportData.length === 0 || !canGenerateModel182 || !canExportReports} className={MOBILE_CTA_PRIMARY}>
+                      <Button onClick={handleExportAEAT} disabled={reportData.length === 0} className={MOBILE_CTA_PRIMARY}>
                           <Download className="mr-2 h-4 w-4" />
                           {t.reports.exportAEAT}
                       </Button>
@@ -718,7 +698,7 @@ export function DonationsReportGenerator() {
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <Button variant="outline" onClick={handleExportExcel} disabled={reportData.length === 0 || !canGenerateModel182 || !canExportReports} className={MOBILE_CTA_PRIMARY}>
+                      <Button variant="outline" onClick={handleExportExcel} disabled={reportData.length === 0} className={MOBILE_CTA_PRIMARY}>
                           <Download className="mr-2 h-4 w-4" />
                           {t.reports.exportExcel}
                       </Button>
@@ -731,7 +711,7 @@ export function DonationsReportGenerator() {
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <Button variant="ghost" size="sm" onClick={handleExportGestoria} disabled={reportData.length === 0 || !canGenerateModel182 || !canExportReports} className="text-muted-foreground">
+                      <Button variant="ghost" size="sm" onClick={handleExportGestoria} disabled={reportData.length === 0} className="text-muted-foreground">
                           <Download className="mr-2 h-4 w-4" />
                           {t.reports.exportGestoria}
                       </Button>

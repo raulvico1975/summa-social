@@ -3,7 +3,7 @@
 
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { computeFxAmountEUR } from '@/lib/project-module/fx';
 import { validateAssignments } from '@/lib/project-module/normalize-assignments';
 import {
@@ -30,7 +30,6 @@ import {
 import { ref, deleteObject } from 'firebase/storage';
 import { useFirebase } from '@/firebase';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
-import { canReadBankInProjectes, canUseProjectModule, resolveEffectivePermissions } from '@/lib/permissions';
 import type {
   ProjectExpenseExport,
   Project,
@@ -299,22 +298,11 @@ interface UseUnifiedExpenseFeedResult {
 
 export function useUnifiedExpenseFeed(options?: UseUnifiedExpenseFeedOptions): UseUnifiedExpenseFeedResult {
   const { firestore } = useFirebase();
-  const { organizationId, userRole, member } = useCurrentOrganization();
+  const { organizationId } = useCurrentOrganization();
 
   const projectId = options?.projectId ?? null;
   const budgetLineId = options?.budgetLineId ?? null;
   const isFiltered = !!(projectId || budgetLineId);
-
-  const effectivePermissions = useMemo(
-    () => resolveEffectivePermissions({
-      role: userRole,
-      userOverrides: member?.userOverrides,
-      userGrants: member?.userGrants,
-    }),
-    [member?.userGrants, member?.userOverrides, userRole]
-  );
-  const canViewBankExpenses = canReadBankInProjectes(effectivePermissions);
-  const canViewOffBankExpenses = canUseProjectModule(effectivePermissions);
 
   const [expenses, setExpenses] = useState<UnifiedExpenseWithLink[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -329,17 +317,10 @@ export function useUnifiedExpenseFeed(options?: UseUnifiedExpenseFeedOptions): U
 
   // Helper per carregar despeses filtrades
   const loadFilteredExpenses = useCallback(async () => {
-    if (!organizationId) return;
-    if (!canViewOffBankExpenses && !canViewBankExpenses) {
-      setExpenses([]);
-      setUsedFallback(false);
-      return;
-    }
-
     const linksRef = collection(
       firestore,
       'organizations',
-      organizationId,
+      organizationId!,
       'projectModule',
       '_',
       'expenseLinks'
@@ -391,12 +372,7 @@ export function useUnifiedExpenseFeed(options?: UseUnifiedExpenseFeedOptions): U
     for (const linkDoc of linksSnapshot.docs) {
       const linkData = { id: linkDoc.id, ...linkDoc.data() } as ExpenseLink;
       linksMap.set(linkDoc.id, linkData);
-      const txId = linkDoc.id;
-      const isOffBank = txId.startsWith('off_');
-      if ((isOffBank && !canViewOffBankExpenses) || (!isOffBank && !canViewBankExpenses)) {
-        continue;
-      }
-      txIds.push(txId);
+      txIds.push(linkDoc.id);
     }
 
     if (txIds.length === 0) {
@@ -408,7 +384,7 @@ export function useUnifiedExpenseFeed(options?: UseUnifiedExpenseFeedOptions): U
     const bankRef = collection(
       firestore,
       'organizations',
-      organizationId,
+      organizationId!,
       'exports',
       'projectExpenses',
       'items'
@@ -417,7 +393,7 @@ export function useUnifiedExpenseFeed(options?: UseUnifiedExpenseFeedOptions): U
     const offBankRef = collection(
       firestore,
       'organizations',
-      organizationId,
+      organizationId!,
       'projectModule',
       '_',
       'offBankExpenses'
@@ -438,7 +414,7 @@ export function useUnifiedExpenseFeed(options?: UseUnifiedExpenseFeedOptions): U
 
     // Carregar off-bank expenses en paral·lel (chunks de 10)
     const offBankMap = new Map<string, OffBankExpense>();
-    if (canViewOffBankExpenses && offBankTxIds.length > 0) {
+    if (offBankTxIds.length > 0) {
       const offBankDocIds = offBankTxIds.map(id => id.replace('off_', ''));
       const chunks = chunkArray(offBankDocIds, 10);
       const snaps = await Promise.all(
@@ -455,7 +431,7 @@ export function useUnifiedExpenseFeed(options?: UseUnifiedExpenseFeedOptions): U
 
     // Carregar bank expenses en paral·lel (chunks de 10)
     const bankMap = new Map<string, ProjectExpenseExport>();
-    if (canViewBankExpenses && bankTxIds.length > 0) {
+    if (bankTxIds.length > 0) {
       const chunks = chunkArray(bankTxIds, 10);
       const snaps = await Promise.all(
         chunks.map((ids) =>
@@ -552,20 +528,12 @@ export function useUnifiedExpenseFeed(options?: UseUnifiedExpenseFeedOptions): U
     });
 
     setExpenses(result);
-  }, [firestore, organizationId, projectId, budgetLineId, canViewOffBankExpenses, canViewBankExpenses]);
+  }, [firestore, organizationId, projectId, budgetLineId]);
 
   const loadExpenses = useCallback(async (loadMore = false) => {
     if (!organizationId) return;
 
     try {
-      if (!canViewOffBankExpenses && !canViewBankExpenses) {
-        setExpenses([]);
-        setHasMore(false);
-        setIsLoading(false);
-        setIsLoadingMore(false);
-        return;
-      }
-
       if (loadMore) {
         setIsLoadingMore(true);
       } else {
@@ -585,70 +553,58 @@ export function useUnifiedExpenseFeed(options?: UseUnifiedExpenseFeedOptions): U
 
       // Cas sense filtre: carregar despeses amb paginació
       // 1. Carregar despeses bank (exports)
-      let bankDocs: QueryDocumentSnapshot[] = [];
-      if (canViewBankExpenses) {
-        const bankRef = collection(
-          firestore,
-          'organizations',
-          organizationId,
-          'exports',
-          'projectExpenses',
-          'items'
-        );
+      const bankRef = collection(
+        firestore,
+        'organizations',
+        organizationId,
+        'exports',
+        'projectExpenses',
+        'items'
+      );
 
-        const bankQueryConstraints: QueryConstraint[] = [
-          where('isEligibleForProjects', '==', true),
-          where('deletedAt', '==', null),
-          orderBy('date', 'desc'),
-          limit(PAGE_SIZE),
-        ];
-        if (loadMore && lastBankDoc) {
-          bankQueryConstraints.push(startAfter(lastBankDoc));
-        }
-        const bankQuery = query(bankRef, ...bankQueryConstraints);
-        const bankSnapshot = await getDocs(bankQuery);
-        bankDocs = bankSnapshot.docs;
-      } else {
-        setLastBankDoc(null);
+      const bankQueryConstraints: QueryConstraint[] = [
+        where('isEligibleForProjects', '==', true),
+        where('deletedAt', '==', null),
+        orderBy('date', 'desc'),
+        limit(PAGE_SIZE),
+      ];
+      if (loadMore && lastBankDoc) {
+        bankQueryConstraints.push(startAfter(lastBankDoc));
       }
+      const bankQuery = query(bankRef, ...bankQueryConstraints);
+      const bankSnapshot = await getDocs(bankQuery);
 
       // 2. Carregar despeses off-bank
-      let offBankDocs: QueryDocumentSnapshot[] = [];
-      if (canViewOffBankExpenses) {
-        const offBankRef = collection(
-          firestore,
-          'organizations',
-          organizationId,
-          'projectModule',
-          '_',
-          'offBankExpenses'
-        );
+      const offBankRef = collection(
+        firestore,
+        'organizations',
+        organizationId,
+        'projectModule',
+        '_',
+        'offBankExpenses'
+      );
 
-        const offBankQueryConstraints: QueryConstraint[] = [orderBy('date', 'desc'), limit(PAGE_SIZE)];
-        if (loadMore && lastOffBankDoc) {
-          offBankQueryConstraints.push(startAfter(lastOffBankDoc));
-        }
-        const offBankQuery = query(offBankRef, ...offBankQueryConstraints);
-        const offBankSnapshot = await getDocs(offBankQuery);
-        offBankDocs = offBankSnapshot.docs;
-      } else {
-        setLastOffBankDoc(null);
+      const offBankQueryConstraints: QueryConstraint[] = [orderBy('date', 'desc'), limit(PAGE_SIZE)];
+      if (loadMore && lastOffBankDoc) {
+        offBankQueryConstraints.push(startAfter(lastOffBankDoc));
       }
+      const offBankQuery = query(offBankRef, ...offBankQueryConstraints);
+      const offBankSnapshot = await getDocs(offBankQuery);
 
       // Actualitzar cursors per paginació
-      if (bankDocs.length > 0) {
-        setLastBankDoc(bankDocs[bankDocs.length - 1]);
+      if (bankSnapshot.docs.length > 0) {
+        setLastBankDoc(bankSnapshot.docs[bankSnapshot.docs.length - 1]);
       }
-      if (offBankDocs.length > 0) {
-        setLastOffBankDoc(offBankDocs[offBankDocs.length - 1]);
+      if (offBankSnapshot.docs.length > 0) {
+        setLastOffBankDoc(offBankSnapshot.docs[offBankSnapshot.docs.length - 1]);
       }
 
       // Comprovar si hi ha més dades
-      const hasMoreData = bankDocs.length === PAGE_SIZE || offBankDocs.length === PAGE_SIZE;
+      const hasMoreData = bankSnapshot.docs.length === PAGE_SIZE || offBankSnapshot.docs.length === PAGE_SIZE;
       setHasMore(hasMoreData);
 
       // 3. Convertir a UnifiedExpense
-      const bankExpenses: UnifiedExpense[] = bankDocs.map((d) => {
+      const bankExpenses: UnifiedExpense[] = bankSnapshot.docs.map((d) => {
         const data = d.data() as ProjectExpenseExport;
         return {
           txId: d.id,
@@ -662,7 +618,7 @@ export function useUnifiedExpenseFeed(options?: UseUnifiedExpenseFeedOptions): U
         };
       });
 
-      const offBankExpenses: UnifiedExpense[] = offBankDocs.map((d) => {
+      const offBankExpenses: UnifiedExpense[] = offBankSnapshot.docs.map((d) => {
         const data = d.data() as OffBankExpense;
         const isPending = data.amountEUR === null || data.amountEUR === undefined;
         const amountEURValue = typeof data.amountEUR === 'number' ? -Math.abs(data.amountEUR) : 0;
@@ -766,17 +722,7 @@ export function useUnifiedExpenseFeed(options?: UseUnifiedExpenseFeedOptions): U
       setIsLoading(false);
       setIsLoadingMore(false);
     }
-  }, [
-    firestore,
-    organizationId,
-    projectId,
-    budgetLineId,
-    loadFilteredExpenses,
-    lastBankDoc,
-    lastOffBankDoc,
-    canViewBankExpenses,
-    canViewOffBankExpenses,
-  ]);
+  }, [firestore, organizationId, projectId, budgetLineId, loadFilteredExpenses, lastBankDoc, lastOffBankDoc]);
 
   const refresh = useCallback(async () => {
     await loadExpenses(false);
@@ -789,7 +735,7 @@ export function useUnifiedExpenseFeed(options?: UseUnifiedExpenseFeedOptions): U
 
   useEffect(() => {
     loadExpenses(false);
-  }, [organizationId, projectId, budgetLineId, canViewBankExpenses, canViewOffBankExpenses]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [organizationId, projectId, budgetLineId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return {
     expenses,
@@ -1223,17 +1169,7 @@ interface UseExpenseDetailResult {
 
 export function useExpenseDetail(txId: string): UseExpenseDetailResult {
   const { firestore } = useFirebase();
-  const { organizationId, userRole, member } = useCurrentOrganization();
-
-  const effectivePermissions = useMemo(
-    () => resolveEffectivePermissions({
-      role: userRole,
-      userOverrides: member?.userOverrides,
-      userGrants: member?.userGrants,
-    }),
-    [member?.userGrants, member?.userOverrides, userRole]
-  );
-  const canViewBankExpenses = canReadBankInProjectes(effectivePermissions);
+  const { organizationId } = useCurrentOrganization();
 
   const [expense, setExpense] = useState<ProjectExpenseExport | null>(null);
   const [link, setLink] = useState<ExpenseLink | null>(null);
@@ -1247,10 +1183,6 @@ export function useExpenseDetail(txId: string): UseExpenseDetailResult {
     setError(null);
 
     try {
-      if (!txId.startsWith('off_') && !canViewBankExpenses) {
-        throw new Error('No tens permisos per veure despeses bancaries en Projectes');
-      }
-
       // Carregar despesa del feed
       const expenseRef = doc(
         firestore,
@@ -1293,7 +1225,7 @@ export function useExpenseDetail(txId: string): UseExpenseDetailResult {
     } finally {
       setIsLoading(false);
     }
-  }, [firestore, organizationId, txId, canViewBankExpenses]);
+  }, [firestore, organizationId, txId]);
 
   useEffect(() => {
     load();
