@@ -101,6 +101,30 @@ test('endpoint guard /api/moviments: 403 si sections.moviments=false i moviments
   assert.equal(payload.code, 'MOVIMENTS_ROUTE_REQUIRED');
 });
 
+test('endpoint guard /api/moviments: 403 si sections.moviments=true i moviments.read=false', async () => {
+  const membership = buildMembership({ deny: ['moviments.read'] }, null);
+  const denied = requirePermission(membership, {
+    code: 'MOVIMENTS_ROUTE_REQUIRED',
+    check: canAccessMovimentsRoute,
+  });
+
+  assert.ok(denied);
+  if (!denied) return;
+  assert.equal(denied.status, 403);
+  const payload = await denied.json() as { code: string };
+  assert.equal(payload.code, 'MOVIMENTS_ROUTE_REQUIRED');
+});
+
+test('endpoint guard /api/moviments: permet només si sections.moviments=true i moviments.read=true', () => {
+  const membership = buildMembership(null, null);
+  const denied = requirePermission(membership, {
+    code: 'MOVIMENTS_ROUTE_REQUIRED',
+    check: canAccessMovimentsRoute,
+  });
+
+  assert.equal(denied, null);
+});
+
 test('endpoint guard /api/projectes/:id/moviments: passa amb manage+read encara que sections.moviments=false', () => {
   const membership = buildMembership({ deny: ['sections.moviments'] }, null);
   const denied = requirePermission(membership, {

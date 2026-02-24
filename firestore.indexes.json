@@ -56,6 +56,20 @@
       "queryScope": "COLLECTION",
       "fields": [
         {
+          "fieldPath": "projectId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "date",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "transactions",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
           "fieldPath": "remittanceId",
           "order": "ASCENDING"
         },

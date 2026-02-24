@@ -20,12 +20,13 @@
   "userGrants": [
     "projectes.expenseInput"
   ],
-  "updatedAt": "2026-02-24T10:12:53.000Z"
+  "updatedAt": "<Firestore serverTimestamp()>"
 }
 ```
 
 - `userOverrides.deny`: `string[]` de claus conegudes (deny explícit).
 - `userGrants`: `string[]` de claus grantables per usuari.
+- `updatedAt`: timestamp de servidor Firestore (`FieldValue.serverTimestamp()`).
 - Defaults implícits:
   - si `userOverrides` no existeix: `deny = []`
   - si `userGrants` no existeix: `grants = []`
@@ -76,6 +77,16 @@ On s'enforça:
 
 - `GET /moviments` -> `sections.moviments && moviments.read`
 - `GET /projectes/:id/moviments` -> `projectes.manage && moviments.read`
+
+## Índex Firestore obligatori
+
+Per evitar `500` a `GET /api/projectes/:id/moviments` (query amb `where('projectId','==', ...)` + `orderBy('date','desc')`), cal un índex compost:
+
+- Collection: `transactions`
+- Scope: `COLLECTION`
+- Camps:
+  - `projectId` `ASCENDING`
+  - `date` `DESCENDING`
 
 ## Matriu Projectes (capacitats excloents)
 
