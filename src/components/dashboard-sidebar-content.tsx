@@ -42,6 +42,8 @@ import { useToast } from '@/hooks/use-toast';
 import { useTranslations } from '@/i18n';
 import { signOut as firebaseSignOut } from 'firebase/auth';
 import { useCurrentOrganization, useOrgUrl } from '@/hooks/organization-provider';
+import { usePermissions } from '@/hooks/use-permissions';
+import type { PermissionKey } from '@/lib/permissions';
 
 const SUPER_ADMIN_UID = 'f2AHJqjXiOZkYajwkOnZ8RY6h2k2';
 
@@ -52,6 +54,7 @@ export function DashboardSidebarContent() {
   const { t } = useTranslations();
   const { toast } = useToast();
   const { state: sidebarState, isMobile, setOpenMobile } = useSidebar();
+  const { can, canUseProjectModule } = usePermissions();
 
   // Obtenir dades de l'organització i el helper per construir URLs
   const { userProfile, firebaseUser, organization, orgSlug } = useCurrentOrganization();
@@ -105,23 +108,27 @@ export function DashboardSidebarContent() {
 
   // Items del submenú Projectes (Mòdul)
   const projectModuleItems = React.useMemo(() => {
-    if (!isProjectModuleEnabled) return [];
-    return [
-      {
+    if (!isProjectModuleEnabled || !canUseProjectModule || !can('sections.projectes')) return [];
+
+    const items = [];
+    if (can('projectes.manage')) {
+      items.push({
         path: '/dashboard/project-module/projects',
         label: t.sidebar.projectModuleManage ?? 'Gestió de projectes',
         icon: FolderKanban,
-      },
-      {
-        path: '/dashboard/project-module/expenses',
-        label: t.sidebar.projectModuleExpenses ?? 'Assignació de despeses',
-        icon: ClipboardList,
-      },
-    ].map(item => ({
+      });
+    }
+    items.push({
+      path: '/dashboard/project-module/expenses',
+      label: t.sidebar.projectModuleExpenses ?? 'Assignació de despeses',
+      icon: ClipboardList,
+    });
+
+    return items.map(item => ({
       ...item,
       href: buildUrl(item.path),
     }));
-  }, [t, isProjectModuleEnabled, buildUrl]);
+  }, [t, isProjectModuleEnabled, canUseProjectModule, can, buildUrl]);
 
   // Comprovar si estem en una ruta del mòdul projectes
   const isProjectModuleActive = React.useMemo(() => {
@@ -195,12 +202,29 @@ export function DashboardSidebarContent() {
       });
     }
 
+    const sectionByPath: Partial<Record<string, PermissionKey>> = {
+      '/dashboard/movimientos': 'sections.moviments',
+      '/dashboard/projectes': 'sections.projectes',
+      '/dashboard/donants': 'sections.donants',
+      '/dashboard/proveidors': 'sections.proveidors',
+      '/dashboard/treballadors': 'sections.treballadors',
+      '/dashboard/informes': 'sections.informes',
+      '/dashboard/configuracion': 'sections.configuracio',
+      '/dashboard/guides': 'sections.guides',
+    };
+
+    const visibleItems = baseItems.filter(item => {
+      const requiredSection = sectionByPath[item.path];
+      if (!requiredSection) return true;
+      return can(requiredSection);
+    });
+
     // Construir URLs amb el slug
-    return baseItems.map(item => ({
+    return visibleItems.map(item => ({
       ...item,
       href: buildUrl(item.path),
     }));
-  }, [t, isSuperAdmin, buildUrl]);
+  }, [t, isSuperAdmin, can, buildUrl]);
 
   // ═══════════════════════════════════════════════════════════════════════════
   // Helper per comprovar si una ruta està activa
