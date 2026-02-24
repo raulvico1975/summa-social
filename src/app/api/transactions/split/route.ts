@@ -6,7 +6,7 @@ import {
   validateUserMembership,
   verifyIdToken,
 } from '@/lib/api/admin-sdk';
-import { requireOperationalAccess } from '@/lib/api/require-operational-access';
+import { requirePermission } from '@/lib/api/require-permission';
 import { getLockFailureMessage, type LockOperation } from '@/lib/fiscal/processLocks';
 import {
   calculateSplitAmountDeltaCents,
@@ -355,7 +355,10 @@ export async function POST(request: NextRequest): Promise<NextResponse<SplitResp
 
   const db = getAdminDb();
   const membership = await validateUserMembership(db, authResult.uid, parsedBody.orgId);
-  const accessError = requireOperationalAccess(membership);
+  const accessError = requirePermission(membership, {
+    code: 'MOVIMENTS_EDITAR_REQUIRED',
+    check: (permissions) => permissions['moviments.editar'],
+  });
   if (accessError) return accessError as NextResponse<SplitResponseBody>;
 
   const parentRef = db.doc(`organizations/${parsedBody.orgId}/transactions/${parsedBody.parentTxId}`);

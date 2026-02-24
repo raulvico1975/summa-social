@@ -95,6 +95,7 @@ import { OffBankExpenseModal } from '@/components/project-module/add-off-bank-ex
 import { buildDocumentFilename } from '@/lib/build-document-filename';
 import { useIsMobile } from '@/hooks/use-is-mobile';
 import { MobileListItem } from '@/components/mobile/mobile-list-item';
+import { usePermissions } from '@/hooks/use-permissions';
 
 function formatAmount(amount: number): string {
   return new Intl.NumberFormat('ca-ES', {
@@ -737,6 +738,7 @@ export default function ExpensesInboxPage() {
   const router = useRouter();
   const { buildUrl } = useOrgUrl();
   const { organizationId } = useCurrentOrganization();
+  const { canReadBankInProjectes, projectCapability } = usePermissions();
   const { toast } = useToast();
   const storage = useStorage();
   const isMobile = useIsMobile();
@@ -854,6 +856,12 @@ export default function ExpensesInboxPage() {
     | 'unassigned'
     | 'needsReview';
   const [tableFilter, setTableFilter] = React.useState<ExpenseTableFilter>('all');
+
+  React.useEffect(() => {
+    if (!canReadBankInProjectes && tableFilter === 'bank') {
+      setTableFilter('all');
+    }
+  }, [canReadBankInProjectes, tableFilter]);
 
   // Filtratge combinat: tableFilter + searchQuery
   const filteredExpenses = React.useMemo(() => {
@@ -1440,12 +1448,14 @@ export default function ExpensesInboxPage() {
               <Plus className="h-4 w-4 mr-2" />
               {t.projectModule?.addExpense ?? 'Afegir despesa'}
             </Button>
-            <Link href={buildUrl('/dashboard/project-module/projects')}>
-              <Button variant="outline" size="sm">
-                <FolderKanban className="h-4 w-4 mr-2" />
-                {t.breadcrumb?.projects ?? 'Projectes'}
-              </Button>
-            </Link>
+            {projectCapability === 'manage' && (
+              <Link href={buildUrl('/dashboard/project-module/projects')}>
+                <Button variant="outline" size="sm">
+                  <FolderKanban className="h-4 w-4 mr-2" />
+                  {t.breadcrumb?.projects ?? 'Projectes'}
+                </Button>
+              </Link>
+            )}
             <Button
               onClick={() => setTableFilter(tableFilter === 'needsReview' ? 'all' : 'needsReview')}
               variant={tableFilter === 'needsReview' ? 'default' : 'outline'}
@@ -1495,7 +1505,7 @@ export default function ExpensesInboxPage() {
               <SelectItem value="withoutDocument">{ep.filterWithoutDocument}</SelectItem>
               <SelectItem value="unassigned">{ep.filterUnassigned}</SelectItem>
               <SelectItem value="offBank">{ep.filterOffBank}</SelectItem>
-              <SelectItem value="bank">{ep.filterBank}</SelectItem>
+              {canReadBankInProjectes && <SelectItem value="bank">{ep.filterBank}</SelectItem>}
             </SelectContent>
           </Select>
         ) : (
@@ -1529,14 +1539,16 @@ export default function ExpensesInboxPage() {
               <Globe className="h-4 w-4 mr-1" />
               {ep.filterOffBank}
             </Button>
-            <Button
-              variant={tableFilter === 'bank' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setTableFilter('bank')}
-            >
-              <Landmark className="h-4 w-4 mr-1" />
-              {ep.filterBank}
-            </Button>
+            {canReadBankInProjectes && (
+              <Button
+                variant={tableFilter === 'bank' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setTableFilter('bank')}
+              >
+                <Landmark className="h-4 w-4 mr-1" />
+                {ep.filterBank}
+              </Button>
+            )}
           </div>
         )}
       </div>

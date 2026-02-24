@@ -7,7 +7,7 @@ import { useParams, useRouter, usePathname, useSearchParams } from 'next/navigat
 import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, collectionGroup, query, where, getDocs, doc, getDoc, limit } from 'firebase/firestore';
 import { generateUniqueSlug, reserveSlug } from '@/lib/slugs';
-import type { Organization, OrganizationRole, UserProfile } from '@/lib/data';
+import type { Organization, OrganizationRole, UserProfile, OrganizationMember } from '@/lib/data';
 import { Loader2, AlertCircle, LogOut } from 'lucide-react';
 import { User, signOut } from 'firebase/auth';
 import { isDemoEnv } from '@/lib/demo/isDemoOrg';
@@ -17,6 +17,7 @@ interface OrganizationContextType {
   organizationId: string | null;
   orgSlug: string | null;
   userProfile: UserProfile | null;
+  member: OrganizationMember | null;
   userRole: OrganizationRole | null;
   firebaseUser: User | null;
   isLoading: boolean;
@@ -65,6 +66,7 @@ function useOrganizationBySlug(orgSlug?: string) {
   const [organization, setOrganization] = React.useState<Organization | null>(null);
   const [organizationId, setOrganizationId] = React.useState<string | null>(null);
   const [userProfile, setUserProfile] = React.useState<UserProfile | null>(null);
+  const [member, setMember] = React.useState<OrganizationMember | null>(null);
   const [userRole, setUserRole] = React.useState<OrganizationRole | null>(null);
   const [isLoading, setIsLoading] = React.useState(true);
   const [error, setError] = React.useState<Error | null>(null);
@@ -91,6 +93,7 @@ function useOrganizationBySlug(orgSlug?: string) {
     const loadOrganization = async () => {
       setIsLoading(true);
       setError(null);
+      setMember(null);
 
       try {
         let orgDoc: Organization | null = null;
@@ -252,18 +255,51 @@ function useOrganizationBySlug(orgSlug?: string) {
         setOrganization(orgDoc);
         setOrganizationId(orgId);
 
-        // Carregar perfil d'usuari
+        // Carregar perfil + dades de membre (permisos granulars)
         const profileRef = doc(firestore, 'organizations', orgId, 'members', user.uid);
-        const profileSnap = await getDoc(profileRef);
-        if (profileSnap.exists()) {
-          const profileData = profileSnap.data();
-          setUserProfile({
-            organizationId: profileData.organizationId ?? orgId,
-            role: profileData.role ?? 'viewer',
-            displayName: profileData.displayName ?? user.displayName ?? '',
-            email: profileData.email ?? user.email ?? undefined,
-            organizations: profileData.organizations,
-          });
+        try {
+          const profileSnap = await getDoc(profileRef);
+          if (profileSnap.exists()) {
+            const profileData = profileSnap.data();
+            const role = (profileData.role ?? 'viewer') as OrganizationRole;
+            const userOverrides =
+              profileData.userOverrides && typeof profileData.userOverrides === 'object'
+                ? profileData.userOverrides as { deny?: string[] }
+                : undefined;
+            const userGrants = Array.isArray(profileData.userGrants)
+              ? profileData.userGrants.filter((value: unknown): value is string => typeof value === 'string')
+              : undefined;
+
+            setUserProfile({
+              organizationId: profileData.organizationId ?? orgId,
+              role,
+              displayName: profileData.displayName ?? user.displayName ?? '',
+              email: profileData.email ?? user.email ?? undefined,
+              organizations: profileData.organizations,
+            });
+
+            setMember({
+              userId: profileData.userId ?? user.uid,
+              email: profileData.email ?? user.email ?? '',
+              displayName: profileData.displayName ?? user.displayName ?? '',
+              role,
+              joinedAt: profileData.joinedAt ?? '',
+              invitedBy: profileData.invitedBy,
+              invitationId: profileData.invitationId,
+              userOverrides,
+              userGrants,
+            });
+          } else {
+            setUserProfile(null);
+            setMember(null);
+          }
+        } catch (memberProfileErr) {
+          if (process.env.NODE_ENV !== 'production') {
+            // eslint-disable-next-line no-console
+            console.debug('[ORG_PROVIDER] Member profile read failed');
+          }
+          setUserProfile(null);
+          setMember(null);
         }
 
       } catch (err) {
@@ -295,6 +331,7 @@ function useOrganizationBySlug(orgSlug?: string) {
     organizationId,
     orgSlug: organization?.slug || orgSlug || null,
     userProfile,
+    member,
     userRole,
     firebaseUser: user,
     isLoading: isLoading || isUserLoading,

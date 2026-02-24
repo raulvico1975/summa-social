@@ -6,9 +6,12 @@ import { Button } from '@/components/ui/button';
 import { Archive } from 'lucide-react';
 import { useTranslations } from '@/i18n';
 import { ClosingBundleDialog } from './closing-bundle-dialog';
+import { usePermissions } from '@/hooks/use-permissions';
 
 export function ClosingBundleCard() {
   const { t } = useTranslations();
+  const { can } = usePermissions();
+  const canExportReports = can('informes.exportar');
   const [dialogOpen, setDialogOpen] = React.useState(false);
 
   return (
@@ -21,7 +24,7 @@ export function ClosingBundleCard() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Button onClick={() => setDialogOpen(true)}>
+          <Button onClick={() => setDialogOpen(true)} disabled={!canExportReports}>
             <Archive className="mr-2 h-4 w-4" />
             {t.reports.closingBundle.cta}
           </Button>

@@ -68,6 +68,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useTranslations } from '@/i18n';
 import type { jsPDF } from 'jspdf';
 import { useIsMobile } from '@/hooks/use-is-mobile';
+import { usePermissions } from '@/hooks/use-permissions';
 import { MobileListItem } from '@/components/mobile/mobile-list-item';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
@@ -161,9 +162,21 @@ const loadImageAsBase64 = (url: string, signal?: AbortSignal): Promise<string | 
 export function DonationCertificateGenerator() {
   const { firestore, user } = useFirebase();
   const { organizationId, organization } = useCurrentOrganization();
+  const { can } = usePermissions();
   const { toast } = useToast();
   const { t, language } = useTranslations();
   const isMobile = useIsMobile();
+  const canGenerateCertificates = can('fiscal.certificats.generar');
+
+  const ensureCanGenerateCertificates = React.useCallback(() => {
+    if (canGenerateCertificates) return true;
+    toast({
+      variant: 'destructive',
+      title: t.common.error,
+      description: 'No tens permisos per generar certificats fiscals.',
+    });
+    return false;
+  }, [canGenerateCertificates, toast, t.common.error]);
 
   // Lògica per any per defecte: si estem a gener, any anterior; altrament any actual - 1
   // (normalment es generen certificats de l'any anterior)
@@ -304,6 +317,7 @@ export function DonationCertificateGenerator() {
   }, [firestore, organizationId]);
 
   const loadDonations = React.useCallback(async () => {
+    if (!canGenerateCertificates) return;
     if (!firestore || !organizationId) return;
 
     setIsLoading(true);
@@ -393,7 +407,7 @@ export function DonationCertificateGenerator() {
     } finally {
       setIsLoading(false);
     }
-  }, [firestore, organizationId, selectedYear, toast, t]);
+  }, [canGenerateCertificates, firestore, organizationId, selectedYear, toast, t]);
 
   // Només carregar donacions quan l'usuari ho demana explícitament
   React.useEffect(() => {
@@ -689,6 +703,7 @@ export function DonationCertificateGenerator() {
 
   // Enviar email a un sol donant
   const handleSendEmailOne = async (summary: DonorSummary) => {
+    if (!ensureCanGenerateCertificates()) return;
     if (!summary.donor.email) {
       toast({ variant: 'destructive', title: t.common.error, description: t.certificates.email.errorNoEmail });
       return;
@@ -748,6 +763,7 @@ export function DonationCertificateGenerator() {
 
   // Enviar emails als seleccionats (amb confirmació prèvia)
   const handleSendEmailSelected = async () => {
+    if (!ensureCanGenerateCertificates()) return;
     const selected = donorSummaries.filter(s => selectedDonors.has(s.donor.id));
     const withEmail = selected.filter(s => s.hasEmail);
     const withoutEmail = selected.filter(s => !s.hasEmail);
@@ -834,6 +850,7 @@ export function DonationCertificateGenerator() {
 
   // Obrir confirmació per enviar email individual
   const openEmailConfirmOne = (summary: DonorSummary) => {
+    if (!ensureCanGenerateCertificates()) return;
     if (!summary.donor.email) {
       toast({ variant: 'destructive', title: t.common.error, description: t.certificates.email.errorNoEmail });
       return;
@@ -844,6 +861,7 @@ export function DonationCertificateGenerator() {
 
   // Obrir confirmació per enviar emails massius
   const openEmailConfirmSelected = () => {
+    if (!ensureCanGenerateCertificates()) return;
     const selected = donorSummaries.filter(s => selectedDonors.has(s.donor.id));
     const withEmail = selected.filter(s => s.hasEmail);
 
@@ -881,6 +899,7 @@ export function DonationCertificateGenerator() {
   };
 
   const handleDownloadOne = async (summary: DonorSummary) => {
+    if (!ensureCanGenerateCertificates()) return;
     const doc = await generatePDF(summary);
     const fileName = `Certificat_${selectedYear}_${cleanName(summary.donor.name).replace(/\s+/g, '_')}.pdf`;
     doc.save(fileName);
@@ -888,6 +907,7 @@ export function DonationCertificateGenerator() {
   };
 
   const handleDownloadAll = async () => {
+    if (!ensureCanGenerateCertificates()) return;
     const selected = donorSummaries.filter(s => selectedDonors.has(s.donor.id));
     if (selected.length === 0) {
       toast({ variant: 'destructive', title: t.common.error, description: t.certificates.errorNoDonorSelected });
@@ -955,7 +975,13 @@ export function DonationCertificateGenerator() {
                 </SelectContent>
               </Select>
             </div>
-            <Button onClick={() => setHasLoadedList(true)}>
+            <Button
+              onClick={() => {
+                if (!ensureCanGenerateCertificates()) return;
+                setHasLoadedList(true);
+              }}
+              disabled={!canGenerateCertificates}
+            >
               <Users className="mr-2 h-4 w-4" />
               {t.certificates.loadDonorsButton}
             </Button>
@@ -1061,7 +1087,7 @@ export function DonationCertificateGenerator() {
               <Button
                 variant="outline"
                 onClick={handleDownloadAll}
-                disabled={isLoading || isGenerating || selectedDonors.size === 0}
+                disabled={isLoading || isGenerating || selectedDonors.size === 0 || !canGenerateCertificates}
                 className={cn(MOBILE_CTA_PRIMARY, MOBILE_CTA_TRUNCATE)}
               >
                 {isGenerating ? (
@@ -1079,7 +1105,7 @@ export function DonationCertificateGenerator() {
               <Button
                 variant="outline"
                 onClick={openEmailConfirmSelected}
-                disabled={isLoading || isSendingEmails || stats.selectedWithEmail === 0}
+                disabled={isLoading || isSendingEmails || stats.selectedWithEmail === 0 || !canGenerateCertificates}
                 className={cn(MOBILE_CTA_PRIMARY, MOBILE_CTA_TRUNCATE)}
               >
                 {isSendingEmails ? (
