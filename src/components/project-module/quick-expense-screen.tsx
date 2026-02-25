@@ -124,6 +124,7 @@ export function QuickExpenseScreen({ organizationId, isLandingMode = false }: Qu
   // Estat IA
   const [aiState, setAIState] = useState<AIExtractionState>('idle');
   const [aiExtraction, setAIExtraction] = useState<AIExtraction | null>(null);
+  const [lastAIAttempt, setLastAIAttempt] = useState<{ fileUrl: string; storagePath: string } | null>(null);
 
   // Derivats
   const hasAttachments = uploads.some(u => u.url && !u.error);
@@ -136,6 +137,7 @@ export function QuickExpenseScreen({ organizationId, isLandingMode = false }: Qu
 
   const extractWithAI = useCallback(async (fileUrl: string, storagePath: string) => {
     // Només intentem extracció per imatges
+    setLastAIAttempt({ fileUrl, storagePath });
     setAIState('extracting');
 
     try {
@@ -196,6 +198,11 @@ export function QuickExpenseScreen({ organizationId, isLandingMode = false }: Qu
       setAIState('error');
     }
   }, [date, amountEUR, amountOriginal, concept]);
+
+  const handleRetryAI = useCallback(() => {
+    if (!lastAIAttempt || aiState === 'extracting') return;
+    extractWithAI(lastAIAttempt.fileUrl, lastAIAttempt.storagePath);
+  }, [aiState, extractWithAI, lastAIAttempt]);
 
   // ---------------------------------------------------------------------------
   // FILE UPLOAD
@@ -410,6 +417,7 @@ export function QuickExpenseScreen({ organizationId, isLandingMode = false }: Qu
       setCurrency('EUR');
       setAIState('idle');
       setAIExtraction(null);
+      setLastAIAttempt(null);
       userEditedAmount.current = false;
       userEditedConcept.current = false;
       userEditedDate.current = false;
@@ -576,6 +584,26 @@ export function QuickExpenseScreen({ organizationId, isLandingMode = false }: Qu
                   <Sparkles className="h-3 w-3" />
                   {tr('projectModule.quickExpense.aiSuggested')}
                 </Badge>
+              )}
+              {aiState === 'error' && (
+                <div className="rounded-md border border-destructive/30 bg-destructive/5 p-3">
+                  <p className="text-sm font-medium text-destructive">
+                    {tr('projectModule.quickExpense.aiErrorTitle')}
+                  </p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {tr('projectModule.quickExpense.aiErrorBody')}
+                  </p>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="mt-2"
+                    onClick={handleRetryAI}
+                    disabled={!lastAIAttempt}
+                  >
+                    {tr('projectModule.quickExpense.aiRetry')}
+                  </Button>
+                </div>
               )}
             </div>
           )}

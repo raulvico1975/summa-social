@@ -240,6 +240,12 @@ export function TransactionImporter({ availableCategories }: TransactionImporter
   // Dedupe 3 estats: candidats pendents de resolució
   const [classifiedResults, setClassifiedResults] = React.useState<ClassifiedRow[] | null>(null);
   const [isCandidateDialogOpen, setIsCandidateDialogOpen] = React.useState(false);
+  const [dedupeSummary, setDedupeSummary] = React.useState<{
+    newCount: number;
+    safeDuplicatesCount: number;
+    candidateCount: number;
+    totalCount: number;
+  } | null>(null);
   const [pendingImportContext, setPendingImportContext] = React.useState<{
     bankAccountId: string;
     fileName: string | null;
@@ -709,37 +715,30 @@ export function TransactionImporter({ availableCategories }: TransactionImporter
         const safeDupes = classified.filter(c => c.status === 'DUPLICATE_SAFE');
         const candidates = classified.filter(c => c.status === 'DUPLICATE_CANDIDATE');
         const newTxs = classified.filter(c => c.status === 'NEW');
+        const summary = {
+          newCount: newTxs.length,
+          safeDuplicatesCount: safeDupes.length,
+          candidateCount: candidates.length,
+          totalCount: classified.length,
+        };
 
-        if (candidates.length > 0) {
-            // Guardar context i obrir diàleg de resolució
-            setClassifiedResults(classified);
-            setPendingImportContext({ bankAccountId, fileName, rawData: data });
-            setIsCandidateDialogOpen(true);
-            // NO setIsImporting(false) — mantenim loading fins que l'usuari resolgui
-            return;
+        const transactionsToImport = summary.newCount + summary.safeDuplicatesCount + summary.candidateCount;
+        if (transactionsToImport === 0) {
+          toast({
+            title: t.importers.transaction.noTransactionsFound,
+            description: t.importers.transaction.noValidTransactions,
+          });
+          setIsImporting(false);
+          return;
         }
 
-        const transactionsToImport = [...newTxs.map(c => c.tx), ...safeDupes.map(c => c.tx)];
-
-        // Sense candidats: executar directament (inclou DUPLICATE_SAFE com a avisos)
-        if (transactionsToImport.length > 0) {
-            executeImport(transactionsToImport, bankAccountId, fileName, data.length, {
-                duplicateSkippedCount: 0,
-            });
-            return;
-        }
-
-        if (newTxs.length > 0) {
-            executeImport(newTxs.map(c => c.tx), bankAccountId, fileName, data.length, {
-                duplicateSkippedCount: 0,
-            });
-        } else {
-            toast({
-                title: safeDupes.length > 0 ? t.importers.transaction.noNewTransactions : t.importers.transaction.noTransactionsFound,
-                description: t.importers.transaction.noValidTransactions,
-            });
-            setIsImporting(false);
-        }
+        // Mostrar sempre resum previ abans d'importar
+        setClassifiedResults(classified);
+        setPendingImportContext({ bankAccountId, fileName, rawData: data });
+        setDedupeSummary(summary);
+        setIsCandidateDialogOpen(true);
+        setIsImporting(false);
+        return;
     } catch (error: any) {
         console.error("Error classifying parsed data:", error);
         toast({
@@ -762,6 +761,8 @@ export function TransactionImporter({ availableCategories }: TransactionImporter
       setIsImporting(false);
       return;
     }
+
+    setIsImporting(true);
 
     const candidates = classifiedResults.filter(c => c.status === 'DUPLICATE_CANDIDATE');
     const newTxs = classifiedResults.filter(c => c.status === 'NEW');
@@ -795,6 +796,7 @@ export function TransactionImporter({ availableCategories }: TransactionImporter
       });
       setClassifiedResults(null);
       setPendingImportContext(null);
+      setDedupeSummary(null);
       setIsImporting(false);
     }
   };
@@ -803,6 +805,7 @@ export function TransactionImporter({ availableCategories }: TransactionImporter
     setIsCandidateDialogOpen(false);
     setClassifiedResults(null);
     setPendingImportContext(null);
+    setDedupeSummary(null);
     setIsImporting(false);
   };
 
@@ -825,6 +828,7 @@ export function TransactionImporter({ availableCategories }: TransactionImporter
     // Netejar estat de classificació
     setClassifiedResults(null);
     setPendingImportContext(null);
+    setDedupeSummary(null);
 
     if (!organizationId) {
       setIsImporting(false);
@@ -1049,14 +1053,44 @@ export function TransactionImporter({ availableCategories }: TransactionImporter
         className="hidden"
         disabled={isImporting}
       />
-      <Button disabled={isImporting} onClick={() => fileInputRef.current?.click()}>
-        {isImporting ? (
-          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+      <div className="flex flex-wrap items-center gap-2">
+        {bankAccounts.length > 0 ? (
+          <div className="min-w-[220px] max-w-[320px]">
+            <Select
+              value={selectedBankAccountId ?? ''}
+              onValueChange={(value) => setSelectedBankAccountId(value)}
+              disabled={isImporting || isLoadingBankAccounts}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder={t.settings.bankAccounts.selectAccount} />
+              </SelectTrigger>
+              <SelectContent>
+                {bankAccounts.map((account) => (
+                  <SelectItem key={account.id} value={account.id}>
+                    {account.name}
+                    {account.isDefault && ` (${t.settings.bankAccounts.default})`}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         ) : (
-          <FileUp className="mr-2 h-4 w-4" />
+          <Button variant="outline" asChild>
+            <Link href={buildUrl('/configuracion')}>
+              {t.settings.bankAccounts.goToSettings}
+            </Link>
+          </Button>
         )}
-        {t.importers.transaction.title}
-      </Button>
+
+        <Button disabled={isImporting} onClick={() => fileInputRef.current?.click()}>
+          {isImporting ? (
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          ) : (
+            <FileUp className="mr-2 h-4 w-4" />
+          )}
+          {t.importers.transaction.title}
+        </Button>
+      </div>
 
       {/* Diàleg de selecció de compte bancari */}
       <Dialog open={isAccountDialogOpen} onOpenChange={(open) => {
@@ -1197,7 +1231,10 @@ export function TransactionImporter({ availableCategories }: TransactionImporter
       <DedupeCandidateResolver
         open={isCandidateDialogOpen}
         candidates={classifiedResults?.filter(c => c.status === 'DUPLICATE_CANDIDATE') ?? []}
-        safeDuplicatesCount={classifiedResults?.filter(c => c.status === 'DUPLICATE_SAFE').length ?? 0}
+        newCount={dedupeSummary?.newCount ?? 0}
+        safeDuplicatesCount={dedupeSummary?.safeDuplicatesCount ?? (classifiedResults?.filter(c => c.status === 'DUPLICATE_SAFE').length ?? 0)}
+        candidateCount={dedupeSummary?.candidateCount ?? (classifiedResults?.filter(c => c.status === 'DUPLICATE_CANDIDATE').length ?? 0)}
+        totalCount={dedupeSummary?.totalCount ?? (classifiedResults?.length ?? 0)}
         onContinue={handleCandidatesContinue}
         onCancel={handleCandidatesCancelled}
       />

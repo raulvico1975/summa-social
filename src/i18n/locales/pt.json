@@ -4138,5 +4138,20 @@
   "movements.split.apply": "Aplicar",
   "movements.split.cancel": "Cancelar",
   "movements.split.deltaInvalid": "A soma das linhas deve fechar com o valor bancário (tolerância ±0,02 €).",
-  "movements.split.deleteBlocked": "Faz parte de um desdobramento. Para alterar, desfaça o desdobramento."
+  "movements.split.deleteBlocked": "Faz parte de um desdobramento. Para alterar, desfaça o desdobramento.",
+  "projectModule.quickExpense.aiErrorTitle": "Erro na análise por IA",
+  "projectModule.quickExpense.aiErrorBody": "Não foi possível extrair a informação automaticamente. Pode continuar manualmente ou tentar novamente.",
+  "projectModule.quickExpense.aiRetry": "Repetir análise",
+  "reports.fiscalYearContext": "Exercício fiscal {year}. Apresentação habitual: ano {filingYear}.",
+  "reports.fiscalYearRecommendation": "Recomendação: trabalhar com exercício fechado (normalmente {recommendedYear}).",
+  "reports.fiscalYearCurrentWarning": "Selecionou o ano em curso. Verifique se pretende o exercício fechado para a apresentação fiscal.",
+  "importers.transaction.preImportSummaryTitle": "Resumo pré-importação",
+  "importers.transaction.preImportSummaryDescription": "Revise o resumo antes de confirmar a importação.",
+  "importers.transaction.preImportSummaryNew": "Novos",
+  "importers.transaction.preImportSummaryDuplicates": "Duplicados",
+  "importers.transaction.preImportSummaryConflicts": "Conflitos",
+  "importers.transaction.preImportSummaryTotal": "Total",
+  "importers.transaction.preImportConflictsHint": "Foram detetados conflitos: reveja-os antes de continuar.",
+  "importers.transaction.preImportSummaryNoConflicts": "Não foram detetados conflitos. Pode continuar com a importação.",
+  "permissionsDialog.restoreDefaults": "Restaurar predefinições"
 }
