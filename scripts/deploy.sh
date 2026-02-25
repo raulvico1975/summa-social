@@ -32,6 +32,7 @@ CURRENT_PHASE="Inicialitzacio"
 INCIDENT_RECORDED=false
 DEPLOY_SUCCESS=0
 DEPLOY_CONTENT_SHA=""
+DEPLOY_PROD_BEFORE_SHA=""
 POSTDEPLOY_URLS_READY=false
 RESOLVED_DEPLOY_BASE_URL=""
 RESOLVED_SMOKE_PUBLIC_URL=""
@@ -828,7 +829,7 @@ prepare_rollback_plan() {
 
   local date current_prod_sha target_main_sha
   date=$(TZ="Europe/Madrid" date '+%Y-%m-%d %H:%M')
-  current_prod_sha=$(git rev-parse --short prod)
+  current_prod_sha="${DEPLOY_PROD_BEFORE_SHA:-$(git rev-parse --short prod)}"
   target_main_sha="${DEPLOY_CONTENT_SHA:-$(git rev-parse --short main)}"
 
   cat > "$PROJECT_DIR/$ROLLBACK_PLAN_FILE" <<EOF
@@ -1111,13 +1112,17 @@ main() {
   run_verifications          # Pas 5
   display_deploy_summary     # Pas 6
   handle_business_decision_for_residual_risk
+  DEPLOY_PROD_BEFORE_SHA=$(git rev-parse --short prod)
   DEPLOY_CONTENT_SHA=$(git rev-parse --short main)
   prepare_rollback_plan
-  append_deploy_log          # Pas 9
   commit_deploy_logs_if_needed
+  DEPLOY_CONTENT_SHA=$(git rev-parse --short main)
   execute_merge_ritual       # Pas 7
   post_deploy_check          # Pas 8
   post_production_3min_check
+  prepare_rollback_plan
+  append_deploy_log          # Pas 9
+  commit_deploy_logs_if_needed
   DEPLOY_SUCCESS=1
 
   echo "  DEPLOY COMPLETAT ($DEPLOY_RESULT)."
