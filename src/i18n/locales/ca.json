@@ -4006,5 +4006,20 @@
   "movements.split.apply": "Aplicar",
   "movements.split.cancel": "Cancel·lar",
   "movements.split.deltaInvalid": "La suma de les línies ha de quadrar amb l'import del banc (tolerància ±0,02 €).",
-  "movements.split.deleteBlocked": "Forma part d'un desglossament. Per canviar-ho, desfés el desglossament."
+  "movements.split.deleteBlocked": "Forma part d'un desglossament. Per canviar-ho, desfés el desglossament.",
+  "projectModule.quickExpense.aiErrorTitle": "Error en l'anàlisi amb IA",
+  "projectModule.quickExpense.aiErrorBody": "No s'ha pogut extreure la informació automàticament. Pots continuar manualment o reintentar.",
+  "projectModule.quickExpense.aiRetry": "Reintentar anàlisi",
+  "reports.fiscalYearContext": "Exercici fiscal {year}. Presentació habitual: any {filingYear}.",
+  "reports.fiscalYearRecommendation": "Recomanació: treballa amb exercici tancat (normalment {recommendedYear}).",
+  "reports.fiscalYearCurrentWarning": "Has seleccionat l'any en curs. Revisa si vols l'exercici tancat per a presentació fiscal.",
+  "importers.transaction.preImportSummaryTitle": "Resum pre-importació",
+  "importers.transaction.preImportSummaryDescription": "Revisa el resum abans de confirmar la importació.",
+  "importers.transaction.preImportSummaryNew": "Nous",
+  "importers.transaction.preImportSummaryDuplicates": "Duplicats",
+  "importers.transaction.preImportSummaryConflicts": "Conflictes",
+  "importers.transaction.preImportSummaryTotal": "Total",
+  "importers.transaction.preImportConflictsHint": "S'han detectat conflictes: revisa'ls abans de continuar.",
+  "importers.transaction.preImportSummaryNoConflicts": "No s'han detectat conflictes. Pots continuar amb la importació.",
+  "permissionsDialog.restoreDefaults": "Restaurar per defecte"
 }

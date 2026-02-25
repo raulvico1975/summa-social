@@ -4007,5 +4007,20 @@
   "movements.split.apply": "Appliquer",
   "movements.split.cancel": "Annuler",
   "movements.split.deltaInvalid": "La somme des lignes doit correspondre au montant bancaire (tolérance ±0,02 €).",
-  "movements.split.deleteBlocked": "Fait partie d'une ventilation. Pour le modifier, annulez la ventilation."
+  "movements.split.deleteBlocked": "Fait partie d'une ventilation. Pour le modifier, annulez la ventilation.",
+  "projectModule.quickExpense.aiErrorTitle": "Erreur d'analyse IA",
+  "projectModule.quickExpense.aiErrorBody": "Impossible d'extraire automatiquement les informations. Vous pouvez continuer manuellement ou réessayer.",
+  "projectModule.quickExpense.aiRetry": "Réessayer l'analyse",
+  "reports.fiscalYearContext": "Exercice fiscal {year}. Dépôt habituel : année {filingYear}.",
+  "reports.fiscalYearRecommendation": "Recommandation : travaillez sur un exercice clôturé (généralement {recommendedYear}).",
+  "reports.fiscalYearCurrentWarning": "Vous avez sélectionné l'année en cours. Vérifiez si vous souhaitez l'exercice clôturé pour la déclaration fiscale.",
+  "importers.transaction.preImportSummaryTitle": "Résumé pré-import",
+  "importers.transaction.preImportSummaryDescription": "Vérifiez le résumé avant de confirmer l'importation.",
+  "importers.transaction.preImportSummaryNew": "Nouveaux",
+  "importers.transaction.preImportSummaryDuplicates": "Doublons",
+  "importers.transaction.preImportSummaryConflicts": "Conflits",
+  "importers.transaction.preImportSummaryTotal": "Total",
+  "importers.transaction.preImportConflictsHint": "Des conflits ont été détectés : vérifiez-les avant de continuer.",
+  "importers.transaction.preImportSummaryNoConflicts": "Aucun conflit détecté. Vous pouvez poursuivre l'importation.",
+  "permissionsDialog.restoreDefaults": "Restaurer par défaut"
 }

@@ -82,7 +82,7 @@ export function MembersUserPermissionsDialog({
   const [isSaving, setIsSaving] = React.useState(false);
   const lastFocusedElementRef = React.useRef<HTMLElement | null>(null);
 
-  const roleDefaults = React.useMemo(() => getRoleDefaults('user'), []);
+  const roleDefaults = React.useMemo(() => getRoleDefaults(member?.role ?? null), [member?.role]);
 
   React.useEffect(() => {
     if (open && document.activeElement instanceof HTMLElement) {
@@ -168,6 +168,11 @@ export function MembersUserPermissionsDialog({
     });
   }, []);
 
+  const handleRestoreDefaults = React.useCallback(() => {
+    setDenied(new Set());
+    setGrants(new Set());
+  }, []);
+
   const handleSave = React.useCallback(async () => {
     if (!organizationId || !member || !user) return;
 
@@ -229,6 +234,7 @@ export function MembersUserPermissionsDialog({
   };
 
   const projectCapabilityValue = projectCapability === 'expenseInput' ? 'expenseInput' : 'manage';
+  const canRestoreDefaults = denied.size > 0 || grants.size > 0;
 
   return (
     <Dialog open={open} onOpenChange={handleDialogOpenChange}>
@@ -306,6 +312,14 @@ export function MembersUserPermissionsDialog({
         </div>
 
         <DialogFooter>
+          <Button
+            variant="ghost"
+            className="sm:mr-auto"
+            onClick={handleRestoreDefaults}
+            disabled={isSaving || !canRestoreDefaults}
+          >
+            {tr('permissionsDialog.restoreDefaults', 'Restaurar per defecte')}
+          </Button>
           <Button variant="outline" onClick={closeDialog} disabled={isSaving}>{tr('permissionsDialog.cancel', 'Cancel lar')}</Button>
           <Button onClick={handleSave} disabled={isSaving}>
             {isSaving

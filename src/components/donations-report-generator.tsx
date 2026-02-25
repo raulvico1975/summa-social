@@ -32,7 +32,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Download, Loader2, Heart, Undo2, User, MoreVertical, AlertTriangle } from 'lucide-react';
+import Link from 'next/link';
+import { Download, Loader2, Heart, Undo2, User, AlertTriangle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import {
   Tooltip,
@@ -47,7 +48,7 @@ import { encodeLatin1, type AEATExcludedDonor, type AEATExportResult } from '@/l
 import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
 import { collection } from 'firebase/firestore';
 import { useTranslations } from '@/i18n';
-import { useCurrentOrganization } from '@/hooks/organization-provider';
+import { useCurrentOrganization, useOrgUrl } from '@/hooks/organization-provider';
 import { usePermissions } from '@/hooks/use-permissions';
 import { useIsMobile } from '@/hooks/use-is-mobile';
 import { MobileListItem } from '@/components/mobile/mobile-list-item';
@@ -173,9 +174,10 @@ interface ReportStats {
 
 export function DonationsReportGenerator() {
   const { firestore, auth } = useFirebase();
-  const { organizationId, organization } = useCurrentOrganization();
+  const { organizationId } = useCurrentOrganization();
+  const { buildUrl } = useOrgUrl();
   const { can } = usePermissions();
-  const { t } = useTranslations();
+  const { t, tr } = useTranslations();
   const isMobile = useIsMobile();
   const canGenerateModel182 = can('fiscal.model182.generar');
   const canExportReports = can('informes.exportar');
@@ -681,6 +683,12 @@ export function DonationsReportGenerator() {
     });
   };
 
+  const selectedFiscalYear = Number.parseInt(selectedYear, 10);
+  const currentCalendarYear = new Date().getFullYear();
+  const filingYear = Number.isFinite(selectedFiscalYear) ? selectedFiscalYear + 1 : currentCalendarYear + 1;
+  const recommendedFiscalYear = currentCalendarYear - 1;
+  const isCurrentFiscalYear = selectedFiscalYear === currentCalendarYear;
+
 
   return (
       <Card>
@@ -692,6 +700,20 @@ export function DonationsReportGenerator() {
                   {t.reports.donationsReportTitle}
                 </CardTitle>
                 <CardDescription>{t.reports.donationsReportDescription}</CardDescription>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {tr('reports.fiscalYearContext', 'Exercici fiscal {year}. Presentació habitual: any {filingYear}.')
+                    .replace('{year}', selectedYear)
+                    .replace('{filingYear}', String(filingYear))}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {tr('reports.fiscalYearRecommendation', 'Recomanació: treballa amb exercici tancat (normalment {recommendedYear}).')
+                    .replace('{recommendedYear}', String(recommendedFiscalYear))}
+                </p>
+                {isCurrentFiscalYear && (
+                  <p className="text-xs text-amber-700">
+                    {tr('reports.fiscalYearCurrentWarning', "Has seleccionat l'any en curs. Revisa si vols l'exercici tancat per a presentació fiscal.")}
+                  </p>
+                )}
               </div>
               <div className={cn(MOBILE_ACTIONS_BAR, "sm:justify-end")}>
                 <Select value={selectedYear} onValueChange={setSelectedYear}>
@@ -986,6 +1008,17 @@ export function DonationsReportGenerator() {
               >
                 <Download className="mr-2 h-4 w-4" />
                 {t.reports.downloadExcludedCsv}
+              </Button>
+              <Button variant="outline" asChild className="w-full sm:w-auto">
+                <Link
+                  href={buildUrl('/donants?filter=incomplete')}
+                  onClick={() => {
+                    setAeatExcludedDialogOpen(false);
+                    setAeatPendingExport(null);
+                  }}
+                >
+                  {tr('guides.cta.model182HasErrors', 'Anar a Donants')}
+                </Link>
               </Button>
               <Button
                 variant="default"
