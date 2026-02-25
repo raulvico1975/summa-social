@@ -30,6 +30,8 @@ BACKUP_EXPORT_PATH=""
 DEPLOY_BLOCK_REASON=""
 CURRENT_PHASE="Inicialitzacio"
 INCIDENT_RECORDED=false
+DEPLOY_SUCCESS=0
+DEPLOY_CONTENT_SHA=""
 POSTDEPLOY_URLS_READY=false
 RESOLVED_DEPLOY_BASE_URL=""
 RESOLVED_SMOKE_PUBLIC_URL=""
@@ -68,8 +70,18 @@ HEADER
   INCIDENT_RECORDED=true
 }
 
+cleanup_deploy_docs_if_incomplete() {
+  if [ "$DEPLOY_SUCCESS" -eq 1 ]; then
+    return
+  fi
+
+  git restore --staged --worktree -- "$DEPLOY_LOG" "$ROLLBACK_PLAN_FILE" 2>/dev/null || true
+}
+
 on_script_exit() {
   local exit_code="$1"
+  cleanup_deploy_docs_if_incomplete
+
   if [ "$exit_code" -ne 0 ]; then
     if [ -z "$DEPLOY_BLOCK_REASON" ]; then
       DEPLOY_BLOCK_REASON="Comprovacio no superada a la fase: $CURRENT_PHASE"
@@ -817,7 +829,7 @@ prepare_rollback_plan() {
   local date current_prod_sha target_main_sha
   date=$(TZ="Europe/Madrid" date '+%Y-%m-%d %H:%M')
   current_prod_sha=$(git rev-parse --short prod)
-  target_main_sha=$(git rev-parse --short main)
+  target_main_sha="${DEPLOY_CONTENT_SHA:-$(git rev-parse --short main)}"
 
   cat > "$PROJECT_DIR/$ROLLBACK_PLAN_FILE" <<EOF
 # Rollback Plan (auto) — Summa Social
@@ -981,7 +993,7 @@ post_production_3min_check() {
 }
 
 # ============================================================
-# PAS 9 — Deploy log (NO commit automatic)
+# PAS 9 — Deploy log
 # ============================================================
 append_deploy_log() {
   CURRENT_PHASE="Registrar deploy"
@@ -990,7 +1002,7 @@ append_deploy_log() {
   local deploy_date
   deploy_date=$(TZ="Europe/Madrid" date '+%Y-%m-%d %H:%M')
   local deploy_sha
-  deploy_sha=$(git rev-parse --short prod)
+  deploy_sha="${DEPLOY_CONTENT_SHA:-$(git rev-parse --short main)}"
   local fiscal_str
   fiscal_str=$([ "$IS_FISCAL" = true ] && echo "Si" || echo "No")
 
@@ -1058,17 +1070,27 @@ BACKUP_HEADER
     echo "| $deploy_date | $deploy_sha | $BACKUP_RESULT | ${BACKUP_EXPORT_PATH:--} |" >> "$PROJECT_DIR/$DEPLOY_LOG"
   fi
 
-  # Stage (no commit)
-  git add "$PROJECT_DIR/$DEPLOY_LOG"
-  if [ -f "$PROJECT_DIR/$ROLLBACK_PLAN_FILE" ]; then
-    git add "$PROJECT_DIR/$ROLLBACK_PLAN_FILE"
-  fi
-
   echo "  Registrat a $DEPLOY_LOG"
   echo "  $log_line"
   echo ""
-  echo "  El fitxer queda staged. Per commitejar:"
-  echo "    git commit -m \"docs(deploy-log): $deploy_date $deploy_sha risc=$RISK_LEVEL\""
+}
+
+commit_deploy_logs_if_needed() {
+  CURRENT_PHASE="Commit logs deploy"
+  echo "[9b/9] Committant logs de deploy (si hi ha canvis)..."
+  echo ""
+
+  git add "$DEPLOY_LOG" "$ROLLBACK_PLAN_FILE"
+
+  if git diff --cached --quiet -- "$DEPLOY_LOG" "$ROLLBACK_PLAN_FILE"; then
+    echo "  Sense canvis a logs de deploy. No es crea cap commit."
+    echo ""
+    return
+  fi
+
+  git commit -m "chore(deploy): update deploy logs" -- "$DEPLOY_LOG" "$ROLLBACK_PLAN_FILE"
+  MAIN_SHA=$(git rev-parse --short HEAD)
+  echo "  Commit de logs creat a main."
   echo ""
 }
 
@@ -1089,11 +1111,14 @@ main() {
   run_verifications          # Pas 5
   display_deploy_summary     # Pas 6
   handle_business_decision_for_residual_risk
+  DEPLOY_CONTENT_SHA=$(git rev-parse --short main)
+  prepare_rollback_plan
+  append_deploy_log          # Pas 9
+  commit_deploy_logs_if_needed
   execute_merge_ritual       # Pas 7
   post_deploy_check          # Pas 8
   post_production_3min_check
-  prepare_rollback_plan
-  append_deploy_log          # Pas 9
+  DEPLOY_SUCCESS=1
 
   echo "  DEPLOY COMPLETAT ($DEPLOY_RESULT)."
   echo ""

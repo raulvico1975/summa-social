@@ -102,6 +102,17 @@ export function MembersManager() {
 
   const isAdmin = userRole === 'admin';
 
+  const openUserPermissionsDialog = React.useCallback((target: OrganizationMember) => {
+    // Patró Radix intern: quan obrim una modal des d'un menú, fem blur + defer
+    // per evitar bloquejos de focus/overlay en tancar.
+    if (document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
+    window.setTimeout(() => {
+      setMemberToEditPermissions(target);
+    }, 0);
+  }, []);
+
   const getRoleBadge = (role: OrganizationRole) => {
     switch (role) {
       case 'admin':
@@ -298,7 +309,7 @@ export function MembersManager() {
                                 {t.members.roleViewer}
                               </DropdownMenuItem>
                               {member.role === 'user' && (
-                                <DropdownMenuItem onClick={() => setMemberToEditPermissions(member)}>
+                                <DropdownMenuItem onClick={() => openUserPermissionsDialog(member)}>
                                   <Shield className="mr-2 h-4 w-4" />
                                   Permisos
                                 </DropdownMenuItem>
@@ -383,7 +394,7 @@ export function MembersManager() {
                                   </DropdownMenuTrigger>
                                   <DropdownMenuContent align="end">
                                     {member.role === 'user' && (
-                                      <DropdownMenuItem onClick={() => setMemberToEditPermissions(member)}>
+                                      <DropdownMenuItem onClick={() => openUserPermissionsDialog(member)}>
                                         <Shield className="mr-2 h-4 w-4" />
                                         Permisos
                                       </DropdownMenuItem>
