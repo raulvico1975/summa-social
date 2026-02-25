@@ -4,6 +4,15 @@ Historial de canvis del projecte, ordenat de més recent a més antic.
 
 ---
 
+## 1.45 – 25 Febrer 2026
+
+- Alineació del document mestre amb contracte real d’import bancari.
+- Correcció dedupe fort sense fallback.
+- Model de permisos actualitzat a capabilities.
+- Clarificació model canònic vs legacy.
+
+---
+
 ## [1.43.0] - 2026-02-14
 
 ### Hub de Guies / Assistent — millor comprensió real de preguntes
