@@ -1,6 +1,6 @@
 # ═══════════════════════════════════════════════════════════════════════════════
 # SUMMA SOCIAL - REFERÈNCIA COMPLETA DEL PROJECTE
-# Versió 1.41 - Febrer 2026
+# Versió 1.45 - 25 Febrer 2026
 # ═══════════════════════════════════════════════════════════════════════════════
 
 
@@ -441,6 +441,9 @@ organizations/
       │       ├── email: string
       │       ├── displayName: string
       │       ├── joinedAt: string
+      │       ├── userOverrides?: { deny: string[] }
+      │       ├── userGrants?: string[]
+      │       ├── capabilities?: Record<string, boolean>
       │       └── invitedBy?: string
       │
       ├── transactions/
@@ -448,19 +451,23 @@ organizations/
       │       ├── date: string                    # Data (YYYY-MM-DD)
       │       ├── description: string             # Concepte bancari
       │       ├── amount: number                  # Import (+ ingrés, - despesa)
+      │       ├── note: string | null             # Nota editable de l'usuari
       │       ├── category: string | null         # ID de categoria
-      │       ├── categoryName: string | null     # Nom (desnormalitzat)
-      │       ├── emisorId: string | null         # ID del contacte
-      │       ├── emisorName: string | null       # Nom (desnormalitzat)
-      │       ├── contactId: string | null        # ID contacte (alias emisorId)
+      │       ├── document: string | null         # URL document adjunt
+      │       ├── contactId: string | null        # ID contacte canònic
       │       ├── contactType: string | null      # 'donor' | 'supplier' | 'employee'
-      │       ├── contactName: string | null      # Nom contacte (desnormalitzat)
       │       ├── projectId: string | null        # ID del projecte
-      │       ├── projectName: string | null      # Nom (desnormalitzat)
-      │       ├── documentUrl: string | null      # URL document adjunt
-      │       ├── notes: string | null            # Notes internes
       │       ├── transactionType: string | null  # 'normal' | 'return' | 'return_fee' | 'donation' | 'fee'
       │       ├── donationStatus: string | null   # 'returned' si marcada
+      │       │
+      │       # Camps legacy/desnormalitzats (compatibilitat/export, fora del contracte canònic):
+      │       ├── categoryName: string | null
+      │       ├── emisorId: string | null
+      │       ├── emisorName: string | null
+      │       ├── contactName: string | null
+      │       ├── projectName: string | null
+      │       ├── documentUrl: string | null
+      │       ├── notes: string | null
       │       │
       │       # Camps de remeses:
       │       ├── isRemittance: boolean | null    # És una remesa agrupada?
@@ -471,6 +478,9 @@ organizations/
       │       ├── source: 'bank' | 'remittance' | 'manual' | 'stripe' | null  # Origen
       │       ├── parentTransactionId: string | null  # ID remesa pare
       │       ├── bankAccountId: string | null        # ID compte bancari (obligatori si source=bank|stripe)
+      │       ├── balanceAfter: number | null         # Saldo després del moviment (si disponible)
+      │       ├── operationDate: string | null        # Data operació YYYY-MM-DD
+      │       ├── duplicateReason: string | null      # Diagnòstic intern de dedupe fort
       │       │
       │       # Camps de remeses de devolucions:
       │       ├── remittanceType: 'returns' | 'donations' | 'payments' | null
@@ -589,6 +599,11 @@ organizations/
               └── updatedAt: timestamp
 ```
 
+### Nota de model canònic vs camps legacy
+
+- Model canònic `Transaction`: `note`, `document`, `contactId`, `contactType`, `projectId`.
+- Camps com `documentUrl`, `notes`, `emisorName`, `categoryName`, `contactName`, `projectName` són **legacy/desnormalitzats** (compatibilitat/export) i no formen part del contracte canònic principal.
+
 ## 2.3 Sistema d'Autenticació i Rols
 
 ### Rols d'organització (`OrganizationRole`)
@@ -603,27 +618,18 @@ organizations/
 
 El SuperAdmin **no és un rol d'organització**. Es gestiona globalment:
 
-- **Ruta Firestore:** `systemSuperAdmins/{uid}` (si el document existeix, l'usuari és SuperAdmin)
-- **Constant:** `SUPER_ADMIN_UID` a `src/lib/admin/is-superadmin.ts`
-- **Helper:** `isSuperAdmin(uid)` — comprova existència del document
+- **Criteri oficial API:** `systemSuperAdmins/{uid}` (si el document existeix, l'usuari és SuperAdmin)
+- **Fallback d'entorn:** `SUPER_ADMIN_UID` (només fallback per entorns específics)
+- **Helper:** `isSuperAdmin(uid)` a `src/lib/api/admin-sdk.ts`
 - **Permisos:** Tot + Zona de Perill + Panell `/admin` + Gestió traduccions + Product Updates
 
 ### Permisos detallats
 
-| Acció | SuperAdmin | Admin | User | Viewer |
-|-------|------------|-------|------|--------|
-| Veure dashboard | ✅ | ✅ | ✅ | ✅ |
-| Veure moviments | ✅ | ✅ | ✅ | ✅ |
-| Crear moviments | ✅ | ✅ | ✅ | ❌ |
-| Editar moviments | ✅ | ✅ | ✅ | ❌ |
-| Eliminar moviments | ✅ | ✅ | ❌ | ❌ |
-| Importar extractes | ✅ | ✅ | ✅ | ❌ |
-| Gestionar contactes | ✅ | ✅ | ✅ | ❌ |
-| Gestionar categories | ✅ | ✅ | ❌ | ❌ |
-| Gestionar membres | ✅ | ✅ | ❌ | ❌ |
-| Configurar organització | ✅ | ✅ | ❌ | ❌ |
-| Generar informes | ✅ | ✅ | ✅ | ✅ |
-| Zona de Perill | ✅ | ❌ | ❌ | ❌ |
+**Model vigent:**
+- El control real és per claus de permís (`PermissionKey`) i capacitats (`capabilities`) al membre.
+- Claus crítiques: `moviments.importarExtractes`, `informes.exportar`, `fiscal.model182.generar`, `fiscal.model347.generar`, `fiscal.certificats.generar`.
+- `viewer` no genera fiscal per defecte.
+- Firestore Rules aplica model **fail-closed** sobre `capabilities` (admin bypass).
 
 ### Persistència de sessió
 
@@ -772,14 +778,20 @@ Els següents blocs estan **desactivats** (comentats al codi) a partir de v1.20:
 5. Importació amb auto-assignació
 
 **NOU v1.44 · Dedupe fort per saldo (conservador i no destructiu):**
-- Nous camps opcionals a `Transaction`: `balanceAfter?: number`, `operationDate?: string` (`YYYY-MM-DD`), `duplicateReason?: string`.
+- Nous camps a `Transaction`: `balanceAfter?: number`, `operationDate?: string` (`YYYY-MM-DD`), `duplicateReason?: string`.
+- `operationDate` (`F. ejecución` / `Fecha operación`) és **obligatori** a import bancari.
+- Si falta o és invàlid: `OPERATION_DATE_REQUIRED` i abort de la importació.
+- `balanceAfter` és opcional.
 - Només es persisteixen en imports nous quan l'input és vàlid (sense `null` ni `undefined` explícits).
 - No es fa backfill, no hi ha migracions massives i no es modifica cap transacció històrica.
 - Ordre de deduplicació durant import:
   1. `bankAccountId + bankRef` (si hi ha `bankRef`)
-  2. Si l'entrada té `balanceAfter`: `bankAccountId + balanceAfter + amount + (operationDate || date)` → `DUPLICATE_SAFE` + `duplicateReason = "balance+amount+date"`
+  2. Si l'entrada té `balanceAfter` i `operationDate`: `bankAccountId + balanceAfter + amount + operationDate` → `DUPLICATE_SAFE` + `duplicateReason = "balance+amount+date"`
   3. Si no aplica l'anterior: lògica actual base/candidate
 - La regla forta per saldo només compara contra existents que també tenen `balanceAfter`.
+- Sense fallback a `date` dins la regla forta.
+- Si falta `operationDate`, la regla forta no aplica.
+- L'endpoint `POST /api/transactions/import` exigeix permís `moviments.importarExtractes`.
 
 ### 3.2.2 Sistema d'Auto-Assignació Intel·ligent
 
@@ -806,9 +818,10 @@ Els següents blocs estan **desactivats** (comentats al codi) a partir de v1.20:
 
 | Columna | Editable |
 |---------|----------|
-| Data | ✅ |
-| Descripció | ✅ |
+| Data (mostra `operationDate` si existeix, sinó `date`) | ❌ |
 | Import | ✅ |
+| Saldo (`balanceAfter`) | ❌ |
+| Descripció | ✅ |
 | Categoria | ✅ (selector amb cerca) |
 | Contacte | ✅ (selector amb cerca) |
 | Projecte | ✅ |
@@ -2281,6 +2294,14 @@ Estadístiques per projecte:
 
 
 ## 3.8 INFORMES FISCALS
+
+### Export AEAT 182/347 (arquitectura)
+
+- La generació AEAT es fa server-side via:
+  - `POST /api/fiscal/model182/generate`
+  - `POST /api/fiscal/model347/generate`
+- Guard d'accés: membre admin o capacitat fiscal corresponent.
+- Errors típics: `UNAUTHORIZED`, `NOT_MEMBER`, `FORBIDDEN (MISSING_PERMISSION)`.
 
 ### 3.8.1 Model 182 - Declaració de Donacions
 
@@ -3940,19 +3961,19 @@ El tab de quilometratge suporta deep linking amb scroll automàtic:
 | `expenseReports.banners.*` | Banners informatius |
 
 
-## 3.10 PANELL SUPERADMIN GLOBAL (NOU v1.20)
+## 3.13 PANELL SUPERADMIN GLOBAL (NOU v1.20)
 
 Panell de control exclusiu per al SuperAdmin del sistema, accessible des de `/admin`.
 
-### 3.10.1 Accés i Seguretat
+### 3.13.1 Accés i Seguretat
 
 | Aspecte | Detall |
 |---------|--------|
 | **URL** | `/admin` (sense orgSlug) |
-| **Accés** | Només `SUPER_ADMIN_UID` (definit a `src/lib/data.ts`) |
+| **Accés** | Criteri oficial API: `systemSuperAdmins/{uid}`. Fallback d'entorn: `SUPER_ADMIN_UID` |
 | **Redirecció** | Si no és SuperAdmin → redirigeix a `/dashboard` |
 
-### 3.10.2 Funcionalitats
+### 3.13.2 Funcionalitats
 
 **Redisseny Torre de Control (NOU v1.43):**
 
@@ -3968,7 +3989,7 @@ Panell de control exclusiu per al SuperAdmin del sistema, accessible des de `/ad
 
 **Origen del resum executiu:** endpoint `GET /api/admin/control-tower/summary`.
 
-### 3.10.3 Reset de Contrasenya (NOU v1.20)
+### 3.13.3 Reset de Contrasenya (NOU v1.20)
 
 Secció per enviar correus de restabliment de contrasenya:
 
@@ -3978,7 +3999,7 @@ Secció per enviar correus de restabliment de contrasenya:
 | **Acció** | `sendPasswordResetEmail()` de Firebase Auth |
 | **Seguretat** | Missatge genèric sempre ("Si l'adreça existeix...") per no revelar si l'email existeix |
 
-### 3.10.4 Secció Diagnòstic (NOU v1.20)
+### 3.13.4 Secció Diagnòstic (NOU v1.20)
 
 Enllaços ràpids per a manteniment i diagnòstic:
 
@@ -3988,7 +4009,7 @@ Enllaços ràpids per a manteniment i diagnòstic:
 | **Cloud Logging** | `console.cloud.google.com/logs/query?project=summa-social` |
 | **DEV-SOLO-MANUAL.md** | Path copiable al porta-retalls |
 
-### 3.10.5 Salut del Sistema - Sentinelles (NOU v1.23)
+### 3.13.5 Salut del Sistema - Sentinelles (NOU v1.23)
 
 Sistema automàtic de detecció d'incidències accessible només des de `/admin`.
 
@@ -4057,7 +4078,7 @@ Errors ignorats automàticament (no creen incidents):
 - Només visible per SuperAdmin a `/admin`
 - S6–S8 requereixen implementació de consultes específiques
 
-### 3.10.5b Integritat de Dades - Diagnòstic P0 (NOU v1.33)
+### 3.13.5b Integritat de Dades - Diagnòstic P0 (NOU v1.33)
 
 Panell de diagnòstic d'integritat de dades accessible per administradors d'organització al Dashboard.
 
@@ -4083,7 +4104,7 @@ Panell de diagnòstic d'integritat de dades accessible per administradors d'orga
 - `src/lib/category-health.ts` — Checks i funció `runHealthCheck()`
 - `src/app/[orgSlug]/dashboard/page.tsx` — UI Card + Dialog
 
-### 3.10.5c Guardrails d'Integritat: Categories i Eixos (NOU v1.35)
+### 3.13.5c Guardrails d'Integritat: Categories i Eixos (NOU v1.35)
 
 Guardrails per evitar inconsistències referenciàries quan s'arxiven categories o eixos d'actuació.
 
@@ -4146,7 +4167,7 @@ Nota: Una categoria/eix arxivat NO és orfe (el doc existeix). Orfe = el documen
 - `src/components/project-manager.tsx` — UI eixos (flux arxivat)
 - `firestore.rules` — Rules actualitzades
 
-### 3.10.5d Guardrails d'Integritat: Comptes Bancaris (NOU v1.36 - FASE 2A)
+### 3.13.5d Guardrails d'Integritat: Comptes Bancaris (NOU v1.36 - FASE 2A)
 
 Guardrails per evitar desactivar comptes bancaris que tenen moviments associats.
 
@@ -4173,7 +4194,7 @@ Guardrails per evitar desactivar comptes bancaris que tenen moviments associats.
 
 **Health Check:** Bloc H detecta transaccions amb `bankAccountId` que no existeix a la col·lecció bankAccounts.
 
-### 3.10.5e Guardrails d'Integritat: Contactes (NOU v1.36 - FASE 2B)
+### 3.13.5e Guardrails d'Integritat: Contactes (NOU v1.36 - FASE 2B)
 
 Guardrails per evitar arxivar contactes (donants/proveïdors/treballadors) amb moviments actius.
 
@@ -4224,7 +4245,7 @@ Migrat: `donor-manager.tsx` (commits `d9c7ae0`, `9c3be85`). Pendent: `supplier-m
 
 Les regles d'update accedien directament a `resource.data.archived`, que llançava error si el camp no existia al document (documents creats abans del sistema d'arxivat). Ara s'utilitza `resource.data.get('archived', null)` per defecte segur. Afecta totes les regles d'update que comprovaven el camp `archived`.
 
-### 3.10.5f Guardrails d'Integritat: Liquidacions (NOU v1.36 - FASE 2C)
+### 3.13.5f Guardrails d'Integritat: Liquidacions (NOU v1.36 - FASE 2C)
 
 Guardrails per evitar arxivar liquidacions (ExpenseReports) que tenen tiquets pendents.
 
@@ -4270,7 +4291,7 @@ Guardrails per evitar arxivar liquidacions (ExpenseReports) que tenen tiquets pe
 - `src/app/[orgSlug]/dashboard/movimientos/liquidacions/page.tsx` — UI liquidacions
 - `src/lib/category-health.ts` — checkOrphanTickets()
 
-### 3.10.5g Resum Complet de Guardrails d'Integritat (ACTUALITZAT v1.40)
+### 3.13.5g Resum Complet de Guardrails d'Integritat (ACTUALITZAT v1.40)
 
 **Taula resum de totes les entitats protegides:**
 
@@ -4296,7 +4317,7 @@ Guardrails per evitar arxivar liquidacions (ExpenseReports) que tenen tiquets pe
 
 **Nota v1.40:** Blocs K i L afegits. K integrat al dashboard de health; L exportat com a funció independent (`checkOrphanExpenseLinks()`) però no integrat al dashboard general perquè `expenseLinks` no es carreguen a la vista principal.
 
-### 3.10.5h Admin SDK Compartit (NOU v1.40)
+### 3.13.5h Admin SDK Compartit (NOU v1.40)
 
 Centralització de la inicialització de Firebase Admin SDK en un únic helper, eliminant ~500 línies de codi duplicat a les rutes API.
 
@@ -4328,7 +4349,7 @@ Centralització de la inicialització de Firebase Admin SDK en un únic helper, 
 - `POST /api/invitations/resolve` (NOU v1.40)
 - `POST /api/invitations/accept` (NOU v1.40)
 
-### 3.10.5h2 Accés Operatiu Unificat (NOU v1.41)
+### 3.13.5h2 Accés Operatiu Unificat (NOU v1.41)
 
 Helper centralitzat que valida accés operatiu (admin + user) amb bypass per superadmin, eliminant codi duplicat a les rutes API d'arxivat.
 
@@ -4351,7 +4372,7 @@ Helper centralitzat que valida accés operatiu (admin + user) amb bypass per sup
 - `POST /api/contacts/archive`
 - `POST /api/contacts/import`
 
-### 3.10.5i Registre i Invitacions via Admin API (NOU v1.40)
+### 3.13.5i Registre i Invitacions via Admin API (NOU v1.40)
 
 El flux de registre d'usuaris convidats ha estat migrat a Admin SDK per resoldre problemes amb les Firestore Rules que bloquejaven l'escriptura client.
 
@@ -4375,7 +4396,7 @@ El flux de registre d'usuaris convidats ha estat migrat a Admin SDK per resoldre
 - `src/app/api/invitations/accept/route.ts` — Acceptar invitació
 - `src/app/registre/page.tsx` — Pàgina de registre
 
-### 3.10.6 Fitxers principals
+### 3.13.6 Fitxers principals
 
 | Fitxer | Funció |
 |--------|--------|
@@ -4386,7 +4407,7 @@ El flux de registre d'usuaris convidats ha estat migrat a Admin SDK per resoldre
 | `src/lib/api/require-operational-access.ts` | Validació accés operatiu unificat (NOU v1.41) |
 | `src/lib/donors/periodicity-suffix.ts` | Sufix periodicitat quota (NOU v1.41) |
 
-### 3.10.7 Backup Local d'Organitzacions (NOU v1.28)
+### 3.13.7 Backup Local d'Organitzacions (NOU v1.28)
 
 Funcionalitat per descarregar un backup complet d'una organització en format JSON.
 
@@ -4435,7 +4456,7 @@ Funcionalitat per descarregar un backup complet d'una organització en format JS
 **Nota:** Aquesta funcionalitat és independent de la integració de backups automàtics al núvol. Permet descàrregues manuals puntuals per a migracions o auditories.
 
 
-### 3.10.8 Backups al núvol (Dropbox / Google Drive) — DESACTIVAT
+### 3.13.8 Backups al núvol (Dropbox / Google Drive) — DESACTIVAT
 
 **ESTAT ACTUAL: DESACTIVAT (gener 2026)**
 
@@ -4445,7 +4466,7 @@ Aquesta funcionalitat està **desactivada per defecte**. El codi existeix però 
 - El scheduler setmanal fa early-return sense processar
 - Cap banner ni avís apareix al Dashboard
 
-El mecanisme **oficial i únic** de backup és el **backup local** (secció 3.10.7), accessible només per SuperAdmin des de `/admin`.
+El mecanisme **oficial i únic** de backup és el **backup local** (secció 3.13.7), accessible només per SuperAdmin des de `/admin`.
 
 #### Per què està desactivat
 
@@ -4501,7 +4522,7 @@ Segons implementació actual a `functions/src/backups/exportFirestoreOrg.ts`:
 - URLs signades
 - Subcol·leccions no llistades (integrations, backupOAuthRequests, etc.)
 
-El dataset és equivalent al backup local (secció 3.10.7).
+El dataset és equivalent al backup local (secció 3.13.7).
 
 #### On es configura (UX)
 
@@ -4639,13 +4660,16 @@ El backup manual des de la UI crida la mateixa lògica via `/api/integrations/ba
 
 **Columnes detectades (base):** Data, Concepte/Descripció, Import/Quantitat
 
-**Columnes opcionals (NOU v1.44):**
+**Contracte vigent (NOU v1.45):**
 - `Saldo` / `Balance` → `balanceAfter` (només si és número finit)
-- `F. ejecución` / `Fecha operación` → `operationDate` (només si és data vàlida `YYYY-MM-DD`)
+- `F. ejecución` / `Fecha operación` → `operationDate` (**obligatori**, data vàlida `YYYY-MM-DD`)
+- Si falta o és invàlid: `OPERATION_DATE_REQUIRED` i abort de la importació.
 
 **Regla de duplicate fort (NOU v1.44):**
-- Només s'activa si l'entrada porta `balanceAfter`.
-- Clau: `bankAccountId + balanceAfter + amount + (operationDate || date)`.
+- Només s'activa si l'entrada porta `balanceAfter` i `operationDate`.
+- Clau: `bankAccountId + balanceAfter + amount + operationDate`.
+- Sense fallback a `date` dins la regla forta.
+- Si falta `operationDate`, la regla forta no aplica.
 - Si hi ha match, es classifica com `DUPLICATE_SAFE` i es marca `duplicateReason = "balance+amount+date"`.
 
 ## 4.2 Importació de Donants
@@ -4689,15 +4713,18 @@ El backup manual des de la UI crida la mateixa lògica via `/api/integrations/ba
 
 **Columnes requerides:** id, Created date (UTC), Amount, Fee, Customer Email, Status, Transfer, Amount Refunded
 
-**Veure secció 3.9 per detalls complets.**
+**Veure secció 3.10 per detalls complets.**
 
 ## 4.7 Exportacions
 
-| Informe | Format | Nom fitxer |
-|---------|--------|------------|
-| Model 182 | Excel (.xlsx) | Model182_{org}_{any}.xlsx |
-| Model 347 | CSV | Model347_{org}_{any}.csv |
-| Certificats | PDF / ZIP | certificat_{donant}_{any}.pdf |
+| Informe | Format | Nom fitxer real |
+|---------|--------|-----------------|
+| Model 182 (estàndard) | Excel (.xlsx) | `model182_{any}.xlsx` |
+| Model 182 (gestoria A–G) | Excel (.xlsx) | `model182_gestoria_A-G_{any}.xlsx` |
+| Model 182 AEAT | TXT (ISO-8859-1) | `modelo182_{any}.txt` |
+| Model 347 (resum) | CSV | `informe_model347_{any}.csv` |
+| Model 347 AEAT | TXT (ISO-8859-1) | `modelo347_{any}.txt` |
+| Certificats | PDF / ZIP | `certificat_{donant}_{any}.pdf` |
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -5409,7 +5436,7 @@ Helper centralitzat per filtrar valors invàlids abans de renderitzar `Select.It
 | **1.33** | **30 Gen 2026** | **Health Check P0: panell d'integritat de dades al Dashboard (només admin). 5 blocs deterministes: A) categories legacy (docIds), B) dates formats mixtos/invàlids, C) coherència origen bancari (source↔bankAccountId), D) archivedAt en queries normals, E) signs per transactionType. UI amb details expandibles, badge recompte, taula exemples (max 5). Deduplicació global importació bancària (per rang dates), guardrails UX solapament extractes, camps bancaris readonly (description/amount) per moviments importats. Fitxer category-health.ts amb runHealthCheck().** |
 | **1.34** | **31 Gen 2026** | **Invariant A4 source↔bankAccountId: `bank`/`stripe` requereixen bankAccountId (P0 error si absent), `remittance` hereta del pare, `manual` no aplica. Health check actualitzat per detectar stripe sense bankAccountId. Camps (date/amount/description) bloquejats si bankAccountId present. Backfill dades legacy Flores (363 transaccions: 340 bank + 23 remittance).** |
 | **1.35** | **1 Feb 2026** | **Guardrails integritat Categories i Eixos: prohibit delete físic (Firestore Rules), arxivat només via API amb reassignació obligatòria si count > 0, camps archivedAt/ByUid/FromAction protegits contra escriptura client. APIs `/api/categories/archive` i `/api/projects/archive` amb validació orgId derivat de membership. Health Check nou: blocs F (categories òrfenes) i G (projects orfes). UI: icona Archive, ReassignModal, traduccions CA/ES/FR.** |
-| **1.44** | **17 Feb 2026** | **Importació bancària conservadora: nous camps opcionals `balanceAfter` i `operationDate` (sense backfill), regla de deduplicació forta per saldo (`bankAccountId + balanceAfter + amount + (operationDate || date)`) amb prioritat després de `bankRef`, i diagnòstic `duplicateReason="balance+amount+date"` en duplicats forts.** |
+| **1.44** | **17 Feb 2026** | **Importació bancària conservadora: nous camps `balanceAfter` i `operationDate` (sense backfill), regla de deduplicació forta per saldo (`bankAccountId + balanceAfter + amount + operationDate`) amb prioritat després de `bankRef`, i diagnòstic `duplicateReason="balance+amount+date"` en duplicats forts.** |
 | **1.43** | **14 Feb 2026** | **Hub de Guies/Bot: recuperació semàntica reforçada (més intents reals coberts), desambiguació 1/2 en consultes ambigües, fallback guiat i badges de navegació clicables. SuperAdmin `/admin`: redisseny "Torre de Control" en 5 blocs (Estat, Entitats, Coneixement/Bot, Comunicació, Configuració), resum executiu via `/api/admin/control-tower/summary` i fix de robustesa de timestamps.** |
 | **1.41** | **11 Feb 2026** | **Donants: persona de contacte per empreses (contactPersonName), 3 filtres dashboard (Tipus/Modalitat/Periodicitat) amb comptadors i lògica AND, quota amb sufix periodicitat. Accés operatiu unificat (require-operational-access.ts) amb superadmin bypass. Fix Firestore Rules `.get('archived', null)` per docs legacy. Fixes menors i18n i typecheck.** |
 | **1.40** | **10 Feb 2026** | **Admin SDK compartit centralitzat (admin-sdk.ts, -500 línies). Registre/invitacions via Admin API. Pre-selecció SEPA pain.008 per periodicitat natural. Dinàmica donants redissenyada (5 blocs, PF/PJ). Health Check K/L. Gate i18n pre-commit. SafeSelect guard. Neteja console.logs.** |
@@ -6228,5 +6255,5 @@ Les següents regles han de ser certes en tot moment. Si es trenca alguna, cal c
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # FI DEL DOCUMENT
-# Última actualització: 15 Febrer 2026 - Versió 1.41
+# Última actualització: 25 Febrer 2026 - Versió 1.45
 # ═══════════════════════════════════════════════════════════════════════════════
