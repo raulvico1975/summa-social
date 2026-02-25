@@ -247,9 +247,13 @@ Pas a pas:
 5. Envia la invitació
 
 Rols disponibles:
-- **Administrador** (`admin`): gestió operativa i de configuració de l'entitat
-- **Usuari** (`user`): operativa diària
-- **Només lectura** (`viewer`): consulta, sense edició
+- **Administrador**: gestió operativa i de configuració de l'entitat
+- **Usuari**: operativa diària
+- **Només lectura**: consulta, sense edició
+
+Permisos específics:
+- Alguns accessos es poden donar de manera específica, encara que dues persones tinguin el mateix rol general.
+- La generació dels models fiscals (**Model 182** i **Model 347**) és una acció reservada: cal permís específic o rol d'administració.
 
 Altres accions útils en aquest bloc:
 - Importar invitacions en bloc (icona de pujada)
@@ -692,13 +696,24 @@ La bona notícia és que Summa Social fa gran part de la feina automàticament. 
 2. Ves a 💰 **Moviments**
 3. Clica **"Importar"**
 4. Arrossega el fitxer o clica per seleccionar-lo
-5. Revisa les columnes detectades (Data, Descripció, Import)
+5. Revisa les columnes detectades (**Data d'operació**, Descripció, Import)
 6. Si tens més d'un compte bancari, selecciona'l
 7. Clica **"Importar X moviments"**
 
+> ⚠️ **Molt important:** La **Data d'operació** és obligatòria. Si una fila no té aquesta data, aquell moviment no es processa.
+>
+> Per què és tan important?
+> - Garanteix una conciliació bancària fiable
+> - Millora la detecció de duplicats
+> - Manté la traçabilitat necessària per a revisions fiscals
+>
+> **Microexemple:** Si tens dos cobraments de 25€ del mateix donant en mesos diferents, la data d'operació permet distingir-los correctament i evitar confusions.
+
 ### Sobre els duplicats
 
-El sistema **detecta automàticament** els moviments que ja existeixen. Pots importar el mateix extracte diverses vegades sense por de duplicar dades.
+El sistema **detecta automàticament** els moviments que ja existeixen. Per fer-ho amb màxima robustesa, té en compte el **compte**, el **saldo**, l'**import** i la **data d'operació**.
+
+Quan la data d'operació està ben informada, pots importar el mateix extracte diverses vegades amb molta seguretat. Si falta aquesta data, la detecció continua funcionant però és menys robusta i et pot tocar revisar algun cas manualment.
 
 ---
 
@@ -1548,6 +1563,14 @@ Generar els informes fiscals obligatoris (Model 182 i 347) i els certificats de 
 
 Tot el treball de categorització i gestió de devolucions que has fet durant l'any serveix per això: que els informes surtin correctes a la primera.
 
+### Accés a la generació fiscal (182 / 347)
+
+La generació dels models fiscals es fa directament des de la secció 📄 **Informes** de Summa Social.
+
+Si el teu perfil no està autoritzat per generar-los, el sistema t'ho indicarà a la pantalla. En aquest cas, demana accés a una persona administradora.
+
+És una acció reservada a perfils autoritzats (permís específic o rol d'administració).
+
 ---
 
 ## 9.1 Model 182 — Declaració de Donacions
@@ -2289,7 +2312,7 @@ El sistema reconeix sinònims i expressions comunes, així que no et preocupis p
 
 | Missatge | Solució |
 |----------|---------|
-| "No tens permisos" | Demana canvi de rol |
+| "No tens permisos" | Demana a una persona administradora el permís necessari (per exemple, per generar informes fiscals) |
 | "Dades incompletes" | Revisa camps en vermell |
 | "Duplicat detectat" | Activa "Actualitzar existents" |
 | "IBAN no vàlid" | 24 caràcters, comença per ES |
