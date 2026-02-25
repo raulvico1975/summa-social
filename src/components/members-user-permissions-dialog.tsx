@@ -5,6 +5,7 @@ import type { OrganizationMember } from '@/lib/data';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
 import { useFirebase } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
+import { useTranslations } from '@/i18n';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Switch } from '@/components/ui/switch';
@@ -26,25 +27,45 @@ interface MembersUserPermissionsDialogProps {
   member: OrganizationMember | null;
 }
 
-const SECTION_TOGGLES: Array<{ key: PermissionKey; label: string }> = [
-  { key: 'sections.moviments', label: 'Moviments' },
-  { key: 'sections.projectes', label: 'Projectes' },
-  { key: 'sections.informes', label: 'Informes' },
-  { key: 'sections.donants', label: 'Donants' },
-  { key: 'sections.proveidors', label: 'Proveidors' },
-  { key: 'sections.treballadors', label: 'Treballadors' },
-  { key: 'sections.configuracio', label: 'Configuracio' },
+const SECTION_TOGGLES: PermissionKey[] = [
+  'sections.moviments',
+  'sections.projectes',
+  'sections.informes',
+  'sections.donants',
+  'sections.proveidors',
+  'sections.treballadors',
+  'sections.configuracio',
 ];
 
-const CRITICAL_ACTION_TOGGLES: Array<{ key: PermissionKey; label: string }> = [
-  { key: 'moviments.read', label: 'moviments.read' },
-  { key: 'moviments.importarExtractes', label: 'moviments.importarExtractes' },
-  { key: 'moviments.editar', label: 'moviments.editar' },
-  { key: 'informes.exportar', label: 'informes.exportar' },
-  { key: 'fiscal.model182.generar', label: 'fiscal.model182.generar' },
-  { key: 'fiscal.model347.generar', label: 'fiscal.model347.generar' },
-  { key: 'fiscal.certificats.generar', label: 'fiscal.certificats.generar' },
+const CRITICAL_ACTION_TOGGLES: PermissionKey[] = [
+  'moviments.read',
+  'moviments.importarExtractes',
+  'moviments.editar',
+  'informes.exportar',
+  'fiscal.model182.generar',
+  'fiscal.model347.generar',
+  'fiscal.certificats.generar',
 ];
+
+const SECTION_LABEL_KEYS: Partial<Record<PermissionKey, string>> = {
+  'sections.moviments': 'sidebar.movements',
+  'sections.projectes': 'sidebar.projects',
+  'sections.informes': 'sidebar.reports',
+  'sections.donants': 'sidebar.donors',
+  'sections.proveidors': 'sidebar.suppliers',
+  'sections.treballadors': 'sidebar.employees',
+  'sections.configuracio': 'sidebar.settings',
+};
+
+const ACTION_LABEL_KEYS: Partial<Record<PermissionKey, string>> = {
+  'moviments.read': 'permissionsDialog.actions.movimentsRead',
+  'moviments.importarExtractes': 'permissionsDialog.actions.movimentsImportarExtractes',
+  'moviments.editar': 'permissionsDialog.actions.movimentsEditar',
+  'informes.exportar': 'permissionsDialog.actions.informesExportar',
+  'fiscal.model182.generar': 'permissionsDialog.actions.fiscalModel182Generar',
+  'fiscal.model347.generar': 'permissionsDialog.actions.fiscalModel347Generar',
+  'fiscal.certificats.generar': 'permissionsDialog.actions.fiscalCertificatsGenerar',
+};
 
 export function MembersUserPermissionsDialog({
   open,
@@ -54,12 +75,20 @@ export function MembersUserPermissionsDialog({
   const { organizationId } = useCurrentOrganization();
   const { user } = useFirebase();
   const { toast } = useToast();
+  const { tr } = useTranslations();
 
   const [denied, setDenied] = React.useState<Set<PermissionKey>>(new Set());
   const [grants, setGrants] = React.useState<Set<PermissionKey>>(new Set());
   const [isSaving, setIsSaving] = React.useState(false);
+  const lastFocusedElementRef = React.useRef<HTMLElement | null>(null);
 
   const roleDefaults = React.useMemo(() => getRoleDefaults('user'), []);
+
+  React.useEffect(() => {
+    if (open && document.activeElement instanceof HTMLElement) {
+      lastFocusedElementRef.current = document.activeElement;
+    }
+  }, [open]);
 
   React.useEffect(() => {
     if (!open || !member) return;
@@ -90,6 +119,30 @@ export function MembersUserPermissionsDialog({
       return next;
     });
   }, []);
+
+  const closeDialog = React.useCallback(() => {
+    // Evita que un estat de "saving" bloquegi la modal després de tancar-la.
+    setIsSaving(false);
+    onOpenChange(false);
+    requestAnimationFrame(() => {
+      const previous = lastFocusedElementRef.current;
+      if (previous && document.contains(previous)) {
+        previous.focus();
+        return;
+      }
+      if (document.activeElement instanceof HTMLElement) {
+        document.activeElement.blur();
+      }
+    });
+  }, [onOpenChange]);
+
+  const handleDialogOpenChange = React.useCallback((nextOpen: boolean) => {
+    if (!nextOpen) {
+      closeDialog();
+      return;
+    }
+    onOpenChange(true);
+  }, [closeDialog, onOpenChange]);
 
   const handleProjectCapabilityChange = React.useCallback((value: 'manage' | 'expenseInput') => {
     setDenied((prev) => {
@@ -139,53 +192,74 @@ export function MembersUserPermissionsDialog({
       });
       const payload = await response.json() as { error?: string };
       if (!response.ok) {
-        throw new Error(payload.error ?? 'No s han pogut desar els permisos.');
+        throw new Error(payload.error ?? tr('permissionsDialog.saveError', 'No s han pogut desar els permisos.'));
       }
 
       toast({
-        title: 'Permisos actualitzats',
-        description: `S'han desat els permisos de ${member.displayName || member.email}`,
+        title: tr('permissionsDialog.saved', 'Permisos actualitzats'),
+        description: member.displayName || member.email,
       });
-      onOpenChange(false);
+      closeDialog();
     } catch (error) {
       console.error('Error actualitzant permisos d usuari:', error);
       toast({
         variant: 'destructive',
-        title: 'Error',
-        description: 'No s han pogut desar els permisos.',
+        title: tr('common.error', 'Error'),
+        description: tr('permissionsDialog.saveError', 'No s han pogut desar els permisos.'),
       });
     } finally {
       setIsSaving(false);
     }
-  }, [denied, grants, member, onOpenChange, organizationId, toast, user]);
+  }, [closeDialog, denied, grants, member, organizationId, toast, tr, user]);
 
   if (!member || member.role !== 'user') {
     return null;
   }
 
+  const permissionLabel = (permission: PermissionKey, group: 'section' | 'action'): string => {
+    const translationKey =
+      group === 'section'
+        ? SECTION_LABEL_KEYS[permission]
+        : ACTION_LABEL_KEYS[permission];
+
+    if (!translationKey) {
+      return tr('permissionsDialog.unknownPermission', 'Permis desconegut');
+    }
+    return tr(translationKey, tr('permissionsDialog.unknownPermission', 'Permis desconegut'));
+  };
+
   const projectCapabilityValue = projectCapability === 'expenseInput' ? 'expenseInput' : 'manage';
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-2xl">
+    <Dialog open={open} onOpenChange={handleDialogOpenChange}>
+      <DialogContent
+        className="max-h-[85vh] overflow-y-auto sm:max-w-2xl"
+        onCloseAutoFocus={(event) => {
+          event.preventDefault();
+          const previous = lastFocusedElementRef.current;
+          if (previous && document.contains(previous)) {
+            previous.focus();
+          }
+        }}
+      >
         <DialogHeader>
-          <DialogTitle>Permisos d usuari</DialogTitle>
+          <DialogTitle>{tr('permissionsDialog.title', 'Permisos d usuari')}</DialogTitle>
           <DialogDescription>
-            Configura seccions, accions critiques i capacitat de Projectes per a {member.displayName || member.email}.
+            {`${tr('permissionsDialog.description', 'Configura seccions, accions critiques i capacitat de Projectes per a')} ${member.displayName || member.email}.`}
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-6 py-2">
           <div className="space-y-3">
-            <h3 className="text-sm font-semibold">Seccions</h3>
+            <h3 className="text-sm font-semibold">{tr('permissionsDialog.sectionsTitle', 'Seccions')}</h3>
             <div className="grid gap-3 sm:grid-cols-2">
               {SECTION_TOGGLES.map((section) => (
-                <div key={section.key} className="flex items-center justify-between rounded-md border p-3">
-                  <Label htmlFor={`section-${section.key}`} className="cursor-pointer">{section.label}</Label>
+                <div key={section} className="flex items-center justify-between rounded-md border p-3">
+                  <Label htmlFor={`section-${section}`} className="cursor-pointer">{permissionLabel(section, 'section')}</Label>
                   <Switch
-                    id={`section-${section.key}`}
-                    checked={effectivePermissions[section.key]}
-                    onCheckedChange={(checked) => togglePermission(section.key, checked === true)}
+                    id={`section-${section}`}
+                    checked={effectivePermissions[section]}
+                    onCheckedChange={(checked) => togglePermission(section, checked === true)}
                   />
                 </div>
               ))}
@@ -195,15 +269,15 @@ export function MembersUserPermissionsDialog({
           <Separator />
 
           <div className="space-y-3">
-            <h3 className="text-sm font-semibold">Accions critiques</h3>
+            <h3 className="text-sm font-semibold">{tr('permissionsDialog.actionsTitle', 'Accions critiques')}</h3>
             <div className="grid gap-3">
               {CRITICAL_ACTION_TOGGLES.map((action) => (
-                <div key={action.key} className="flex items-center justify-between rounded-md border p-3">
-                  <Label htmlFor={`action-${action.key}`} className="cursor-pointer font-mono text-xs">{action.label}</Label>
+                <div key={action} className="flex items-center justify-between rounded-md border p-3">
+                  <Label htmlFor={`action-${action}`} className="cursor-pointer text-xs">{permissionLabel(action, 'action')}</Label>
                   <Switch
-                    id={`action-${action.key}`}
-                    checked={effectivePermissions[action.key]}
-                    onCheckedChange={(checked) => togglePermission(action.key, checked === true)}
+                    id={`action-${action}`}
+                    checked={effectivePermissions[action]}
+                    onCheckedChange={(checked) => togglePermission(action, checked === true)}
                   />
                 </div>
               ))}
@@ -213,7 +287,7 @@ export function MembersUserPermissionsDialog({
           <Separator />
 
           <div className="space-y-3">
-            <h3 className="text-sm font-semibold">Projectes</h3>
+            <h3 className="text-sm font-semibold">{tr('permissionsDialog.projectsTitle', 'Projectes')}</h3>
             <RadioGroup
               value={projectCapabilityValue}
               onValueChange={(value) => handleProjectCapabilityChange(value as 'manage' | 'expenseInput')}
@@ -221,20 +295,22 @@ export function MembersUserPermissionsDialog({
             >
               <div className="flex items-center gap-2 rounded-md border p-3">
                 <RadioGroupItem value="manage" id="projects-manage" />
-                <Label htmlFor="projects-manage" className="cursor-pointer">projectes.manage</Label>
+                <Label htmlFor="projects-manage" className="cursor-pointer">{tr('permissionsDialog.projects.manage', 'Gestio de projectes')}</Label>
               </div>
               <div className="flex items-center gap-2 rounded-md border p-3">
                 <RadioGroupItem value="expenseInput" id="projects-expense-input" />
-                <Label htmlFor="projects-expense-input" className="cursor-pointer">projectes.expenseInput</Label>
+                <Label htmlFor="projects-expense-input" className="cursor-pointer">{tr('permissionsDialog.projects.expenseInput', 'Entrada de despeses')}</Label>
               </div>
             </RadioGroup>
           </div>
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isSaving}>Cancel lar</Button>
+          <Button variant="outline" onClick={closeDialog} disabled={isSaving}>{tr('permissionsDialog.cancel', 'Cancel lar')}</Button>
           <Button onClick={handleSave} disabled={isSaving}>
-            {isSaving ? 'Desant...' : 'Desar permisos'}
+            {isSaving
+              ? tr('permissionsDialog.saving', 'Desant...')
+              : tr('permissionsDialog.save', 'Desar permisos')}
           </Button>
         </DialogFooter>
       </DialogContent>
