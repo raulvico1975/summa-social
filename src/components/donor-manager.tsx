@@ -1990,20 +1990,18 @@ export function DonorManager() {
                     {/* Camps recurrents (només si aplica) */}
                     {formData.membershipType === 'recurring' && (
                       <>
-                        <div className="grid grid-cols-2 gap-3">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
                           <div className="space-y-1.5">
                             <Label htmlFor="monthlyAmount">{tr('donors.quotaAmountPerCharge.label', 'Import de quota')}</Label>
                             <Input
                               id="monthlyAmount"
                               type="number"
                               step="0.01"
+                              className="h-10"
                               value={formData.monthlyAmount || ''}
                               onChange={(e) => handleFormChange('monthlyAmount', parseFloat(e.target.value) || undefined)}
                               placeholder="10.00"
                             />
-                            <p className="text-xs text-muted-foreground leading-4">
-                              {tr('donors.quotaAmountPerCharge.hint', "Import per cobrament segons periodicitat.")}
-                            </p>
                           </div>
                           <div className="space-y-1.5">
                             <Label htmlFor="periodicityQuota">{tr('donors.periodicityQuota.label', 'Periodicitat')}</Label>
@@ -2011,7 +2009,7 @@ export function DonorManager() {
                               value={formData.periodicityQuota ?? "__none__"}
                               onValueChange={(v) => handleFormChange('periodicityQuota', v === "__none__" ? null : v)}
                             >
-                              <SelectTrigger id="periodicityQuota">
+                              <SelectTrigger id="periodicityQuota" className="h-10">
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
@@ -2025,6 +2023,9 @@ export function DonorManager() {
                             </Select>
                           </div>
                         </div>
+                        <p className="text-xs text-muted-foreground leading-4">
+                          {tr('donors.quotaAmountPerCharge.hint', "Import per cobrament segons periodicitat.")}
+                        </p>
 
                         <div className="space-y-1.5">
                           <Label htmlFor="memberSince">{t.donors.memberSince}</Label>
