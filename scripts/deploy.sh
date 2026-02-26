@@ -416,7 +416,20 @@ auto_predeploy_backup() {
   echo "[3b/9] Backup curt predeploy..."
   echo ""
 
-  if [ "$RISK_LEVEL" != "ALT" ] || [ "$IS_FISCAL" != true ]; then
+  local is_prod_deploy=false
+  if [ "${ENV:-}" = "prod" ]; then
+    is_prod_deploy=true
+  fi
+
+  if [ -z "${FIRESTORE_BACKUP_BUCKET:-}" ] && [ "$is_prod_deploy" = true ]; then
+    BACKUP_RESULT="BLOCKED_NO_BUCKET"
+    DEPLOY_BLOCK_REASON="FIRESTORE_BACKUP_BUCKET no configurat"
+    DEPLOY_RESULT="BLOCKED_SAFE"
+    echo "ERROR: FIRESTORE_BACKUP_BUCKET no configurat"
+    exit 1
+  fi
+
+  if [ "$is_prod_deploy" = false ] && { [ "$RISK_LEVEL" != "ALT" ] || [ "$IS_FISCAL" != true ]; }; then
     BACKUP_RESULT="NO_REQUIRED"
     echo "  No cal backup extra (nomes s'activa amb risc ALT fiscal)."
     echo ""
@@ -431,6 +444,13 @@ auto_predeploy_backup() {
   fi
 
   if ! command -v firebase >/dev/null 2>&1; then
+    if [ "$is_prod_deploy" = true ]; then
+      BACKUP_RESULT="BLOCKED_NO_FIREBASE_CLI"
+      DEPLOY_BLOCK_REASON="Firebase CLI no disponible per backup obligatori en prod"
+      DEPLOY_RESULT="BLOCKED_SAFE"
+      echo "ERROR: Firebase CLI no disponible per executar el backup obligatori de prod"
+      exit 1
+    fi
     BACKUP_RESULT="SKIPPED_NO_FIREBASE_CLI"
     echo "  Backup no executat: falta Firebase CLI en aquest entorn."
     echo ""
@@ -451,6 +471,14 @@ auto_predeploy_backup() {
     echo "  Backup curt completat correctament."
     echo ""
     return
+  fi
+
+  if [ "$is_prod_deploy" = true ]; then
+    BACKUP_RESULT="BLOCKED_BACKUP_FAILED"
+    DEPLOY_BLOCK_REASON="Backup Firestore obligatori de prod no completat"
+    DEPLOY_RESULT="BLOCKED_SAFE"
+    echo "ERROR: Backup Firestore obligatori de prod no completat"
+    exit 1
   fi
 
   BACKUP_RESULT="FAILED_NON_BLOCKING"

@@ -13,3 +13,4 @@ Registre curt d'incidències de deploy bloquejat o incomplet.
 | 2026-02-16 13:04 | Verificacions | MITJA | 3e84bd9 | 397ca22 | BLOCKED_SAFE | La verificacio de CI no ha passat. | Pendent |
 | 2026-02-17 22:34 | Preflight git | BAIX | b2e1afe | 85892a1 | BLOCKED_SAFE | Main no esta sincronitzada amb remot. | Pendent |
 | 2026-02-24 19:40 | Resum predeploy | ALT | 9e7f12f | 0d83b87 | BLOCKED_SAFE | Comprovacio no superada a la fase: Resum predeploy | Pendent |
+| 2026-02-26 09:18 | Verificacions | MITJA | a0b9cb2 | e49cc44 | BLOCKED_SAFE | La verificacio de CI no ha passat. | Pendent |
