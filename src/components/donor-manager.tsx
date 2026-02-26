@@ -286,8 +286,8 @@ export function DonorManager() {
   const [editingDonor, setEditingDonor] = React.useState<Donor | null>(null);
   const [donorToDelete, setDonorToDelete] = React.useState<Donor | null>(null);
   const [formData, setFormData] = React.useState<DonorFormData>(emptyFormData);
-  const [status, setStatus] = React.useState<'active' | 'inactive'>(emptyFormData.status ?? 'active');
-  const [inactiveSince, setInactiveSince] = React.useState<string | null>(emptyFormData.inactiveSince ?? null);
+  const [status, setStatus] = React.useState<'active' | 'inactive'>('active');
+  const [inactiveSince, setInactiveSince] = React.useState<string | null>(null);
 
   // Filtre de donants incomplets
   const [showIncompleteOnly, setShowIncompleteOnly] = React.useState(false);
