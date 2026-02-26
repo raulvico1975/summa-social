@@ -629,6 +629,7 @@
   "donors.form.section.contact": "Contacto",
   "donors.form.section.donation": "Quota / Doação",
   "donors.form.section.fiscal": "Dados fiscais",
+  "donor.form.inactiveSince": "Data de baixa",
   "donors.iban": "IBAN",
   "donors.import": "Importar Donants",
   "donors.importer.confirmImport": "Importar",

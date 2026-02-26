@@ -89,7 +89,7 @@ import { filterValidSelectItems } from '@/lib/ui/safe-select-options';
 import { CannotArchiveContactDialog } from '@/components/contacts/cannot-archive-contact-dialog';
 import { getPeriodicitySuffix } from '@/lib/donors/periodicity-suffix';
 
-type DonorFormData = Omit<Donor, 'id' | 'createdAt' | 'updatedAt'>;
+type DonorFormData = Omit<Donor, 'id' | 'createdAt' | 'updatedAt' | 'status' | 'inactiveSince'>;
 
 const emptyFormData: DonorFormData = {
   type: 'donor',
@@ -108,8 +108,6 @@ const emptyFormData: DonorFormData = {
   phone: '',
   notes: '',
   defaultCategoryId: undefined,
-  status: 'active',
-  inactiveSince: undefined,
   periodicityQuota: null,
   contactPersonName: null,
 };
@@ -675,6 +673,7 @@ export function DonorManager() {
       : (t.donorsFilter.noWithReturns || 'No hi ha donants amb devolucions');
 
   const handleEdit = (donor: Donor) => {
+    const currentStatus: 'active' | 'inactive' = donor.status === 'inactive' ? 'inactive' : 'active';
     setEditingDonor(donor);
     setFormData({
       type: 'donor',
@@ -693,12 +692,10 @@ export function DonorManager() {
       phone: donor.phone || '',
       notes: donor.notes || '',
       defaultCategoryId: donor.defaultCategoryId,
-      status: donor.status || 'active',
-      inactiveSince: donor.inactiveSince,
       periodicityQuota: donor.periodicityQuota ?? null,
       contactPersonName: donor.contactPersonName ?? null,
     });
-    setStatus((donor.status || 'active') as 'active' | 'inactive');
+    setStatus(currentStatus);
     setInactiveSince(donor.inactiveSince ?? null);
     setIsDialogOpen(true);
   };
@@ -1836,7 +1833,7 @@ export function DonorManager() {
                         </div>
                         {status === 'inactive' && (
                           <div className="space-y-2">
-                            <Label htmlFor="inactiveSince">Data Baixa</Label>
+                            <Label htmlFor="inactiveSince">{tr('donor.form.inactiveSince')}</Label>
                             <Input
                               id="inactiveSince"
                               type="date"

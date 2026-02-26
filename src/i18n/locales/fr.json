@@ -591,6 +591,7 @@
   "donors.form.section.contact": "Contact",
   "donors.form.section.donation": "Cotisation / Don",
   "donors.form.section.fiscal": "Données fiscales",
+  "donor.form.inactiveSince": "Date de résiliation",
   "donors.iban": "IBAN",
   "donors.import": "Importer donateurs",
   "donors.importer.confirmImport": "Importer",
