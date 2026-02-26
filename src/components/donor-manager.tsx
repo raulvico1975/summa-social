@@ -288,6 +288,8 @@ export function DonorManager() {
   const [editingDonor, setEditingDonor] = React.useState<Donor | null>(null);
   const [donorToDelete, setDonorToDelete] = React.useState<Donor | null>(null);
   const [formData, setFormData] = React.useState<DonorFormData>(emptyFormData);
+  const [status, setStatus] = React.useState<'active' | 'inactive'>(emptyFormData.status ?? 'active');
+  const [inactiveSince, setInactiveSince] = React.useState<string | null>(emptyFormData.inactiveSince ?? null);
 
   // Filtre de donants incomplets
   const [showIncompleteOnly, setShowIncompleteOnly] = React.useState(false);
@@ -393,6 +395,17 @@ export function DonorManager() {
   React.useEffect(() => {
     loadDonorsWithReturns();
   }, [loadDonorsWithReturns]);
+
+  React.useEffect(() => {
+    if (status === 'inactive' && !inactiveSince) {
+      const today = new Date().toISOString().split('T')[0];
+      setInactiveSince(today);
+    }
+
+    if (status !== 'inactive') {
+      setInactiveSince(null);
+    }
+  }, [status]);
 
   // Llegir paràmetres de la URL (filtres)
   React.useEffect(() => {
@@ -685,6 +698,8 @@ export function DonorManager() {
       periodicityQuota: donor.periodicityQuota ?? null,
       contactPersonName: donor.contactPersonName ?? null,
     });
+    setStatus((donor.status || 'active') as 'active' | 'inactive');
+    setInactiveSince(donor.inactiveSince ?? null);
     setIsDialogOpen(true);
   };
 
@@ -811,12 +826,16 @@ export function DonorManager() {
     if (!open) {
       setEditingDonor(null);
       setFormData(emptyFormData);
+      setStatus('active');
+      setInactiveSince(null);
     }
   };
 
   const handleAddNew = () => {
     setEditingDonor(null);
     setFormData(emptyFormData);
+    setStatus('active');
+    setInactiveSince(null);
     setIsDialogOpen(true);
   };
 
@@ -862,16 +881,6 @@ export function DonorManager() {
 
     const now = new Date().toISOString();
 
-    // Gestionar canvi d'estat actiu/baixa
-    let inactiveSince: string | null | undefined = formData.inactiveSince;
-    if (formData.status === 'inactive' && !inactiveSince) {
-      // Si canvia a baixa i no tenia data, posar data actual
-      inactiveSince = now;
-    } else if (formData.status === 'active') {
-      // Si canvia a actiu, esborrar data de baixa
-      inactiveSince = null;
-    }
-
     const dataToSave = {
       ...normalized,
       taxId: normalized.taxId || null,
@@ -886,8 +895,8 @@ export function DonorManager() {
       monthlyAmount: normalized.monthlyAmount ?? null,
       memberSince: normalized.memberSince ?? null,
       iban: normalized.iban || null,
-      status: formData.status || 'active',
-      inactiveSince: inactiveSince,
+      status: status,
+      inactiveSince: status === 'inactive' ? inactiveSince : null,
       periodicityQuota: formData.periodicityQuota ?? null,
       contactPersonName: formData.donorType === 'company'
         ? (formData.contactPersonName?.trim() || null)
@@ -1755,12 +1764,12 @@ export function DonorManager() {
           {/* Cos amb scroll */}
           <div className="flex-1 min-h-0 overflow-y-auto px-6 py-5">
             {/* Grid principal 2 columnes */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
 
               {/* ══════════════════════════════════════════════════════════════
                   COLUMNA ESQUERRA
                   ══════════════════════════════════════════════════════════════ */}
-              <div className="space-y-6">
+              <div className="space-y-6 h-full">
 
                 {/* Secció: Dades fiscals */}
                 <div className="rounded-lg border bg-background px-4 py-4">
@@ -1793,8 +1802,8 @@ export function DonorManager() {
                       </p>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="space-y-1.5">
+                    <div className="grid grid-cols-2 gap-3 items-stretch">
+                      <div className="space-y-1.5 h-full">
                         <Label htmlFor="donorType">{t.donors.donorType}</Label>
                         <Select
                           value={formData.donorType}
@@ -1809,28 +1818,35 @@ export function DonorManager() {
                           </SelectContent>
                         </Select>
                       </div>
-                      <div className="space-y-1.5">
-                        <Label htmlFor="status">{t.donors.statusField}</Label>
-                        <Select
-                          value={formData.status || 'active'}
-                          onValueChange={(v) => handleFormChange('status', v)}
-                        >
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="active">{t.donors.statusActive}</SelectItem>
-                            <SelectItem value="inactive">{t.donors.statusInactive}</SelectItem>
-                          </SelectContent>
-                        </Select>
+                      <div className="space-y-4 h-full">
+                        <div className="space-y-1.5">
+                          <Label htmlFor="status">{t.donors.statusField}</Label>
+                          <Select
+                            value={status}
+                            onValueChange={(v) => setStatus(v as 'active' | 'inactive')}
+                          >
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="active">{t.donors.statusActive}</SelectItem>
+                              <SelectItem value="inactive">{t.donors.statusInactive}</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        {status === 'inactive' && (
+                          <div className="space-y-2">
+                            <Label htmlFor="inactiveSince">Data Baixa</Label>
+                            <Input
+                              id="inactiveSince"
+                              type="date"
+                              value={inactiveSince ?? ''}
+                              onChange={(e) => setInactiveSince(e.target.value || null)}
+                            />
+                          </div>
+                        )}
                       </div>
                     </div>
-
-                    {formData.status === 'inactive' && formData.inactiveSince && (
-                      <div className="text-sm text-muted-foreground">
-                        {t.donors.inactiveSinceLabel}: {new Date(formData.inactiveSince).toLocaleDateString()}
-                      </div>
-                    )}
 
                   </div>
                 </div>
@@ -1931,7 +1947,7 @@ export function DonorManager() {
               {/* ══════════════════════════════════════════════════════════════
                   COLUMNA DRETA
                   ══════════════════════════════════════════════════════════════ */}
-              <div className="space-y-6">
+              <div className="space-y-6 h-full">
 
                 {/* Secció: Quota / Donació */}
                 <div className="rounded-lg border bg-background px-4 py-4">
