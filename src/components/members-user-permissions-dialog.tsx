@@ -16,6 +16,7 @@ import {
   applyOverrides,
   getProjectCapability,
   getRoleDefaults,
+  isUserPermissionsCustomized,
   sanitizePermissionList,
   sanitizeUserGrants,
   type PermissionKey,
@@ -221,6 +222,10 @@ export function MembersUserPermissionsDialog({
     return null;
   }
 
+  const userPermissionsStatusLabel = isUserPermissionsCustomized(member.userOverrides, member.userGrants)
+    ? tr('members.roleUserCustomized', 'User (personalitzat)')
+    : tr('members.roleUserDefault', 'User (per defecte)');
+
   const permissionLabel = (permission: PermissionKey, group: 'section' | 'action'): string => {
     const translationKey =
       group === 'section'
@@ -253,6 +258,7 @@ export function MembersUserPermissionsDialog({
           <DialogDescription>
             {`${tr('permissionsDialog.description', 'Configura seccions, accions critiques i capacitat de Projectes per a')} ${member.displayName || member.email}.`}
           </DialogDescription>
+          <p className="text-xs text-muted-foreground">{userPermissionsStatusLabel}</p>
         </DialogHeader>
 
         <div className="space-y-6 py-2">

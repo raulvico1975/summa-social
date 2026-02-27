@@ -1952,6 +1952,8 @@ export const es = {
     noName: "Sin nombre",
     roleAdmin: "Administrador",
     roleUser: "Usuario",
+    roleUserDefault: "User (por defecto)",
+    roleUserCustomized: "User (personalizado)",
     roleViewer: "Visualizador",
     roleAdminDescription: "Control total: gestión de miembros, finanzas y configuración.",
     roleUserDescription: "Gestión financiera: transacciones, contactos e informes.",

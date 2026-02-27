@@ -1920,6 +1920,8 @@ export const ca = {
     // Rols
     roleAdmin: "Administrador",
     roleUser: "Usuari",
+    roleUserDefault: "User (per defecte)",
+    roleUserCustomized: "User (personalitzat)",
     roleViewer: "Visualitzador",
     roleAdminDescription: "Control total: gestió de membres, finances i configuració.",
     roleUserDescription: "Gestió financera: transaccions, contactes i informes.",

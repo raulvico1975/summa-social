@@ -5,6 +5,7 @@ import {
   canAccessMovimentsRoute,
   canReadBankInProjectes,
   getRoleDefaults,
+  isUserPermissionsCustomized,
   resolveEffectivePermissions,
 } from '@/lib/permissions';
 
@@ -67,4 +68,23 @@ test('project capability remains mutually exclusive', () => {
 
   assert.equal(effective['projectes.manage'], true);
   assert.equal(effective['projectes.expenseInput'], false);
+});
+
+test('isUserPermissionsCustomized returns false for empty/null inputs', () => {
+  assert.equal(isUserPermissionsCustomized(undefined, undefined), false);
+  assert.equal(isUserPermissionsCustomized(null, null), false);
+  assert.equal(isUserPermissionsCustomized({}, undefined), false);
+  assert.equal(isUserPermissionsCustomized({ deny: [] }, []), false);
+});
+
+test('isUserPermissionsCustomized returns true with one valid deny', () => {
+  assert.equal(isUserPermissionsCustomized({ deny: ['moviments.read'] }, null), true);
+});
+
+test('isUserPermissionsCustomized returns true with one valid grant', () => {
+  assert.equal(isUserPermissionsCustomized(null, ['moviments.read']), true);
+});
+
+test('isUserPermissionsCustomized returns false when deny/grants sanitize to empty', () => {
+  assert.equal(isUserPermissionsCustomized({ deny: ['not.a.real.permission'] }, ['configuracio.manage']), false);
 });

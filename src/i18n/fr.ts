@@ -1922,6 +1922,8 @@ export const fr = {
     // Rôles
     roleAdmin: "Administrateur",
     roleUser: "Utilisateur",
+    roleUserDefault: "User (par défaut)",
+    roleUserCustomized: "User (personnalisé)",
     roleViewer: "Lecteur",
     roleAdminDescription: "Contrôle total : gestion des membres, finances et configuration.",
     roleUserDescription: "Gestion financière : transactions, contacts et rapports.",

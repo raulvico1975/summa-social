@@ -52,6 +52,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { MOBILE_ACTIONS_BAR, MOBILE_CTA_PRIMARY } from '@/lib/ui/mobile-actions';
 import { MembersUserPermissionsDialog } from '@/components/members-user-permissions-dialog';
+import { isUserPermissionsCustomized } from '@/lib/permissions';
 
 export function MembersManager() {
   const { firestore, user } = useFirebase();
@@ -124,6 +125,13 @@ export function MembersManager() {
       default:
         return <Badge variant="outline">{role}</Badge>;
     }
+  };
+
+  const getUserRoleStatusLabel = (member: OrganizationMember): string | null => {
+    if (member.role !== 'user') return null;
+    return isUserPermissionsCustomized(member.userOverrides, member.userGrants)
+      ? t.members.roleUserCustomized
+      : t.members.roleUserDefault;
   };
 
   const formatDate = (dateString: string) => {
@@ -270,64 +278,68 @@ export function MembersManager() {
                   ))
                 )}
                 {members && members.length > 0 ? (
-                  members.map((member) => (
-                    <MobileListItem
-                      key={member.id || member.userId}
-                      title={
-                        <div>
-                          <span>{member.displayName || t.members.noName}</span>
-                          {member.userId === user?.uid && (
-                            <span className="text-xs text-muted-foreground ml-1">({t.members.you})</span>
-                          )}
-                        </div>
-                      }
-                      leadingIcon={<User className="h-4 w-4" />}
-                      badges={[getRoleBadge(member.role)]}
-                      meta={[
-                        { value: member.email },
-                        { label: t.members.joinedAt, value: formatDate(member.joinedAt) },
-                      ]}
-                      actions={
-                        isAdmin && member.userId !== user?.uid ? (
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon" className="h-8 w-8">
-                                <MoreVertical className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => handleChangeRole(member, 'admin')}>
-                                <Shield className="mr-2 h-4 w-4" />
-                                {t.members.roleAdmin}
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => handleChangeRole(member, 'user')}>
-                                <User className="mr-2 h-4 w-4" />
-                                {t.members.roleUser}
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => handleChangeRole(member, 'viewer')}>
-                                <Eye className="mr-2 h-4 w-4" />
-                                {t.members.roleViewer}
-                              </DropdownMenuItem>
-                              {member.role === 'user' && (
-                                <DropdownMenuItem onClick={() => openUserPermissionsDialog(member)}>
+                  members.map((member) => {
+                    const userRoleStatusLabel = getUserRoleStatusLabel(member);
+                    return (
+                      <MobileListItem
+                        key={member.id || member.userId}
+                        title={
+                          <div>
+                            <span>{member.displayName || t.members.noName}</span>
+                            {member.userId === user?.uid && (
+                              <span className="text-xs text-muted-foreground ml-1">({t.members.you})</span>
+                            )}
+                          </div>
+                        }
+                        leadingIcon={<User className="h-4 w-4" />}
+                        badges={[getRoleBadge(member.role)]}
+                        meta={[
+                          { value: member.email },
+                          ...(userRoleStatusLabel ? [{ value: userRoleStatusLabel }] : []),
+                          { label: t.members.joinedAt, value: formatDate(member.joinedAt) },
+                        ]}
+                        actions={
+                          isAdmin && member.userId !== user?.uid ? (
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-8 w-8">
+                                  <MoreVertical className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={() => handleChangeRole(member, 'admin')}>
                                   <Shield className="mr-2 h-4 w-4" />
-                                  Permisos
+                                  {t.members.roleAdmin}
                                 </DropdownMenuItem>
-                              )}
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem
-                                onClick={() => setMemberToDelete(member)}
-                                className="text-destructive"
-                              >
-                                <Trash2 className="mr-2 h-4 w-4" />
-                                {t.members.removeMember}
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        ) : undefined
-                      }
-                    />
-                  ))
+                                <DropdownMenuItem onClick={() => handleChangeRole(member, 'user')}>
+                                  <User className="mr-2 h-4 w-4" />
+                                  {t.members.roleUser}
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleChangeRole(member, 'viewer')}>
+                                  <Eye className="mr-2 h-4 w-4" />
+                                  {t.members.roleViewer}
+                                </DropdownMenuItem>
+                                {member.role === 'user' && (
+                                  <DropdownMenuItem onClick={() => openUserPermissionsDialog(member)}>
+                                    <Shield className="mr-2 h-4 w-4" />
+                                    Permisos
+                                  </DropdownMenuItem>
+                                )}
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem
+                                  onClick={() => setMemberToDelete(member)}
+                                  className="text-destructive"
+                                >
+                                  <Trash2 className="mr-2 h-4 w-4" />
+                                  {t.members.removeMember}
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          ) : undefined
+                        }
+                      />
+                    );
+                  })
                 ) : (
                   <div className="text-center text-muted-foreground py-12">
                     {t.members.noMembers}
@@ -347,72 +359,83 @@ export function MembersManager() {
                   </TableHeader>
                   <TableBody>
                     {members && members.length > 0 ? (
-                      members.map((member) => (
-                        <TableRow key={member.id || member.userId}>
-                          <TableCell>
-                            <div>
-                              <div className="font-medium">{member.displayName || t.members.noName}</div>
-                              <div className="text-sm text-muted-foreground">{member.email}</div>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            {isAdmin && member.userId !== user?.uid ? (
-                              <Select
-                                value={member.role}
-                                onValueChange={(value) => handleChangeRole(member, value as OrganizationRole)}
-                                disabled={isProcessing}
-                              >
-                                <SelectTrigger className="w-[140px]">
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="admin">{t.members.roleAdmin}</SelectItem>
-                                  <SelectItem value="user">{t.members.roleUser}</SelectItem>
-                                  <SelectItem value="viewer">{t.members.roleViewer}</SelectItem>
-                                </SelectContent>
-                              </Select>
-                            ) : (
-                              <div className="flex items-center gap-2">
-                                {getRoleBadge(member.role)}
-                                {member.userId === user?.uid && (
-                                  <span className="text-xs text-muted-foreground">({t.members.you})</span>
-                                )}
-                              </div>
-                            )}
-                          </TableCell>
-                          <TableCell className="text-sm text-muted-foreground">
-                            {formatDate(member.joinedAt)}
-                          </TableCell>
-                          {isAdmin && (
+                      members.map((member) => {
+                        const userRoleStatusLabel = getUserRoleStatusLabel(member);
+                        return (
+                          <TableRow key={member.id || member.userId}>
                             <TableCell>
-                              {member.userId !== user?.uid && (
-                                <DropdownMenu>
-                                  <DropdownMenuTrigger asChild>
-                                    <Button variant="ghost" size="sm">
-                                      <MoreHorizontal className="h-4 w-4" />
-                                    </Button>
-                                  </DropdownMenuTrigger>
-                                  <DropdownMenuContent align="end">
-                                    {member.role === 'user' && (
-                                      <DropdownMenuItem onClick={() => openUserPermissionsDialog(member)}>
-                                        <Shield className="mr-2 h-4 w-4" />
-                                        Permisos
-                                      </DropdownMenuItem>
-                                    )}
-                                    <DropdownMenuItem
-                                      onClick={() => setMemberToDelete(member)}
-                                      className="text-destructive"
-                                    >
-                                      <Trash2 className="mr-2 h-4 w-4" />
-                                      {t.members.removeMember}
-                                    </DropdownMenuItem>
-                                  </DropdownMenuContent>
-                                </DropdownMenu>
+                              <div>
+                                <div className="font-medium">{member.displayName || t.members.noName}</div>
+                                <div className="text-sm text-muted-foreground">{member.email}</div>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              {isAdmin && member.userId !== user?.uid ? (
+                                <div className="space-y-1">
+                                  <Select
+                                    value={member.role}
+                                    onValueChange={(value) => handleChangeRole(member, value as OrganizationRole)}
+                                    disabled={isProcessing}
+                                  >
+                                    <SelectTrigger className="w-[140px]">
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="admin">{t.members.roleAdmin}</SelectItem>
+                                      <SelectItem value="user">{t.members.roleUser}</SelectItem>
+                                      <SelectItem value="viewer">{t.members.roleViewer}</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                  {userRoleStatusLabel && (
+                                    <p className="text-xs text-muted-foreground">{userRoleStatusLabel}</p>
+                                  )}
+                                </div>
+                              ) : (
+                                <div className="flex items-center gap-2">
+                                  {getRoleBadge(member.role)}
+                                  {userRoleStatusLabel && (
+                                    <span className="text-xs text-muted-foreground">{userRoleStatusLabel}</span>
+                                  )}
+                                  {member.userId === user?.uid && (
+                                    <span className="text-xs text-muted-foreground">({t.members.you})</span>
+                                  )}
+                                </div>
                               )}
                             </TableCell>
-                          )}
-                        </TableRow>
-                      ))
+                            <TableCell className="text-sm text-muted-foreground">
+                              {formatDate(member.joinedAt)}
+                            </TableCell>
+                            {isAdmin && (
+                              <TableCell>
+                                {member.userId !== user?.uid && (
+                                  <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                      <Button variant="ghost" size="sm">
+                                        <MoreHorizontal className="h-4 w-4" />
+                                      </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                      {member.role === 'user' && (
+                                        <DropdownMenuItem onClick={() => openUserPermissionsDialog(member)}>
+                                          <Shield className="mr-2 h-4 w-4" />
+                                          Permisos
+                                        </DropdownMenuItem>
+                                      )}
+                                      <DropdownMenuItem
+                                        onClick={() => setMemberToDelete(member)}
+                                        className="text-destructive"
+                                      >
+                                        <Trash2 className="mr-2 h-4 w-4" />
+                                        {t.members.removeMember}
+                                      </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                  </DropdownMenu>
+                                )}
+                              </TableCell>
+                            )}
+                          </TableRow>
+                        );
+                      })
                     ) : (
                       <TableRow>
                         <TableCell colSpan={isAdmin ? 4 : 3} className="text-center text-muted-foreground h-24">
