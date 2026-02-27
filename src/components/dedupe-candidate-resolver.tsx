@@ -22,9 +22,11 @@ import {
 } from '@/components/ui/table';
 import { useTranslations } from '@/i18n';
 import type { ClassifiedRow } from '@/lib/transaction-dedupe';
+import { getSafeDuplicateUi } from '@/lib/safe-duplicate-ui';
 
 interface DedupeCandidateResolverProps {
   candidates: ClassifiedRow[];
+  safeDuplicates: ClassifiedRow[];
   newCount: number;
   safeDuplicatesCount: number;
   candidateCount: number;
@@ -36,6 +38,7 @@ interface DedupeCandidateResolverProps {
 
 export function DedupeCandidateResolver({
   candidates,
+  safeDuplicates,
   newCount,
   safeDuplicatesCount,
   candidateCount,
@@ -45,6 +48,21 @@ export function DedupeCandidateResolver({
   open,
 }: DedupeCandidateResolverProps) {
   const { t, tr } = useTranslations();
+  const safeReasonCounts = React.useMemo(() => {
+    const counts = {
+      BANK_REF: 0,
+      BALANCE_AMOUNT_DATE: 0,
+      INTRA_FILE: 0,
+    };
+
+    for (const row of safeDuplicates) {
+      if (row.reason === 'BANK_REF') counts.BANK_REF += 1;
+      if (row.reason === 'BALANCE_AMOUNT_DATE') counts.BALANCE_AMOUNT_DATE += 1;
+      if (row.reason === 'INTRA_FILE') counts.INTRA_FILE += 1;
+    }
+
+    return counts;
+  }, [safeDuplicates]);
 
   const formatDate = (dateStr?: string) => {
     if (!dateStr) return '—';
@@ -61,6 +79,11 @@ export function DedupeCandidateResolver({
       style: 'currency',
       currency: 'EUR',
     }).format(value);
+  };
+
+  const getExistingId = (row: ClassifiedRow): string | null => {
+    if (row.reason === 'INTRA_FILE') return null;
+    return row.matchedExistingIds[0] ?? row.matchedExisting[0]?.id ?? null;
   };
 
   if (!open) return null;
@@ -99,6 +122,86 @@ export function DedupeCandidateResolver({
             <p className="text-xl font-semibold">{totalCount}</p>
           </div>
         </div>
+
+        {safeDuplicates.length > 0 && (
+          <>
+            <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200">
+              <p className="font-medium">
+                {tr('movements.import.safeDuplicates.title', 'Duplicats segurs')}
+              </p>
+              <p className="mt-1 text-xs opacity-90">
+                {tr('movements.import.safeDuplicates.counts', 'Per tipus')}
+              </p>
+              <div className="mt-1 flex flex-wrap gap-3 text-xs">
+                <span>
+                  {tr('movements.import.safeDuplicates.reason.bankRef.label', 'Referència bancària')}: {safeReasonCounts.BANK_REF}
+                </span>
+                <span>
+                  {tr('movements.import.safeDuplicates.reason.balanceAmountDate.label', 'Coincidència completa')}: {safeReasonCounts.BALANCE_AMOUNT_DATE}
+                </span>
+                <span>
+                  {tr('movements.import.safeDuplicates.reason.intraFile.label', 'Línia repetida al fitxer')}: {safeReasonCounts.INTRA_FILE}
+                </span>
+              </div>
+            </div>
+
+            <ScrollArea className="max-h-[280px] rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-[130px]">Data</TableHead>
+                    <TableHead className="w-[120px] text-right">Import</TableHead>
+                    <TableHead>
+                      {tr('movements.import.safeDuplicates.columns.message', 'Missatge')}
+                    </TableHead>
+                    <TableHead className="w-[220px]">
+                      {tr('movements.import.safeDuplicates.columns.detail', 'Detall')}
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {safeDuplicates.map((safeRow, index) => {
+                    const safeUi = getSafeDuplicateUi(safeRow.reason);
+                    const existingId = getExistingId(safeRow);
+
+                    return (
+                      <TableRow key={`safe-${safeRow.tx.description}-${safeRow.tx.date}-${index}`}>
+                        <TableCell className="whitespace-nowrap text-xs">
+                          {formatDate(safeRow.tx.operationDate ?? safeRow.tx.date)}
+                        </TableCell>
+                        <TableCell className="whitespace-nowrap text-right font-mono text-xs">
+                          {formatAmount(safeRow.tx.amount)}
+                        </TableCell>
+                        <TableCell className="text-xs">
+                          <p className="font-medium">{tr(safeUi.mainKey, safeUi.mainFallback)}</p>
+                          <p className="text-muted-foreground">{safeRow.tx.description}</p>
+                        </TableCell>
+                        <TableCell className="text-xs">
+                          <details>
+                            <summary className="cursor-pointer text-primary underline-offset-2 hover:underline">
+                              {tr('movements.import.safeDuplicates.viewWhy', 'Veure per què')}
+                            </summary>
+                            <div className="mt-2 space-y-1">
+                              {safeUi.detailKey && safeUi.detailFallback && (
+                                <p>{tr(safeUi.detailKey, safeUi.detailFallback)}</p>
+                              )}
+                              {safeUi.showExistingId && existingId && (
+                                <p>
+                                  {tr('movements.import.safeDuplicates.existingIdLabel', 'ID del moviment existent')}:{' '}
+                                  <span className="font-mono">{existingId}</span>
+                                </p>
+                              )}
+                            </div>
+                          </details>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </ScrollArea>
+          </>
+        )}
 
         {candidateCount > 0 ? (
           <>
