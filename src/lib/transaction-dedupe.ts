@@ -171,6 +171,18 @@ function createBalanceAmountDateKey(tx: {
   return `${accountPrefix}:bal:${balanceAfterCents}|${amountCents}|${dateKey}`;
 }
 
+function hasFullModernBalanceData(tx: {
+  operationDate?: unknown;
+  balanceAfter?: unknown;
+}): tx is { operationDate: string; balanceAfter: number } {
+  return (
+    typeof tx.operationDate === 'string' &&
+    tx.operationDate.trim() !== '' &&
+    typeof tx.balanceAfter === 'number' &&
+    Number.isFinite(tx.balanceAfter)
+  );
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // ENRICHMENT
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -250,13 +262,15 @@ export function classifyTransactions(
       existingByBaseKey.set(key, arr);
     }
 
-    const balanceAmountDateKey = createBalanceAmountDateKey({
-      date: etx.date,
-      operationDate: etx.operationDate,
-      amount: etx.amount,
-      balanceAfter: etx.balanceAfter,
-      bankAccountId: etx.bankAccountId,
-    });
+    const balanceAmountDateKey = hasFullModernBalanceData(etx)
+      ? createBalanceAmountDateKey({
+        date: etx.date,
+        operationDate: etx.operationDate,
+        amount: etx.amount,
+        balanceAfter: etx.balanceAfter,
+        bankAccountId: etx.bankAccountId,
+      })
+      : null;
     if (balanceAmountDateKey) {
       const arr = existingByBalanceAmountDateKey.get(balanceAmountDateKey) || [];
       arr.push({ id: etx.id, tx: etx });
@@ -341,15 +355,19 @@ export function classifyTransactions(
     }
 
     // 3. Regla forta amb saldo: bankAccount + balanceAfter + amount + operationDate
-    const balanceAmountDateKey = createBalanceAmountDateKey({
-      date: tx.date,
-      operationDate: tx.operationDate,
-      amount: tx.amount,
-      balanceAfter: (tx as { balanceAfter?: number }).balanceAfter,
-      bankAccountId,
-    });
+    const incomingHasFullData = hasFullModernBalanceData(tx);
+    const balanceAmountDateKey = incomingHasFullData
+      ? createBalanceAmountDateKey({
+        date: tx.date,
+        operationDate: tx.operationDate,
+        amount: tx.amount,
+        balanceAfter: (tx as { balanceAfter?: number }).balanceAfter,
+        bankAccountId,
+      })
+      : null;
     if (balanceAmountDateKey) {
-      const strongMatches = existingByBalanceAmountDateKey.get(balanceAmountDateKey);
+      const strongMatches = (existingByBalanceAmountDateKey.get(balanceAmountDateKey) || [])
+        .filter(match => hasFullModernBalanceData(match.tx));
       if (strongMatches && strongMatches.length > 0) {
         results.push({
           tx: { ...tx, duplicateReason: 'balance+amount+date' },

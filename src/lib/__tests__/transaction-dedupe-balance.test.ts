@@ -46,6 +46,17 @@ describe('transaction dedupe with balanceAfter strong rule', () => {
     assert.equal(result[0].tx.duplicateReason, 'balance+amount+date');
   });
 
+  it('si l existent és legacy (sense operationDate o balanceAfter), no pot ser duplicate segur per saldo', () => {
+    const existing = [makeExisting({ id: 'tx-legacy', balanceAfter: undefined, operationDate: undefined })];
+    const parsed = [makeIncoming({ balanceAfter: 1000, operationDate: '2026-02-10' })];
+
+    const result = classifyTransactions(parsed, existing, 'acc-1');
+
+    assert.equal(result.length, 1);
+    assert.equal(result[0].status, 'DUPLICATE_CANDIDATE');
+    assert.notEqual(result[0].reason, 'BALANCE_AMOUNT_DATE');
+  });
+
   it('si incoming no té saldo, no aplica la regla forta de saldo', () => {
     const existing = [makeExisting({ id: 'tx-1', balanceAfter: 1000, operationDate: '2026-02-10' })];
     const parsed = [makeIncoming()];
