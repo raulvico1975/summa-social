@@ -25,7 +25,6 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Filter, X, Undo2, Circle, User } from 'lucide-react';
 import type { TableFilter } from './TransactionsFilters';
 import type { SourceFilter } from '@/lib/constants';
-import type { BankAccount } from '@/lib/data';
 
 // =============================================================================
 // TYPES
@@ -39,7 +38,6 @@ interface FiltersSheetProps {
   onSourceFilterChange: (filter: SourceFilter) => void;
   bankAccountFilter: string;
   onBankAccountFilterChange: (accountId: string) => void;
-  bankAccounts: BankAccount[];
   // Counts for badges
   totalCount: number;
   returnsCount: number;
@@ -85,7 +83,6 @@ export const FiltersSheet = React.memo(function FiltersSheet({
   onSourceFilterChange,
   bankAccountFilter,
   onBankAccountFilterChange,
-  bankAccounts,
   totalCount,
   pendingReturnsCount,
   expensesWithoutDocCount,
@@ -205,26 +202,6 @@ export const FiltersSheet = React.memo(function FiltersSheet({
               </SelectContent>
             </Select>
           </div>
-
-          {/* Bank account filter */}
-          {bankAccounts.length > 0 && (
-            <div className="space-y-3">
-              <Label className="text-sm font-medium">{t.filterByAccount}</Label>
-              <Select value={bankAccountFilter} onValueChange={onBankAccountFilterChange}>
-                <SelectTrigger>
-                  <SelectValue placeholder={t.allAccounts} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__all__">{t.allAccounts}</SelectItem>
-                  {bankAccounts.map((account) => (
-                    <SelectItem key={account.id} value={account.id}>
-                      {account.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
         </div>
 
         <SheetFooter className="flex-row gap-2 sm:justify-between">

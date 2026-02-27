@@ -10,17 +10,13 @@ import {
 } from '@/components/ui/tooltip';
 import {
   Sparkles,
-  Search,
-  X,
   Info,
   Square,
 } from 'lucide-react';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Progress } from '@/components/ui/progress';
 import type { SourceFilter } from '@/lib/constants';
-import type { BankAccount } from '@/lib/data';
 import { FiltersSheet } from './FiltersSheet';
 
 // =============================================================================
@@ -48,8 +44,6 @@ export type TableFilter =
 interface TransactionsFiltersProps {
   currentFilter: TableFilter;
   onFilterChange: (filter: TableFilter) => void;
-  searchQuery: string;
-  onSearchChange: (query: string) => void;
   totalCount: number;
   returnsCount: number;
   pendingReturnsCount: number;
@@ -69,7 +63,6 @@ interface TransactionsFiltersProps {
   // Bank account filter
   bankAccountFilter: string;
   onBankAccountFilterChange: (accountId: string) => void;
-  bankAccounts: BankAccount[];
   // Bulk mode (SuperAdmin only)
   isSuperAdmin?: boolean;
   isBulkMode?: boolean;
@@ -89,7 +82,6 @@ interface TransactionsFiltersProps {
     donationsNoContact: string;
     pendingFilters: string;
     exportTooltip: string;
-    searchPlaceholder: string;
     importReturnsFile?: string;
     allAccounts: string;
     // New translations for reorganized UI
@@ -136,8 +128,6 @@ interface TransactionsFiltersProps {
 export const TransactionsFilters = React.memo(function TransactionsFilters({
   currentFilter,
   onFilterChange,
-  searchQuery,
-  onSearchChange,
   totalCount,
   pendingReturnsCount,
   expensesWithoutDocCount,
@@ -151,7 +141,6 @@ export const TransactionsFilters = React.memo(function TransactionsFilters({
   onSourceFilterChange,
   bankAccountFilter,
   onBankAccountFilterChange,
-  bankAccounts,
   isSuperAdmin,
   isBulkMode,
   onBulkModeChange,
@@ -163,31 +152,8 @@ export const TransactionsFilters = React.memo(function TransactionsFilters({
   return (
     <div className="flex flex-col gap-3 w-full md:flex-row md:flex-wrap md:items-center">
       {/* ═══════════════════════════════════════════════════════════════════
-          FRANJA 2: Treball actiu (Cerca + Classificar pendents + Mode ràpid)
+          FRANJA 2: Treball actiu (Classificar pendents + Mode ràpid)
           ═══════════════════════════════════════════════════════════════════ */}
-
-      {/* Cercador intel·ligent — full-width en mòbil, ~40-50% en desktop */}
-      <div className="relative w-full md:flex-1 md:min-w-[200px] md:max-w-[50%]">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input
-          placeholder={t.searchPlaceholder}
-          value={searchQuery}
-          onChange={(e) => onSearchChange(e.target.value)}
-          className="pl-9 pr-9 h-10 text-base"
-        />
-        {searchQuery && (
-          <button
-            type="button"
-            onClick={() => onSearchChange('')}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-          >
-            <X className="h-4 w-4" />
-          </button>
-        )}
-      </div>
-
-      {/* Separador visual (només desktop) */}
-      <div className="hidden md:block h-6 w-px bg-border" />
 
       {/* ═══════════════════════════════════════════════════════════════════
           FILTRES RÀPIDS (shortcuts per despeses)
@@ -350,7 +316,6 @@ export const TransactionsFilters = React.memo(function TransactionsFilters({
           onSourceFilterChange={onSourceFilterChange}
           bankAccountFilter={bankAccountFilter}
           onBankAccountFilterChange={onBankAccountFilterChange}
-          bankAccounts={bankAccounts}
           totalCount={totalCount}
           returnsCount={0}
           pendingReturnsCount={pendingReturnsCount}
