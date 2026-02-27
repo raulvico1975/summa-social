@@ -26,6 +26,7 @@ import {
   FolderKanban,
   MessageSquare,
   GitMerge,
+  Mail,
 } from 'lucide-react';
 import type { Transaction, ContactType } from '@/lib/data';
 import { formatCurrencyEU, formatDateShort } from '@/lib/normalize';
@@ -50,6 +51,7 @@ interface TransactionRowMobileProps {
   onSplitAmount?: (tx: Transaction) => void;
   isSplitDeleteBlocked?: boolean;
   onOpenReturnDialog?: (tx: Transaction) => void;
+  onGenerateReturnEmailDraft?: (tx: Transaction) => void;
   onViewRemittanceDetail?: (txId: string) => void;
   onAttachDocument?: (txId: string) => void;
   t: {
@@ -68,6 +70,7 @@ interface TransactionRowMobileProps {
     viewRemittanceDetail: string;
     remittanceQuotes: string;
     manageReturn?: string;
+    generateReturnEmail?: string;
     addNote?: string;
     editNote?: string;
   };
@@ -83,6 +86,7 @@ export const TransactionRowMobile = React.memo(function TransactionRowMobile({
   onSplitAmount,
   isSplitDeleteBlocked,
   onOpenReturnDialog,
+  onGenerateReturnEmailDraft,
   onViewRemittanceDetail,
   onAttachDocument,
   t,
@@ -93,6 +97,7 @@ export const TransactionRowMobile = React.memo(function TransactionRowMobile({
   const isReturn = tx.transactionType === 'return';
   const isReturnFee = tx.transactionType === 'return_fee';
   const isReturnedDonation = tx.donationStatus === 'returned';
+  const canGenerateReturnEmail = isReturn && !!tx.contactId && tx.isRemittance !== true;
   const hasDocument = !!tx.document;
   const hasBalanceAfter = typeof tx.balanceAfter === 'number' && Number.isFinite(tx.balanceAfter);
   const balanceText = hasBalanceAfter ? formatCurrencyEU(Math.abs(tx.balanceAfter!)) : '—';
@@ -141,6 +146,15 @@ export const TransactionRowMobile = React.memo(function TransactionRowMobile({
       onOpenReturnDialog(tx);
     }, 50);
   }, [tx, onOpenReturnDialog]);
+
+  const handleGenerateReturnEmailDraft = React.useCallback(() => {
+    if (!onGenerateReturnEmailDraft) return;
+    setIsMenuOpen(false);
+    setTimeout(() => {
+      if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
+      onGenerateReturnEmailDraft(tx);
+    }, 50);
+  }, [onGenerateReturnEmailDraft, tx]);
 
   const handleViewRemittance = React.useCallback(() => {
     if (!onViewRemittanceDetail) return;
@@ -298,6 +312,12 @@ export const TransactionRowMobile = React.memo(function TransactionRowMobile({
               <DropdownMenuItem onClick={handleManageReturn}>
                 <Undo2 className="h-4 w-4 mr-2" />
                 {t.manageReturn || 'Assignar donant'}
+              </DropdownMenuItem>
+            )}
+            {canGenerateReturnEmail && onGenerateReturnEmailDraft && (
+              <DropdownMenuItem onClick={handleGenerateReturnEmailDraft}>
+                <Mail className="h-4 w-4 mr-2" />
+                {t.generateReturnEmail || 'Generar correu al soci'}
               </DropdownMenuItem>
             )}
             <DropdownMenuSeparator />

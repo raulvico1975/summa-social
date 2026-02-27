@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { useFirebase } from '@/firebase';
@@ -15,12 +16,13 @@ import { Building2, Save, Upload, Loader2, Image as ImageIcon, PenTool, Trash2 }
 import type { Organization } from '@/lib/data';
 import { useTranslations } from '@/i18n';
 import { useSearchParams, useRouter } from 'next/navigation';
+import { SYSTEM_DEFAULT_RETURN_EMAIL_TEMPLATE } from '@/lib/returns/build-return-email-draft';
 
 export function OrganizationSettings() {
   const { firestore, storage } = useFirebase();
   const { organizationId, organization } = useCurrentOrganization();
   const { toast } = useToast();
-  const { t } = useTranslations();
+  const { t, tr } = useTranslations();
   const { buildUrl } = useOrgUrl();
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -50,6 +52,7 @@ export function OrganizationSettings() {
     signatoryRole: '',
     contactAlertThreshold: 50,
     language: 'es' as 'ca' | 'es',
+    returnEmailTemplate: '',
   });
 
   // Carregar dades de l'organització
@@ -84,6 +87,7 @@ export function OrganizationSettings() {
             signatoryRole: data.signatoryRole || '',
             contactAlertThreshold: data.contactAlertThreshold ?? 50,
             language: data.language ?? 'es',
+            returnEmailTemplate: data.returnEmailTemplate || '',
           });
         }
       } catch (error) {
@@ -140,6 +144,7 @@ export function OrganizationSettings() {
         signatoryRole: formData.signatoryRole || null,
         contactAlertThreshold: formData.contactAlertThreshold,
         language: formData.language,
+        returnEmailTemplate: formData.returnEmailTemplate.trim() ? formData.returnEmailTemplate : null,
       };
 
       await updateDoc(orgRef, dataToSave);
@@ -539,6 +544,28 @@ export function OrganizationSettings() {
                 placeholder={t.settings.organization.signatoryRolePlaceholder}
               />
             </div>
+          </div>
+        </div>
+
+        <div className="pt-4 border-t space-y-3">
+          <h3 className="text-base font-semibold">{tr('settings.returnEmailTemplate.title')}</h3>
+          <p className="text-sm text-muted-foreground">{tr('settings.returnEmailTemplate.description')}</p>
+          <Textarea
+            id="returnEmailTemplate"
+            value={formData.returnEmailTemplate}
+            onChange={(e) => handleChange('returnEmailTemplate', e.target.value)}
+            className="min-h-40"
+          />
+          <p className="text-xs text-muted-foreground">{tr('settings.returnEmailTemplate.variables')}</p>
+          <div>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => handleChange('returnEmailTemplate', SYSTEM_DEFAULT_RETURN_EMAIL_TEMPLATE)}
+            >
+              {tr('settings.returnEmailTemplate.restore')}
+            </Button>
           </div>
         </div>
 

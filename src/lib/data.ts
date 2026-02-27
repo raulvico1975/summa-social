@@ -549,6 +549,7 @@ export type Organization = {
   contactAlertThreshold?: number;  // Llindar mínim (€) per alertes de moviments sense contacte (default: 50)
   // Configuració d'idioma
   language?: OrganizationLanguage; // Idioma per certificats i emails (default: 'es')
+  returnEmailTemplate?: string | null; // Plantilla del correu de devolucions (fallback al sistema si null/absent)
   // Feature flags
   features?: OrganizationFeatures; // Mòduls opcionals activats/desactivats
   // Onboarding
