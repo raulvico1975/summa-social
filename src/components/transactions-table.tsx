@@ -38,6 +38,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
 import {
   Select,
   SelectContent,
@@ -905,6 +906,7 @@ export function TransactionsTable({ initialDateFilter = null, canEditMovements =
     setDateFilter({ type: 'all' });
     setContactIdFilter(null);
     setSourceFilter('all');
+    setBankAccountFilter('__all__');
     if (typeof window !== 'undefined') {
       const url = new URL(window.location.href);
       url.searchParams.delete('filter');
@@ -1568,7 +1570,6 @@ export function TransactionsTable({ initialDateFilter = null, canEditMovements =
     donationsNoContact: t.movements.table.donationsNoContact || 'Donaciones sin contacto',
     pendingFilters: t.movements.table.pendingFilters,
     exportTooltip: t.movements.table.exportTooltip,
-    searchPlaceholder: t.movements.table.searchPlaceholder,
     importReturnsFile: t.movements.table.uploadBankFile,
     allAccounts: t.settings.bankAccounts.allAccounts,
     // New translations for reorganized UI
@@ -1610,10 +1611,51 @@ export function TransactionsTable({ initialDateFilter = null, canEditMovements =
   return (
     <TooltipProvider>
       {/* ═══════════════════════════════════════════════════════════════════════
-          SECCIÓ: Filtre de dates
+          SECCIÓ: Barra principal (Períodes + Cerca + Compte bancari)
           ═══════════════════════════════════════════════════════════════════════ */}
-      <div className="mb-4">
-        <DateFilter value={dateFilter} onChange={setDateFilter} />
+      <div className="mb-4 w-full">
+        <div className="flex w-full flex-col gap-3 lg:flex-row lg:items-center lg:gap-4">
+          <div className="shrink-0">
+            <DateFilter value={dateFilter} onChange={setDateFilter} />
+          </div>
+
+          <div className="relative w-full lg:min-w-[420px] lg:flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder={t.movements.table.searchPlaceholder}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="h-11 pl-10 pr-10 text-base"
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
+          </div>
+
+          {bankAccounts.length > 0 && (
+            <div className="w-full lg:w-[280px] lg:shrink-0">
+              <Select value={bankAccountFilter} onValueChange={setBankAccountFilter}>
+                <SelectTrigger className="h-11">
+                  <SelectValue placeholder={t.settings.bankAccounts.allAccounts} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__all__">{t.settings.bankAccounts.allAccounts}</SelectItem>
+                  {bankAccounts.map((account) => (
+                    <SelectItem key={account.id} value={account.id}>
+                      {account.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* ═══════════════════════════════════════════════════════════════════════
@@ -1623,8 +1665,6 @@ export function TransactionsTable({ initialDateFilter = null, canEditMovements =
         <TransactionsFilters
           currentFilter={tableFilter}
           onFilterChange={setTableFilter}
-          searchQuery={searchQuery}
-          onSearchChange={setSearchQuery}
           totalCount={transactions?.length || 0}
           returnsCount={returnTransactions.length}
           pendingReturnsCount={pendingReturns.length}
@@ -1642,7 +1682,6 @@ export function TransactionsTable({ initialDateFilter = null, canEditMovements =
           onSourceFilterChange={setSourceFilter}
           bankAccountFilter={bankAccountFilter}
           onBankAccountFilterChange={setBankAccountFilter}
-          bankAccounts={bankAccounts}
           isSuperAdmin={isSuperAdmin}
           isBulkMode={isBulkMode}
           onBulkModeChange={handleBulkModeChange}
