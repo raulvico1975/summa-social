@@ -54,6 +54,7 @@ import {
   CheckCircle2,
   CreditCard,
   MessageSquare,
+  Mail,
 } from 'lucide-react';
 import type { Transaction, Category, Project, ContactType } from '@/lib/data';
 import { formatCurrencyEU, formatDateShort } from '@/lib/normalize';
@@ -113,6 +114,7 @@ interface TransactionRowProps {
   onSplitStripeRemittance?: (tx: Transaction) => void;
   onViewRemittanceDetail: (txId: string, parentTx?: Transaction) => void;
   onUndoRemittance?: (tx: Transaction) => void;
+  onGenerateReturnEmailDraft?: (tx: Transaction) => void;
   onCreateNewContact: (txId: string, type: 'donor' | 'supplier') => void;
   onOpenReturnImporter?: (parentTx?: Transaction) => void;
   // SEPA reconciliation
@@ -150,6 +152,7 @@ interface TransactionRowProps {
     attachDocument: string;
     deleteDocument: string;
     manageReturn: string;
+    generateReturnEmail?: string;
     edit: string;
     splitAmount: string;
     splitRemittance: string;
@@ -209,6 +212,7 @@ export const TransactionRow = React.memo(function TransactionRow({
   onSplitStripeRemittance,
   onViewRemittanceDetail,
   onUndoRemittance,
+  onGenerateReturnEmailDraft,
   onCreateNewContact,
   onOpenReturnImporter,
   detectedPrebankRemittance,
@@ -229,6 +233,7 @@ export const TransactionRow = React.memo(function TransactionRow({
   const isReturn = tx.transactionType === 'return';
   const isReturnFee = tx.transactionType === 'return_fee';
   const isReturnedDonation = tx.donationStatus === 'returned';
+  const canGenerateReturnEmail = isReturn && !!tx.contactId && tx.isRemittance !== true;
   // Detecta transaccions via Stripe (donations, fees)
   const isFromStripe = tx.source === 'stripe';
   const canSplitAmount =
@@ -338,6 +343,17 @@ export const TransactionRow = React.memo(function TransactionRow({
       onOpenReturnDialog(tx);
     }, 100);
   }, [tx, onOpenReturnDialog]);
+
+  const handleGenerateReturnEmailDraft = React.useCallback(() => {
+    if (!onGenerateReturnEmailDraft) return;
+    setIsActionsMenuOpen(false);
+    setTimeout(() => {
+      if (document.activeElement instanceof HTMLElement) {
+        document.activeElement.blur();
+      }
+      onGenerateReturnEmailDraft(tx);
+    }, 100);
+  }, [onGenerateReturnEmailDraft, tx]);
 
   const handleSplitRemittance = React.useCallback(() => {
     // Delay per permetre que el DropdownMenu es tanqui completament
@@ -856,6 +872,12 @@ export const TransactionRow = React.memo(function TransactionRow({
                   <Link className="mr-2 h-4 w-4 text-red-500" />
                   {t.manageReturn}
                 </DropdownMenuItem>
+                {canGenerateReturnEmail && onGenerateReturnEmailDraft && (
+                  <DropdownMenuItem onClick={handleGenerateReturnEmailDraft}>
+                    <Mail className="mr-2 h-4 w-4" />
+                    {t.generateReturnEmail || 'Generar correu al soci'}
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuSeparator />
               </>
             )}
