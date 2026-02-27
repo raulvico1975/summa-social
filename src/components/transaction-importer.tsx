@@ -336,6 +336,14 @@ export function TransactionImporter({ availableCategories }: TransactionImporter
     setPendingFile(null);
   };
 
+  const handleImportClick = () => {
+    if (bankAccounts.length === 0) {
+      setIsAccountDialogOpen(true);
+      return;
+    }
+    fileInputRef.current?.click();
+  };
+
   const startImportProcess = (file: File, bankAccountId: string | null) => {
     setIsImporting(true);
     if (file.name.endsWith('.csv')) {
@@ -1053,35 +1061,7 @@ export function TransactionImporter({ availableCategories }: TransactionImporter
         disabled={isImporting}
       />
       <div className="flex flex-wrap items-center gap-2">
-        {bankAccounts.length > 0 ? (
-          <div className="min-w-[220px] max-w-[320px]">
-            <Select
-              value={selectedBankAccountId ?? ''}
-              onValueChange={(value) => setSelectedBankAccountId(value)}
-              disabled={isImporting || isLoadingBankAccounts}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder={t.settings.bankAccounts.selectAccount} />
-              </SelectTrigger>
-              <SelectContent>
-                {bankAccounts.map((account) => (
-                  <SelectItem key={account.id} value={account.id}>
-                    {account.name}
-                    {account.isDefault && ` (${t.settings.bankAccounts.default})`}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        ) : (
-          <Button variant="outline" asChild>
-            <Link href={buildUrl('/configuracion')}>
-              {t.settings.bankAccounts.goToSettings}
-            </Link>
-          </Button>
-        )}
-
-        <Button disabled={isImporting} onClick={() => fileInputRef.current?.click()}>
+        <Button disabled={isImporting} onClick={handleImportClick}>
           {isImporting ? (
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
           ) : (
