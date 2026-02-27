@@ -91,6 +91,8 @@ import { prebankRemittancesCollection } from '@/lib/pending-documents/sepa-remit
 import { where, getDocs, getDoc } from 'firebase/firestore';
 import { filterActiveContacts } from '@/lib/contacts/filterActiveContacts';
 import { UndoProcessingDialog } from '@/components/undo-processing-dialog';
+import { ReturnEmailDraftDialog } from '@/components/returns/ReturnEmailDraftDialog';
+import { buildReturnEmailDraft } from '@/lib/returns/build-return-email-draft';
 import {
   detectUndoOperationType,
   countChildTransactions,
@@ -116,7 +118,7 @@ const ReturnImporter = dynamic(
 
 export function TransactionsTable({ initialDateFilter = null, canEditMovements = true }: TransactionsTableProps = {}) {
   const { firestore, user, storage } = useFirebase();
-  const { organizationId } = useCurrentOrganization();
+  const { organizationId, organization } = useCurrentOrganization();
   const { t, language, tr } = useTranslations();
   const { toast } = useToast();
   const locale = language === 'es' ? 'es-ES' : 'ca-ES';
@@ -372,6 +374,8 @@ export function TransactionsTable({ initialDateFilter = null, canEditMovements =
   const [undoTransaction, setUndoTransaction] = React.useState<Transaction | null>(null);
   const [undoChildCount, setUndoChildCount] = React.useState(0);
   const [isUndoProcessing, setIsUndoProcessing] = React.useState(false);
+  const [isReturnEmailDraftDialogOpen, setIsReturnEmailDraftDialogOpen] = React.useState(false);
+  const [returnEmailDraftBody, setReturnEmailDraftBody] = React.useState('');
 
   // Maps per noms
   const contactMap = React.useMemo(() =>
@@ -1223,6 +1227,28 @@ export function TransactionsTable({ initialDateFilter = null, canEditMovements =
     setIsSplitAmountDialogOpen(true);
   }, [t.common.error, toast, tr]);
 
+  const handleGenerateReturnEmailDraft = React.useCallback((transaction: Transaction) => {
+    if (transaction.transactionType !== 'return') return;
+    if (!transaction.contactId) return;
+    if (transaction.isRemittance === true) return;
+
+    const contactName =
+      (transaction as Transaction & { contactName?: string | null }).contactName?.trim()
+      || contactMap[transaction.contactId]?.name
+      || null;
+    const txDate = getDisplayDate(transaction);
+    const draft = buildReturnEmailDraft({
+      contactName,
+      txDate,
+      amount: transaction.amount,
+      language,
+      organizationReturnTemplate: organization?.returnEmailTemplate ?? null,
+    });
+
+    setReturnEmailDraftBody(draft);
+    setIsReturnEmailDraftDialogOpen(true);
+  }, [contactMap, getDisplayDate, language, organization?.returnEmailTemplate]);
+
   const handleOnSplitDone = () => {
     setIsSplitterOpen(false);
     setTransactionToSplit(null);
@@ -1511,6 +1537,7 @@ export function TransactionsTable({ initialDateFilter = null, canEditMovements =
     attachDocument: t.movements.table.attachDocument,
     deleteDocument: t.movements.table.deleteDocument,
     manageReturn: t.movements.table.manageReturn,
+    generateReturnEmail: tr('returns.emailDraft.action'),
     edit: t.movements.table.edit,
     splitAmount: tr('movements.split.action'),
     splitRemittance: t.movements.table.splitRemittance,
@@ -1792,6 +1819,7 @@ export function TransactionsTable({ initialDateFilter = null, canEditMovements =
               onSplitAmount={handleSplitAmount}
               isSplitDeleteBlocked={isSplitDeleteBlockedInMemory(tx)}
               onOpenReturnDialog={handleOpenReturnDialog}
+              onGenerateReturnEmailDraft={handleGenerateReturnEmailDraft}
               onViewRemittanceDetail={handleViewRemittanceDetail}
               onAttachDocument={handleAttachDocumentWithRename}
               t={rowTranslations}
@@ -1902,6 +1930,7 @@ export function TransactionsTable({ initialDateFilter = null, canEditMovements =
                   onEdit={handleEditClick}
                   onDelete={handleDeleteWithSplitGuard}
                   onOpenReturnDialog={handleOpenReturnDialog}
+                  onGenerateReturnEmailDraft={handleGenerateReturnEmailDraft}
                   onSplitAmount={handleSplitAmount}
                   onSplitRemittance={handleSplitRemittance}
                   onSplitStripeRemittance={handleSplitStripeRemittance}
@@ -2114,6 +2143,12 @@ export function TransactionsTable({ initialDateFilter = null, canEditMovements =
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <ReturnEmailDraftDialog
+        open={isReturnEmailDraftDialogOpen}
+        onOpenChange={setIsReturnEmailDraftDialogOpen}
+        initialBody={returnEmailDraftBody}
+      />
 
       {/* Edit Transaction Dialog */}
       <EditTransactionDialog
