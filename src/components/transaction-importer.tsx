@@ -1230,6 +1230,7 @@ export function TransactionImporter({ availableCategories }: TransactionImporter
       <DedupeCandidateResolver
         open={isCandidateDialogOpen}
         candidates={classifiedResults?.filter(c => c.status === 'DUPLICATE_CANDIDATE') ?? []}
+        safeDuplicates={classifiedResults?.filter(c => c.status === 'DUPLICATE_SAFE') ?? []}
         newCount={dedupeSummary?.newCount ?? 0}
         safeDuplicatesCount={dedupeSummary?.safeDuplicatesCount ?? (classifiedResults?.filter(c => c.status === 'DUPLICATE_SAFE').length ?? 0)}
         candidateCount={dedupeSummary?.candidateCount ?? (classifiedResults?.filter(c => c.status === 'DUPLICATE_CANDIDATE').length ?? 0)}
