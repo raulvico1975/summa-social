@@ -722,7 +722,7 @@ export function TransactionImporter({ availableCategories }: TransactionImporter
           totalCount: classified.length,
         };
 
-        const transactionsToImport = summary.newCount + summary.safeDuplicatesCount + summary.candidateCount;
+        const transactionsToImport = summary.newCount + summary.candidateCount;
         if (transactionsToImport === 0) {
           toast({
             title: t.importers.transaction.noTransactionsFound,
@@ -770,12 +770,11 @@ export function TransactionImporter({ availableCategories }: TransactionImporter
 
     const transactionsToImport = [
       ...newTxs.map(c => c.tx),
-      ...safeDupes.map(c => c.tx),
       ...candidates.map(c => c.tx),
     ];
 
     const stats = {
-      duplicateSkippedCount: 0,
+      duplicateSkippedCount: safeDupes.length,
       candidateCount: candidates.length,
       candidateUserImportedCount: candidates.length,
       candidateUserSkippedCount: 0,
