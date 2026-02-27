@@ -2220,6 +2220,8 @@
   "members.roleAdminDescription": "Control total: gestió de membres, finances i configuració.",
   "members.roleUpdated": "Rol actualitzat",
   "members.roleUser": "Usuari",
+  "members.roleUserDefault": "User (per defecte)",
+  "members.roleUserCustomized": "User (personalitzat)",
   "members.roleUserDescription": "Gestió financera: transaccions, contactes i informes.",
   "members.roleViewer": "Visualitzador",
   "members.roleViewerDescription": "Només lectura: pot veure però no modificar.",

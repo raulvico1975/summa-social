@@ -2220,6 +2220,8 @@
   "members.roleAdminDescription": "Control total: gestión de miembros, finanzas y configuración.",
   "members.roleUpdated": "Rol actualizado",
   "members.roleUser": "Usuario",
+  "members.roleUserDefault": "User (por defecto)",
+  "members.roleUserCustomized": "User (personalizado)",
   "members.roleUserDescription": "Gestión financiera: transacciones, contactos e informes.",
   "members.roleViewer": "Visualizador",
   "members.roleViewerDescription": "Solo lectura: puede ver pero no modificar.",

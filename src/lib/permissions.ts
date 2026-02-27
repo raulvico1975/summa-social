@@ -134,6 +134,15 @@ export function sanitizeUserGrants(grants: string[] | null | undefined): Permiss
   return sanitizePermissionList(grants).filter(isUserGrantablePermission);
 }
 
+export function isUserPermissionsCustomized(
+  userOverrides?: UserPermissionOverrides | null,
+  userGrants?: string[] | null
+): boolean {
+  const deny = sanitizePermissionList(userOverrides?.deny ?? undefined);
+  const grants = sanitizeUserGrants(userGrants);
+  return deny.length > 0 || grants.length > 0;
+}
+
 export function getRoleDefaults(role: OrganizationRole | null): PermissionMap {
   if (!role) return createEmptyPermissions();
   return { ...ROLE_DEFAULTS[role] };
