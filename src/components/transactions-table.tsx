@@ -100,6 +100,7 @@ import {
   type UndoOperationType,
 } from '@/lib/fiscal/undoProcessing';
 import { detectLegacyCategoryTransactions, logLegacyCategorySummary } from '@/lib/category-health';
+import { sortTransactionsForTable } from '@/lib/transactions/sort-transactions-for-table';
 
 interface TransactionsTableProps {
   initialDateFilter?: DateFilterValue | null;
@@ -867,11 +868,10 @@ export function TransactionsTable({ initialDateFilter = null, canEditMovements =
       result = result.filter(tx => tx.contactId === contactIdFilter);
     }
 
-    // Ordenar per data descendent (més recents primer)
-    return [...result].sort((a, b) => {
-      const dateA = new Date(getDisplayDate(a)).getTime();
-      const dateB = new Date(getDisplayDate(b)).getTime();
-      return sortDateAsc ? dateA - dateB : dateB - dateA;
+    // Ordenar per data (criteri principal) i, en grups fiables, per saldo intra-dia
+    return sortTransactionsForTable(result, {
+      sortDateAsc,
+      getDisplayDate,
     });
   }, [transactions, tableFilter, expensesWithoutDoc, returnTransactions, uncategorizedTransactions, noContactTransactions, donationsNoContactTransactions, sortDateAsc, searchQuery, contactMap, projectMap, getCategoryDisplayName, hideRemittanceItems, contactIdFilter, donorMembershipMap, sourceFilter, bankAccountFilter, getDisplayDate]);
 
