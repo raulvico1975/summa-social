@@ -683,13 +683,6 @@ export function DonationsReportGenerator() {
     });
   };
 
-  const selectedFiscalYear = Number.parseInt(selectedYear, 10);
-  const currentCalendarYear = new Date().getFullYear();
-  const filingYear = Number.isFinite(selectedFiscalYear) ? selectedFiscalYear + 1 : currentCalendarYear + 1;
-  const recommendedFiscalYear = currentCalendarYear - 1;
-  const isCurrentFiscalYear = selectedFiscalYear === currentCalendarYear;
-
-
   return (
       <Card>
         <CardHeader>
@@ -700,20 +693,6 @@ export function DonationsReportGenerator() {
                   {t.reports.donationsReportTitle}
                 </CardTitle>
                 <CardDescription>{t.reports.donationsReportDescription}</CardDescription>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  {tr('reports.fiscalYearContext', 'Exercici fiscal {year}. Presentació habitual: any {filingYear}.')
-                    .replace('{year}', selectedYear)
-                    .replace('{filingYear}', String(filingYear))}
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  {tr('reports.fiscalYearRecommendation', 'Recomanació: treballa amb exercici tancat (normalment {recommendedYear}).')
-                    .replace('{recommendedYear}', String(recommendedFiscalYear))}
-                </p>
-                {isCurrentFiscalYear && (
-                  <p className="text-xs text-amber-700">
-                    {tr('reports.fiscalYearCurrentWarning', "Has seleccionat l'any en curs. Revisa si vols l'exercici tancat per a presentació fiscal.")}
-                  </p>
-                )}
               </div>
               <div className={cn(MOBILE_ACTIONS_BAR, "sm:justify-end")}>
                 <Select value={selectedYear} onValueChange={setSelectedYear}>
