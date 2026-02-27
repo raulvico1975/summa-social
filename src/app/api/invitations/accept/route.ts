@@ -25,6 +25,15 @@ interface AcceptResponse {
   error?: string;
 }
 
+function isOrganizationRole(value: unknown): value is OrganizationRole {
+  return value === 'admin' || value === 'user' || value === 'viewer';
+}
+
+function defaultCapabilitiesForRole(role: OrganizationRole): Record<string, boolean> {
+  if (role === 'admin') return {};
+  return ROLE_DEFAULT_CAPABILITIES[role] ?? { 'moviments.read': true };
+}
+
 export async function POST(
   request: NextRequest
 ): Promise<NextResponse<AcceptResponse>> {
@@ -73,27 +82,46 @@ export async function POST(
       return NextResponse.json({ success: false, error: 'email_mismatch' }, { status: 403 });
     }
 
-    if (invData.role !== role) {
+    const invitationRole: OrganizationRole = isOrganizationRole(invData.role) ? invData.role : 'user';
+
+    if (!isOrganizationRole(role) || invitationRole !== role) {
       return NextResponse.json({ success: false, error: 'role_mismatch' }, { status: 403 });
     }
 
-    // 4. Batch: crear membre + marcar invitació com usada
+    // 4. Batch: assegurar membre consistent + marcar invitació com usada
     const batch = db.batch();
-
-    // 4a. Crear membre (amb capabilities D1 per enforçament Firestore Rules)
     const memberRef = db.doc(`organizations/${organizationId}/members/${authResult.uid}`);
-    const memberRole = role as OrganizationRole;
-    batch.set(memberRef, {
-      userId: authResult.uid,
-      email,
-      displayName,
-      role,
-      joinedAt: new Date().toISOString(),
-      invitationId,
-      capabilities: memberRole === 'admin' ? {} : ROLE_DEFAULT_CAPABILITIES[memberRole] ?? { 'moviments.read': true },
-    });
+    const memberSnap = await memberRef.get();
 
-    // 4b. Marcar invitació com usada
+    if (!memberSnap.exists) {
+      // Membre nou: crear amb rol i capabilities per defecte.
+      batch.set(memberRef, {
+        userId: authResult.uid,
+        email,
+        displayName,
+        role: invitationRole,
+        joinedAt: new Date().toISOString(),
+        invitationId,
+        capabilities: defaultCapabilitiesForRole(invitationRole),
+      });
+    } else {
+      // Tria A: fill-if-missing.
+      // Si el membre ja existeix i no té capabilities, omplim defaults segons rol.
+      const memberData = memberSnap.data() as Record<string, unknown> | undefined;
+      const hasCapabilities = memberData?.capabilities !== undefined && memberData?.capabilities !== null;
+
+      if (!hasCapabilities) {
+        const existingRole = memberData?.role;
+        const roleForDefaults: OrganizationRole = isOrganizationRole(existingRole)
+          ? existingRole
+          : invitationRole;
+        batch.update(memberRef, {
+          capabilities: defaultCapabilitiesForRole(roleForDefaults),
+        });
+      }
+    }
+
+    // Marcar invitació com usada
     batch.update(invitationRef, {
       usedAt: FieldValue.serverTimestamp(),
       usedBy: authResult.uid,

@@ -11,15 +11,23 @@ import { useFirebase } from '@/firebase';
 import { useTranslations } from '@/i18n';
 import { useToast } from '@/hooks/use-toast';
 import { signInWithEmailAndPassword, setPersistence, browserSessionPersistence, sendPasswordResetEmail } from 'firebase/auth';
-import { doc, getDoc, setDoc, updateDoc, collection, query, where, getDocs } from 'firebase/firestore';
+import { doc, getDoc } from 'firebase/firestore';
 import { Loader2, Building2, AlertCircle, Clock } from 'lucide-react';
 import { isDemoEnv } from '@/lib/demo/isDemoOrg';
-import type { Invitation, OrganizationMember, UserProfile } from '@/lib/data';
 
 interface OrgInfo {
   id: string;
   name: string;
   slug: string;
+}
+
+interface ResolvedInvitation {
+  invitationId: string;
+  organizationId: string;
+  organizationName: string | null;
+  email: string;
+  role: 'admin' | 'user' | 'viewer';
+  expiresAt: string | null;
 }
 
 function resolveAuthLanguage(language: string): string {
@@ -116,85 +124,63 @@ function OrgLoginContent() {
       // Si hi ha inviteToken, completar l'acceptació de la invitació
       if (inviteToken && organization) {
         try {
-          // Buscar la invitació pel token
-          const invitationsRef = collection(firestore, 'invitations');
-          const q = query(invitationsRef, where('token', '==', inviteToken));
-          const querySnapshot = await getDocs(q);
+          const resolveRes = await fetch(`/api/invitations/resolve?token=${encodeURIComponent(inviteToken)}`);
+          const resolveBody = await resolveRes.json().catch(() => ({} as { error?: string }));
 
-          if (!querySnapshot.empty) {
-            const invitationDoc = querySnapshot.docs[0];
-            const invitationData = { id: invitationDoc.id, ...invitationDoc.data() } as Invitation;
-
-            // Verificar que la invitació és per aquesta organització i no ha estat usada
+          if (resolveRes.status === 410) {
+            if (resolveBody.error === 'expired') {
+              toast({
+                variant: 'destructive',
+                title: 'Invitació expirada',
+                description: 'Demana una nova invitació a l\'administrador',
+              });
+            }
+          } else if (!resolveRes.ok) {
+            console.error('Error resolent invitació:', resolveBody);
+          } else {
+            const invitationData = resolveBody as ResolvedInvitation;
+            const loginEmail = (loggedInUser.email || email).toLowerCase();
             const isValidOrg = invitationData.organizationId === organization.id;
-            const isNotUsed = !invitationData.usedAt;
-            // Si la invitació té email específic, verificar que coincideix
-            const emailMatches = !invitationData.email ||
-              invitationData.email.toLowerCase() === (loggedInUser.email || email).toLowerCase();
-            // Verificar que no ha expirat
-            const notExpired = new Date() <= new Date(invitationData.expiresAt);
+            const emailMatches = invitationData.email.toLowerCase() === loginEmail;
 
-            if (isValidOrg && isNotUsed && emailMatches && notExpired) {
-              // Verificar si l'usuari ja és membre
-              const memberRef = doc(
-                firestore,
-                'organizations',
-                organization.id,
-                'members',
-                loggedInUser.uid
-              );
-              const memberSnap = await getDoc(memberRef);
-
-              if (!memberSnap.exists()) {
-                // Afegir l'usuari com a membre
-                // IMPORTANT: invitationId és obligatori per validar a Firestore Rules
-                const memberData: OrganizationMember = {
-                  userId: loggedInUser.uid,
-                  email: loggedInUser.email || email,
-                  displayName: loggedInUser.displayName || email.split('@')[0],
-                  role: invitationData.role,
-                  joinedAt: new Date().toISOString(),
-                  invitedBy: invitationData.createdBy,
-                  invitationId: invitationData.id,
-                };
-                await setDoc(memberRef, memberData);
-
-                // Actualitzar el perfil d'usuari si no té organització
-                const userProfileRef = doc(firestore, 'users', loggedInUser.uid);
-                const userProfileSnap = await getDoc(userProfileRef);
-                if (!userProfileSnap.exists()) {
-                  const userProfile: UserProfile = {
-                    organizationId: organization.id,
-                    role: invitationData.role,
-                    displayName: loggedInUser.displayName || email.split('@')[0],
-                  };
-                  await setDoc(userProfileRef, userProfile);
-                }
-
-                // Marcar la invitació com a usada
-                const invitationRef = doc(firestore, 'invitations', invitationData.id);
-                await updateDoc(invitationRef, {
-                  usedAt: new Date().toISOString(),
-                  usedBy: loggedInUser.uid,
-                });
-
-                toast({
-                  title: 'Invitació acceptada!',
-                  description: `T'has unit a ${organization.name}`,
-                });
-              }
+            if (!isValidOrg) {
+              toast({
+                variant: 'destructive',
+                title: 'Invitació no vàlida',
+                description: 'Aquesta invitació no correspon a aquesta organització',
+              });
             } else if (!emailMatches) {
               toast({
                 variant: 'destructive',
                 title: 'Email no coincideix',
                 description: `Aquesta invitació és per ${invitationData.email}`,
               });
-            } else if (!notExpired) {
-              toast({
-                variant: 'destructive',
-                title: 'Invitació expirada',
-                description: 'Demana una nova invitació a l\'administrador',
+            } else {
+              const idToken = await loggedInUser.getIdToken();
+              const acceptRes = await fetch('/api/invitations/accept', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  Authorization: `Bearer ${idToken}`,
+                },
+                body: JSON.stringify({
+                  invitationId: invitationData.invitationId,
+                  organizationId: invitationData.organizationId,
+                  displayName: loggedInUser.displayName || email.split('@')[0],
+                  email: loggedInUser.email || email,
+                  role: invitationData.role,
+                }),
               });
+
+              const acceptBody = await acceptRes.json().catch(() => ({} as { error?: string }));
+              if (acceptRes.ok) {
+                toast({
+                  title: 'Invitació acceptada!',
+                  description: `T'has unit a ${organization.name}`,
+                });
+              } else if (!(acceptRes.status === 410 && acceptBody.error === 'already_used')) {
+                console.error('Error acceptant invitació:', acceptBody);
+              }
             }
           }
         } catch (inviteErr) {
