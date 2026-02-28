@@ -147,17 +147,49 @@ export function DedupeCandidateResolver({
           <div className={`grid grid-cols-1 gap-2 ${hasMappedBalance ? 'sm:grid-cols-3' : 'sm:grid-cols-2'}`}>
             <div className="rounded-md border p-3 text-sm">
               <p className="font-medium">{tr('importers.transaction.preview.dateRange', 'Rang de dates de l’extracte importat')}</p>
-              <p className="text-muted-foreground">
-                {parseSummary.dateRange
-                  ? `${formatDate(parseSummary.dateRange.from)} - ${formatDate(parseSummary.dateRange.to)}`
-                  : '—'}
-              </p>
+              {parseSummary.dateRange ? (
+                <div className="mt-2 space-y-2">
+                  <div className="flex items-center justify-between gap-3 text-muted-foreground">
+                    <span className="text-xs uppercase tracking-wide">
+                      {tr('importers.transaction.preview.fromDate', 'Des de')}
+                    </span>
+                    <span className="font-medium text-foreground">
+                      {formatDate(parseSummary.dateRange.from)}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between gap-3 text-muted-foreground">
+                    <span className="text-xs uppercase tracking-wide">
+                      {tr('importers.transaction.preview.toDate', 'Fins a')}
+                    </span>
+                    <span className="font-medium text-foreground">
+                      {formatDate(parseSummary.dateRange.to)}
+                    </span>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-muted-foreground">—</p>
+              )}
             </div>
             <div className="rounded-md border p-3 text-sm">
               <p className="font-medium">{tr('importers.transaction.preview.totals', 'Totals de l’extracte importat')}</p>
-              <p className="text-muted-foreground">
-                {`${tr('importers.transaction.preview.income', 'Ingressos')}: ${formatAmount(parseSummary.totals.income)} · ${tr('importers.transaction.preview.expense', 'Despeses')}: ${formatAmount(-Math.abs(parseSummary.totals.expense))}`}
-              </p>
+              <div className="mt-2 space-y-2">
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-muted-foreground">
+                    {tr('importers.transaction.preview.income', 'Ingressos')}
+                  </span>
+                  <span className="font-medium tabular-nums text-emerald-700 dark:text-emerald-300">
+                    {formatAmount(parseSummary.totals.income)}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-muted-foreground">
+                    {tr('importers.transaction.preview.expense', 'Despeses')}
+                  </span>
+                  <span className="font-medium tabular-nums text-rose-700 dark:text-rose-300">
+                    {formatAmount(-Math.abs(parseSummary.totals.expense))}
+                  </span>
+                </div>
+              </div>
             </div>
             {hasMappedBalance && parseSummary.balances && (
               <div className="rounded-md border p-3 text-sm">
