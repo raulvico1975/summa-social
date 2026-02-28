@@ -17,7 +17,8 @@ export type LockOperation =
   | 'returnImport'
   | 'remittanceSplit'
   | 'stripeSplit'
-  | 'undoRemittance';
+  | 'undoRemittance'
+  | 'undoSplit';
 
 export interface ProcessLock {
   lockedAt: Timestamp;

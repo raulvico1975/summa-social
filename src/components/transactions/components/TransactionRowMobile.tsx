@@ -31,6 +31,7 @@ import {
 import type { Transaction, ContactType } from '@/lib/data';
 import { formatCurrencyEU, formatDateShort } from '@/lib/normalize';
 import type { DeleteTransactionBlockedReason } from '@/lib/transactions/can-delete-transaction';
+import { canShowUndoSplitAction } from '@/lib/splits/split-visibility';
 
 /**
  * Helper: middle ellipsis per a noms llargs
@@ -50,6 +51,8 @@ interface TransactionRowMobileProps {
   onEdit: (tx: Transaction) => void;
   onDelete: (tx: Transaction) => void;
   onSplitAmount?: (tx: Transaction) => void;
+  onOpenSplitDetail?: (txId: string) => void;
+  onUndoSplit?: (txId: string) => void;
   isSplitDeleteBlocked?: boolean;
   deleteBlockedReason?: DeleteTransactionBlockedReason | null;
   onOpenReturnDialog?: (tx: Transaction) => void;
@@ -72,6 +75,8 @@ interface TransactionRowMobileProps {
     deleteBlockedParentRemittance: string;
     deleteBlockedChildRemittance: string;
     viewRemittanceDetail: string;
+    splitProcessedLabel?: string;
+    undoSplit?: string;
     remittanceQuotes: string;
     manageReturn?: string;
     generateReturnEmail?: string;
@@ -88,6 +93,8 @@ export const TransactionRowMobile = React.memo(function TransactionRowMobile({
   onEdit,
   onDelete,
   onSplitAmount,
+  onOpenSplitDetail,
+  onUndoSplit,
   isSplitDeleteBlocked,
   deleteBlockedReason,
   onOpenReturnDialog,
@@ -188,6 +195,24 @@ export const TransactionRowMobile = React.memo(function TransactionRowMobile({
     }, 50);
   }, [tx.id, onViewRemittanceDetail]);
 
+  const handleOpenSplitDetail = React.useCallback(() => {
+    if (!onOpenSplitDetail) return;
+    setIsMenuOpen(false);
+    setTimeout(() => {
+      if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
+      onOpenSplitDetail(tx.id);
+    }, 50);
+  }, [onOpenSplitDetail, tx.id]);
+
+  const handleUndoSplit = React.useCallback(() => {
+    if (!onUndoSplit) return;
+    setIsMenuOpen(false);
+    setTimeout(() => {
+      if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
+      onUndoSplit(tx.id);
+    }, 50);
+  }, [onUndoSplit, tx.id]);
+
   const handleAttachDoc = React.useCallback(() => {
     if (!onAttachDocument) return;
     setIsMenuOpen(false);
@@ -259,7 +284,7 @@ export const TransactionRowMobile = React.memo(function TransactionRowMobile({
       </div>
 
       {/* Middle: Badges (type + remittance) */}
-      {(isReturn || isReturnFee || isReturnedDonation || tx.isRemittance) && (
+      {(isReturn || isReturnFee || isReturnedDonation || tx.isRemittance || canShowUndoSplitAction(tx)) && (
         <div className="mt-2 flex flex-wrap gap-1">
           {isReturn && (
             <Badge variant="destructive" className="gap-0.5 text-xs py-0 px-1.5">
@@ -288,6 +313,15 @@ export const TransactionRowMobile = React.memo(function TransactionRowMobile({
               {tx.remittanceResolvedCount ?? tx.remittanceItemCount}/{tx.remittanceItemCount} {t.remittanceQuotes}
             </Badge>
           )}
+          {canShowUndoSplitAction(tx) && onOpenSplitDetail && (
+            <Badge
+              variant="secondary"
+              className="text-xs py-0 px-1.5 cursor-pointer hover:bg-accent"
+              onClick={handleOpenSplitDetail}
+            >
+              {t.splitProcessedLabel || 'Desglossat'}
+            </Badge>
+          )}
         </div>
       )}
 
@@ -310,7 +344,7 @@ export const TransactionRowMobile = React.memo(function TransactionRowMobile({
               <MoreVertical className="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
+          <DropdownMenuContent align="end" forceMount>
             <DropdownMenuItem onClick={handleEdit}>
               <Edit className="h-4 w-4 mr-2" />
               {t.edit}
@@ -348,6 +382,12 @@ export const TransactionRowMobile = React.memo(function TransactionRowMobile({
               <DropdownMenuItem onClick={handleSplitAmount}>
                 <GitMerge className="h-4 w-4 mr-2" />
                 {t.splitAmount}
+              </DropdownMenuItem>
+            )}
+            {canShowUndoSplitAction(tx) && onUndoSplit && (
+              <DropdownMenuItem onClick={handleUndoSplit} className="text-orange-600">
+                <Undo2 className="h-4 w-4 mr-2" />
+                {t.undoSplit || 'Desfer desglossament'}
               </DropdownMenuItem>
             )}
             {deleteBlockedMessage ? (
