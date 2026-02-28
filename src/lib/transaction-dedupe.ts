@@ -300,9 +300,10 @@ export function classifyTransactions(
       existingByBalanceAmountDateKey.set(balanceAmountDateKey, arr);
     }
 
+    const existingBalanceAfter = etx.balanceAfter;
     const existingHasLegacyShape =
-      typeof etx.balanceAfter === 'number' &&
-      Number.isFinite(etx.balanceAfter) &&
+      typeof existingBalanceAfter === 'number' &&
+      Number.isFinite(existingBalanceAfter) &&
       etx.operationDate == null &&
       typeof etx.date === 'string' &&
       etx.date.trim() !== '';
@@ -310,7 +311,7 @@ export function classifyTransactions(
     if (existingHasLegacyShape) {
       const legacyBalanceKey = createLegacyBalanceProxyDateKey({
         amount: etx.amount,
-        balanceAfter: etx.balanceAfter,
+        balanceAfter: existingBalanceAfter,
         proxyDate: etx.date,
         bankAccountId: etx.bankAccountId,
       });

@@ -339,9 +339,7 @@ export function DangerZone() {
       let queryConstraint: ReturnType<typeof where> | null = null;
       let deletedCount = 0;
 
-      if (deleteType === 'transactions') {
-        collectionPath = `organizations/${organizationId}/transactions`;
-      } else if (deleteType === 'categories') {
+      if (deleteType === 'categories') {
         collectionPath = `organizations/${organizationId}/categories`;
       } else {
         collectionPath = `organizations/${organizationId}/contacts`;
@@ -366,23 +364,6 @@ export function DangerZone() {
         setConfirmText('');
         setIsDeleting(false);
         return;
-      }
-
-      // Guardrail: bloquejar delete de transaccions amb vincle a projectes
-      if (deleteType === 'transactions') {
-        const txIds = snapshot.docs.map(d => d.id);
-        const linkedIds = await findLinkedTxIds(firestore, organizationId, txIds);
-        if (linkedIds.length > 0) {
-          toast({
-            variant: 'destructive',
-            title: t.dangerZone.blockedByProjectLinks ?? 'Moviments assignats a projectes',
-            description: (t.dangerZone.blockedByProjectLinksCount ?? '{{count}} moviments tenen assignacions a projectes.').replace('{{count}}', String(linkedIds.length)),
-          });
-          setDeleteType(null);
-          setConfirmText('');
-          setIsDeleting(false);
-          return;
-        }
       }
 
       // Esborrar en batches de 500 (límit de Firestore)

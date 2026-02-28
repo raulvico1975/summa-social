@@ -19,3 +19,4 @@ Registre curt d'incidències de deploy bloquejat o incomplet.
 | 2026-02-28 18:08 | Resum predeploy | ALT | 4a379c8 | aa7407f | BLOCKED_SAFE | Comprovacio no superada a la fase: Resum predeploy | Pendent |
 | 2026-02-28 19:01 | Preflight git | BAIX | fa0bfbc | 885ab58 | BLOCKED_SAFE | Hi ha canvis pendents sense tancar abans de publicar. | Pendent |
 | 2026-02-28 19:01 | Preflight git | BAIX | dc0587d | 885ab58 | BLOCKED_SAFE | Hi ha canvis pendents sense tancar abans de publicar. | Pendent |
+| 2026-02-28 19:34 | Verificacions | ALT | d0291b3 | 2e5ef88 | BLOCKED_SAFE | La verificacio de CI no ha passat. | Pendent |
