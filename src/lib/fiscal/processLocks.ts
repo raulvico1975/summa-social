@@ -59,28 +59,6 @@ const DEFAULT_TTL_SECONDS = 90;
 // =============================================================================
 
 /**
- * Helper pur per decidir si un lock continua actiu en un instant donat.
- */
-export function isLockActive(expiresAtMillis: number, nowMillis: number): boolean {
-  return expiresAtMillis > nowMillis;
-}
-
-/**
- * Helper pur per construir el resultat de conflicte de lock.
- */
-export function buildLockConflictResult(
-  lockedByUid: string,
-  operation: LockOperation
-): AcquireLockResult {
-  return {
-    ok: false,
-    reason: 'locked_by_other',
-    lockedByUid,
-    operation,
-  };
-}
-
-/**
  * Adquireix un lock atòmic per processar una transacció pare.
  *
  * Usa runTransaction() per garantir atomicitat:
@@ -119,9 +97,14 @@ export async function acquireProcessLock(
         const lockData = lockDoc.data() as ProcessLock;
 
         // Comprovar si el lock ha expirat
-        if (isLockActive(lockData.expiresAt.toMillis(), now.toMillis())) {
+        if (lockData.expiresAt.toMillis() > now.toMillis()) {
           // Lock actiu - no podem adquirir
-          return buildLockConflictResult(lockData.lockedByUid, lockData.operation);
+          return {
+            ok: false as const,
+            reason: 'locked_by_other' as const,
+            lockedByUid: lockData.lockedByUid,
+            operation: lockData.operation,
+          };
         }
         // Lock expirat - podem sobreescriure
       }

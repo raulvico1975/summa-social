@@ -29,21 +29,6 @@ export type ArchiveAction =
 // =============================================================================
 
 /**
- * Divideix una llista en chunks de mida màxima indicada.
- */
-export function chunkIds<T>(items: T[], chunkSize = BATCH_SIZE): T[][] {
-  if (chunkSize <= 0) {
-    return [items];
-  }
-
-  const chunks: T[][] = [];
-  for (let i = 0; i < items.length; i += chunkSize) {
-    chunks.push(items.slice(i, i + chunkSize));
-  }
-  return chunks;
-}
-
-/**
  * Obté els IDs de filles actives d'una remesa
  *
  * Estratègia:
@@ -69,7 +54,8 @@ export async function getActiveChildTransactionIds(
     // Verificar que les filles encara estan actives
     const activeIds: string[] = [];
 
-    for (const chunk of chunkIds(transactionIdsFromDoc)) {
+    for (let i = 0; i < transactionIdsFromDoc.length; i += BATCH_SIZE) {
+      const chunk = transactionIdsFromDoc.slice(i, i + BATCH_SIZE);
 
       // Verificar en paral·lel
       const checks = await Promise.all(
@@ -148,7 +134,8 @@ export async function softArchiveTransactionsByIds(
   const now = new Date().toISOString();
   let archivedCount = 0;
 
-  for (const chunk of chunkIds(transactionIds)) {
+  for (let i = 0; i < transactionIds.length; i += BATCH_SIZE) {
+    const chunk = transactionIds.slice(i, i + BATCH_SIZE);
     const batch = db.batch();
 
     for (const txId of chunk) {
@@ -185,7 +172,8 @@ export async function deletePendingItems(
 
   let deletedCount = 0;
 
-  for (const chunk of chunkIds(pendingSnap.docs)) {
+  for (let i = 0; i < pendingSnap.docs.length; i += BATCH_SIZE) {
+    const chunk = pendingSnap.docs.slice(i, i + BATCH_SIZE);
     const batch = db.batch();
 
     for (const doc of chunk) {

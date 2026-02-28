@@ -41,52 +41,6 @@ export interface UndoResult {
 // =============================================================================
 
 /**
- * Resolveix el recompte de filles amb fallback parentTransactionId -> remittanceId.
- */
-export function resolveUndoChildCount(
-  parentMatchCount: number,
-  remittanceDocIds: string[],
-  parentTxId: string,
-  remittanceId?: string | null
-): number {
-  if (parentMatchCount > 0) {
-    return parentMatchCount;
-  }
-
-  if (!remittanceId) {
-    return 0;
-  }
-
-  return remittanceDocIds.filter((id) => id !== parentTxId).length;
-}
-
-/**
- * Planifica la mida de cada chunk respectant límit batch i operacions extra finals.
- */
-export function planUndoChunkSizes(
-  totalChildren: number,
-  batchSize = 50,
-  extraOpsInLastBatch = 1
-): number[] {
-  if (totalChildren <= 0) {
-    return [];
-  }
-
-  const sizes: number[] = [];
-  const lastChunkMaxSize = Math.max(1, batchSize - extraOpsInLastBatch);
-  let remaining = totalChildren;
-
-  while (remaining > 0) {
-    const isLastChunk = remaining <= batchSize;
-    const take = isLastChunk ? Math.min(lastChunkMaxSize, remaining) : batchSize;
-    sizes.push(take);
-    remaining -= take;
-  }
-
-  return sizes;
-}
-
-/**
  * Detecta el tipus d'operació a desfer basant-se en la transacció pare
  */
 export function detectUndoOperationType(tx: Transaction): UndoOperationType | null {
@@ -198,20 +152,19 @@ export async function countChildTransactions(
     where('parentTransactionId', '==', parentTxId)
   );
   const byParentSnap = await getDocs(byParentQuery);
-  const byParentCount = byParentSnap.size;
+  count = byParentSnap.size;
 
   // Mètode 2: remittanceId (remeses legacy)
-  let remittanceDocIds: string[] = [];
-  if (remittanceId && byParentCount === 0) {
+  if (remittanceId && count === 0) {
     const byRemittanceQuery = query(
       transactionsRef,
       where('remittanceId', '==', remittanceId)
     );
     const byRemittanceSnap = await getDocs(byRemittanceQuery);
-    remittanceDocIds = byRemittanceSnap.docs.map((d) => d.id);
+    // No comptar el pare
+    count = byRemittanceSnap.docs.filter(d => d.id !== parentTxId).length;
   }
 
-  count = resolveUndoChildCount(byParentCount, remittanceDocIds, parentTxId, remittanceId);
   return count;
 }
 
@@ -284,14 +237,18 @@ export async function executeUndo(
     let archivedCount = 0;
     let deletedCount = 0;
 
-    // Processar filles en chunks de 50 (reservant ops finals al darrer batch)
+    // Processar filles en chunks de 50
+    // Reservem operacions per l'últim batch (reset pare + delete remesa)
     const extraOps = parentTx.remittanceId ? 2 : 1;
-    const chunkSizes = planUndoChunkSizes(children.length, BATCH_SIZE, extraOps);
+    const lastChunkMaxSize = BATCH_SIZE - extraOps;
 
     let cursor = 0;
-    for (const size of chunkSizes) {
-      const chunk = children.slice(cursor, cursor + size);
-      cursor += size;
+    while (cursor < children.length) {
+      const remaining = children.length - cursor;
+      const isLastChunk = remaining <= BATCH_SIZE;
+      const take = isLastChunk ? Math.min(lastChunkMaxSize, remaining) : BATCH_SIZE;
+      const chunk = children.slice(cursor, cursor + take);
+      cursor += take;
       const batch = writeBatch(firestore);
 
       for (const child of chunk) {

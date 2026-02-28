@@ -4,8 +4,8 @@ set -e
 echo "[verify-ci] Typecheck..."
 npm run typecheck
 
-echo "[verify-ci] Tests + coverage (report-only)..."
-npm run test:coverage
+echo "[verify-ci] Tests..."
+npm test
 
 echo "[verify-ci] Support golden set eval..."
 npm run support:eval
