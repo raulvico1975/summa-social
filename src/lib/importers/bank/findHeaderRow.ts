@@ -1,17 +1,57 @@
-const HEADER_SCAN_LIMIT = 20;
-const CORE_MATCH_WEIGHT = 2;
-const OPTIONAL_MATCH_WEIGHT = 1;
-const MIN_CORE_CATEGORIES = 2;
-const MIN_TOTAL_SCORE = 4;
+export const DEFAULT_HEADER_SCAN_LIMIT = 120;
+const DEFAULT_MIN_ESSENTIAL_MATCHES = 3;
+const DEFAULT_MAX_CANDIDATES = 5;
 
-type HeaderCategory = 'date' | 'description' | 'amount' | 'balance' | 'reference';
+export type HeaderField =
+  | 'operationDate'
+  | 'valueDate'
+  | 'genericDate'
+  | 'description'
+  | 'amount'
+  | 'balanceAfter'
+  | 'debit'
+  | 'credit'
+  | 'reference'
+  | 'category'
+  | 'subcategory'
+  | 'comment';
 
-const HEADER_KEYWORDS: Record<HeaderCategory, string[]> = {
-  date: ['data', 'fecha', 'date', 'valor', 'operacion', 'operacion', 'ejecucion', 'ejecucion'],
-  description: ['concepte', 'concepto', 'descripcion', 'descripcion', 'descripcio', 'description', 'detalle', 'detall'],
-  amount: ['import', 'importe', 'amount', 'cantidad', 'quantitat'],
-  balance: ['saldo', 'balance'],
-  reference: ['referencia', 'referencia', 'referencia 1', 'referencia 2', 'ref'],
+type EssentialCategory = 'date' | 'description' | 'amount';
+
+export const DEFAULT_BANK_HEADER_SYNONYMS: Record<HeaderField, string[]> = {
+  operationDate: [
+    'd operativa',
+    'd. operativa',
+    'fecha operacion',
+    'fecha operación',
+    'data operacio',
+    'data operació',
+    'f operacion',
+    'f. operacion',
+    'f operación',
+    'f. operación',
+    'f ejecucion',
+    'f. ejecucion',
+    'f ejecución',
+    'f. ejecución',
+  ],
+  valueDate: [
+    'd valor',
+    'd. valor',
+    'fecha valor',
+    'f valor',
+    'f. valor',
+  ],
+  genericDate: ['fecha', 'data', 'date'],
+  description: ['concepte', 'concepto', 'descripcion', 'descripción', 'detalle', 'detall'],
+  amount: ['import', 'importe', 'importe eur', 'importe €', 'amount', 'cantidad'],
+  balanceAfter: ['saldo', 'saldo eur', 'saldo €', 'balance'],
+  debit: ['debe', 'càrrec', 'cargo', 'debit'],
+  credit: ['haber', 'abonament', 'abono', 'credit'],
+  reference: ['referencia', 'referencia 1', 'referencia 2', 'ref'],
+  category: ['categoria', 'categoría'],
+  subcategory: ['subcategoria', 'subcategoría'],
+  comment: ['comentario', 'comentari', 'comment'],
 };
 
 const removeAccents = (value: string): string => {
@@ -70,87 +110,143 @@ const getCategoryMatchCount = (cells: string[], keywords: string[]): number => {
 type RowEvaluation = {
   index: number;
   score: number;
-  coreMatched: number;
-  matchedByCategory: Partial<Record<HeaderCategory, number>>;
+  essentialMatched: number;
+  matchedFields: HeaderField[];
+  matchedByField: Partial<Record<HeaderField, number>>;
+  essentialFlags: Record<EssentialCategory, boolean>;
+  lowConfidence: boolean;
 };
 
-const evaluateRow = (row: unknown[], index: number): RowEvaluation => {
+type EvaluateOptions = {
+  synonyms: Record<HeaderField, string[]>;
+  minEssentialMatches: number;
+};
+
+const evaluateRow = (row: unknown[], index: number, options: EvaluateOptions): RowEvaluation => {
   const cells = row.map(normalizeCell).filter(Boolean);
-  const matchedByCategory: Partial<Record<HeaderCategory, number>> = {};
-  let score = 0;
-  let coreMatched = 0;
+  const matchedByField: Partial<Record<HeaderField, number>> = {};
+  const matchedFields: HeaderField[] = [];
 
-  for (const [category, keywords] of Object.entries(HEADER_KEYWORDS) as [HeaderCategory, string[]][]) {
+  for (const [field, keywords] of Object.entries(options.synonyms) as [HeaderField, string[]][]) {
     const matches = getCategoryMatchCount(cells, keywords);
-    if (matches <= 0) continue;
-
-    matchedByCategory[category] = matches;
-
-    if (category === 'date' || category === 'description' || category === 'amount') {
-      coreMatched += 1;
-      score += CORE_MATCH_WEIGHT;
-    } else {
-      score += OPTIONAL_MATCH_WEIGHT;
-    }
-
-    // Bonus conservador si dins la mateixa categoria hi ha 2+ matches
-    if (matches > 1) {
-      score += 1;
+    if (matches > 0) {
+      matchedByField[field] = matches;
+      matchedFields.push(field);
     }
   }
 
-  return { index, score, coreMatched, matchedByCategory };
+  const essentialFlags: Record<EssentialCategory, boolean> = {
+    date: Boolean(
+      matchedByField.operationDate
+      || matchedByField.valueDate
+      || matchedByField.genericDate
+    ),
+    description: Boolean(matchedByField.description),
+    amount: Boolean(matchedByField.amount || matchedByField.debit || matchedByField.credit),
+  };
+
+  const essentialMatched = Object.values(essentialFlags).filter(Boolean).length;
+  const score = matchedFields.length;
+  const lowConfidence = essentialMatched < options.minEssentialMatches;
+
+  return {
+    index,
+    score,
+    essentialMatched,
+    matchedFields,
+    matchedByField,
+    essentialFlags,
+    lowConfidence,
+  };
+};
+
+export type HeaderCandidate = {
+  index: number;
+  score: number;
+  essentialMatched: number;
+  matchedFields: HeaderField[];
+  matchedByField: Partial<Record<HeaderField, number>>;
+  lowConfidence: boolean;
 };
 
 export type HeaderRowDetection = {
   index: number | null;
   score: number;
+  lowConfidence: boolean;
+  topCandidates: HeaderCandidate[];
   reasons: string[];
 };
 
-export function findHeaderRow(rows: unknown[][]): HeaderRowDetection {
+type FindHeaderRowOptions = {
+  scanLimit?: number;
+  minEssentialMatches?: number;
+  maxCandidates?: number;
+  synonyms?: Partial<Record<HeaderField, string[]>>;
+};
+
+export function findHeaderRow(rows: unknown[][], options: FindHeaderRowOptions = {}): HeaderRowDetection {
   if (!Array.isArray(rows) || rows.length === 0) {
-    return { index: null, score: 0, reasons: ['No rows available'] };
-  }
-
-  let bestCandidate: RowEvaluation | null = null;
-
-  const scanLimit = Math.min(rows.length, HEADER_SCAN_LIMIT);
-  for (let i = 0; i < scanLimit; i++) {
-    const row = Array.isArray(rows[i]) ? rows[i] : [];
-    const evaluated = evaluateRow(row, i);
-    const isCandidate = evaluated.coreMatched >= MIN_CORE_CATEGORIES && evaluated.score >= MIN_TOTAL_SCORE;
-    if (!isCandidate) continue;
-
-    if (
-      !bestCandidate
-      || evaluated.score > bestCandidate.score
-      || (evaluated.score === bestCandidate.score && evaluated.coreMatched > bestCandidate.coreMatched)
-      || (
-        evaluated.score === bestCandidate.score
-        && evaluated.coreMatched === bestCandidate.coreMatched
-        && evaluated.index < bestCandidate.index
-      )
-    ) {
-      bestCandidate = evaluated;
-    }
-  }
-
-  if (!bestCandidate) {
     return {
       index: null,
       score: 0,
-      reasons: [`No candidate met confidence rules (minCore=${MIN_CORE_CATEGORIES}, minScore=${MIN_TOTAL_SCORE})`],
+      lowConfidence: true,
+      topCandidates: [],
+      reasons: ['No rows available'],
     };
   }
 
-  const categories = (Object.keys(bestCandidate.matchedByCategory) as HeaderCategory[]).join(', ');
+  const scanLimit = Math.min(rows.length, options.scanLimit ?? DEFAULT_HEADER_SCAN_LIMIT);
+  const minEssentialMatches = options.minEssentialMatches ?? DEFAULT_MIN_ESSENTIAL_MATCHES;
+  const maxCandidates = options.maxCandidates ?? DEFAULT_MAX_CANDIDATES;
+  const synonyms = {
+    ...DEFAULT_BANK_HEADER_SYNONYMS,
+    ...options.synonyms,
+  };
+
+  const evaluatedRows: RowEvaluation[] = [];
+  for (let i = 0; i < scanLimit; i++) {
+    const row = Array.isArray(rows[i]) ? rows[i] : [];
+    const evaluated = evaluateRow(row, i, { synonyms, minEssentialMatches });
+    if (evaluated.score > 0) {
+      evaluatedRows.push(evaluated);
+    }
+  }
+
+  if (evaluatedRows.length === 0) {
+    return {
+      index: null,
+      score: 0,
+      lowConfidence: true,
+      topCandidates: [],
+      reasons: ['No candidate row matched header synonyms'],
+    };
+  }
+
+  const sortedCandidates = evaluatedRows
+    .sort((a, b) => {
+      if (b.score !== a.score) return b.score - a.score;
+      if (b.essentialMatched !== a.essentialMatched) return b.essentialMatched - a.essentialMatched;
+      return b.index - a.index;
+    });
+  const bestCandidate = sortedCandidates[0];
+  const topCandidates: HeaderCandidate[] = sortedCandidates.slice(0, maxCandidates).map((candidate) => ({
+    index: candidate.index,
+    score: candidate.score,
+    essentialMatched: candidate.essentialMatched,
+    matchedFields: candidate.matchedFields,
+    matchedByField: candidate.matchedByField,
+    lowConfidence: candidate.lowConfidence,
+  }));
+
   return {
     index: bestCandidate.index,
     score: bestCandidate.score,
+    lowConfidence: bestCandidate.lowConfidence,
+    topCandidates,
     reasons: [
-      `Matched categories: ${categories}`,
-      `Core categories matched: ${bestCandidate.coreMatched}`,
+      `Matched fields: ${bestCandidate.matchedFields.join(', ')}`,
+      `Essential matched: ${bestCandidate.essentialMatched}/${minEssentialMatches}`,
+      `Low confidence: ${bestCandidate.lowConfidence ? 'yes' : 'no'}`,
       `Total score: ${bestCandidate.score}`,
     ],
   };

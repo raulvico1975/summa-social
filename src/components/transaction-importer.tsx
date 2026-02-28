@@ -37,12 +37,23 @@ import Link from 'next/link';
 import { suggestPendingDocumentMatches } from '@/lib/pending-documents';
 import { classifyTransactions, type ClassifiedRow } from '@/lib/transaction-dedupe';
 import { DedupeCandidateResolver } from '@/components/dedupe-candidate-resolver';
+import { RemittanceStyleMappingStep } from '@/components/importers/remittance-style-mapping-step';
 import {
-  findHeaderRow,
-  findColumnIndexByKeywords,
-  findRawValueByKeywords,
-  normalizeCell,
-} from '@/lib/importers/bank/findHeaderRow';
+  BankStatementParseError,
+  parseBankStatementRows,
+  shouldOpenManualMapping,
+  type ColumnMappingOverride,
+  type ParseBankStatementResult,
+  type ParseRiskSignals,
+  type ParseSummary,
+  type ParsedBankStatementRow,
+} from '@/lib/importers/bank/bankStatementParser';
+import {
+  buildBankMappingColumnOptions,
+  buildBankMappingPreviewRows,
+  getBankMappingColumnCount,
+  type BankMappingFieldId,
+} from '@/lib/importers/bank/mapping-ui';
 
 interface ImportTransactionsApiResponse {
   success: boolean;
@@ -77,22 +88,6 @@ function getDateRangeFromParsedRows(
 
   return { minDate: rangeValues[0], maxDate: rangeValues[rangeValues.length - 1] };
 }
-
-function parseAmount(value: unknown): number {
-  if (typeof value === 'number') {
-    return value;
-  }
-
-  if (typeof value !== 'string') return NaN;
-  const normalized = value.replace(/\./g, '').replace(',', '.');
-  return parseFloat(normalized);
-}
-
-function parseOperationDate(rawDate: unknown): string | null {
-  const parsed = parseSingleDate(rawDate);
-  return parsed && isIsoDateOnly(parsed) ? parsed : null;
-}
-
 
 /**
  * Fetch global de transaccions existents per (orgId, bankAccountId, rang de dates)
@@ -139,94 +134,42 @@ async function fetchExistingTransactionsForDedupe(
 
 // ═══════════════════════════════════════════════════════════════════════════════
 
-const DATE_COLUMN_NAMES = [
-  'f. valor',
-  'f valor',
-  'fecha valor',
-  'fecha operación',
-  'fecha operacion',
-  'fecha',
-  'f. ejecución',
-  'f. ejecucion',
-  'f ejecucion',
-  'data',
-  'date',
-  'valor',
-];
-const DESCRIPTION_COLUMN_NAMES = [
-  'concepte',
-  'concepto',
-  'descripción',
-  'descripcion',
-  'descripció',
-  'descripcio',
-  'description',
-  'detalle',
-  'detall',
-];
-const AMOUNT_COLUMN_NAMES = ['import', 'importe', 'amount', 'cantidad', 'quantitat'];
-const BALANCE_COLUMN_NAMES = ['saldo', 'balance'];
-const OPERATION_DATE_COLUMN_NAMES = [
-  'f. ejecución',
-  'f. ejecucion',
-  'f ejecucion',
-  'fecha ejecución',
-  'fecha ejecucion',
-  'fecha operación',
-  'fecha operacion',
-  'operación',
-  'operacion',
-];
-const VALUE_DATE_COLUMN_NAMES = ['f. valor', 'f valor', 'fecha valor', 'valor'];
-const GENERIC_DATE_COLUMN_NAMES = ['fecha', 'data', 'date'];
+const toIsoDateTime = (dateOnly: string): string => `${dateOnly}T00:00:00.000Z`;
 
-const LEGACY_HEADER_KEYWORDS = ['fecha', 'concepto', 'importe', 'descrip', 'amount'];
-
-const findColumnIndex = (header: string[], potentialNames: string[]): number => {
-  return findColumnIndexByKeywords(header, potentialNames);
-};
-
-const isLegacyHeaderRow = (row: unknown[]): boolean => {
-  const rowString = row.map((cell) => String(cell ?? '')).join(' ').toLowerCase();
-  const matches = LEGACY_HEADER_KEYWORDS.filter((keyword) => rowString.includes(keyword)).length;
-  return matches >= 2;
-};
-
-const isRowCompletelyEmpty = (row: unknown[]): boolean => {
-  return row.every((cell) => normalizeCell(cell) === '');
-};
-
-
-/**
- * Cerca un valor en rawRow per nom de columna (fuzzy, case-insensitive substring)
- */
-const findRawValue = (rawRow: Record<string, any>, potentialNames: string[]): any => {
-  return findRawValueByKeywords(rawRow as Record<string, unknown>, potentialNames);
-};
-
-/**
- * Parseja un valor de data (Date, DD/MM/YYYY, YYYY-MM-DD) a YYYY-MM-DD string
- */
-const parseSingleDate = (val: any): string | null => {
-  if (!val) return null;
-  let d: Date;
-  if (val instanceof Date) {
-    d = val;
-  } else {
-    const s = String(val);
-    const parts = s.match(/(\d{1,2})[/-](\d{1,2})[/-](\d{2,4})/);
-    if (parts) {
-      let year = parseInt(parts[3], 10);
-      if (year < 100) year += 2000;
-      d = new Date(year, parseInt(parts[2], 10) - 1, parseInt(parts[1], 10));
-    } else {
-      d = new Date(s);
+const mapParseErrorToMessage = (
+  error: unknown,
+  t: ReturnType<typeof useTranslations>['t'],
+  tr: ReturnType<typeof useTranslations>['tr']
+): string => {
+  if (error instanceof BankStatementParseError) {
+    if (error.code === 'HEADER_NOT_FOUND') {
+      return t.importers.transaction.errors.headerNotFound;
+    }
+    if (error.code === 'MISSING_REQUIRED_COLUMNS') {
+      const missing = Array.isArray(error.details.missingColumns)
+        ? error.details.missingColumns.map((v) => String(v)).join(', ')
+        : 'Data, Concepte, Import';
+      return t.importers.transaction.errors.requiredColumnsNotFound(missing);
+    }
+    if (error.code === 'OPERATION_DATE_REQUIRED') {
+      const row = typeof error.details.rowIndex === 'number' ? ` (fila ${error.details.rowIndex})` : '';
+      return `${tr('import.errors.operationDateRequired')}${row}`;
+    }
+    if (error.code === 'NO_VALID_TRANSACTIONS') {
+      return t.importers.transaction.noValidTransactions;
+    }
+    if (error.code === 'INVALID_ROW') {
+      const row = typeof error.details.rowIndex === 'number' ? ` (fila ${error.details.rowIndex})` : '';
+      return `${t.importers.transaction.errors.cannotProcessContent}${row}`;
     }
   }
-  return isNaN(d.getTime()) ? null : d.toISOString().split('T')[0];
-};
 
-const isIsoDateOnly = (value: string): boolean => /^\d{4}-\d{2}-\d{2}$/.test(value);
+  if (error instanceof Error && error.message) {
+    return error.message;
+  }
+
+  return t.importers.transaction.errors.cannotProcessContent;
+};
 
 export function TransactionImporter({ availableCategories }: TransactionImporterProps) {
   const fileInputRef = React.useRef<HTMLInputElement>(null);
@@ -240,16 +183,29 @@ export function TransactionImporter({ availableCategories }: TransactionImporter
   // Dedupe 3 estats: candidats pendents de resolució
   const [classifiedResults, setClassifiedResults] = React.useState<ClassifiedRow[] | null>(null);
   const [isCandidateDialogOpen, setIsCandidateDialogOpen] = React.useState(false);
-  const [dedupeSummary, setDedupeSummary] = React.useState<{
-    newCount: number;
-    safeDuplicatesCount: number;
-    candidateCount: number;
-    totalCount: number;
-  } | null>(null);
   const [pendingImportContext, setPendingImportContext] = React.useState<{
     bankAccountId: string;
     fileName: string | null;
-    rawData: any[];
+    totalRawRows: number;
+  } | null>(null);
+  const [previewSummary, setPreviewSummary] = React.useState<ParseSummary | null>(null);
+  const [previewRows, setPreviewRows] = React.useState<ParsedBankStatementRow[]>([]);
+  const [previewHasMappedBalance, setPreviewHasMappedBalance] = React.useState(false);
+  const [mappingState, setMappingState] = React.useState<{
+    rows: unknown[][];
+    bankAccountId: string | null;
+    fileName: string | null;
+    headerRowIndex: number;
+    columns: ReturnType<typeof buildBankMappingColumnOptions>;
+    previewRows: string[][];
+    previewColumnCount: number;
+    selectedMapping: {
+      operationDate: number;
+      description: number;
+      amount: number;
+      balanceAfter: number;
+    };
+    riskSignals: ParseRiskSignals;
   } | null>(null);
   const { toast } = useToast();
   const { firestore, auth } = useFirebase();
@@ -345,28 +301,76 @@ export function TransactionImporter({ availableCategories }: TransactionImporter
   };
 
   const startImportProcess = (file: File, bankAccountId: string | null) => {
+    setMappingState(null);
+    setPreviewSummary(null);
+    setPreviewRows([]);
+    setPreviewHasMappedBalance(false);
     setIsImporting(true);
     if (file.name.endsWith('.csv')) {
-        parseCsv(file, bankAccountId);
+      parseCsv(file, bankAccountId);
     } else if (file.name.endsWith('.xlsx')) {
-        parseXlsx(file, bankAccountId);
+      parseXlsx(file, bankAccountId);
     } else {
-        toast({
-            variant: 'destructive',
-            title: t.importers.transaction.errors.unsupportedFormat,
-            description: t.importers.transaction.errors.unsupportedFormatDescription,
-        });
-        setIsImporting(false);
+      toast({
+        variant: 'destructive',
+        title: t.importers.transaction.errors.unsupportedFormat,
+        description: t.importers.transaction.errors.unsupportedFormatDescription,
+      });
+      setIsImporting(false);
     }
-  }
+  };
 
-  /**
-   * Detecta solapament amb transaccions existents i últim importRun
-   */
-  // La fricció de solapament ja es gestiona al diàleg de selecció de compte
-  // Aquesta funció ara simplement passa les dades a processar
-  const checkOverlapAndConfirm = async (parsedData: any[], bankAccountId: string | null, fileName: string | null) => {
-    classifyParsedData(parsedData, bankAccountId, fileName);
+  const checkOverlapAndConfirm = async (
+    parseResult: ParseBankStatementResult,
+    bankAccountId: string | null,
+    fileName: string | null
+  ) => {
+    return classifyParsedData(parseResult, bankAccountId, fileName);
+  };
+
+  const processRowsMatrix = async (
+    rows: unknown[][],
+    bankAccountId: string | null,
+    fileName: string | null,
+    options: {
+      headerRowIndexOverride?: number;
+      columnMappingOverride?: ColumnMappingOverride;
+      skipMappingDialog?: boolean;
+    } = {}
+  ): Promise<'processed' | 'deferred'> => {
+    const normalizedRows = rows.map((row) => (Array.isArray(row) ? row : []));
+    const parsed = parseBankStatementRows(normalizedRows, {
+      headerRowIndex: options.headerRowIndexOverride,
+      columnMappingOverride: options.columnMappingOverride,
+    });
+
+    if (!options.skipMappingDialog && shouldOpenManualMapping(parsed)) {
+      const columns = buildBankMappingColumnOptions(normalizedRows, parsed.headerRowIndex, parsed.header);
+      const mappingPreviewRows = buildBankMappingPreviewRows(normalizedRows, parsed.headerRowIndex);
+      const previewColumnCount = getBankMappingColumnCount(parsed.header, mappingPreviewRows);
+
+      setMappingState({
+        rows: normalizedRows,
+        bankAccountId,
+        fileName,
+        headerRowIndex: parsed.headerRowIndex,
+        columns,
+        previewRows: mappingPreviewRows,
+        previewColumnCount,
+        selectedMapping: {
+          operationDate: parsed.columnMapping.operationDate,
+          description: parsed.columnMapping.description,
+          amount: parsed.columnMapping.amount,
+          balanceAfter: parsed.columnMapping.balanceAfter,
+        },
+        riskSignals: parsed.riskSignals,
+      });
+      setIsImporting(false);
+      return 'deferred';
+    }
+
+    await checkOverlapAndConfirm(parsed, bankAccountId, fileName);
+    return 'processed';
   };
 
   const parseXlsx = (file: File, bankAccountId: string | null) => {
@@ -375,91 +379,38 @@ export function TransactionImporter({ availableCategories }: TransactionImporter
       try {
         const XLSX = await import('xlsx');
         const data = e.target?.result;
-        const workbook = XLSX.read(data, { type: 'binary', cellDates: true });
+        const workbook = XLSX.read(data, { type: 'array', cellDates: true });
         const sheetName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[sheetName];
-        const json = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: "" });
+        const json = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' });
 
         if (!json || json.length === 0) {
-            throw new Error(t.importers.transaction.errors.emptyXlsx);
+          throw new Error(t.importers.transaction.errors.emptyXlsx);
         }
 
         const rows = (json as unknown[][]).map((row) => (Array.isArray(row) ? row : []));
-        const headerDetection = findHeaderRow(rows);
-        let headerRowIndex = -1;
-        let usedHeuristicHeader = false;
-
-        if (headerDetection.index !== null) {
-          headerRowIndex = headerDetection.index;
-          usedHeuristicHeader = true;
-        } else {
-          // Guardrail: si la heurística no té prou confiança, mantenir detecció legacy
-          for (let i = 0; i < rows.length; i++) {
-            if (isLegacyHeaderRow(rows[i])) {
-              headerRowIndex = i;
-              break;
-            }
-          }
-        }
-
-        if (headerRowIndex === -1) {
-             throw new Error(t.importers.transaction.errors.headerNotFound);
-        }
-
-        const header = (rows[headerRowIndex] as string[]).map(h => String(h || '').trim());
-
-        const operationDateIndex = findColumnIndex(header, OPERATION_DATE_COLUMN_NAMES);
-        const valueDateIndex = findColumnIndex(header, [...VALUE_DATE_COLUMN_NAMES, ...GENERIC_DATE_COLUMN_NAMES]);
-        const conceptIndex = findColumnIndex(header, DESCRIPTION_COLUMN_NAMES);
-        const amountIndex = findColumnIndex(header, AMOUNT_COLUMN_NAMES);
-
-        if (operationDateIndex === -1 || conceptIndex === -1 || amountIndex === -1) {
-            const missing = [
-                ...(operationDateIndex === -1 ? ['F. ejecución'] : []),
-                ...(conceptIndex === -1 ? ['Concepto'] : []),
-                ...(amountIndex === -1 ? ['Importe'] : [])
-            ].join(', ');
-            throw new Error(t.importers.transaction.errors.requiredColumnsNotFound(missing));
-        }
-
-        const dataRows = usedHeuristicHeader
-          ? rows.slice(headerRowIndex + 1).filter((row) => !isRowCompletelyEmpty(row))
-          : rows.slice(headerRowIndex + 1);
-        const parsedData = dataRows.map((row: any) => {
-            // Preservar totes les columnes per enrichment
-            const _rawRow: Record<string, any> = {};
-            header.forEach((h, idx) => { _rawRow[h] = row?.[idx]; });
-            return {
-              Fecha: row?.[operationDateIndex],
-              Valor: row?.[valueDateIndex],
-              Concepto: row?.[conceptIndex],
-              Importe: row?.[amountIndex],
-              _rawRow,
-            };
-        });
-
-        checkOverlapAndConfirm(parsedData, bankAccountId, file.name);
+        await processRowsMatrix(rows, bankAccountId, file.name);
       } catch (error: any) {
-        console.error("Error processing XLSX data:", error);
+        console.error('Error processing XLSX data:', error);
         toast({
           variant: 'destructive',
           title: t.importers.transaction.errors.importError,
-          description: error.message || t.importers.transaction.errors.cannotProcessXlsx,
+          description: mapParseErrorToMessage(error, t, tr) || t.importers.transaction.errors.cannotProcessXlsx,
           duration: 9000,
         });
         setIsImporting(false);
       }
     };
     reader.onerror = () => {
-         toast({
-          variant: 'destructive',
-          title: t.importers.transaction.errors.readError,
-          description: t.importers.transaction.errors.cannotReadFile,
-        });
-        setIsImporting(false);
-    }
+      toast({
+        variant: 'destructive',
+        title: t.importers.transaction.errors.readError,
+        description: t.importers.transaction.errors.cannotReadFile,
+      });
+      setIsImporting(false);
+    };
     reader.readAsArrayBuffer(file);
-  }
+  };
 
   /**
    * Detecta el separador més probable d'un CSV (`;` o `,`)
@@ -489,74 +440,47 @@ export function TransactionImporter({ availableCategories }: TransactionImporter
     };
 
     // Funció auxiliar per parsejar el text CSV
-    const parseText = (text: string): Promise<any[]> => {
+    const parseText = (text: string): Promise<unknown[][]> => {
       return new Promise((resolve) => {
         const delimiter = detectCsvDelimiter(text);
 
         Papa.parse(text, {
-          header: true,
-          skipEmptyLines: true,
+          header: false,
+          skipEmptyLines: false,
           delimiter,
           complete: (results) => {
-            resolve(results.data);
+            const matrix = (results.data as unknown[]).map((row) => (Array.isArray(row) ? row : []));
+            resolve(matrix);
           },
           error: () => {
             resolve([]);
-          }
+          },
         });
       });
     };
 
-    // Funció per verificar si les dades són vàlides (tenen transaccions processables)
-    const hasValidTransactions = (data: any[]): boolean => {
-      if (!data || data.length === 0) return false;
+    try {
+      const tryEncoding = async (encoding: string): Promise<'processed' | 'deferred'> => {
+        const text = await readWithEncoding(encoding);
+        const rows = await parseText(text);
+        return processRowsMatrix(rows, bankAccountId, file.name);
+      };
 
-      // Comprovar si almenys una fila té les columnes necessàries
-      for (const row of data.slice(0, 5)) { // Només mirem les primeres 5 files
-        const rawRow = row as Record<string, any>;
-        const operationDateValue = parseOperationDate(findRawValue(rawRow, OPERATION_DATE_COLUMN_NAMES));
-        const descriptionValue = findRawValue(rawRow, DESCRIPTION_COLUMN_NAMES);
-        const amountValue = findRawValue(rawRow, AMOUNT_COLUMN_NAMES);
-        const amount = parseAmount(amountValue);
-
-        if (
-          operationDateValue &&
-          descriptionValue &&
-          Number.isFinite(amount)
-        ) {
-          return true;
+      try {
+        await tryEncoding('UTF-8');
+      } catch (firstError) {
+        try {
+          await tryEncoding('ISO-8859-1');
+        } catch (secondError) {
+          throw secondError || firstError;
         }
       }
-      return false;
-    };
-
-    try {
-      // Intent 1: UTF-8
-      let text = await readWithEncoding('UTF-8');
-      let data = await parseText(text);
-
-      if (!hasValidTransactions(data)) {
-        // Intent 2: ISO-8859-1 (latin1) - comú en bancs espanyols com Triodos
-        text = await readWithEncoding('ISO-8859-1');
-        data = await parseText(text);
-      }
-
-      if (hasValidTransactions(data)) {
-        checkOverlapAndConfirm(data, bankAccountId, file.name);
-      } else {
-        toast({
-          variant: 'destructive',
-          title: t.importers.transaction.errors.importError,
-          description: t.importers.transaction.noValidTransactions,
-        });
-        setIsImporting(false);
-      }
     } catch (error) {
-      console.error("CSV parse error:", error);
+      console.error('CSV parse error:', error);
       toast({
         variant: 'destructive',
         title: t.importers.transaction.errors.importError,
-        description: t.importers.transaction.errors.cannotReadCsv,
+        description: mapParseErrorToMessage(error, t, tr) || t.importers.transaction.errors.cannotReadCsv,
       });
       setIsImporting(false);
     }
@@ -566,7 +490,11 @@ export function TransactionImporter({ availableCategories }: TransactionImporter
   // FASE 1: CLASSIFICACIÓ (parse + dedupe 3 estats)
   // ═══════════════════════════════════════════════════════════════════════════════
 
-  const classifyParsedData = async (data: any[], bankAccountId: string | null, fileName: string | null) => {
+  const classifyParsedData = async (
+    parseResult: ParseBankStatementResult,
+    bankAccountId: string | null,
+    fileName: string | null
+  ) => {
      if (!organizationId) {
         toast({ variant: 'destructive', title: t.importers.transaction.errors.processingError, description: t.importers.transaction.errors.cannotIdentifyOrg });
         setIsImporting(false);
@@ -582,113 +510,32 @@ export function TransactionImporter({ availableCategories }: TransactionImporter
 
     try {
         // Parsejar files a transaccions, preservant rawRow per enrichment
-        const allParsedWithRaw = data
-        .map((row: any) => {
-            // rawRow: còpia per poder afegir _opDate/_valueDate sense mutar l'original
-            const rawRow: Record<string, any> = { ...(row._rawRow || row) };
+        const allParsedWithRaw = parseResult.rows
+        .map((row) => {
+          const rawRow: Record<string, any> = { ...(row.rawRow || {}) };
+          rawRow._opDate = row.operationDate;
+          if (row.balanceAfter !== undefined && Number.isFinite(row.balanceAfter)) {
+            rawRow._balance = row.balanceAfter;
+          }
 
-            // Detectar ambdues dates per separat (enrichment E1)
-            const valueDateRaw = findRawValue(rawRow, VALUE_DATE_COLUMN_NAMES);
-            const opDateRaw = findRawValue(rawRow, OPERATION_DATE_COLUMN_NAMES);
-            const genericDateRaw = findRawValue(rawRow, GENERIC_DATE_COLUMN_NAMES);
-            const dateValue = valueDateRaw || opDateRaw || genericDateRaw;
-            const descriptionValueRaw = findRawValue(rawRow, DESCRIPTION_COLUMN_NAMES);
-            const descriptionValue = typeof descriptionValueRaw === 'string'
-              ? descriptionValueRaw.trim()
-              : String(descriptionValueRaw ?? '').trim();
-            let amountValue = findRawValue(rawRow, AMOUNT_COLUMN_NAMES);
+          const transactionType = detectReturnType(row.description) || 'normal';
+          const tx = {
+            id: '',
+            date: toIsoDateTime(row.date),
+            description: row.description,
+            amount: row.amount,
+            category: null,
+            document: null,
+            contactId: null,
+            transactionType,
+            bankAccountId: bankAccountId ?? null,
+            source: 'bank' as const,
+            ...(row.balanceAfter !== undefined && Number.isFinite(row.balanceAfter) ? { balanceAfter: row.balanceAfter } : {}),
+            operationDate: row.operationDate,
+          } as Omit<Transaction, 'id'>;
 
-            if (typeof amountValue === 'string') {
-                amountValue = amountValue.replace(/\./g, '').replace(',', '.');
-            }
-            const amount = parseFloat(amountValue);
-
-            const hasContent = Boolean(descriptionValue) || Number.isFinite(amount) || Boolean(opDateRaw);
-            const parsedOpDate = parseOperationDate(opDateRaw);
-
-            if (!dateValue || !descriptionValue || !Number.isFinite(amount)) {
-              if (!hasContent) {
-                return null;
-              }
-
-              throw new Error(t.importers.transaction.errors.cannotProcessContent);
-            }
-
-            if (!parsedOpDate) {
-              throw new Error(tr('import.errors.operationDateRequired'));
-            }
-
-            if (!dateValue) {
-                return null;
-            }
-
-            let date;
-             if (dateValue instanceof Date) {
-                date = dateValue;
-            } else {
-                const dateString = String(dateValue);
-                const parts = dateString.match(/(\d{1,2})[/-](\d{1,2})[/-](\d{2,4})/);
-                if (parts) {
-                    const day = parseInt(parts[1], 10);
-                    const month = parseInt(parts[2], 10);
-                    let year = parseInt(parts[3], 10);
-                    if (year < 100) year += 2000;
-
-                    if (month > 12 && day <= 12) {
-                         date = new Date(year, month - 1, day);
-                    } else {
-                         date = new Date(year, month - 1, day);
-                    }
-                } else {
-                    date = new Date(dateString);
-                }
-            }
-
-            if (isNaN(date.getTime())) {
-                return null;
-            }
-
-            // Enrichment: executionDate (F. ejecución) — sempre que existeixi
-            const normalizedOpDate = parsedOpDate;
-            rawRow._opDate = normalizedOpDate;
-
-            // Enrichment: saldo/balance — parsejar format EU a number
-            let parsedBalanceAfter: number | undefined;
-            const balanceRaw = findRawValue(rawRow, BALANCE_COLUMN_NAMES);
-            if (balanceRaw !== null) {
-              let balanceNum: number;
-              if (typeof balanceRaw === 'number') {
-                balanceNum = balanceRaw;
-              } else {
-                const cleaned = String(balanceRaw).replace(/\./g, '').replace(',', '.');
-                balanceNum = parseFloat(cleaned);
-              }
-              if (Number.isFinite(balanceNum)) {
-                rawRow._balance = balanceNum;
-                parsedBalanceAfter = balanceNum;
-              }
-            }
-
-            const transactionType = detectReturnType(descriptionValue) || 'normal';
-
-            const tx = {
-                id: '',
-                date: date.toISOString(),
-                description: descriptionValue,
-                amount: amount,
-                category: null,
-                document: null,
-                contactId: null,
-                transactionType,
-                bankAccountId: bankAccountId ?? null,
-                source: 'bank' as const,
-                ...(parsedBalanceAfter !== undefined && Number.isFinite(parsedBalanceAfter) ? { balanceAfter: parsedBalanceAfter } : {}),
-                operationDate: normalizedOpDate,
-            } as Omit<Transaction, 'id'>;
-
-            return { tx, rawRow };
-        })
-        .filter((item): item is { tx: Omit<Transaction, 'id'>; rawRow: Record<string, any> } => item !== null);
+          return { tx, rawRow };
+        });
 
         // Classificar amb dedupe (Mode A: cap bloqueig)
         const dateRange = getDateRangeFromParsedRows(allParsedWithRaw.map(r => r.tx));
@@ -742,17 +589,23 @@ export function TransactionImporter({ availableCategories }: TransactionImporter
 
         // Mostrar sempre resum previ abans d'importar
         setClassifiedResults(classified);
-        setPendingImportContext({ bankAccountId, fileName, rawData: data });
-        setDedupeSummary(summary);
+        setPendingImportContext({
+          bankAccountId,
+          fileName,
+          totalRawRows: parseResult.summary.dataRowsCount,
+        });
+        setPreviewSummary(parseResult.summary);
+        setPreviewRows(parseResult.sampleRows);
+        setPreviewHasMappedBalance(parseResult.columnMapping.balanceAfter !== -1);
         setIsCandidateDialogOpen(true);
         setIsImporting(false);
         return;
     } catch (error: any) {
-        console.error("Error classifying parsed data:", error);
+        console.error('Error classifying parsed data:', error);
         toast({
           variant: 'destructive',
           title: t.importers.transaction.errors.processingError,
-          description: error.message || t.importers.transaction.errors.cannotProcessContent,
+          description: mapParseErrorToMessage(error, t, tr),
         });
         setIsImporting(false);
     }
@@ -793,7 +646,7 @@ export function TransactionImporter({ availableCategories }: TransactionImporter
         transactionsToImport,
         pendingImportContext.bankAccountId,
         pendingImportContext.fileName,
-        pendingImportContext.rawData.length,
+        pendingImportContext.totalRawRows,
         stats
       );
     } else {
@@ -803,7 +656,9 @@ export function TransactionImporter({ availableCategories }: TransactionImporter
       });
       setClassifiedResults(null);
       setPendingImportContext(null);
-      setDedupeSummary(null);
+      setPreviewSummary(null);
+      setPreviewRows([]);
+      setPreviewHasMappedBalance(false);
       setIsImporting(false);
     }
   };
@@ -812,9 +667,74 @@ export function TransactionImporter({ availableCategories }: TransactionImporter
     setIsCandidateDialogOpen(false);
     setClassifiedResults(null);
     setPendingImportContext(null);
-    setDedupeSummary(null);
+    setPreviewSummary(null);
+    setPreviewRows([]);
+    setPreviewHasMappedBalance(false);
     setIsImporting(false);
   };
+
+  const handleMappingFieldChange = (
+    field: BankMappingFieldId,
+    value: string
+  ) => {
+    const selectedValue = Number.parseInt(value, 10);
+    setMappingState((prev) => {
+      if (!prev || Number.isNaN(selectedValue)) return prev;
+      return {
+        ...prev,
+        selectedMapping: {
+          ...prev.selectedMapping,
+          [field]: selectedValue,
+        },
+      };
+    });
+  };
+
+  const handleMappingCancel = () => {
+    setMappingState(null);
+    setIsImporting(false);
+  };
+
+  const handleMappingContinue = async () => {
+    if (!mappingState) return;
+    setIsImporting(true);
+
+    try {
+      await processRowsMatrix(
+        mappingState.rows,
+        mappingState.bankAccountId,
+        mappingState.fileName,
+        {
+          headerRowIndexOverride: mappingState.headerRowIndex,
+          columnMappingOverride: {
+            operationDate: mappingState.selectedMapping.operationDate,
+            description: mappingState.selectedMapping.description,
+            amount: mappingState.selectedMapping.amount,
+            balanceAfter: mappingState.selectedMapping.balanceAfter,
+          },
+          skipMappingDialog: true,
+        }
+      );
+      setMappingState(null);
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: t.importers.transaction.errors.processingError,
+        description: mapParseErrorToMessage(error, t, tr),
+      });
+      setIsImporting(false);
+    }
+  };
+
+  const canContinueWithMapping = React.useMemo(() => {
+    if (!mappingState) return false;
+    const hasAmountMapping = mappingState.selectedMapping.amount !== -1 || mappingState.riskSignals.hasDebitCredit;
+    return (
+      mappingState.selectedMapping.operationDate !== -1
+      && mappingState.selectedMapping.description !== -1
+      && hasAmountMapping
+    );
+  }, [mappingState]);
 
   // ═══════════════════════════════════════════════════════════════════════════════
   // FASE 2: EXECUCIÓ (contact matching + batch write + importRun)
@@ -835,7 +755,9 @@ export function TransactionImporter({ availableCategories }: TransactionImporter
     // Netejar estat de classificació
     setClassifiedResults(null);
     setPendingImportContext(null);
-    setDedupeSummary(null);
+    setPreviewSummary(null);
+    setPreviewRows([]);
+    setPreviewHasMappedBalance(false);
 
     if (!organizationId) {
       setIsImporting(false);
@@ -1206,15 +1128,95 @@ export function TransactionImporter({ availableCategories }: TransactionImporter
         </DialogContent>
       </Dialog>
 
+      <Dialog
+        open={Boolean(mappingState)}
+        onOpenChange={(open) => {
+          if (!open) handleMappingCancel();
+        }}
+      >
+        <DialogContent className="sm:max-w-4xl">
+          <DialogHeader>
+            <DialogTitle>
+              {tr('importers.transaction.mapping.title', 'Configuració del mapeig')}
+            </DialogTitle>
+            <DialogDescription>
+              {tr(
+                'importers.transaction.mapping.description',
+                'Revisa la previsualització i indica quina columna correspon a cada camp.'
+              )}
+            </DialogDescription>
+          </DialogHeader>
+
+          {mappingState && (
+            <RemittanceStyleMappingStep
+              fields={[
+                {
+                  id: 'operationDate',
+                  label: tr('importers.transaction.mapping.field.operationDate', 'Data (requerit)'),
+                  required: true,
+                  dotClassName: 'bg-purple-500',
+                  headerClassName: 'bg-purple-100 dark:bg-purple-900/30',
+                  cellClassName: 'bg-purple-50 dark:bg-purple-900/20',
+                },
+                {
+                  id: 'description',
+                  label: tr('importers.transaction.mapping.field.description', 'Descripció (requerit)'),
+                  required: true,
+                  dotClassName: 'bg-blue-500',
+                  headerClassName: 'bg-blue-100 dark:bg-blue-900/30',
+                  cellClassName: 'bg-blue-50 dark:bg-blue-900/20',
+                },
+                {
+                  id: 'amount',
+                  label: tr('importers.transaction.mapping.field.amount', 'Import (requerit)'),
+                  required: true,
+                  allowUnavailable: mappingState.riskSignals.hasDebitCredit,
+                  dotClassName: 'bg-green-500',
+                  headerClassName: 'bg-green-100 dark:bg-green-900/30',
+                  cellClassName: 'bg-green-50 dark:bg-green-900/20',
+                },
+                {
+                  id: 'balanceAfter',
+                  label: tr('importers.transaction.mapping.field.balanceAfter', 'Saldo (opcional)'),
+                  required: false,
+                  allowUnavailable: true,
+                  dotClassName: 'bg-cyan-500',
+                  headerClassName: 'bg-cyan-100 dark:bg-cyan-900/30',
+                  cellClassName: 'bg-cyan-50 dark:bg-cyan-900/20',
+                },
+              ]}
+              selectedMapping={mappingState.selectedMapping}
+              columns={mappingState.columns}
+              previewRows={mappingState.previewRows}
+              previewColumnCount={mappingState.previewColumnCount}
+              previewStartRow={mappingState.headerRowIndex + 2}
+              labels={{
+                previewTitle: tr('importers.transaction.mapping.previewTitle', 'Previsualització (primeres 8 files)'),
+                fieldMappingTitle: tr('importers.transaction.mapping.fieldMappingTitle', 'Mapejat de camps'),
+                columnOptionTemplate: tr('importers.transaction.mapping.columnOption', 'Columna {index}: {example}'),
+                columnHeaderPrefix: tr('importers.transaction.mapping.columnHeaderPrefix', 'Col.'),
+                notAvailable: tr('importers.transaction.mapping.notAvailable', 'No disponible'),
+                back: tr('common.back', 'Tornar'),
+                continue: tr('common.continue', 'Continuar'),
+              }}
+              isSubmitting={isImporting}
+              continueDisabled={!canContinueWithMapping}
+              onBack={handleMappingCancel}
+              onContinue={handleMappingContinue}
+              onMappingChange={(field, nextValue) => handleMappingFieldChange(field, String(nextValue))}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+
       {/* Diàleg de resolució de candidats a duplicat */}
       <DedupeCandidateResolver
         open={isCandidateDialogOpen}
         candidates={classifiedResults?.filter(c => c.status === 'DUPLICATE_CANDIDATE') ?? []}
         safeDuplicates={classifiedResults?.filter(c => c.status === 'DUPLICATE_SAFE') ?? []}
-        newCount={dedupeSummary?.newCount ?? 0}
-        safeDuplicatesCount={dedupeSummary?.safeDuplicatesCount ?? (classifiedResults?.filter(c => c.status === 'DUPLICATE_SAFE').length ?? 0)}
-        candidateCount={dedupeSummary?.candidateCount ?? (classifiedResults?.filter(c => c.status === 'DUPLICATE_CANDIDATE').length ?? 0)}
-        totalCount={dedupeSummary?.totalCount ?? (classifiedResults?.length ?? 0)}
+        parseSummary={previewSummary}
+        sampleRows={previewRows}
+        hasMappedBalance={previewHasMappedBalance}
         onContinue={handleCandidatesContinue}
         onCancel={handleCandidatesCancelled}
       />
