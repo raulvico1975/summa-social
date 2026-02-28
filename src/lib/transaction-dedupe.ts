@@ -249,6 +249,8 @@ export function classifyTransactions(
       date: etx.date,
       description: etx.description,
       amount: etx.amount,
+      bankRef: (etx as { bankRef?: string | null }).bankRef,
+      valueDate: (etx as { valueDate?: string }).valueDate,
       bankAccountId: etx.bankAccountId,
     });
 

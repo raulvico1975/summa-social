@@ -793,6 +793,10 @@ Els següents blocs estan **desactivats** (comentats al codi) a partir de v1.20:
 - Si falta `operationDate`, la regla forta no aplica.
 - L'endpoint `POST /api/transactions/import` exigeix permís `moviments.importarExtractes`.
 
+**Invariants d'importació (IMP):**
+- **IMP-1 (rang dedupe):** el rang de cerca de duplicats cobreix sempre `date` i `operationDate`. Contracte: `from = min(date, operationDate)` i `to = max(date, operationDate)`. Encara que la query filtri per `date`, mai es pot excloure la `date` real del moviment.
+- **IMP-2 (candidats):** `DUPLICATE_CANDIDATE` requereix opt-in explícit de l'usuària. Sense selecció explícita, només s'importen moviments `NEW`.
+
 ### 3.2.2 Sistema d'Auto-Assignació Intel·ligent
 
 **FASE 1: Matching per Nom (instantani)**

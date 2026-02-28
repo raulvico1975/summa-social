@@ -247,11 +247,38 @@ No existeix "Reparar" com a operació separada. El flux de recuperació és semp
 
 ---
 
+### VF-15 Invariants d'import bancari (IMP-1 + IMP-2)
+
+**Context:**
+Validació funcional mínima obligatòria a una org de prova abans de prod.
+
+**Passos (T1 — rang dedupe date/operationDate):**
+1. A la org de prova, crea/importa un moviment existent:
+   `date=2025-12-30`, `operationDate` buit/null, mateix compte bancari.
+2. Importa un fitxer amb un moviment amb:
+   `date=2025-12-30`, `operationDate=2026-01-02`, mateix import i descripció.
+3. Obre el resum pre-importació.
+
+**Expected T1:**
+- [ ] El moviment NO apareix com a `NEW`
+- [ ] Apareix com a duplicat segur o candidat (segons dades disponibles)
+
+**Passos (T2 — candidats sense opt-in):**
+1. En el mateix resum pre-importació, deixa **0 candidats seleccionats**.
+2. Confirma importació.
+
+**Expected T2:**
+- [ ] El botó indica explícitament `Importar X nous (0 candidats)` abans de confirmar
+- [ ] No s'importa cap `DUPLICATE_CANDIDATE`
+- [ ] Només entren moviments `NEW`
+
+---
+
 ## 3. Resultat de la sessió
 
-| Data | Executor | VF-1 | VF-2 | VF-3 | VF-4 | VF-5 | VF-6 | VF-7 | VF-8 | VF-9 | VF-10 | VF-11 | VF-12 | VF-13 | VF-14 | Notes |
-|------|----------|------|------|------|------|------|------|------|------|------|-------|-------|-------|-------|-------|-------|
-| YYYY-MM-DD | Nom | - | - | - | - | - | - | - | - | - | - | - | - | - | - | |
+| Data | Executor | VF-1 | VF-2 | VF-3 | VF-4 | VF-5 | VF-6 | VF-7 | VF-8 | VF-9 | VF-10 | VF-11 | VF-12 | VF-13 | VF-14 | VF-15 | Notes |
+|------|----------|------|------|------|------|------|------|------|------|------|-------|-------|-------|-------|-------|-------|-------|
+| YYYY-MM-DD | Nom | - | - | - | - | - | - | - | - | - | - | - | - | - | - | - | |
 
 ---
 
@@ -264,4 +291,4 @@ No existeix "Reparar" com a operació separada. El flux de recuperació és semp
 
 ---
 
-*Última actualització: 2026-02-13*
+*Última actualització: 2026-02-28*
