@@ -676,42 +676,118 @@ export type SupplierCategory = typeof SUPPLIER_CATEGORIES[number];
  * Cada banc té el seu format específic
  */
 export const RETURN_PATTERNS = {
-  // Devolucions
+  // Devolucions (alta confiança)
   return: [
-    /devolucion\s*(de)?\s*recibo/i,                    // Santander: "Devolucion De Recibo"
-    /adeudo\s*devolucion\s*recibos/i,                  // Triodos: "ADEUDO DEVOLUCION RECIBOS"
-    /dev\.?\s*recibo/i,                                // CaixaBank: "DEV.RECIBO ADEUDO SEPA"
-    /recibo\s*devuelto/i,                              // Genèric
-    /devolución/i,                                     // Genèric amb accent
+    /\bADEUDO\s+DEVOLUCION(?:ES)?\s+RECIBOS?\b/,       // Triodos: "ADEUDO DEVOLUCION RECIBOS"
+    /\bDEVOLUCION(?:ES)?(?:\s+DE)?\s+RECIBOS?\b/,      // Santander: "DEVOLUCION DE RECIBO(S)"
+    /\bDEV\s+RECIBOS?\b/,                              // CaixaBank: "DEV.RECIBO ADEUDO SEPA"
+    /\bRECIBOS?\s+DEVUELT[OA]S?\b/,                    // "RECIBO DEVUELTO"
+    /\bRECIBOS?\s+IMPAGAD[OA]S?\b/,                    // "RECIBO IMPAGADO"
+    /\bRECHAZO\s+RECIBOS?\b/,                          // "RECHAZO RECIBO"
+    /\bRETORNO\s+RECIBOS?\b/,                          // "RETORNO RECIBO"
+    /\bADEUDO\s+SEPA\s+DEV\b/,                         // "ADEUDO SEPA DEV"
+    /\bSEPA\s+DD\s+RETURN(?:ED)?\b/,                   // "SEPA DD RETURN"
+    /\bRETURNED\s+DIRECT\s+DEBIT\b/,                   // Bancs internacionals
+    /\bR[\s-]?TRANSACTION\b/,                          // Codis operatius
   ],
-  // Comissions per devolució
+  // Comissions per devolució (alta confiança)
   returnFee: [
-    /comision\s*devol/i,                               // Triodos: "COMISION DEVOL. RECIBOS"
-    /gastos?\s*devolucion/i,                           // Santander: "Gastos Devoluciones De Recibos"
-    /comision.*devolucion/i,                           // Genèric
-    /gastos?.*devol/i,                                 // Genèric
+    /\bCOMISION(?:ES)?\s+DEV\b/,                       // Triodos: "COMISION DEV. RECIBOS"
+    /\bCOMISION(?:ES)?\s+DEVOL\b/,                     // Triodos: "COMISION DEVOL. RECIBOS"
+    /\bCOMISION(?:ES)?\s+DEVOLUCION(?:ES)?\b/,         // "COMISION DEVOLUCION"
+    /\bGASTOS?\s+DEVOLUCION(?:ES)?\b/,                 // Santander: "GASTOS DEVOLUCIONES"
+    /\bCOMISION(?:ES)?\s+POR\s+DEVOLUCION(?:ES)?\b/,   // "COMISION POR DEVOLUCION"
+    /\bRETURN\s+FEE\b/,                                // Bancs internacionals
+    /\bR[\s-]?TRANSACTION\s+FEE\b/,                    // Codis operatius
+    /\bRJCT\s+FEE\b/,                                  // Codis operatius
+  ],
+  // Exclusions per evitar falsos positius (p. ex. devolucions de targeta/compra)
+  exclude: [
+    /\bDEVOLUCION(?:ES)?\s+COMPRA\b/,
+    /\bABONO\s+TARJETA\b/,
+    /\bREEMBOLSO\s+TARJETA\b/,
+    /\bCARD\s+REFUND\b/,
   ],
 } as const;
+
+const RETURN_SIGNAL_PATTERNS = [
+  /\bDEV\b/,
+  /\bDEVOLUCION(?:ES)?\b/,
+  /\bDEVUELT[OA]S?\b/,
+  /\bRECHAZO\b/,
+  /\bRETORNO\b/,
+  /\bIMPAGAD[OA]S?\b/,
+  /\bRETURN(?:ED)?\b/,
+  /\bRJCT\b/,
+  /\bR[\s-]?TRANSACTION\b/,
+] as const;
+
+const RETURN_CONTEXT_PATTERNS = [
+  /\bRECIBOS?\b/,
+  /\bADEUDO\b/,
+  /\bDOMICILIACION(?:ES)?\b/,
+  /\bSEPA\b/,
+  /\bDIRECT\s+DEBIT\b/,
+  /\bDD\b/,
+] as const;
+
+const RETURN_FEE_CONTEXT_PATTERNS = [
+  /\bCOMISION(?:ES)?\b/,
+  /\bGASTOS?\b/,
+  /\bFEE\b/,
+  /\bCOSTE\b/,
+] as const;
+
+function normalizeDescriptionForReturnDetection(description: string): string {
+  if (!description) return '';
+
+  return description
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function matchesAnyPattern(value: string, patterns: readonly RegExp[]): boolean {
+  return patterns.some((pattern) => pattern.test(value));
+}
 
 /**
  * Detecta si una descripció correspon a una devolució
  * @returns 'return' | 'return_fee' | null
  */
 export function detectReturnType(description: string): TransactionType | null {
-  const normalized = description.toLowerCase();
+  const normalized = normalizeDescriptionForReturnDetection(description);
+  if (!normalized) return null;
 
-  // Primer comprovar si és una comissió (més específic)
-  for (const pattern of RETURN_PATTERNS.returnFee) {
-    if (pattern.test(normalized)) {
-      return 'return_fee';
-    }
+  // Exclusions explícites abans de qualsevol classificació
+  if (matchesAnyPattern(normalized, RETURN_PATTERNS.exclude)) {
+    return null;
   }
 
-  // Després comprovar si és una devolució
-  for (const pattern of RETURN_PATTERNS.return) {
-    if (pattern.test(normalized)) {
-      return 'return';
-    }
+  // Primer comprovar si és una comissió (més específic)
+  if (matchesAnyPattern(normalized, RETURN_PATTERNS.returnFee)) {
+    return 'return_fee';
+  }
+
+  // Heurística robusta per comissions no cobertes per patró estricte
+  const hasReturnSignal = matchesAnyPattern(normalized, RETURN_SIGNAL_PATTERNS);
+  const hasFeeContext = matchesAnyPattern(normalized, RETURN_FEE_CONTEXT_PATTERNS);
+  if (hasReturnSignal && hasFeeContext) {
+    return 'return_fee';
+  }
+
+  // Després comprovar devolució estricta
+  if (matchesAnyPattern(normalized, RETURN_PATTERNS.return)) {
+    return 'return';
+  }
+
+  // Heurística robusta per devolucions (senyal + context rebut/SEPA)
+  const hasReturnContext = matchesAnyPattern(normalized, RETURN_CONTEXT_PATTERNS);
+  if (hasReturnSignal && hasReturnContext) {
+    return 'return';
   }
 
   return null;
