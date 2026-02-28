@@ -4,7 +4,6 @@ import * as React from 'react';
 import { ArrowLeft, ArrowRight, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import {
   Select,
   SelectContent,
@@ -88,26 +87,38 @@ export function RemittanceStyleMappingStep({
     return map;
   }, [fields, selectedMapping]);
 
+  const columnByIndex = React.useMemo(() => {
+    const map = new Map<number, BankMappingColumnOption>();
+    for (const column of columns) {
+      map.set(column.index, column);
+    }
+    return map;
+  }, [columns]);
+
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 overflow-x-hidden">
       <div className="space-y-2">
         <Label className="flex items-center gap-2">
           <Eye className="h-4 w-4" />
           {labels.previewTitle}
         </Label>
-        <ScrollArea className="h-[200px] rounded-md border">
-          <Table>
+        <div className="max-h-[30vh] overflow-auto rounded-md border sm:max-h-[220px]">
+          <Table className="min-w-max">
             <TableHeader>
               <TableRow>
                 <TableHead className="w-12 text-xs">#</TableHead>
                 {Array.from({ length: previewColumnCount }, (_, index) => {
                   const selectedField = selectedFieldByColumn.get(index);
+                  const column = columnByIndex.get(index);
+                  const headerLabel = column?.label
+                    ? column.label
+                    : `${labels.columnHeaderPrefix}${index}`;
                   return (
                     <TableHead
                       key={`head-${index}`}
-                      className={`text-xs min-w-[110px] ${selectedField?.headerClassName ?? ''}`}
+                      className={`text-xs min-w-[110px] whitespace-nowrap ${selectedField?.headerClassName ?? ''}`}
                     >
-                      {`${labels.columnHeaderPrefix}${index}`}
+                      {headerLabel}
                     </TableHead>
                   );
                 })}
@@ -124,7 +135,7 @@ export function RemittanceStyleMappingStep({
                     return (
                       <TableCell
                         key={`cell-${rowIndex}-${columnIndex}`}
-                        className={`text-xs truncate max-w-[180px] ${selectedField?.cellClassName ?? ''}`}
+                        className={`text-xs truncate whitespace-nowrap max-w-[180px] ${selectedField?.cellClassName ?? ''}`}
                       >
                         {row[columnIndex] || '-'}
                       </TableCell>
@@ -134,14 +145,14 @@ export function RemittanceStyleMappingStep({
               ))}
             </TableBody>
           </Table>
-        </ScrollArea>
+        </div>
       </div>
 
       <div className="space-y-3 rounded-lg border p-4">
         <Label className="font-medium">{labels.fieldMappingTitle}</Label>
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           {fields.map((field) => (
-            <div key={field.id} className="space-y-1">
+            <div key={field.id} className="min-w-0 space-y-1">
               <Label className="text-xs flex items-center gap-1">
                 <span className={`h-3 w-3 rounded ${field.dotClassName}`}></span>
                 {field.label}
@@ -150,7 +161,7 @@ export function RemittanceStyleMappingStep({
                 value={selectedMapping[field.id] !== -1 ? String(selectedMapping[field.id]) : 'none'}
                 onValueChange={(value) => onMappingChange(field.id, value === 'none' ? -1 : Number.parseInt(value, 10))}
               >
-                <SelectTrigger className="h-8">
+                <SelectTrigger className="h-8 w-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -159,10 +170,12 @@ export function RemittanceStyleMappingStep({
                   )}
                   {columns.map((column) => (
                     <SelectItem key={`${field.id}-${column.index}`} value={String(column.index)}>
-                      {replaceTemplateVars(labels.columnOptionTemplate, {
-                        index: String(column.index),
-                        example: column.sample || '-',
-                      })}
+                      {column.label
+                        ? `${column.label}: ${column.sample || '-'}`
+                        : replaceTemplateVars(labels.columnOptionTemplate, {
+                          index: String(column.index),
+                          example: column.sample || '-',
+                        })}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -172,14 +185,14 @@ export function RemittanceStyleMappingStep({
         </div>
       </div>
 
-      <div className="flex items-center justify-between gap-2 pt-2">
-        <Button variant="outline" onClick={onBack} disabled={isSubmitting}>
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          {labels.back}
-        </Button>
-        <Button onClick={onContinue} disabled={isSubmitting || continueDisabled}>
+      <div className="sticky bottom-0 z-10 flex w-full flex-col-reverse gap-2 border-t bg-background/95 pb-[calc(env(safe-area-inset-bottom)+0.25rem)] pt-3 shadow-[0_-8px_16px_-14px_rgba(0,0,0,0.35)] backdrop-blur supports-[backdrop-filter]:bg-background/90 sm:flex-row sm:justify-end">
+        <Button className="w-full sm:w-auto" onClick={onContinue} disabled={isSubmitting || continueDisabled}>
           <ArrowRight className="mr-2 h-4 w-4" />
           {labels.continue}
+        </Button>
+        <Button className="w-full sm:w-auto" variant="outline" onClick={onBack} disabled={isSubmitting}>
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          {labels.back}
         </Button>
       </div>
     </div>

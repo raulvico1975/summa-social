@@ -1,7 +1,8 @@
-export type BankMappingFieldId = 'operationDate' | 'description' | 'amount' | 'balanceAfter';
+export type BankMappingFieldId = 'operationDate' | 'valueDate' | 'description' | 'amount' | 'balanceAfter';
 
 export type BankMappingColumnOption = {
   index: number;
+  label: string;
   sample: string | null;
 };
 
@@ -12,6 +13,7 @@ export type BankMappingFieldDefinition = {
 
 export const BANK_MAPPING_FIELD_DEFINITIONS: BankMappingFieldDefinition[] = [
   { id: 'operationDate', required: true },
+  { id: 'valueDate', required: false },
   { id: 'description', required: true },
   { id: 'amount', required: true },
   { id: 'balanceAfter', required: false },
@@ -20,7 +22,19 @@ export const BANK_MAPPING_FIELD_DEFINITIONS: BankMappingFieldDefinition[] = [
 const PREVIEW_DEFAULT_LIMIT = 8;
 const SAMPLE_MAX_LENGTH = 60;
 
-const normalizeCell = (value: unknown): string => String(value ?? '').trim();
+const formatDateCell = (date: Date): string => {
+  const day = String(date.getDate()).padStart(2, '0');
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const year = String(date.getFullYear());
+  return `${day}/${month}/${year}`;
+};
+
+const normalizeCell = (value: unknown): string => {
+  if (value instanceof Date && !Number.isNaN(value.getTime())) {
+    return formatDateCell(value);
+  }
+  return String(value ?? '').trim();
+};
 
 const isRowEmpty = (row: unknown[]): boolean => row.every((cell) => normalizeCell(cell) === '');
 
@@ -30,6 +44,7 @@ export function buildBankMappingColumnOptions(
   header: string[]
 ): BankMappingColumnOption[] {
   return header.map((_, index) => {
+    const label = normalizeCell(header[index]);
     let sample: string | null = null;
 
     for (let rowIndex = headerRowIndex + 1; rowIndex < rows.length; rowIndex++) {
@@ -41,7 +56,7 @@ export function buildBankMappingColumnOptions(
       break;
     }
 
-    return { index, sample };
+    return { index, label, sample };
   });
 }
 
@@ -57,7 +72,7 @@ export function buildBankMappingPreviewRows(
 
     const row = rows[rowIndex];
     if (!Array.isArray(row) || isRowEmpty(row)) continue;
-    previewRows.push(row.map((cell) => String(cell ?? '')));
+    previewRows.push(row.map((cell) => normalizeCell(cell)));
   }
 
   return previewRows;
