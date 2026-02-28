@@ -40,6 +40,8 @@ interface DeleteMovementsFamilyApiResponse {
     transactions: number;
     remittancesPending: number;
     remittances: number;
+    prebankRemittances: number;
+    pendingDocuments: number;
     importRuns: number;
     importJobs: number;
     total: number;
@@ -325,7 +327,9 @@ export function DangerZone() {
             title: t.dangerZone.deleteSuccess,
             description:
               `Moviments: ${result.deleted?.transactions ?? 0}, ` +
-              `remeses: ${result.deleted?.remittances ?? 0} (+${result.deleted?.remittancesPending ?? 0} pendents), ` +
+              `remeses: ${(result.deleted?.remittances ?? 0) + (result.deleted?.prebankRemittances ?? 0)} ` +
+              `(+${result.deleted?.remittancesPending ?? 0} pendents interns), ` +
+              `documents pendents: ${result.deleted?.pendingDocuments ?? 0}, ` +
               `imports: ${result.deleted?.importRuns ?? 0}/${result.deleted?.importJobs ?? 0}.`,
           });
         }
@@ -530,7 +534,7 @@ export function DangerZone() {
               </p>
               {deleteType === 'transactions' && (
                 <p>
-                  Això també esborrarà remeses i registres d'import associats.
+                  Això també esborrarà remeses, documents pendents i registres d'import associats.
                 </p>
               )}
               <p className="font-semibold text-red-600">

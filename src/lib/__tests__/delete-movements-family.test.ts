@@ -16,6 +16,8 @@ describe('delete movements family plan', () => {
         { id: 'rem-1', pendingIds: ['p-1', 'p-2', 'p-2'] },
         { id: 'rem-2', pendingIds: [] },
       ],
+      prebankRemittanceIds: ['pb-1', 'pb-1'],
+      pendingDocumentIds: ['pd-1', 'pd-2'],
       importRunIds: ['run-1'],
       importJobIds: ['job-1', 'job-1'],
     });
@@ -32,16 +34,23 @@ describe('delete movements family plan', () => {
       'organizations/org-1/remittances/rem-1',
       'organizations/org-1/remittances/rem-2',
     ]);
+    assert.deepEqual(plan.prebankRemittancePaths, [
+      'organizations/org-1/prebankRemittances/pb-1',
+    ]);
+    assert.deepEqual(plan.pendingDocumentPaths, [
+      'organizations/org-1/pendingDocuments/pd-1',
+      'organizations/org-1/pendingDocuments/pd-2',
+    ]);
     assert.deepEqual(plan.importRunPaths, [
       'organizations/org-1/importRuns/run-1',
     ]);
     assert.deepEqual(plan.importJobPaths, [
       'organizations/org-1/importJobs/job-1',
     ]);
-    assert.equal(plan.totalDeletes, 8);
+    assert.equal(plan.totalDeletes, 11);
   });
 
-  it('executes deletion plan and leaves transactions/remittances/import metadata at 0', async () => {
+  it('executes deletion plan and leaves transactions/remittances/pending/import metadata at 0', async () => {
     const orgId = 'org-1';
     const unrelatedPath = `organizations/${orgId}/contacts/c-1`;
 
@@ -51,6 +60,8 @@ describe('delete movements family plan', () => {
       remittances: [
         { id: 'rem-1', pendingIds: ['p-1'] },
       ],
+      prebankRemittanceIds: ['pb-1'],
+      pendingDocumentIds: ['pd-1'],
       importRunIds: ['run-1'],
       importJobIds: ['job-1'],
     });
@@ -59,6 +70,8 @@ describe('delete movements family plan', () => {
       ...plan.transactionPaths,
       ...plan.remittancePendingPaths,
       ...plan.remittancePaths,
+      ...plan.prebankRemittancePaths,
+      ...plan.pendingDocumentPaths,
       ...plan.importRunPaths,
       ...plan.importJobPaths,
       unrelatedPath,
@@ -79,6 +92,8 @@ describe('delete movements family plan', () => {
 
     assert.equal(countPrefix(`organizations/${orgId}/transactions/`), 0);
     assert.equal(countPrefix(`organizations/${orgId}/remittances/`), 0);
+    assert.equal(countPrefix(`organizations/${orgId}/prebankRemittances/`), 0);
+    assert.equal(countPrefix(`organizations/${orgId}/pendingDocuments/`), 0);
     assert.equal(countPrefix(`organizations/${orgId}/importRuns/`), 0);
     assert.equal(countPrefix(`organizations/${orgId}/importJobs/`), 0);
     assert.equal(docs.has(unrelatedPath), true);
