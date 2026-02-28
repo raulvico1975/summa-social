@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle, Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -20,6 +20,12 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { useTranslations } from '@/i18n';
 import type { ClassifiedRow } from '@/lib/transaction-dedupe';
 import { getSafeDuplicateUi } from '@/lib/safe-duplicate-ui';
@@ -28,12 +34,9 @@ import type { ParseSummary, ParsedBankStatementRow } from '@/lib/importers/bank/
 interface DedupeCandidateResolverProps {
   candidates: ClassifiedRow[];
   safeDuplicates: ClassifiedRow[];
-  newCount: number;
-  safeDuplicatesCount: number;
-  candidateCount: number;
-  totalCount: number;
   parseSummary: ParseSummary | null;
   sampleRows: ParsedBankStatementRow[];
+  hasMappedBalance: boolean;
   onContinue: () => void;
   onCancel: () => void;
   open: boolean;
@@ -42,17 +45,28 @@ interface DedupeCandidateResolverProps {
 export function DedupeCandidateResolver({
   candidates,
   safeDuplicates,
-  newCount,
-  safeDuplicatesCount,
-  candidateCount,
-  totalCount,
   parseSummary,
   sampleRows,
+  hasMappedBalance,
   onContinue,
   onCancel,
   open,
 }: DedupeCandidateResolverProps) {
   const { t, tr } = useTranslations();
+  const candidateCount = candidates.length;
+  const warningsLabelByCode: Record<string, string> = {
+    operationDateDerived: tr('importers.transaction.preview.warning.operationDateDerived', 'Data derivada de columna alternativa'),
+    debitCreditFallback: tr('importers.transaction.preview.warning.debitCreditFallback', 'Import calculat amb Debe/Haber'),
+    balanceMismatch: tr('importers.transaction.preview.warning.balanceMismatch', 'Possible incoherència de saldo'),
+  };
+  const movementCounts = React.useMemo(() => {
+    const detectedRows = parseSummary?.dataRowsCount ?? 0;
+    const preparedRows = parseSummary?.parsedRowsCount ?? 0;
+    return {
+      toImport: preparedRows,
+      discarded: Math.max(detectedRows - preparedRows, 0),
+    };
+  }, [parseSummary]);
   const safeReasonCounts = React.useMemo(() => {
     const counts = {
       BANK_REF: 0,
@@ -95,12 +109,6 @@ export function DedupeCandidateResolver({
     return row.matchedExistingIds[0] ?? row.matchedExisting[0]?.id ?? null;
   };
 
-  const warningLabels: Record<string, string> = {
-    operationDateDerived: tr('importers.transaction.preview.warning.operationDateDerived', 'Data derivada de columna alternativa'),
-    debitCreditFallback: tr('importers.transaction.preview.warning.debitCreditFallback', 'Import calculat amb Debe/Haber'),
-    balanceMismatch: tr('importers.transaction.preview.warning.balanceMismatch', 'Possible incoherència de saldo'),
-  };
-
   if (!open) return null;
 
   return (
@@ -119,37 +127,26 @@ export function DedupeCandidateResolver({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
           <div className="rounded-md border p-3">
-            <p className="text-xs text-muted-foreground">{tr('importers.transaction.preview.rowsDetected', 'Files detectades')}</p>
-            <p className="text-xl font-semibold">{parseSummary?.dataRowsCount ?? 0}</p>
+            <p className="text-xs text-muted-foreground">{tr('importers.transaction.preview.movementsToImport', 'Moviments a importar')}</p>
+            <p className="text-xl font-semibold">{movementCounts.toImport}</p>
           </div>
           <div className="rounded-md border p-3">
-            <p className="text-xs text-muted-foreground">{tr('importers.transaction.preview.rowsReady', 'Files preparades')}</p>
-            <p className="text-xl font-semibold">{parseSummary?.parsedRowsCount ?? 0}</p>
-          </div>
-          <div className="rounded-md border p-3">
-            <p className="text-xs text-muted-foreground">{tr('importers.transaction.preImportSummaryNew', 'Nous')}</p>
-            <p className="text-xl font-semibold">{newCount}</p>
-          </div>
-          <div className="rounded-md border p-3">
-            <p className="text-xs text-muted-foreground">{tr('importers.transaction.preImportSummaryDuplicates', 'Duplicats')}</p>
-            <p className="text-xl font-semibold">{safeDuplicatesCount}</p>
-          </div>
-          <div className="rounded-md border p-3">
-            <p className="text-xs text-muted-foreground">{tr('importers.transaction.preImportSummaryConflicts', 'Conflictes')}</p>
-            <p className="text-xl font-semibold">{candidateCount}</p>
-          </div>
-          <div className="rounded-md border p-3">
-            <p className="text-xs text-muted-foreground">{tr('importers.transaction.preImportSummaryTotal', 'Total')}</p>
-            <p className="text-xl font-semibold">{totalCount}</p>
+            <p className="text-xs text-muted-foreground">{tr('importers.transaction.preview.movementsDiscarded', 'Moviments descartats')}</p>
+            <p className="text-xl font-semibold">{movementCounts.discarded}</p>
+            {movementCounts.discarded > 0 && (
+              <p className="mt-1 text-xs text-muted-foreground">
+                {tr('importers.transaction.preview.discardedReason', 'Capçalera/totals/valors buits')}
+              </p>
+            )}
           </div>
         </div>
 
         {parseSummary && (
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+          <div className={`grid grid-cols-1 gap-2 ${hasMappedBalance ? 'sm:grid-cols-3' : 'sm:grid-cols-2'}`}>
             <div className="rounded-md border p-3 text-sm">
-              <p className="font-medium">{tr('importers.transaction.preview.dateRange', 'Rang de dates')}</p>
+              <p className="font-medium">{tr('importers.transaction.preview.dateRange', 'Rang de dates de l’extracte importat')}</p>
               <p className="text-muted-foreground">
                 {parseSummary.dateRange
                   ? `${formatDate(parseSummary.dateRange.from)} - ${formatDate(parseSummary.dateRange.to)}`
@@ -157,57 +154,107 @@ export function DedupeCandidateResolver({
               </p>
             </div>
             <div className="rounded-md border p-3 text-sm">
-              <p className="font-medium">{tr('importers.transaction.preview.totals', 'Totals')}</p>
+              <p className="font-medium">{tr('importers.transaction.preview.totals', 'Totals de l’extracte importat')}</p>
               <p className="text-muted-foreground">
                 {`${tr('importers.transaction.preview.income', 'Ingressos')}: ${formatAmount(parseSummary.totals.income)} · ${tr('importers.transaction.preview.expense', 'Despeses')}: ${formatAmount(-Math.abs(parseSummary.totals.expense))}`}
               </p>
             </div>
-            <div className="rounded-md border p-3 text-sm">
-              <p className="font-medium">{tr('importers.transaction.preview.balance', 'Saldo inicial/final')}</p>
-              <p className="text-muted-foreground">
-                {parseSummary.balances
-                  ? `${formatAmount(parseSummary.balances.initial)} -> ${formatAmount(parseSummary.balances.final)}`
-                  : tr('importers.transaction.preview.balanceUnavailable', 'No disponible')}
-              </p>
-            </div>
-            <div className="rounded-md border p-3 text-sm">
-              <p className="font-medium">{tr('importers.transaction.preview.warnings', 'Avisos')}</p>
-              <p className="text-muted-foreground">
-                {`${tr('importers.transaction.preview.invalidDates', 'Dates invàlides')}: ${parseSummary.warnings.datesInvalid} · ${tr('importers.transaction.preview.invalidAmounts', 'Imports invàlids')}: ${parseSummary.warnings.amountInvalid} · ${tr('importers.transaction.preview.balanceMismatch', 'Mismatches saldo')}: ${parseSummary.warnings.balanceMismatchCount}`}
-              </p>
-            </div>
+            {hasMappedBalance && parseSummary.balances && (
+              <div className="rounded-md border p-3 text-sm">
+                <div className="mb-2 flex items-start justify-between gap-2">
+                  <p className="font-medium">
+                    {tr('importers.transaction.preview.balanceFirstInExtract', 'Saldo del primer moviment de l’extracte importat')}
+                  </p>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        type="button"
+                        className="inline-flex h-4 w-4 items-center justify-center rounded text-muted-foreground hover:text-foreground"
+                        aria-label={tr('importers.transaction.preview.balanceTooltipAria', 'Informació sobre saldos de l’extracte importat')}
+                      >
+                        <Info className="h-3.5 w-3.5" />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-xs text-xs">
+                      {tr(
+                        'importers.transaction.preview.balanceExtractTooltip',
+                        'Aquests valors corresponen al saldo que apareix al primer i a l’últim moviment inclòs a l’extracte que has importat. No necessàriament coincideixen amb el saldo actual del compte.'
+                      )}
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
+                <p className="text-muted-foreground">{formatAmount(parseSummary.balances.initial)}</p>
+                <p className="mt-3 font-medium">
+                  {tr('importers.transaction.preview.balanceLastInExtract', 'Saldo de l’últim moviment de l’extracte importat')}
+                </p>
+                <p className="text-muted-foreground">{formatAmount(parseSummary.balances.final)}</p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {hasMappedBalance && (parseSummary?.warnings.balanceMismatchCount ?? 0) > 0 && (
+          <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200">
+            {tr(
+              'importers.transaction.preview.balanceMismatchSummary',
+              'Hi ha {count} moviments amb saldo no coherent. Revisa’ls a la taula.'
+            ).replace('{count}', String(parseSummary?.warnings.balanceMismatchCount ?? 0))}
           </div>
         )}
 
         {sampleRows.length > 0 && (
-          <ScrollArea className="max-h-[260px] rounded-md border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-[80px]">{tr('importers.transaction.preview.row', 'Fila')}</TableHead>
-                  <TableHead className="w-[120px]">{tr('importers.transaction.preview.date', 'Data')}</TableHead>
-                  <TableHead>{tr('importers.transaction.preview.description', 'Descripció')}</TableHead>
-                  <TableHead className="w-[120px] text-right">{tr('importers.transaction.preview.amount', 'Import')}</TableHead>
-                  <TableHead>{tr('importers.transaction.preview.rowWarnings', 'Avisos')}</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {sampleRows.map((row) => (
-                  <TableRow key={`preview-${row.rowIndex}`}>
-                    <TableCell className="text-xs">{row.rowIndex}</TableCell>
-                    <TableCell className="text-xs">{formatDate(row.operationDate)}</TableCell>
-                    <TableCell className="text-xs">{row.description}</TableCell>
-                    <TableCell className="text-right text-xs">{formatAmount(row.amount)}</TableCell>
-                    <TableCell className="text-xs">
-                      {row.warnings.length === 0
-                        ? '—'
-                        : row.warnings.map((warning) => warningLabels[warning] ?? warning).join(' · ')}
-                    </TableCell>
+          <TooltipProvider>
+            <ScrollArea className="max-h-[260px] rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-[120px]">{tr('importers.transaction.preview.date', 'Data')}</TableHead>
+                    <TableHead>{tr('importers.transaction.preview.description', 'Descripció')}</TableHead>
+                    <TableHead className="w-[120px] text-right">{tr('importers.transaction.preview.amount', 'Import')}</TableHead>
+                    {hasMappedBalance && (
+                      <TableHead className="w-[120px] text-right">{tr('importers.transaction.preview.balanceColumn', 'Saldo')}</TableHead>
+                    )}
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </ScrollArea>
+                </TableHeader>
+                <TableBody>
+                  {sampleRows.map((row) => {
+                    const warningText = row.warnings.map((warning) => warningsLabelByCode[warning] ?? warning).join(' · ');
+
+                    return (
+                      <TableRow key={`preview-${row.rowIndex}`} className={row.warnings.length > 0 ? 'bg-amber-50/40 dark:bg-amber-950/20' : undefined}>
+                        <TableCell className="text-xs">{formatDate(row.operationDate)}</TableCell>
+                        <TableCell className="text-xs">
+                          <div className="flex items-center gap-2">
+                            <span>{row.description}</span>
+                            {row.warnings.length > 0 && (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <button
+                                    type="button"
+                                    className="inline-flex h-4 w-4 items-center justify-center rounded text-amber-600 hover:text-amber-700 dark:text-amber-300 dark:hover:text-amber-200"
+                                    aria-label={tr('importers.transaction.preview.sampleWarnings', 'Veure incidències de la fila')}
+                                  >
+                                    <AlertTriangle className="h-3.5 w-3.5" />
+                                  </button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  {warningText}
+                                </TooltipContent>
+                              </Tooltip>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-right text-xs">{formatAmount(row.amount)}</TableCell>
+                        {hasMappedBalance && (
+                          <TableCell className="text-right text-xs">{formatAmount(row.balanceAfter)}</TableCell>
+                        )}
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </ScrollArea>
+          </TooltipProvider>
         )}
 
         {safeDuplicates.length > 0 && (
@@ -290,7 +337,7 @@ export function DedupeCandidateResolver({
           </>
         )}
 
-        {candidateCount > 0 ? (
+        {candidateCount > 0 && (
           <>
             <div className="rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-800 dark:border-blue-800 dark:bg-blue-950 dark:text-blue-200">
               <p className="flex items-center gap-2">
@@ -335,10 +382,6 @@ export function DedupeCandidateResolver({
               </Table>
             </ScrollArea>
           </>
-        ) : (
-          <div className="rounded-md border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-800 dark:border-green-900 dark:bg-green-950 dark:text-green-200">
-            {tr('importers.transaction.preImportSummaryNoConflicts', "No s'han detectat conflictes. Pots continuar amb la importació.")}
-          </div>
         )}
 
         <DialogFooter>
