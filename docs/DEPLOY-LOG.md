@@ -90,6 +90,7 @@ Registre cronologic de desplegaments a produccio.
 - Extraccio minima de helpers purs per testabilitat a `processLocks.ts`, `children-ops.ts`, `undoProcessing.ts`.
 
 | 2026-02-28 10:46 | 57f3250 | ALT | Si | 31 | OK |
+| 2026-02-28 10:49 | 14d78c5 | MITJA | Si | 6 | OK |
 ## Decisions humanes (negoci)
 
 | Data | SHA | human_question_reason | business_impact | decision_taken |
