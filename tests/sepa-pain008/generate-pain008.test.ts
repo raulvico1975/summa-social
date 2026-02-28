@@ -299,4 +299,126 @@ describe('generatePain008Xml', () => {
     assert.ok(xml.includes('&quot;'));
     assert.ok(xml.includes('&apos;'));
   });
+
+  it('happy path with 2 eligible donors keeps MsgId and coherent sums', () => {
+    const xml = generatePain008Xml(sampleRun);
+    assert.ok(xml.includes(`<MsgId>${sampleRun.messageId}</MsgId>`));
+    assert.ok(xml.includes('<CtrlSum>75.00</CtrlSum>'));
+    assert.ok(xml.includes('<InstdAmt Ccy="EUR">50.00</InstdAmt>'));
+    assert.ok(xml.includes('<InstdAmt Ccy="EUR">25.00</InstdAmt>'));
+  });
+
+  it('escapes XML chars in mandate id and donor name', () => {
+    const runWithSpecialChars: SepaCollectionRun = {
+      ...sampleRun,
+      items: [
+        {
+          ...sampleRun.items[0],
+          donorName: 'ANA & <BOB>',
+          umr: 'MANDATE & <A>',
+        },
+      ],
+      totalAmountCents: 5000,
+      totalCount: 1,
+    };
+
+    const xml = generatePain008Xml(runWithSpecialChars);
+    assert.ok(xml.includes('<Nm>ANA &amp; &lt;BOB&gt;</Nm>'));
+    assert.ok(xml.includes('<MndtId>MANDATE &amp; &lt;A&gt;</MndtId>'));
+  });
+
+  it('rounds cents with decimal part (current behavior)', () => {
+    const runWithDecimalCents: SepaCollectionRun = {
+      ...sampleRun,
+      items: [{ ...sampleRun.items[0], amountCents: 1234.5 as unknown as number }],
+      totalAmountCents: 1234.5 as unknown as number,
+      totalCount: 1,
+    };
+
+    const errors = validateCollectionRun(runWithDecimalCents);
+    assert.equal(errors.length, 0);
+
+    const xml = generatePain008Xml(runWithDecimalCents);
+    assert.ok(xml.includes('<InstdAmt Ccy="EUR">12.35</InstdAmt>'));
+    assert.ok(xml.includes('<CtrlSum>12.35</CtrlSum>'));
+  });
+
+  it('includes debtor BIC when includeBic=true and entity is known', () => {
+    const xml = generatePain008Xml(sampleRun, {
+      includeBic: true,
+      generationDate: new Date('2026-01-08T16:44:01.667Z'),
+    });
+
+    assert.ok(xml.includes('<BIC>CAIXESBB</BIC>'));
+  });
+
+  it('falls back to NOTPROVIDED when includeBic=true and entity is unknown', () => {
+    const runWithUnknownEntity: SepaCollectionRun = {
+      ...sampleRun,
+      items: [{ ...sampleRun.items[0], iban: 'ES0000000000000000000000' }],
+      totalAmountCents: 5000,
+      totalCount: 1,
+    };
+
+    const xml = generatePain008Xml(runWithUnknownEntity, { includeBic: true });
+    assert.ok(xml.includes('<Id>NOTPROVIDED</Id>'));
+  });
+});
+
+describe('validateCollectionRun additional branches', () => {
+  const baseRun: SepaCollectionRun = {
+    id: 'test-run-extra',
+    status: 'draft',
+    scheme: 'CORE',
+    bankAccountId: 'bank-1',
+    creditorId: 'ES21001G70782933',
+    creditorName: 'FUNDACION TEST',
+    creditorIban: 'ES3900496990192310051311',
+    requestedCollectionDate: '2026-02-20',
+    items: [
+      {
+        donorId: 'd-1',
+        donorName: 'Donor Name',
+        donorTaxId: '12345678Z',
+        iban: 'ES9121000418450200051332',
+        amountCents: 1000,
+        umr: 'MANDATE-1',
+        signatureDate: '2025-12-01',
+        sequenceType: 'RCUR',
+        endToEndId: 'NOTPROVIDED',
+      },
+    ],
+    totalAmountCents: 1000,
+    totalCount: 1,
+    messageId: 'PRE20260220120000123000000000000000',
+    createdAt: '2026-02-20T12:00:00.123Z',
+    createdBy: 'user-1',
+  };
+
+  it('flags invalid requestedCollectionDate format', () => {
+    const errors = validateCollectionRun({
+      ...baseRun,
+      requestedCollectionDate: '20/02/2026',
+    });
+
+    assert.equal(errors.some((e) => e.field === 'requestedCollectionDate'), true);
+  });
+
+  it('flags missing requestedCollectionDate', () => {
+    const errors = validateCollectionRun({
+      ...baseRun,
+      requestedCollectionDate: '' as unknown as string,
+    });
+
+    assert.equal(errors.some((e) => e.field === 'requestedCollectionDate'), true);
+  });
+
+  it('flags invalid donor IBAN with incorrect length/checksum', () => {
+    const errors = validateCollectionRun({
+      ...baseRun,
+      items: [{ ...baseRun.items[0], iban: 'ES912100041845020005133' }],
+    });
+
+    assert.equal(errors.some((e) => e.field === 'iban'), true);
+  });
 });

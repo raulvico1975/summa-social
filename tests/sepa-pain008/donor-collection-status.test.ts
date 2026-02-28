@@ -1,6 +1,9 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { computeDonorCollectionStatus } from '../../src/lib/sepa/pain008/donor-collection-status';
+import {
+  computeDonorCollectionStatus,
+  PERIODICITY_MONTHS,
+} from '../../src/lib/sepa/pain008/donor-collection-status';
 
 // Helper: shorthand to get just the status type
 function statusType(
@@ -144,6 +147,16 @@ describe('edge cases', () => {
   it('manual when periodicityQuota is manual', () => {
     assert.equal(statusType('manual', '2025-10-15', '2026-02-10'), 'manual');
   });
+
+  it('unknown periodicity behaves as noPeriodicity', () => {
+    const result = computeDonorCollectionStatus(
+      { periodicityQuota: 'biweekly' as unknown as string, sepaPain008LastRunAt: '2025-10-15' },
+      '2026-02-10',
+    );
+    assert.equal(result.type, 'noPeriodicity');
+    assert.equal(result.periodicity, 'biweekly');
+    assert.equal(result.periodicityMonths, null);
+  });
 });
 
 // -----------------------------------------------------------------------
@@ -169,5 +182,14 @@ describe('result object shape', () => {
     assert.equal(result.type, 'due');
     assert.equal(result.lastRunLabel, null);
     assert.equal(result.periodicityMonths, 3);
+  });
+});
+
+describe('PERIODICITY_MONTHS', () => {
+  it('maps each supported periodicity to expected months', () => {
+    assert.equal(PERIODICITY_MONTHS.monthly, 1);
+    assert.equal(PERIODICITY_MONTHS.quarterly, 3);
+    assert.equal(PERIODICITY_MONTHS.semiannual, 6);
+    assert.equal(PERIODICITY_MONTHS.annual, 12);
   });
 });
