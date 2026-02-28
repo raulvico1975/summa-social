@@ -32,6 +32,9 @@ HIGH_RISK_PATTERNS=(
 
 LAST_FETCH_OK=true
 LAST_COMMIT_MESSAGE=""
+LOCK_DIR="${SUMMA_LOCK_DIR:-${TMPDIR:-/tmp}/summa-social-locks}"
+INTEGRATE_LOCK_PATH="$LOCK_DIR/integrate-main.lock"
+INTEGRATE_LOCK_ACQUIRED=false
 
 cd "$PROJECT_DIR"
 
@@ -56,6 +59,78 @@ env_flag_enabled() {
       return 1
       ;;
   esac
+}
+
+lock_pid_is_alive() {
+  local pid="${1:-}"
+  if [ -z "$pid" ] || ! [[ "$pid" =~ ^[0-9]+$ ]]; then
+    return 1
+  fi
+  kill -0 "$pid" >/dev/null 2>&1
+}
+
+read_lock_pid() {
+  local lock_path="$1"
+  if [ ! -f "$lock_path/pid" ]; then
+    printf '%s' ""
+    return
+  fi
+  tr -d '[:space:]' < "$lock_path/pid"
+}
+
+release_integrate_lock() {
+  if [ "$INTEGRATE_LOCK_ACQUIRED" != true ]; then
+    return
+  fi
+
+  if [ -d "$INTEGRATE_LOCK_PATH" ]; then
+    local owner_pid
+    owner_pid="$(read_lock_pid "$INTEGRATE_LOCK_PATH")"
+    if [ -z "$owner_pid" ] || [ "$owner_pid" = "$$" ]; then
+      rm -rf "$INTEGRATE_LOCK_PATH"
+    fi
+  fi
+
+  INTEGRATE_LOCK_ACQUIRED=false
+}
+
+acquire_integrate_lock() {
+  local branch="$1"
+
+  mkdir -p "$LOCK_DIR"
+
+  while true; do
+    if mkdir "$INTEGRATE_LOCK_PATH" 2>/dev/null; then
+      printf '%s\n' "$$" > "$INTEGRATE_LOCK_PATH/pid"
+      date -u '+%Y-%m-%dT%H:%M:%SZ' > "$INTEGRATE_LOCK_PATH/started_at"
+      (hostname 2>/dev/null || echo unknown) > "$INTEGRATE_LOCK_PATH/host"
+      printf '%s\n' "$branch" > "$INTEGRATE_LOCK_PATH/branch"
+      INTEGRATE_LOCK_ACQUIRED=true
+      trap 'release_integrate_lock' EXIT
+      return 0
+    fi
+
+    local owner_pid
+    owner_pid="$(read_lock_pid "$INTEGRATE_LOCK_PATH")"
+
+    if lock_pid_is_alive "$owner_pid"; then
+      say "BLOCKED_SAFE"
+      say "Hi ha un altre agent integrant/publicant; torna-ho a provar quan acabi."
+      say "Lock actiu: $INTEGRATE_LOCK_PATH (pid: ${owner_pid:-desconegut})"
+      exit 1
+    fi
+
+    say "Lock orfe detectat: $INTEGRATE_LOCK_PATH"
+    if env_flag_enabled "${SUMMA_LOCK_FORCE:-0}"; then
+      say "SUMMA_LOCK_FORCE=1 detectat. Esborro lock orfe i reintento."
+      rm -rf "$INTEGRATE_LOCK_PATH"
+      continue
+    fi
+
+    say "BLOCKED_SAFE"
+    say "Per continuar, reintenta amb: SUMMA_LOCK_FORCE=1 npm run acabat -- --allow-main-merge"
+    exit 1
+  done
 }
 
 git_control() {
@@ -635,13 +710,15 @@ run_acabat() {
 
   if [ "$allow_main_merge" != "true" ]; then
     say "$STATUS_READY"
-    say "merge/push disabled by default."
-    say "Per integrar a main cal flag explícit: ALLOW_MAIN_MERGE=1 o --allow-main-merge"
+    say "npm run acabat no integra per defecte."
+    say "Per integrar ara, executa: npm run acabat -- --allow-main-merge"
+    say "La integració és serialitzada per lock; si hi ha un altre agent, espera i reintenta."
     emit_next_step_block "Obre PR manual o torna a executar amb flag explícit si vols integrar."
     return
   fi
 
   say "No hi ha canvis locals nous, pero la branca te commits pendents d'integrar (mode allow-main-merge)."
+  acquire_integrate_lock "$branch"
   push_branch "$branch"
   integrate_to_main "$branch"
 

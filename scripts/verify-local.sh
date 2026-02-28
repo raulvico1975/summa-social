@@ -10,9 +10,6 @@ npm run i18n:check-tr-keys
 echo "[verify-local] Checking build env..."
 node scripts/check-build-env.mjs
 
-echo "[verify-local] Build..."
-npm run build
-
 echo "[verify-local] Checking staged TS/TSX files..."
 
 # Llistar fitxers staged TS/TSX (compatible macOS bash 3.x)
@@ -40,11 +37,5 @@ if echo "$STAGED" | xargs grep -nE ':\s*undefined\b' -- >/dev/null 2>&1; then
   echo "$STAGED" | xargs grep -nE ':\s*undefined\b' -- || true
   exit 1
 fi
-
-echo "[verify-local] Checking hardcoded Catalan in projectModule..."
-node --import tsx scripts/i18n/check-hardcoded-ca.ts
-
-echo "[verify-local] Checking i18n key consistency for projectModule..."
-node --import tsx scripts/i18n/check-keys-scope.ts --scope projectModule
 
 echo "[verify-local] OK"

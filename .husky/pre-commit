@@ -6,9 +6,6 @@ if [ "$branch" = "prod" ]; then
   exit 1
 fi
 
-npm test
 npm run docs:check
-npm run i18n:validate-guides
-npm run i18n:validate-help
 npm run i18n:check
 npm run i18n:check-tr-keys

@@ -57,7 +57,7 @@ Aquesta classificació determina els requisits de validació (secció 4).
    ```bash
    node scripts/check-build-env.mjs && npm run build && npm test
    ```
-4. `npm run acabat` des del worktree: checks + commit + push + integració a `main` (control)
+4. `npm run acabat` des del worktree: orquestració/estat. **No integra ni pusha per defecte**
 5. Després d'`acabat`, el sistema pregunta si vols tancar el worktree (`npm run worktree:close`)
 
 ---
@@ -103,7 +103,8 @@ El ritual complet d'"acabar feina" i publicar s'executa via scripts deterministe
 ```bash
 npm run inicia    # crea branca codex/* + worktree extern de tasca
 npm run implementa # equivalent a inicia
-npm run acabat    # tanca tasca des del worktree (checks + commit + push + integració a main)
+npm run acabat    # orquestració/estat (sense integració per defecte)
+npm run acabat -- --allow-main-merge # push branca + merge a main + push main
 npm run publica   # publica main -> prod (només des del repositori de control)
 npm run worktree:list
 npm run worktree:close
@@ -112,12 +113,15 @@ npm run worktree:gc
 
 `npm run inicia` i `npm run implementa` (`scripts/workflow.sh inicia|implementa`) només funcionen al repositori de control (`main` net) i creen una tasca aïllada: branca `codex/...` + worktree extern.
 
-`npm run acabat` (`scripts/workflow.sh acabat`) fa aquests passos de forma seqüencial:
-1. Detectar canvis pendents i classificar risc (ALT/MITJÀ/BAIX)
-2. Verificacions (`verify-local.sh`, `verify-ci.sh`)
-3. Commit i push de la branca de treball (`codex/...`)
-4. Integració automàtica a `main` via repositori de control (si no hi ha conflictes)
-5. Pregunta operativa de tancament del worktree
+`npm run acabat` (`scripts/workflow.sh acabat`) fa aquests passos:
+1. Valida estat del worktree i sincronització bàsica amb el repositori de control
+2. Si no hi ha flag d'integració: reporta estat i indica el següent pas
+3. **No integra per defecte** (`push/merge` desactivats per defecte)
+4. Si s'executa amb `--allow-main-merge`: fa `push` de branca + integració a `main` + `push main`
+
+Integració i publicació estan serialitzades amb lock de concurrència:
+- Si hi ha lock actiu: el procés es bloqueja amb missatge explícit
+- Si es detecta lock orfe: es pot forçar neteja amb `SUMMA_LOCK_FORCE=1`
 
 `npm run publica` executa `scripts/deploy.sh`, que fa:
 1. Preflight git al **repositori de control** (branca=main, working tree net, pull ff-only)
@@ -167,6 +171,19 @@ npm run worktree:gc
 - Check post-producció de 3 minuts automatitzat.
 - Mini-registre d'incidència quan un deploy queda bloquejat.
 - Si no hi ha URLs de smoke definides, el sistema prova automàticament amb `DEPLOY_BASE_URL` o amb la URL publicada detectada a `firebase.json`.
+
+### Validacions per nivells
+
+- `npm run verify:fast`: validacions ràpides locals (sense build ni tests)
+- `npm run verify:full`: typecheck + cobertura/tests + validacions i18n + build
+- `npm run verify:release`: `deploy.sh` (inclou gates fiscals, verificacions i checks post-prod)
+
+### CI i protecció de branques (3A)
+
+- Workflow CI obligatori a GitHub (`.github/workflows/ci.yml`) en `pull_request` a `main` i `push` a `main`
+- Check requerit a `main`: job `verify-full` en verd
+- Protecció de branques: push directe prohibit a `main` i `prod` per agents no autoritzats
+- `prod` es publica via ritual (`npm run publica`) per actor autoritzat
 
 ### Missatge de commit
 
@@ -269,13 +286,11 @@ Aquest document conté:
 
 ---
 
-## 9. Quan canviar aquest model
+## 9. Evolució del model
 
-Només si:
-- **Equip 3+ devs** → afegir PRs obligatoris
-- **CI/CD automatitzat** → afegir protecció de branques
-
-Fins llavors: **simplicitat i disciplina > automatització**.
+- Mantenim `main -> prod` i deploy per script local controlat
+- CI i branch protection ja són part obligatòria del model
+- Qualsevol canvi futur (deploy per pipeline, entorns extra, etc.) requereix actualitzar aquest document abans d'aplicar-lo
 
 ---
 

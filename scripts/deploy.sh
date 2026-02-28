@@ -40,6 +40,94 @@ RESOLVED_SMOKE_DASHBOARD_URL=""
 RESOLVED_CHECK_LOGIN_URL=""
 RESOLVED_CHECK_CORE_URL=""
 RESOLVED_CHECK_REPORT_URL=""
+INCIDENT_LOG_TOUCHED=false
+LOCK_DIR="${SUMMA_LOCK_DIR:-${TMPDIR:-/tmp}/summa-social-locks}"
+DEPLOY_LOCK_PATH="$LOCK_DIR/deploy.lock"
+DEPLOY_LOCK_ACQUIRED=false
+
+env_flag_enabled() {
+  local value="${1:-}"
+  case "$(printf '%s' "$value" | tr '[:upper:]' '[:lower:]')" in
+    1|true|yes|on)
+      return 0
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+}
+
+lock_pid_is_alive() {
+  local pid="${1:-}"
+  if [ -z "$pid" ] || ! [[ "$pid" =~ ^[0-9]+$ ]]; then
+    return 1
+  fi
+  kill -0 "$pid" >/dev/null 2>&1
+}
+
+read_lock_pid() {
+  local lock_path="$1"
+  if [ ! -f "$lock_path/pid" ]; then
+    printf '%s' ""
+    return
+  fi
+  tr -d '[:space:]' < "$lock_path/pid"
+}
+
+release_deploy_lock() {
+  if [ "$DEPLOY_LOCK_ACQUIRED" != true ]; then
+    return
+  fi
+
+  if [ -d "$DEPLOY_LOCK_PATH" ]; then
+    local owner_pid
+    owner_pid="$(read_lock_pid "$DEPLOY_LOCK_PATH")"
+    if [ -z "$owner_pid" ] || [ "$owner_pid" = "$$" ]; then
+      rm -rf "$DEPLOY_LOCK_PATH"
+    fi
+  fi
+
+  DEPLOY_LOCK_ACQUIRED=false
+}
+
+acquire_deploy_lock() {
+  mkdir -p "$LOCK_DIR"
+
+  while true; do
+    if mkdir "$DEPLOY_LOCK_PATH" 2>/dev/null; then
+      printf '%s\n' "$$" > "$DEPLOY_LOCK_PATH/pid"
+      date -u '+%Y-%m-%dT%H:%M:%SZ' > "$DEPLOY_LOCK_PATH/started_at"
+      (hostname 2>/dev/null || echo unknown) > "$DEPLOY_LOCK_PATH/host"
+      (git rev-parse --abbrev-ref HEAD 2>/dev/null || echo unknown) > "$DEPLOY_LOCK_PATH/branch"
+      DEPLOY_LOCK_ACQUIRED=true
+      return 0
+    fi
+
+    local owner_pid
+    owner_pid="$(read_lock_pid "$DEPLOY_LOCK_PATH")"
+
+    if lock_pid_is_alive "$owner_pid"; then
+      DEPLOY_BLOCK_REASON="Hi ha un altre agent integrant/publicant; torna-ho a provar quan acabi."
+      DEPLOY_RESULT="BLOCKED_SAFE"
+      echo "ERROR: Hi ha un altre agent integrant/publicant; torna-ho a provar quan acabi."
+      echo "  Lock actiu: $DEPLOY_LOCK_PATH (pid: ${owner_pid:-desconegut})"
+      exit 1
+    fi
+
+    echo "ERROR: Lock orfe detectat: $DEPLOY_LOCK_PATH"
+    if env_flag_enabled "${SUMMA_LOCK_FORCE:-0}"; then
+      echo "  SUMMA_LOCK_FORCE=1 detectat. Esborro lock orfe i reintento."
+      rm -rf "$DEPLOY_LOCK_PATH"
+      continue
+    fi
+
+    DEPLOY_BLOCK_REASON="Lock orfe detectat"
+    DEPLOY_RESULT="BLOCKED_SAFE"
+    echo "  Reintenta amb: SUMMA_LOCK_FORCE=1 npm run deploy"
+    echo "  O via workflow: SUMMA_LOCK_FORCE=1 npm run publica"
+    exit 1
+  done
+}
 
 append_incident_log() {
   if [ "$INCIDENT_RECORDED" = true ]; then
@@ -68,6 +156,7 @@ HEADER
   fi
 
   echo "| $date | $CURRENT_PHASE | $RISK_LEVEL | $main_sha_short | $prod_sha_short | $DEPLOY_RESULT | $reason | Pendent |" >> "$log_path"
+  INCIDENT_LOG_TOUCHED=true
   INCIDENT_RECORDED=true
 }
 
@@ -77,11 +166,13 @@ cleanup_deploy_docs_if_incomplete() {
   fi
 
   git restore --staged --worktree -- "$DEPLOY_LOG" "$ROLLBACK_PLAN_FILE" 2>/dev/null || true
+  if [ "$INCIDENT_LOG_TOUCHED" = true ]; then
+    git restore --staged --worktree -- "$INCIDENT_LOG" 2>/dev/null || true
+  fi
 }
 
 on_script_exit() {
   local exit_code="$1"
-  cleanup_deploy_docs_if_incomplete
 
   if [ "$exit_code" -ne 0 ]; then
     if [ -z "$DEPLOY_BLOCK_REASON" ]; then
@@ -92,6 +183,9 @@ on_script_exit() {
     fi
     append_incident_log
   fi
+
+  cleanup_deploy_docs_if_incomplete
+  release_deploy_lock
 }
 
 trap 'on_script_exit $?' EXIT
@@ -1132,6 +1226,7 @@ main() {
   echo "  SUMMA SOCIAL — DEPLOY VERIFICAT"
   echo "======================================"
 
+  acquire_deploy_lock
   preflight_git_checks      # Pas 1
   detect_changed_files       # Pas 2
   classify_risk              # Pas 3
@@ -1141,9 +1236,6 @@ main() {
   display_deploy_summary     # Pas 6
   handle_business_decision_for_residual_risk
   DEPLOY_PROD_BEFORE_SHA=$(git rev-parse --short prod)
-  DEPLOY_CONTENT_SHA=$(git rev-parse --short main)
-  prepare_rollback_plan
-  commit_deploy_logs_if_needed
   DEPLOY_CONTENT_SHA=$(git rev-parse --short main)
   execute_merge_ritual       # Pas 7
   post_deploy_check          # Pas 8
