@@ -1,17 +1,17 @@
 # Rollback Plan (auto) — Summa Social
 
-Generat: 2026-02-28 10:45
+Generat: 2026-02-28 10:46
 Risc: ALT
 Backup curt: SKIPPED_NO_BUCKET
 SHA prod abans de publicar: 2deb4ee
-SHA main a publicar: 84b53a0
+SHA main a publicar: 57f3250
 
 ## Si cal marxa enrere rapida
 
 Opcio recomanada (preserva historial):
 ```bash
 git checkout main
-git revert 84b53a0 --no-edit
+git revert 57f3250 --no-edit
 git push origin main
 bash scripts/deploy.sh
 ```
