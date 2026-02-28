@@ -100,4 +100,94 @@ describe('transaction dedupe with balanceAfter strong rule', () => {
     assert.equal(result[0].status, 'DUPLICATE_CANDIDATE');
     assert.notEqual(result[0].reason, 'BALANCE_AMOUNT_DATE');
   });
+
+  it('legacy proxy-date hit classifica com DUPLICATE_CANDIDATE', () => {
+    const existing = [makeExisting({
+      id: 'tx-legacy',
+      date: '2026-02-10T00:00:00.000Z',
+      balanceAfter: 1000,
+      operationDate: undefined,
+      amount: 25,
+    })];
+    const parsed = [makeIncoming({
+      date: '2026-02-11T00:00:00.000Z',
+      balanceAfter: 1000,
+      operationDate: '2026-02-10',
+      amount: 25,
+    })];
+
+    const result = classifyTransactions(parsed, existing, 'acc-1');
+
+    assert.equal(result.length, 1);
+    assert.equal(result[0].status, 'DUPLICATE_CANDIDATE');
+    assert.equal(result[0].tx.duplicateReason, 'balance+amount+proxyDate');
+    assert.deepEqual(result[0].matchedExistingIds, ['tx-legacy']);
+  });
+
+  it('legacy proxy-date miss per data no fa match', () => {
+    const existing = [makeExisting({
+      id: 'tx-legacy',
+      date: '2026-02-10T00:00:00.000Z',
+      balanceAfter: 1000,
+      operationDate: undefined,
+      amount: 25,
+    })];
+    const parsed = [makeIncoming({
+      date: '2026-02-11T00:00:00.000Z',
+      balanceAfter: 1000,
+      operationDate: '2026-02-09',
+      amount: 25,
+    })];
+
+    const result = classifyTransactions(parsed, existing, 'acc-1');
+
+    assert.equal(result.length, 1);
+    assert.equal(result[0].status, 'NEW');
+    assert.notEqual(result[0].tx.duplicateReason, 'balance+amount+proxyDate');
+  });
+
+  it('legacy proxy-date miss per amount no fa match', () => {
+    const existing = [makeExisting({
+      id: 'tx-legacy',
+      date: '2026-02-10T00:00:00.000Z',
+      balanceAfter: 1000,
+      operationDate: undefined,
+      amount: 25,
+    })];
+    const parsed = [makeIncoming({
+      date: '2026-02-11T00:00:00.000Z',
+      balanceAfter: 1000,
+      operationDate: '2026-02-10',
+      amount: 30,
+    })];
+
+    const result = classifyTransactions(parsed, existing, 'acc-1');
+
+    assert.equal(result.length, 1);
+    assert.equal(result[0].status, 'NEW');
+    assert.notEqual(result[0].tx.duplicateReason, 'balance+amount+proxyDate');
+  });
+
+  it('existing modern amb operationDate no entra al legacy map', () => {
+    const existing = [makeExisting({
+      id: 'tx-modern',
+      date: '2026-02-10T00:00:00.000Z',
+      balanceAfter: 1000,
+      operationDate: '2026-02-10',
+      amount: 25,
+    })];
+    const parsed = [makeIncoming({
+      date: '2026-02-11T00:00:00.000Z',
+      balanceAfter: 1000,
+      operationDate: '2026-02-10',
+      amount: 25,
+    })];
+
+    const result = classifyTransactions(parsed, existing, 'acc-1');
+
+    assert.equal(result.length, 1);
+    assert.equal(result[0].status, 'DUPLICATE_SAFE');
+    assert.equal(result[0].reason, 'BALANCE_AMOUNT_DATE');
+    assert.notEqual(result[0].tx.duplicateReason, 'balance+amount+proxyDate');
+  });
 });

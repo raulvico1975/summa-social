@@ -171,6 +171,24 @@ function createBalanceAmountDateKey(tx: {
   return `${accountPrefix}:bal:${balanceAfterCents}|${amountCents}|${dateKey}`;
 }
 
+/**
+ * Clau legacy proxy per candidats:
+ * bankAccountId + balanceAfter + amount + existing.date (proxy de operationDate)
+ */
+function createLegacyBalanceProxyDateKey(tx: {
+  amount: number;
+  balanceAfter: number;
+  proxyDate: string;
+  bankAccountId?: string | null;
+}): string {
+  const accountPrefix = tx.bankAccountId || 'no-account';
+  const balanceAfterCents = normalizeAmountForDedupe(tx.balanceAfter);
+  const amountCents = normalizeAmountForDedupe(tx.amount);
+  const dateKey = normalizeDateForDedupe(tx.proxyDate);
+
+  return `${accountPrefix}:legbal:${balanceAfterCents}|${amountCents}|${dateKey}`;
+}
+
 function hasFullModernBalanceData(tx: {
   operationDate?: unknown;
   balanceAfter?: unknown;
@@ -239,10 +257,13 @@ export function classifyTransactions(
   bankAccountId: string,
   extraFields: string[] = []
 ): ClassifiedRow[] {
+  type ExistingTx = { id: string; tx: Transaction };
+
   // Indexar existents per refKey i baseKey
-  const existingByRefKey = new Map<string, Array<{ id: string; tx: Transaction }>>();
-  const existingByBalanceAmountDateKey = new Map<string, Array<{ id: string; tx: Transaction }>>();
-  const existingByBaseKey = new Map<string, Array<{ id: string; tx: Transaction }>>();
+  const existingByRefKey = new Map<string, ExistingTx[]>();
+  const existingByBalanceAmountDateKey = new Map<string, ExistingTx[]>();
+  const existingByLegacyBalanceKey = new Map<string, ExistingTx[]>();
+  const existingByBaseKey = new Map<string, ExistingTx[]>();
 
   for (const etx of existingTransactions) {
     const key = createDedupeKey({
@@ -277,6 +298,26 @@ export function classifyTransactions(
       const arr = existingByBalanceAmountDateKey.get(balanceAmountDateKey) || [];
       arr.push({ id: etx.id, tx: etx });
       existingByBalanceAmountDateKey.set(balanceAmountDateKey, arr);
+    }
+
+    const existingBalanceAfter = etx.balanceAfter;
+    const existingHasLegacyShape =
+      typeof existingBalanceAfter === 'number' &&
+      Number.isFinite(existingBalanceAfter) &&
+      etx.operationDate == null &&
+      typeof etx.date === 'string' &&
+      etx.date.trim() !== '';
+
+    if (existingHasLegacyShape) {
+      const legacyBalanceKey = createLegacyBalanceProxyDateKey({
+        amount: etx.amount,
+        balanceAfter: existingBalanceAfter,
+        proxyDate: etx.date,
+        bankAccountId: etx.bankAccountId,
+      });
+      const arr = existingByLegacyBalanceKey.get(legacyBalanceKey) || [];
+      arr.push({ id: etx.id, tx: etx });
+      existingByLegacyBalanceKey.set(legacyBalanceKey, arr);
     }
   }
 
@@ -391,7 +432,39 @@ export function classifyTransactions(
       }
     }
 
-    // 4. Sense bankRef/saldo fort: comprovar match per clau base
+    // 4. Capa legacy proxy-date (només candidate; mai SAFE)
+    if (incomingHasFullData) {
+      const legacyBalanceKey = createLegacyBalanceProxyDateKey({
+        amount: tx.amount,
+        balanceAfter: tx.balanceAfter,
+        proxyDate: tx.operationDate,
+        bankAccountId,
+      });
+      const legacyCandidates = existingByLegacyBalanceKey.get(legacyBalanceKey);
+      if (legacyCandidates && legacyCandidates.length > 0) {
+        // Determinista: prioritzar el primer segons ordre d'indexació.
+        const bestLegacyCandidate = legacyCandidates[0];
+        results.push({
+          tx: { ...tx, duplicateReason: 'balance+amount+proxyDate' },
+          status: 'DUPLICATE_CANDIDATE',
+          reason: 'BASE_KEY',
+          matchedExistingIds: [bestLegacyCandidate.id],
+          matchedExisting: [{
+            id: bestLegacyCandidate.id,
+            date: bestLegacyCandidate.tx.date,
+            description: bestLegacyCandidate.tx.description,
+            amount: bestLegacyCandidate.tx.amount,
+            operationDate: bestLegacyCandidate.tx.operationDate,
+            balanceAfter: bestLegacyCandidate.tx.balanceAfter,
+          }],
+          rawRow,
+          userDecision: null,
+        });
+        continue;
+      }
+    }
+
+    // 5. Sense bankRef/saldo fort/legacy: comprovar match per clau base
     const baseMatches = existingByBaseKey.get(effectiveKey);
     if (!baseMatches || baseMatches.length === 0) {
       // Sense match → NEW

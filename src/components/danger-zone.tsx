@@ -31,6 +31,21 @@ import { formatCurrencyEU } from '@/lib/normalize';
 
 type DeleteType = 'donors' | 'suppliers' | 'employees' | 'transactions' | 'categories' | null;
 
+interface DeleteMovementsFamilyApiResponse {
+  success: boolean;
+  idempotent?: boolean;
+  error?: string;
+  code?: string;
+  deleted?: {
+    transactions: number;
+    remittancesPending: number;
+    remittances: number;
+    importRuns: number;
+    importJobs: number;
+    total: number;
+  };
+}
+
 // Patró per detectar transaccions de remesa (fallback)
 const REMITTANCE_PATTERNS = [
   'Donació soci/a:',
@@ -65,7 +80,7 @@ async function findLinkedTxIds(
 export function DangerZone() {
   const { t } = useTranslations();
   const { toast } = useToast();
-  const { firestore } = useFirebase();
+  const { firestore, auth } = useFirebase();
   const { organizationId, organization } = useCurrentOrganization();
 
   const [deleteType, setDeleteType] = React.useState<DeleteType>(null);
@@ -273,13 +288,58 @@ export function DangerZone() {
     setIsDeleting(true);
 
     try {
+      if (deleteType === 'transactions') {
+        const authUser = auth.currentUser;
+        if (!authUser) {
+          throw new Error('Sessio no valida. Torna a iniciar sessio.');
+        }
+
+        const idToken = await authUser.getIdToken();
+        const response = await fetch('/api/danger-zone/delete-movements-family', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${idToken}`,
+          },
+          body: JSON.stringify({ orgId: organizationId }),
+        });
+
+        let result: DeleteMovementsFamilyApiResponse | null = null;
+        try {
+          result = (await response.json()) as DeleteMovementsFamilyApiResponse;
+        } catch {
+          result = null;
+        }
+
+        if (!response.ok || !result?.success) {
+          throw new Error(result?.error || t.dangerZone.deleteErrorDescription);
+        }
+
+        if ((result.deleted?.total ?? 0) === 0) {
+          toast({
+            title: t.dangerZone.noDataToDelete,
+            description: t.dangerZone.noDataToDeleteDescription,
+          });
+        } else {
+          toast({
+            title: t.dangerZone.deleteSuccess,
+            description:
+              `Moviments: ${result.deleted?.transactions ?? 0}, ` +
+              `remeses: ${result.deleted?.remittances ?? 0} (+${result.deleted?.remittancesPending ?? 0} pendents), ` +
+              `imports: ${result.deleted?.importRuns ?? 0}/${result.deleted?.importJobs ?? 0}.`,
+          });
+        }
+
+        setDeleteType(null);
+        setConfirmText('');
+        return;
+      }
+
       let collectionPath: string;
       let queryConstraint: ReturnType<typeof where> | null = null;
       let deletedCount = 0;
 
-      if (deleteType === 'transactions') {
-        collectionPath = `organizations/${organizationId}/transactions`;
-      } else if (deleteType === 'categories') {
+      if (deleteType === 'categories') {
         collectionPath = `organizations/${organizationId}/categories`;
       } else {
         collectionPath = `organizations/${organizationId}/contacts`;
@@ -304,23 +364,6 @@ export function DangerZone() {
         setConfirmText('');
         setIsDeleting(false);
         return;
-      }
-
-      // Guardrail: bloquejar delete de transaccions amb vincle a projectes
-      if (deleteType === 'transactions') {
-        const txIds = snapshot.docs.map(d => d.id);
-        const linkedIds = await findLinkedTxIds(firestore, organizationId, txIds);
-        if (linkedIds.length > 0) {
-          toast({
-            variant: 'destructive',
-            title: t.dangerZone.blockedByProjectLinks ?? 'Moviments assignats a projectes',
-            description: (t.dangerZone.blockedByProjectLinksCount ?? '{{count}} moviments tenen assignacions a projectes.').replace('{{count}}', String(linkedIds.length)),
-          });
-          setDeleteType(null);
-          setConfirmText('');
-          setIsDeleting(false);
-          return;
-        }
       }
 
       // Esborrar en batches de 500 (límit de Firestore)
@@ -485,6 +528,11 @@ export function DangerZone() {
                   organization?.name || ''
                 )}
               </p>
+              {deleteType === 'transactions' && (
+                <p>
+                  Això també esborrarà remeses i registres d'import associats.
+                </p>
+              )}
               <p className="font-semibold text-red-600">
                 {t.dangerZone.confirmWarning}
               </p>
