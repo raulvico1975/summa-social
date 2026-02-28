@@ -61,6 +61,7 @@ import { formatCurrencyEU, formatDateShort } from '@/lib/normalize';
 import { Checkbox } from '@/components/ui/checkbox';
 import { RowDropTarget } from '@/components/files/row-drop-target';
 import type { DeleteTransactionBlockedReason } from '@/lib/transactions/can-delete-transaction';
+import { canShowUndoSplitAction } from '@/lib/splits/split-visibility';
 
 // =============================================================================
 // HELPERS
@@ -113,6 +114,8 @@ interface TransactionRowProps {
   onSplitRemittance: (tx: Transaction) => void;
   onSplitAmount: (tx: Transaction) => void;
   onSplitStripeRemittance?: (tx: Transaction) => void;
+  onOpenSplitDetail?: (txId: string) => void;
+  onUndoSplit?: (txId: string) => void;
   onViewRemittanceDetail: (txId: string, parentTx?: Transaction) => void;
   onUndoRemittance?: (tx: Transaction) => void;
   onGenerateReturnEmailDraft?: (tx: Transaction) => void;
@@ -169,6 +172,8 @@ interface TransactionRowProps {
     remittanceProcessedLabel: string;
     remittanceNotApplicable: string;
     undoRemittance?: string;
+    splitProcessedLabel?: string;
+    undoSplit?: string;
     reconcileSepa?: string;
     moreOptionsAriaLabel?: string;
     legacyCategory?: string;
@@ -214,6 +219,8 @@ export const TransactionRow = React.memo(function TransactionRow({
   onSplitRemittance,
   onSplitAmount,
   onSplitStripeRemittance,
+  onOpenSplitDetail,
+  onUndoSplit,
   onViewRemittanceDetail,
   onUndoRemittance,
   onGenerateReturnEmailDraft,
@@ -416,6 +423,22 @@ export const TransactionRow = React.memo(function TransactionRow({
     onViewRemittanceDetail(tx.id, tx);
   }, [tx, onViewRemittanceDetail]);
 
+  const handleOpenSplitDetail = React.useCallback(() => {
+    if (!onOpenSplitDetail) return;
+    onOpenSplitDetail(tx.id);
+  }, [onOpenSplitDetail, tx.id]);
+
+  const handleUndoSplit = React.useCallback(() => {
+    if (!onUndoSplit) return;
+    setIsActionsMenuOpen(false);
+    setTimeout(() => {
+      if (document.activeElement instanceof HTMLElement) {
+        document.activeElement.blur();
+      }
+      onUndoSplit(tx.id);
+    }, 100);
+  }, [onUndoSplit, tx.id]);
+
   const handleUndoRemittance = React.useCallback(() => {
     if (!onUndoRemittance) return;
     // Delay per permetre que el DropdownMenu es tanqui completament
@@ -587,6 +610,15 @@ export const TransactionRow = React.memo(function TransactionRow({
                   }
                 </TooltipContent>
               </Tooltip>
+            )}
+            {canShowUndoSplitAction(tx) && onOpenSplitDetail && (
+              <Badge
+                variant="secondary"
+                className="text-xs py-0 px-1.5 cursor-pointer"
+                onClick={handleOpenSplitDetail}
+              >
+                {t.splitProcessedLabel || 'Desglossat'}
+              </Badge>
             )}
             {/* Badge SEPA detectada */}
             {detectedPrebankRemittance && !tx.isRemittance && onReconcileSepa && (
@@ -888,7 +920,7 @@ export const TransactionRow = React.memo(function TransactionRow({
               <MoreVertical className="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
+          <DropdownMenuContent align="end" forceMount>
             {isReturn && !tx.isRemittance && (
               <>
                 <DropdownMenuItem onClick={handleOpenReturnDialog}>
@@ -967,6 +999,12 @@ export const TransactionRow = React.memo(function TransactionRow({
               <DropdownMenuItem onClick={handleUndoRemittance} className="text-orange-600">
                 <Undo2 className="mr-2 h-4 w-4" />
                 {t.undoRemittance || 'Desfer remesa'}
+              </DropdownMenuItem>
+            )}
+            {canShowUndoSplitAction(tx) && onUndoSplit && (
+              <DropdownMenuItem onClick={handleUndoSplit} className="text-orange-600">
+                <Undo2 className="mr-2 h-4 w-4" />
+                {t.undoSplit || 'Desfer desglossament'}
               </DropdownMenuItem>
             )}
             <DropdownMenuSeparator />
