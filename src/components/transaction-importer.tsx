@@ -37,6 +37,7 @@ import Link from 'next/link';
 import { suggestPendingDocumentMatches } from '@/lib/pending-documents';
 import { classifyTransactions, type ClassifiedRow } from '@/lib/transaction-dedupe';
 import { DedupeCandidateResolver } from '@/components/dedupe-candidate-resolver';
+import { RemittanceStyleMappingStep } from '@/components/importers/remittance-style-mapping-step';
 import {
   BankStatementParseError,
   parseBankStatementRows,
@@ -47,6 +48,12 @@ import {
   type ParseSummary,
   type ParsedBankStatementRow,
 } from '@/lib/importers/bank/bankStatementParser';
+import {
+  buildBankMappingColumnOptions,
+  buildBankMappingPreviewRows,
+  getBankMappingColumnCount,
+  type BankMappingFieldId,
+} from '@/lib/importers/bank/mapping-ui';
 
 interface ImportTransactionsApiResponse {
   success: boolean;
@@ -176,12 +183,6 @@ export function TransactionImporter({ availableCategories }: TransactionImporter
   // Dedupe 3 estats: candidats pendents de resolució
   const [classifiedResults, setClassifiedResults] = React.useState<ClassifiedRow[] | null>(null);
   const [isCandidateDialogOpen, setIsCandidateDialogOpen] = React.useState(false);
-  const [dedupeSummary, setDedupeSummary] = React.useState<{
-    newCount: number;
-    safeDuplicatesCount: number;
-    candidateCount: number;
-    totalCount: number;
-  } | null>(null);
   const [pendingImportContext, setPendingImportContext] = React.useState<{
     bankAccountId: string;
     fileName: string | null;
@@ -189,12 +190,15 @@ export function TransactionImporter({ availableCategories }: TransactionImporter
   } | null>(null);
   const [previewSummary, setPreviewSummary] = React.useState<ParseSummary | null>(null);
   const [previewRows, setPreviewRows] = React.useState<ParsedBankStatementRow[]>([]);
+  const [previewHasMappedBalance, setPreviewHasMappedBalance] = React.useState(false);
   const [mappingState, setMappingState] = React.useState<{
     rows: unknown[][];
     bankAccountId: string | null;
     fileName: string | null;
     headerRowIndex: number;
-    columns: string[];
+    columns: ReturnType<typeof buildBankMappingColumnOptions>;
+    previewRows: string[][];
+    previewColumnCount: number;
     selectedMapping: {
       operationDate: number;
       description: number;
@@ -202,7 +206,6 @@ export function TransactionImporter({ availableCategories }: TransactionImporter
       balanceAfter: number;
     };
     riskSignals: ParseRiskSignals;
-    riskMessages: string[];
   } | null>(null);
   const { toast } = useToast();
   const { firestore, auth } = useFirebase();
@@ -301,6 +304,7 @@ export function TransactionImporter({ availableCategories }: TransactionImporter
     setMappingState(null);
     setPreviewSummary(null);
     setPreviewRows([]);
+    setPreviewHasMappedBalance(false);
     setIsImporting(true);
     if (file.name.endsWith('.csv')) {
       parseCsv(file, bankAccountId);
@@ -324,52 +328,6 @@ export function TransactionImporter({ availableCategories }: TransactionImporter
     return classifyParsedData(parseResult, bankAccountId, fileName);
   };
 
-  const buildRiskMessages = (riskSignals: ParseRiskSignals): string[] => {
-    const messages: string[] = [];
-    if (riskSignals.lowConfidence) {
-      messages.push(tr('importers.transaction.mapping.risk.lowConfidence', 'Detecció de capçalera amb confiança baixa.'));
-    }
-    if (riskSignals.missingRequiredFields.length > 0) {
-      messages.push(
-        tr(
-          'importers.transaction.mapping.risk.missingRequired',
-          `Falten camps requerits: ${riskSignals.missingRequiredFields.join(', ')}.`
-        )
-      );
-    }
-    if (riskSignals.operationDateDerived) {
-      messages.push(tr('importers.transaction.mapping.risk.derivedOperationDate', 'S’ha aplicat derivació de data operativa.'));
-    }
-    if (riskSignals.hasDebitCredit) {
-      messages.push(tr('importers.transaction.mapping.risk.debitCredit', 'S’han detectat columnes Debe/Haber.'));
-    }
-    if (riskSignals.datesInvalid > 0) {
-      messages.push(
-        tr(
-          'importers.transaction.mapping.risk.invalidDates',
-          `Hi ha ${riskSignals.datesInvalid} files amb data invàlida.`
-        )
-      );
-    }
-    if (riskSignals.amountInvalid > 0) {
-      messages.push(
-        tr(
-          'importers.transaction.mapping.risk.invalidAmounts',
-          `Hi ha ${riskSignals.amountInvalid} files amb import invàlid.`
-        )
-      );
-    }
-    if (riskSignals.balanceMismatchCount > 0) {
-      messages.push(
-        tr(
-          'importers.transaction.mapping.risk.balanceMismatch',
-          `Hi ha ${riskSignals.balanceMismatchCount} incoherències de saldo.`
-        )
-      );
-    }
-    return messages;
-  };
-
   const processRowsMatrix = async (
     rows: unknown[][],
     bankAccountId: string | null,
@@ -387,9 +345,9 @@ export function TransactionImporter({ availableCategories }: TransactionImporter
     });
 
     if (!options.skipMappingDialog && shouldOpenManualMapping(parsed)) {
-      const columns = parsed.header.map(
-        (column, index) => column || `${tr('importers.transaction.mapping.column', 'Columna')} ${index + 1}`
-      );
+      const columns = buildBankMappingColumnOptions(normalizedRows, parsed.headerRowIndex, parsed.header);
+      const mappingPreviewRows = buildBankMappingPreviewRows(normalizedRows, parsed.headerRowIndex);
+      const previewColumnCount = getBankMappingColumnCount(parsed.header, mappingPreviewRows);
 
       setMappingState({
         rows: normalizedRows,
@@ -397,6 +355,8 @@ export function TransactionImporter({ availableCategories }: TransactionImporter
         fileName,
         headerRowIndex: parsed.headerRowIndex,
         columns,
+        previewRows: mappingPreviewRows,
+        previewColumnCount,
         selectedMapping: {
           operationDate: parsed.columnMapping.operationDate,
           description: parsed.columnMapping.description,
@@ -404,7 +364,6 @@ export function TransactionImporter({ availableCategories }: TransactionImporter
           balanceAfter: parsed.columnMapping.balanceAfter,
         },
         riskSignals: parsed.riskSignals,
-        riskMessages: buildRiskMessages(parsed.riskSignals),
       });
       setIsImporting(false);
       return 'deferred';
@@ -635,9 +594,9 @@ export function TransactionImporter({ availableCategories }: TransactionImporter
           fileName,
           totalRawRows: parseResult.summary.dataRowsCount,
         });
-        setDedupeSummary(summary);
         setPreviewSummary(parseResult.summary);
         setPreviewRows(parseResult.sampleRows);
+        setPreviewHasMappedBalance(parseResult.columnMapping.balanceAfter !== -1);
         setIsCandidateDialogOpen(true);
         setIsImporting(false);
         return;
@@ -697,9 +656,9 @@ export function TransactionImporter({ availableCategories }: TransactionImporter
       });
       setClassifiedResults(null);
       setPendingImportContext(null);
-      setDedupeSummary(null);
       setPreviewSummary(null);
       setPreviewRows([]);
+      setPreviewHasMappedBalance(false);
       setIsImporting(false);
     }
   };
@@ -708,14 +667,14 @@ export function TransactionImporter({ availableCategories }: TransactionImporter
     setIsCandidateDialogOpen(false);
     setClassifiedResults(null);
     setPendingImportContext(null);
-    setDedupeSummary(null);
     setPreviewSummary(null);
     setPreviewRows([]);
+    setPreviewHasMappedBalance(false);
     setIsImporting(false);
   };
 
   const handleMappingFieldChange = (
-    field: 'operationDate' | 'description' | 'amount' | 'balanceAfter',
+    field: BankMappingFieldId,
     value: string
   ) => {
     const selectedValue = Number.parseInt(value, 10);
@@ -796,9 +755,9 @@ export function TransactionImporter({ availableCategories }: TransactionImporter
     // Netejar estat de classificació
     setClassifiedResults(null);
     setPendingImportContext(null);
-    setDedupeSummary(null);
     setPreviewSummary(null);
     setPreviewRows([]);
+    setPreviewHasMappedBalance(false);
 
     if (!organizationId) {
       setIsImporting(false);
@@ -1175,122 +1134,78 @@ export function TransactionImporter({ availableCategories }: TransactionImporter
           if (!open) handleMappingCancel();
         }}
       >
-        <DialogContent className="sm:max-w-3xl">
+        <DialogContent className="sm:max-w-4xl">
           <DialogHeader>
             <DialogTitle>
-              {tr('importers.transaction.mapping.title', 'Mapeig manual de camps')}
+              {tr('importers.transaction.mapping.title', 'Configuració del mapeig')}
             </DialogTitle>
             <DialogDescription>
               {tr(
                 'importers.transaction.mapping.description',
-                'Hem detectat senyals de risc. Revisa el mapeig abans de continuar amb la previsualització.'
+                'Revisa la previsualització i indica quina columna correspon a cada camp.'
               )}
             </DialogDescription>
           </DialogHeader>
 
           {mappingState && (
-            <div className="space-y-4">
-              <div className="rounded-md border bg-muted/30 p-3 text-sm">
-                <p className="mb-2 font-medium">{tr('importers.transaction.mapping.riskTitle', 'Senyals detectades')}</p>
-                <ul className="list-disc space-y-1 pl-5 text-muted-foreground">
-                  {mappingState.riskMessages.map((message, index) => (
-                    <li key={`risk-${index}`}>{message}</li>
-                  ))}
-                </ul>
-              </div>
-
-              <div className="grid grid-cols-1 gap-3">
-                <div className="grid grid-cols-1 gap-2">
-                  <Label>{tr('importers.transaction.mapping.field.operationDate', 'Data (requerit)')}</Label>
-                  <Select
-                    value={String(mappingState.selectedMapping.operationDate)}
-                    onValueChange={(value) => handleMappingFieldChange('operationDate', value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="-1">{tr('importers.transaction.mapping.none', '(cap)')}</SelectItem>
-                      {mappingState.columns.map((column, index) => (
-                        <SelectItem key={`op-${index}`} value={String(index)}>
-                          {`${index + 1}. ${column}`}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="grid grid-cols-1 gap-2">
-                  <Label>{tr('importers.transaction.mapping.field.description', 'Concepte / Descripció (requerit)')}</Label>
-                  <Select
-                    value={String(mappingState.selectedMapping.description)}
-                    onValueChange={(value) => handleMappingFieldChange('description', value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="-1">{tr('importers.transaction.mapping.none', '(cap)')}</SelectItem>
-                      {mappingState.columns.map((column, index) => (
-                        <SelectItem key={`desc-${index}`} value={String(index)}>
-                          {`${index + 1}. ${column}`}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="grid grid-cols-1 gap-2">
-                  <Label>{tr('importers.transaction.mapping.field.amount', 'Import (requerit)')}</Label>
-                  <Select
-                    value={String(mappingState.selectedMapping.amount)}
-                    onValueChange={(value) => handleMappingFieldChange('amount', value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="-1">{tr('importers.transaction.mapping.none', '(cap)')}</SelectItem>
-                      {mappingState.columns.map((column, index) => (
-                        <SelectItem key={`amount-${index}`} value={String(index)}>
-                          {`${index + 1}. ${column}`}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="grid grid-cols-1 gap-2">
-                  <Label>{tr('importers.transaction.mapping.field.balanceAfter', 'Saldo (opcional)')}</Label>
-                  <Select
-                    value={String(mappingState.selectedMapping.balanceAfter)}
-                    onValueChange={(value) => handleMappingFieldChange('balanceAfter', value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="-1">{tr('importers.transaction.mapping.none', '(cap)')}</SelectItem>
-                      {mappingState.columns.map((column, index) => (
-                        <SelectItem key={`balance-${index}`} value={String(index)}>
-                          {`${index + 1}. ${column}`}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-            </div>
+            <RemittanceStyleMappingStep
+              fields={[
+                {
+                  id: 'operationDate',
+                  label: tr('importers.transaction.mapping.field.operationDate', 'Data (requerit)'),
+                  required: true,
+                  dotClassName: 'bg-purple-500',
+                  headerClassName: 'bg-purple-100 dark:bg-purple-900/30',
+                  cellClassName: 'bg-purple-50 dark:bg-purple-900/20',
+                },
+                {
+                  id: 'description',
+                  label: tr('importers.transaction.mapping.field.description', 'Descripció (requerit)'),
+                  required: true,
+                  dotClassName: 'bg-blue-500',
+                  headerClassName: 'bg-blue-100 dark:bg-blue-900/30',
+                  cellClassName: 'bg-blue-50 dark:bg-blue-900/20',
+                },
+                {
+                  id: 'amount',
+                  label: tr('importers.transaction.mapping.field.amount', 'Import (requerit)'),
+                  required: true,
+                  allowUnavailable: mappingState.riskSignals.hasDebitCredit,
+                  dotClassName: 'bg-green-500',
+                  headerClassName: 'bg-green-100 dark:bg-green-900/30',
+                  cellClassName: 'bg-green-50 dark:bg-green-900/20',
+                },
+                {
+                  id: 'balanceAfter',
+                  label: tr('importers.transaction.mapping.field.balanceAfter', 'Saldo (opcional)'),
+                  required: false,
+                  allowUnavailable: true,
+                  dotClassName: 'bg-cyan-500',
+                  headerClassName: 'bg-cyan-100 dark:bg-cyan-900/30',
+                  cellClassName: 'bg-cyan-50 dark:bg-cyan-900/20',
+                },
+              ]}
+              selectedMapping={mappingState.selectedMapping}
+              columns={mappingState.columns}
+              previewRows={mappingState.previewRows}
+              previewColumnCount={mappingState.previewColumnCount}
+              previewStartRow={mappingState.headerRowIndex + 2}
+              labels={{
+                previewTitle: tr('importers.transaction.mapping.previewTitle', 'Previsualització (primeres 8 files)'),
+                fieldMappingTitle: tr('importers.transaction.mapping.fieldMappingTitle', 'Mapejat de camps'),
+                columnOptionTemplate: tr('importers.transaction.mapping.columnOption', 'Columna {index}: {example}'),
+                columnHeaderPrefix: tr('importers.transaction.mapping.columnHeaderPrefix', 'Col.'),
+                notAvailable: tr('importers.transaction.mapping.notAvailable', 'No disponible'),
+                back: tr('common.back', 'Tornar'),
+                continue: tr('common.continue', 'Continuar'),
+              }}
+              isSubmitting={isImporting}
+              continueDisabled={!canContinueWithMapping}
+              onBack={handleMappingCancel}
+              onContinue={handleMappingContinue}
+              onMappingChange={(field, nextValue) => handleMappingFieldChange(field, String(nextValue))}
+            />
           )}
-
-          <DialogFooter>
-            <Button variant="outline" onClick={handleMappingCancel}>
-              {t.common.cancel}
-            </Button>
-            <Button onClick={handleMappingContinue} disabled={!canContinueWithMapping}>
-              {tr('importers.transaction.mapping.applyAndPreview', 'Aplicar mapeig i previsualitzar')}
-            </Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
 
@@ -1299,12 +1214,9 @@ export function TransactionImporter({ availableCategories }: TransactionImporter
         open={isCandidateDialogOpen}
         candidates={classifiedResults?.filter(c => c.status === 'DUPLICATE_CANDIDATE') ?? []}
         safeDuplicates={classifiedResults?.filter(c => c.status === 'DUPLICATE_SAFE') ?? []}
-        newCount={dedupeSummary?.newCount ?? 0}
-        safeDuplicatesCount={dedupeSummary?.safeDuplicatesCount ?? (classifiedResults?.filter(c => c.status === 'DUPLICATE_SAFE').length ?? 0)}
-        candidateCount={dedupeSummary?.candidateCount ?? (classifiedResults?.filter(c => c.status === 'DUPLICATE_CANDIDATE').length ?? 0)}
-        totalCount={dedupeSummary?.totalCount ?? (classifiedResults?.length ?? 0)}
         parseSummary={previewSummary}
         sampleRows={previewRows}
+        hasMappedBalance={previewHasMappedBalance}
         onContinue={handleCandidatesContinue}
         onCancel={handleCandidatesCancelled}
       />
