@@ -27,6 +27,8 @@ interface DeleteMovementsFamilyResponse {
     transactions: number;
     remittancesPending: number;
     remittances: number;
+    prebankRemittances: number;
+    pendingDocuments: number;
     importRuns: number;
     importJobs: number;
     total: number;
@@ -99,6 +101,14 @@ export async function POST(
     });
   }
 
+  const prebankRemittancesRef = db.collection(`organizations/${orgId}/prebankRemittances`);
+  const prebankRemittancesSnap = await prebankRemittancesRef.get();
+  const prebankRemittanceIds = prebankRemittancesSnap.docs.map((doc) => doc.id);
+
+  const pendingDocumentsRef = db.collection(`organizations/${orgId}/pendingDocuments`);
+  const pendingDocumentsSnap = await pendingDocumentsRef.get();
+  const pendingDocumentIds = pendingDocumentsSnap.docs.map((doc) => doc.id);
+
   const importRunsRef = db.collection(`organizations/${orgId}/importRuns`);
   const importRunsSnap = await importRunsRef.get();
   const importRunIds = importRunsSnap.docs
@@ -115,6 +125,8 @@ export async function POST(
     orgId,
     transactionIds,
     remittances,
+    prebankRemittanceIds,
+    pendingDocumentIds,
     importRunIds,
     importJobIds,
   });
@@ -127,6 +139,8 @@ export async function POST(
         transactions: 0,
         remittancesPending: 0,
         remittances: 0,
+        prebankRemittances: 0,
+        pendingDocuments: 0,
         importRuns: 0,
         importJobs: 0,
         total: 0,
@@ -154,6 +168,8 @@ export async function POST(
       transactions: plan.transactionPaths.length,
       remittancesPending: plan.remittancePendingPaths.length,
       remittances: plan.remittancePaths.length,
+      prebankRemittances: plan.prebankRemittancePaths.length,
+      pendingDocuments: plan.pendingDocumentPaths.length,
       importRuns: plan.importRunPaths.length,
       importJobs: plan.importJobPaths.length,
       total: plan.totalDeletes,

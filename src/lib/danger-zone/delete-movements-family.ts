@@ -7,6 +7,8 @@ export interface DeleteMovementsFamilyInput {
   orgId: string;
   transactionIds: string[];
   remittances: RemittanceDeleteScope[];
+  prebankRemittanceIds: string[];
+  pendingDocumentIds: string[];
   importRunIds: string[];
   importJobIds: string[];
 }
@@ -15,6 +17,8 @@ export interface DeleteMovementsFamilyPlan {
   transactionPaths: string[];
   remittancePendingPaths: string[];
   remittancePaths: string[];
+  prebankRemittancePaths: string[];
+  pendingDocumentPaths: string[];
   importRunPaths: string[];
   importJobPaths: string[];
   totalDeletes: number;
@@ -72,6 +76,12 @@ export function buildDeleteMovementsFamilyPlan(
     })
   );
 
+  const prebankRemittancePaths = uniqueNonEmpty(input.prebankRemittanceIds).map(
+    (id) => `${orgPath}/prebankRemittances/${id}`
+  );
+  const pendingDocumentPaths = uniqueNonEmpty(input.pendingDocumentIds).map(
+    (id) => `${orgPath}/pendingDocuments/${id}`
+  );
   const importRunPaths = uniqueNonEmpty(input.importRunIds).map(
     (id) => `${orgPath}/importRuns/${id}`
   );
@@ -83,12 +93,16 @@ export function buildDeleteMovementsFamilyPlan(
     transactionPaths,
     remittancePendingPaths,
     remittancePaths,
+    prebankRemittancePaths,
+    pendingDocumentPaths,
     importRunPaths,
     importJobPaths,
     totalDeletes:
       transactionPaths.length +
       remittancePendingPaths.length +
       remittancePaths.length +
+      prebankRemittancePaths.length +
+      pendingDocumentPaths.length +
       importRunPaths.length +
       importJobPaths.length,
   };
@@ -115,6 +129,8 @@ export async function executeDeleteMovementsFamilyPlan(
     plan.transactionPaths,
     plan.remittancePendingPaths,
     plan.remittancePaths,
+    plan.prebankRemittancePaths,
+    plan.pendingDocumentPaths,
     plan.importRunPaths,
     plan.importJobPaths,
   ];
