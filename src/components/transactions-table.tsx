@@ -63,6 +63,7 @@ import { useToast } from '@/hooks/use-toast';
 import { RemittanceDetailModal } from '@/components/remittance-detail-modal';
 import { StripeImporter } from '@/components/stripe-importer';
 import { SplitAmountDialog } from '@/components/transactions/split-amount-dialog';
+import { SplitDetailDialog } from '@/components/transactions/split-detail-dialog';
 import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
 import { collection, doc, writeBatch, query, orderBy } from 'firebase/firestore';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -106,6 +107,8 @@ import {
   getDeleteTransactionBlockedReason,
   type DeleteTransactionBlockedReason,
 } from '@/lib/transactions/can-delete-transaction';
+import { filterSplitChildTransactions } from '@/lib/splits/split-visibility';
+import { undoSplit } from '@/lib/splits/undoSplit';
 
 interface TransactionsTableProps {
   initialDateFilter?: DateFilterValue | null;
@@ -354,6 +357,9 @@ export function TransactionsTable({ initialDateFilter = null, canEditMovements =
   const [transactionToSplit, setTransactionToSplit] = React.useState<Transaction | null>(null);
   const [isSplitAmountDialogOpen, setIsSplitAmountDialogOpen] = React.useState(false);
   const [splitAmountTransaction, setSplitAmountTransaction] = React.useState<Transaction | null>(null);
+  const [isSplitDetailDialogOpen, setIsSplitDetailDialogOpen] = React.useState(false);
+  const [splitDetailParentTxId, setSplitDetailParentTxId] = React.useState<string | null>(null);
+  const [isUndoSplitProcessing, setIsUndoSplitProcessing] = React.useState(false);
 
   // Modal detall remesa
   const [isRemittanceDetailOpen, setIsRemittanceDetailOpen] = React.useState(false);
@@ -442,6 +448,18 @@ export function TransactionsTable({ initialDateFilter = null, canEditMovements =
       return acc;
     }, {} as Record<string, Transaction>);
   }, [allTransactions]);
+
+  const splitDetailParentTx = React.useMemo(
+    () => (splitDetailParentTxId ? allTransactionsById[splitDetailParentTxId] ?? null : null),
+    [allTransactionsById, splitDetailParentTxId]
+  );
+
+  const splitDetailParts = React.useMemo(() => {
+    if (!splitDetailParentTxId) return [];
+    return (allTransactions ?? []).filter(
+      (tx) => tx.parentTransactionId === splitDetailParentTxId && !tx.archivedAt
+    );
+  }, [allTransactions, splitDetailParentTxId]);
 
   // Mapa de comptes bancaris per ID (per export)
   const bankAccountMap = React.useMemo(() =>
@@ -813,6 +831,9 @@ export function TransactionsTable({ initialDateFilter = null, canEditMovements =
       result = result.filter(tx => !tx.isRemittanceItem && tx.source !== 'remittance');
     }
 
+    // Filtre per amagar fills de "Desglossar import" (només es veu el pare bancari).
+    result = filterSplitChildTransactions(result, allTransactionsById);
+
     // Filtre per source
     if (sourceFilter !== 'all') {
       if (sourceFilter === 'null') {
@@ -878,7 +899,7 @@ export function TransactionsTable({ initialDateFilter = null, canEditMovements =
       sortDateAsc,
       getDisplayDate,
     });
-  }, [transactions, tableFilter, expensesWithoutDoc, returnTransactions, uncategorizedTransactions, noContactTransactions, donationsNoContactTransactions, sortDateAsc, searchQuery, contactMap, projectMap, getCategoryDisplayName, hideRemittanceItems, contactIdFilter, donorMembershipMap, sourceFilter, bankAccountFilter, getDisplayDate]);
+  }, [transactions, tableFilter, expensesWithoutDoc, returnTransactions, uncategorizedTransactions, noContactTransactions, donationsNoContactTransactions, sortDateAsc, searchQuery, contactMap, projectMap, getCategoryDisplayName, hideRemittanceItems, contactIdFilter, donorMembershipMap, sourceFilter, bankAccountFilter, getDisplayDate, allTransactionsById]);
 
   // ═══════════════════════════════════════════════════════════════════════════
   // RESUM FILTRAT
@@ -893,7 +914,10 @@ export function TransactionsTable({ initialDateFilter = null, canEditMovements =
     if (!hasActiveFilter || !transactions) return null;
 
     // Total del període = només apunts bancaris (ledger), excloent desglossaments interns
-    const periodTotal = transactions.filter(tx => !tx.isRemittanceItem && tx.source !== 'remittance').length;
+    const periodTotal = filterSplitChildTransactions(
+      transactions.filter(tx => !tx.isRemittanceItem && tx.source !== 'remittance'),
+      allTransactionsById
+    ).length;
 
     const visible = filteredTransactions;
     return {
@@ -902,7 +926,7 @@ export function TransactionsTable({ initialDateFilter = null, canEditMovements =
       income: visible.filter(tx => tx.amount > 0).reduce((sum, tx) => sum + tx.amount, 0),
       expenses: visible.filter(tx => tx.amount < 0).reduce((sum, tx) => sum + tx.amount, 0),
     };
-  }, [filteredTransactions, transactions, hasActiveFilter]);
+  }, [filteredTransactions, transactions, hasActiveFilter, allTransactionsById]);
 
   const clearAllFilters = React.useCallback(() => {
     setTableFilter('all');
@@ -1233,6 +1257,58 @@ export function TransactionsTable({ initialDateFilter = null, canEditMovements =
     setIsSplitAmountDialogOpen(true);
   }, [t.common.error, toast, tr]);
 
+  const handleOpenSplitDetail = React.useCallback((txId: string) => {
+    setSplitDetailParentTxId(txId);
+    setIsSplitDetailDialogOpen(true);
+  }, []);
+
+  const handleUndoSplit = React.useCallback(async (parentTxId: string) => {
+    if (!organizationId || !user?.uid) {
+      toast({
+        variant: 'destructive',
+        title: t.common.error,
+        description: 'No es pot desfer el desglossament ara mateix.',
+      });
+      return;
+    }
+
+    setIsUndoSplitProcessing(true);
+    try {
+      const result = await undoSplit({
+        firestore,
+        orgId: organizationId,
+        parentTxId,
+        userId: user.uid,
+      });
+
+      if (!result.success) {
+        toast({
+          variant: 'destructive',
+          title: t.common.error,
+          description: result.error || 'No s\'ha pogut desfer el desglossament.',
+        });
+        return;
+      }
+
+      if (result.idempotent) {
+        toast({
+          title: 'Ja estava desfet',
+          description: 'Aquest desglossament ja no tenia línies actives.',
+        });
+      } else {
+        toast({
+          title: 'Desglossament desfet',
+          description: `S'han arxivat ${result.archivedChildren} línies derivades.`,
+        });
+      }
+
+      setIsSplitDetailDialogOpen(false);
+      setSplitDetailParentTxId(null);
+    } finally {
+      setIsUndoSplitProcessing(false);
+    }
+  }, [organizationId, user?.uid, t.common.error, toast, firestore, user]);
+
   const handleGenerateReturnEmailDraft = React.useCallback((transaction: Transaction) => {
     if (transaction.transactionType !== 'return') return;
     if (!transaction.contactId) return;
@@ -1546,9 +1622,11 @@ export function TransactionsTable({ initialDateFilter = null, canEditMovements =
     remittanceQuotes: t.movements.table.remittanceQuotes,
     remittanceProcessedLabel: t.movements.table.remittanceProcessedLabel,
     remittanceNotApplicable: t.movements.table.remittanceNotApplicable,
+    splitProcessedLabel: 'Desglossat',
     undoRemittance:
       (t.movements.table as typeof t.movements.table & { undoRemittance?: string }).undoRemittance ||
       'Desfer remesa',
+    undoSplit: 'Desfer desglossament',
     moreOptionsAriaLabel: t.movements.table.moreOptionsAriaLabel,
     legacyCategory: t.movements?.table?.legacyCategory ?? 'Cal recategoritzar',
     noContact: t.movements.table.noContact,
@@ -1852,6 +1930,8 @@ export function TransactionsTable({ initialDateFilter = null, canEditMovements =
               onEdit={handleEditClick}
               onDelete={handleDeleteWithSplitGuard}
               onSplitAmount={handleSplitAmount}
+              onOpenSplitDetail={handleOpenSplitDetail}
+              onUndoSplit={handleUndoSplit}
               isSplitDeleteBlocked={isSplitDeleteBlockedInMemory(tx)}
               deleteBlockedReason={getDeleteTransactionBlockedReason(tx)}
               onOpenReturnDialog={handleOpenReturnDialog}
@@ -1970,6 +2050,8 @@ export function TransactionsTable({ initialDateFilter = null, canEditMovements =
                   onSplitAmount={handleSplitAmount}
                   onSplitRemittance={handleSplitRemittance}
                   onSplitStripeRemittance={handleSplitStripeRemittance}
+                  onOpenSplitDetail={handleOpenSplitDetail}
+                  onUndoSplit={handleUndoSplit}
                   onViewRemittanceDetail={handleViewRemittanceDetail}
                   onUndoRemittance={handleUndoRemittance}
                   onCreateNewContact={handleOpenNewContactDialog}
@@ -2274,6 +2356,20 @@ export function TransactionsTable({ initialDateFilter = null, canEditMovements =
           }}
         />
       )}
+
+      <SplitDetailDialog
+        open={isSplitDetailDialogOpen}
+        onOpenChange={(open) => {
+          setIsSplitDetailDialogOpen(open);
+          if (!open) {
+            setSplitDetailParentTxId(null);
+          }
+        }}
+        parentTransaction={splitDetailParentTx}
+        splitParts={splitDetailParts}
+        onUndoSplit={handleUndoSplit}
+        isUndoing={isUndoSplitProcessing}
+      />
 
       {/* Remittance Detail Modal */}
       {organizationId && (
