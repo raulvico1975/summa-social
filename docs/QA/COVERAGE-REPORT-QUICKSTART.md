@@ -27,3 +27,10 @@ executedFiles/src = X/Y (Z%)
 - `Z%`: percentatge de superficie executada.
 
 Nota: en Fase 1/Fase 2 la cobertura es **report-only**; no hi ha llindars bloquejants.
+
+## Requisits minims per `npm run build` en local
+
+Cal definir al teu entorn:
+
+- `NEXT_PUBLIC_FIREBASE_PROJECT_ID`
+- `NEXT_PUBLIC_FIREBASE_API_KEY`
