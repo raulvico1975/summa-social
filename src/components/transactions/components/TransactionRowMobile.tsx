@@ -30,6 +30,7 @@ import {
 } from 'lucide-react';
 import type { Transaction, ContactType } from '@/lib/data';
 import { formatCurrencyEU, formatDateShort } from '@/lib/normalize';
+import type { DeleteTransactionBlockedReason } from '@/lib/transactions/can-delete-transaction';
 
 /**
  * Helper: middle ellipsis per a noms llargs
@@ -50,6 +51,7 @@ interface TransactionRowMobileProps {
   onDelete: (tx: Transaction) => void;
   onSplitAmount?: (tx: Transaction) => void;
   isSplitDeleteBlocked?: boolean;
+  deleteBlockedReason?: DeleteTransactionBlockedReason | null;
   onOpenReturnDialog?: (tx: Transaction) => void;
   onGenerateReturnEmailDraft?: (tx: Transaction) => void;
   onViewRemittanceDetail?: (txId: string) => void;
@@ -67,6 +69,8 @@ interface TransactionRowMobileProps {
     delete: string;
     splitAmount: string;
     deleteBlocked: string;
+    deleteBlockedParentRemittance: string;
+    deleteBlockedChildRemittance: string;
     viewRemittanceDetail: string;
     remittanceQuotes: string;
     manageReturn?: string;
@@ -85,6 +89,7 @@ export const TransactionRowMobile = React.memo(function TransactionRowMobile({
   onDelete,
   onSplitAmount,
   isSplitDeleteBlocked,
+  deleteBlockedReason,
   onOpenReturnDialog,
   onGenerateReturnEmailDraft,
   onViewRemittanceDetail,
@@ -110,6 +115,24 @@ export const TransactionRowMobile = React.memo(function TransactionRowMobile({
     tx.source !== 'stripe' &&
     tx.transactionType !== 'donation' &&
     tx.transactionType !== 'fee';
+  const deleteBlockedMessage = React.useMemo(() => {
+    if (deleteBlockedReason === 'parentRemittance') {
+      return t.deleteBlockedParentRemittance;
+    }
+    if (deleteBlockedReason === 'childRemittance') {
+      return t.deleteBlockedChildRemittance;
+    }
+    if (isSplitDeleteBlocked) {
+      return t.deleteBlocked;
+    }
+    return null;
+  }, [
+    deleteBlockedReason,
+    isSplitDeleteBlocked,
+    t.deleteBlocked,
+    t.deleteBlockedChildRemittance,
+    t.deleteBlockedParentRemittance,
+  ]);
 
   // Background color based on transaction type
   const bgClass = isReturn
@@ -327,10 +350,10 @@ export const TransactionRowMobile = React.memo(function TransactionRowMobile({
                 {t.splitAmount}
               </DropdownMenuItem>
             )}
-            {isSplitDeleteBlocked ? (
+            {deleteBlockedMessage ? (
               <DropdownMenuItem disabled className="text-muted-foreground cursor-not-allowed">
                 <Trash2 className="h-4 w-4 mr-2" />
-                {t.deleteBlocked}
+                {deleteBlockedMessage}
               </DropdownMenuItem>
             ) : (
               <DropdownMenuItem onClick={handleDelete} className="text-destructive">

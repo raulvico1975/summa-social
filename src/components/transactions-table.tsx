@@ -89,7 +89,7 @@ import { SepaReconcileModal } from '@/components/pending-documents/sepa-reconcil
 import { filterValidSelectItems } from '@/lib/ui/safe-select-options';
 import type { PrebankRemittance } from '@/lib/pending-documents/sepa-remittance';
 import { prebankRemittancesCollection } from '@/lib/pending-documents/sepa-remittance';
-import { where, getDocs, getDoc } from 'firebase/firestore';
+import { where, getDocs } from 'firebase/firestore';
 import { filterActiveContacts } from '@/lib/contacts/filterActiveContacts';
 import { UndoProcessingDialog } from '@/components/undo-processing-dialog';
 import { ReturnEmailDraftDialog } from '@/components/returns/ReturnEmailDraftDialog';
@@ -102,6 +102,10 @@ import {
 } from '@/lib/fiscal/undoProcessing';
 import { detectLegacyCategoryTransactions, logLegacyCategorySummary } from '@/lib/category-health';
 import { sortTransactionsForTable } from '@/lib/transactions/sort-transactions-for-table';
+import {
+  getDeleteTransactionBlockedReason,
+  type DeleteTransactionBlockedReason,
+} from '@/lib/transactions/can-delete-transaction';
 
 interface TransactionsTableProps {
   initialDateFilter?: DateFilterValue | null;
@@ -1262,49 +1266,39 @@ export function TransactionsTable({ initialDateFilter = null, canEditMovements =
     return !!allTransactionsById[transaction.parentTransactionId]?.isSplit;
   }, [allTransactionsById]);
 
-  const handleDeleteWithSplitGuard = React.useCallback(async (transaction: Transaction) => {
-    if (transaction.isSplit) {
+  const getDeleteBlockedMessage = React.useCallback((reason: DeleteTransactionBlockedReason | null): string | null => {
+    if (reason === 'parentRemittance') {
+      return tr('movements.delete.blocked.parentRemittance');
+    }
+    if (reason === 'childRemittance') {
+      return tr('movements.delete.blocked.childRemittance');
+    }
+    return null;
+  }, [tr]);
+
+  const handleDeleteWithSplitGuard = React.useCallback((transaction: Transaction) => {
+    const blockedReason = getDeleteTransactionBlockedReason(transaction);
+    const blockedMessage = getDeleteBlockedMessage(blockedReason);
+    if (blockedMessage) {
       toast({
         variant: 'destructive',
-        title: t.common.error,
+        title: tr('movements.delete.blocked.title'),
+        description: blockedMessage,
+      });
+      return;
+    }
+
+    if (isSplitDeleteBlockedInMemory(transaction)) {
+      toast({
+        variant: 'destructive',
+        title: tr('movements.delete.blocked.title'),
         description: tr('movements.split.deleteBlocked'),
       });
       return;
     }
 
-    if (transaction.parentTransactionId) {
-      let parentIsSplit = !!allTransactionsById[transaction.parentTransactionId]?.isSplit;
-
-      if (!parentIsSplit && firestore && organizationId) {
-        try {
-          const parentRef = doc(
-            firestore,
-            'organizations',
-            organizationId,
-            'transactions',
-            transaction.parentTransactionId
-          );
-          const parentSnap = await getDoc(parentRef);
-          if (parentSnap.exists()) {
-            parentIsSplit = parentSnap.data().isSplit === true;
-          }
-        } catch (error) {
-          console.warn('[transactions-table] Error validant pare per bloqueig delete split:', error);
-        }
-      }
-
-      if (parentIsSplit) {
-        toast({
-          variant: 'destructive',
-          title: t.common.error,
-          description: tr('movements.split.deleteBlocked'),
-        });
-        return;
-      }
-    }
-
     handleDeleteClick(transaction);
-  }, [allTransactionsById, firestore, handleDeleteClick, organizationId, t.common.error, toast, tr]);
+  }, [getDeleteBlockedMessage, handleDeleteClick, isSplitDeleteBlockedInMemory, toast, tr]);
 
   const handleViewRemittanceDetail = (remittanceId: string, parentTx?: Transaction) => {
     setSelectedRemittanceId(remittanceId);
@@ -1546,6 +1540,8 @@ export function TransactionsTable({ initialDateFilter = null, canEditMovements =
     splitStripeRemittance: t.movements.table.splitStripeRemittance,
     delete: t.movements.table.delete,
     deleteBlocked: tr('movements.split.deleteBlocked'),
+    deleteBlockedParentRemittance: tr('movements.delete.blocked.parentRemittance'),
+    deleteBlockedChildRemittance: tr('movements.delete.blocked.childRemittance'),
     viewRemittanceDetail: t.movements.table.viewRemittanceDetail,
     remittanceQuotes: t.movements.table.remittanceQuotes,
     remittanceProcessedLabel: t.movements.table.remittanceProcessedLabel,
@@ -1857,6 +1853,7 @@ export function TransactionsTable({ initialDateFilter = null, canEditMovements =
               onDelete={handleDeleteWithSplitGuard}
               onSplitAmount={handleSplitAmount}
               isSplitDeleteBlocked={isSplitDeleteBlockedInMemory(tx)}
+              deleteBlockedReason={getDeleteTransactionBlockedReason(tx)}
               onOpenReturnDialog={handleOpenReturnDialog}
               onGenerateReturnEmailDraft={handleGenerateReturnEmailDraft}
               onViewRemittanceDetail={handleViewRemittanceDetail}
@@ -1987,6 +1984,7 @@ export function TransactionsTable({ initialDateFilter = null, canEditMovements =
                   } : null}
                   onReconcileSepa={handleReconcileSepa}
                   isSplitDeleteBlocked={isSplitDeleteBlockedInMemory(tx)}
+                  deleteBlockedReason={getDeleteTransactionBlockedReason(tx)}
                   t={rowTranslations}
                   getCategoryDisplayName={getCategoryDisplayName}
                 />
