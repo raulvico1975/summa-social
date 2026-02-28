@@ -46,6 +46,18 @@ say() {
   printf '%s\n' "$1"
 }
 
+env_flag_enabled() {
+  local value="${1:-}"
+  case "$(printf '%s' "$value" | tr '[:upper:]' '[:lower:]')" in
+    1|true|yes|on)
+      return 0
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+}
+
 git_control() {
   git -C "$CONTROL_REPO_DIR" "$@"
 }
@@ -546,8 +558,21 @@ run_inicia() {
 }
 
 run_acabat() {
+  local allow_arg="${1:-}"
   local final_status branch control_branch control_main_ref ahead_count
   branch="$(current_branch)"
+
+  local allow_main_merge=false
+  if [ "$allow_arg" = "--allow-main-merge" ] || env_flag_enabled "${ALLOW_MAIN_MERGE:-0}"; then
+    allow_main_merge=true
+  fi
+
+  if [ -n "$allow_arg" ] && [ "$allow_arg" != "--allow-main-merge" ]; then
+    say "BLOCKED_SAFE"
+    say "Argument no reconegut per 'acabat': $allow_arg"
+    say "Opció suportada: --allow-main-merge"
+    exit 1
+  fi
 
   if [ "$branch" = "HEAD" ]; then
     say "$STATUS_NO"
@@ -604,11 +629,19 @@ run_acabat() {
 
   if [ "$branch" = "main" ]; then
     say "BLOCKED_SAFE"
-    say "No es pot executar Acabat des de main quan hi ha commits pendents."
+    say "No es permeten passos destructius des de main."
     exit 1
   fi
 
-  say "No hi ha canvis locals nous, pero la branca te commits pendents d'integrar."
+  if [ "$allow_main_merge" != "true" ]; then
+    say "$STATUS_READY"
+    say "merge/push disabled by default."
+    say "Per integrar a main cal flag explícit: ALLOW_MAIN_MERGE=1 o --allow-main-merge"
+    emit_next_step_block "Obre PR manual o torna a executar amb flag explícit si vols integrar."
+    return
+  fi
+
+  say "No hi ha canvis locals nous, pero la branca te commits pendents d'integrar (mode allow-main-merge)."
   push_branch "$branch"
   integrate_to_main "$branch"
 
@@ -692,7 +725,7 @@ main() {
       run_inicia "$arg1"
       ;;
     acabat)
-      run_acabat
+      run_acabat "$arg1"
       ;;
     publica)
       run_publica
