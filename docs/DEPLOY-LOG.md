@@ -89,6 +89,7 @@ Registre cronologic de desplegaments a produccio.
 - No deps noves; CI report-only.
 - Extraccio minima de helpers purs per testabilitat a `processLocks.ts`, `children-ops.ts`, `undoProcessing.ts`.
 
+| 2026-02-28 10:46 | 57f3250 | ALT | Si | 31 | OK |
 ## Decisions humanes (negoci)
 
 | Data | SHA | human_question_reason | business_impact | decision_taken |
@@ -112,3 +113,5 @@ Registre cronologic de desplegaments a produccio.
 | 2026-02-24 14:50 | 0d83b87 | SKIPPED_NO_BUCKET | - |
 | 2026-02-25 12:09 | 35384c0 | Risc ALT residual després de verificacions automàtiques. | podria alterar imports de donacions o devolucions, i l'entitat podria veure totals incorrectes en certificats o informes fiscals. | B_DEPLOY_WITH_VISIBLE_RISK |
 | 2026-02-25 12:09 | 35384c0 | SKIPPED_NO_BUCKET | - |
+| 2026-02-28 10:46 | 57f3250 | Risc ALT residual després de verificacions automàtiques. | podria alterar imports de donacions o devolucions, i l'entitat podria veure totals incorrectes en certificats o informes fiscals. | B_DEPLOY_WITH_VISIBLE_RISK |
+| 2026-02-28 10:46 | 57f3250 | SKIPPED_NO_BUCKET | - |

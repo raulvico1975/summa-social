@@ -39,15 +39,32 @@ describe('bank-mapping-ui', () => {
 
     const options = buildBankMappingColumnOptions(rows, 0, ['Data', 'Concepte', 'Import', 'Saldo']);
     assert.strictEqual(options.length, 4);
+    assert.strictEqual(options[0].label, 'Data');
+    assert.strictEqual(options[1].label, 'Concepte');
     assert.strictEqual(options[0].sample, '01/02/2026');
     assert.strictEqual(options[1].sample, 'Quota febrer');
     assert.strictEqual(options[2].sample, '-23,18');
     assert.strictEqual(options[3].sample, '1.000,00');
   });
 
+  it('formats Date cell values as dd/mm/yyyy for preview and samples', () => {
+    const dateCell = new Date('2026-02-27T00:00:00.000Z');
+    const rows: unknown[][] = [
+      ['Fecha', 'Importe'],
+      [dateCell, -158.33],
+    ];
+
+    const options = buildBankMappingColumnOptions(rows, 0, ['Fecha', 'Importe']);
+    const previewRows = buildBankMappingPreviewRows(rows, 0);
+
+    assert.strictEqual(options[0].sample, '27/02/2026');
+    assert.strictEqual(previewRows[0][0], '27/02/2026');
+  });
+
   it('defines required and optional fields for bank statement mapping', () => {
     const byId = Object.fromEntries(BANK_MAPPING_FIELD_DEFINITIONS.map((field) => [field.id, field.required]));
     assert.strictEqual(byId.operationDate, true);
+    assert.strictEqual(byId.valueDate, false);
     assert.strictEqual(byId.description, true);
     assert.strictEqual(byId.amount, true);
     assert.strictEqual(byId.balanceAfter, false);

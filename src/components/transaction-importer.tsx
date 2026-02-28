@@ -187,6 +187,7 @@ export function TransactionImporter({ availableCategories }: TransactionImporter
     previewColumnCount: number;
     selectedMapping: {
       operationDate: number;
+      valueDate: number;
       description: number;
       amount: number;
       balanceAfter: number;
@@ -345,6 +346,7 @@ export function TransactionImporter({ availableCategories }: TransactionImporter
         previewColumnCount,
         selectedMapping: {
           operationDate: parsed.columnMapping.operationDate,
+          valueDate: parsed.columnMapping.valueDate,
           description: parsed.columnMapping.description,
           amount: parsed.columnMapping.amount,
           balanceAfter: parsed.columnMapping.balanceAfter,
@@ -676,6 +678,7 @@ export function TransactionImporter({ availableCategories }: TransactionImporter
           headerRowIndexOverride: mappingState.headerRowIndex,
           columnMappingOverride: {
             operationDate: mappingState.selectedMapping.operationDate,
+            valueDate: mappingState.selectedMapping.valueDate,
             description: mappingState.selectedMapping.description,
             amount: mappingState.selectedMapping.amount,
             balanceAfter: mappingState.selectedMapping.balanceAfter,
@@ -1102,7 +1105,7 @@ export function TransactionImporter({ availableCategories }: TransactionImporter
           if (!open) handleMappingCancel();
         }}
       >
-        <DialogContent className="sm:max-w-4xl">
+        <DialogContent className="w-[95vw] max-h-[90vh] overflow-x-hidden overflow-y-auto p-4 sm:max-w-5xl sm:p-6">
           <DialogHeader>
             <DialogTitle>
               {tr('importers.transaction.mapping.title', 'Configuració del mapeig')}
@@ -1125,6 +1128,15 @@ export function TransactionImporter({ availableCategories }: TransactionImporter
                   dotClassName: 'bg-purple-500',
                   headerClassName: 'bg-purple-100 dark:bg-purple-900/30',
                   cellClassName: 'bg-purple-50 dark:bg-purple-900/20',
+                },
+                {
+                  id: 'valueDate',
+                  label: tr('importers.transaction.mapping.field.valueDate', 'Data valor (opcional)'),
+                  required: false,
+                  allowUnavailable: true,
+                  dotClassName: 'bg-gray-400',
+                  headerClassName: 'bg-gray-100 dark:bg-gray-800/30',
+                  cellClassName: 'bg-gray-50 dark:bg-gray-800/20',
                 },
                 {
                   id: 'description',
