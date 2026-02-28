@@ -461,15 +461,27 @@ export const es = {
         deselectAll: "Deseleccionar todos",
         assignCategory: "Asignar categoría...",
         removeCategory: "Quitar categoría",
+        deleteSelected: "Eliminar seleccionados",
         assignCategoryTitle: "Asignar categoría",
         assignCategoryDescription: "Selecciona la categoría que quieres asignar a los movimientos seleccionados.",
         selectCategoryPlaceholder: "Selecciona una categoría...",
         cancel: "Cancelar",
         apply: "Aplicar",
+        deleting: "Eliminando...",
+        confirmDeleteAction: "Eliminar",
+        confirmDeleteTitle: (count: number) => `¿Eliminar ${count} movimiento${count > 1 ? 's' : ''}?`,
+        confirmDeleteDescription: (deletable: number, blocked: number) =>
+          `Esta acción no se puede deshacer. Se procesarán ${deletable} movimiento${deletable > 1 ? 's' : ''}.${blocked > 0 ? ` ${blocked} seleccionado${blocked > 1 ? 's' : ''} no se puede eliminar y se omitirá.` : ''}`,
         successAssigned: (count: number, categoryName: string) =>
           `Se ha asignado "${categoryName}" a ${count} movimiento${count > 1 ? 's' : ''}.`,
         successRemoved: (count: number) =>
           `Se ha quitado la categoría de ${count} movimiento${count > 1 ? 's' : ''}.`,
+        successDeleted: (count: number, archivedCount: number) =>
+          `${count} movimiento${count > 1 ? 's' : ''} eliminado${count > 1 ? 's' : ''}${archivedCount > 0 ? ` (${archivedCount} archivado${archivedCount > 1 ? 's' : ''})` : ''}.`,
+        blockedSkipped: (count: number) =>
+          `${count} movimiento${count > 1 ? 's' : ''} no se puede eliminar por restricciones de remesa/desglose.`,
+        errorPartialDelete: (success: number, failed: number) =>
+          `Completado parcialmente: ${success} eliminados/archivados, ${failed} con errores.`,
         errorPartial: (success: number, failed: number) =>
           `Completado parcialmente: ${success} actualizados, ${failed} con errores.`,
         errorAll: "No se ha podido actualizar ningún movimiento.",

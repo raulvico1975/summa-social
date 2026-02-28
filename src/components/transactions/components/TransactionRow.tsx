@@ -96,6 +96,7 @@ interface TransactionRowProps {
   isCategoryLoading: boolean;
   // Bulk selection (opcional, només si canBulkEdit)
   isSelected?: boolean;
+  isSelectionDisabled?: boolean;
   onToggleSelect?: (id: string) => void;
   // Drag & drop document (opcional, només si canEdit)
   onDropFile?: (txId: string, file: File) => Promise<void>;
@@ -204,6 +205,7 @@ export const TransactionRow = React.memo(function TransactionRow({
   isDocumentLoading,
   isCategoryLoading,
   isSelected,
+  isSelectionDisabled,
   onToggleSelect,
   onDropFile,
   dropHint,
@@ -538,7 +540,11 @@ export const TransactionRow = React.memo(function TransactionRow({
         <TableCell className="py-1 px-2">
           <Checkbox
             checked={isSelected}
-            onCheckedChange={() => onToggleSelect(tx.id)}
+            onCheckedChange={() => {
+              if (isSelectionDisabled) return;
+              onToggleSelect(tx.id);
+            }}
+            disabled={isSelectionDisabled}
             aria-label={`Seleccionar moviment ${tx.description}`}
             className="h-4 w-4"
           />

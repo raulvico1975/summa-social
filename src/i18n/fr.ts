@@ -461,15 +461,27 @@ export const fr = {
         deselectAll: "Tout désélectionner",
         assignCategory: "Attribuer catégorie...",
         removeCategory: "Retirer catégorie",
+        deleteSelected: "Supprimer sélectionnés",
         assignCategoryTitle: "Attribuer catégorie",
         assignCategoryDescription: "Sélectionnez la catégorie à attribuer aux mouvements sélectionnés.",
         selectCategoryPlaceholder: "Sélectionner une catégorie...",
         cancel: "Annuler",
         apply: "Appliquer",
+        deleting: "Suppression...",
+        confirmDeleteAction: "Supprimer",
+        confirmDeleteTitle: (count: number) => `Supprimer ${count} mouvement${count > 1 ? 's' : ''} ?`,
+        confirmDeleteDescription: (deletable: number, blocked: number) =>
+          `Cette action est irréversible. ${deletable} mouvement${deletable > 1 ? 's' : ''} ${deletable > 1 ? 'seront traités' : 'sera traité'}.${blocked > 0 ? ` ${blocked} sélectionné${blocked > 1 ? 's' : ''} ne peut pas être supprimé et sera ignoré.` : ''}`,
         successAssigned: (count: number, categoryName: string) =>
           `"${categoryName}" a été attribué à ${count} mouvement${count > 1 ? 's' : ''}.`,
         successRemoved: (count: number) =>
           `La catégorie a été retirée de ${count} mouvement${count > 1 ? 's' : ''}.`,
+        successDeleted: (count: number, archivedCount: number) =>
+          `${count} mouvement${count > 1 ? 's' : ''} supprimé${count > 1 ? 's' : ''}${archivedCount > 0 ? ` (${archivedCount} archivé${archivedCount > 1 ? 's' : ''})` : ''}.`,
+        blockedSkipped: (count: number) =>
+          `${count} mouvement${count > 1 ? 's' : ''} ne peut pas être supprimé à cause des restrictions de virement/ventilation.`,
+        errorPartialDelete: (success: number, failed: number) =>
+          `Terminé partiellement : ${success} supprimés/archivés, ${failed} en erreur.`,
         errorPartial: (success: number, failed: number) =>
           `Partiellement complété : ${success} mis à jour, ${failed} en erreur.`,
         errorAll: "Aucun mouvement n'a pu être mis à jour.",

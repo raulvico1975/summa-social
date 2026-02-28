@@ -461,15 +461,27 @@ export const ca = {
         deselectAll: "Deseleccionar tots",
         assignCategory: "Assignar categoria...",
         removeCategory: "Treure categoria",
+        deleteSelected: "Eliminar seleccionats",
         assignCategoryTitle: "Assignar categoria",
         assignCategoryDescription: "Selecciona la categoria que vols assignar als moviments seleccionats.",
         selectCategoryPlaceholder: "Selecciona una categoria...",
         cancel: "Cancel·lar",
         apply: "Aplicar",
+        deleting: "Eliminant...",
+        confirmDeleteAction: "Eliminar",
+        confirmDeleteTitle: (count: number) => `Eliminar ${count} moviment${count > 1 ? 's' : ''}?`,
+        confirmDeleteDescription: (deletable: number, blocked: number) =>
+          `Aquesta acció no es pot desfer. Es processaran ${deletable} moviment${deletable > 1 ? 's' : ''}.${blocked > 0 ? ` ${blocked} seleccionat${blocked > 1 ? 's' : ''} no es poden eliminar i es descartaran.` : ''}`,
         successAssigned: (count: number, categoryName: string) =>
           `S'ha assignat "${categoryName}" a ${count} moviment${count > 1 ? 's' : ''}.`,
         successRemoved: (count: number) =>
           `S'ha tret la categoria de ${count} moviment${count > 1 ? 's' : ''}.`,
+        successDeleted: (count: number, archivedCount: number) =>
+          `${count} moviment${count > 1 ? 's' : ''} eliminat${count > 1 ? 's' : ''}${archivedCount > 0 ? ` (${archivedCount} arxivat${archivedCount > 1 ? 's' : ''})` : ''}.`,
+        blockedSkipped: (count: number) =>
+          `${count} moviment${count > 1 ? 's' : ''} no es poden eliminar per restriccions de remesa/desglossament.`,
+        errorPartialDelete: (success: number, failed: number) =>
+          `Completat parcialment: ${success} eliminats/arxivats, ${failed} amb errors.`,
         errorPartial: (success: number, failed: number) =>
           `Completat parcialment: ${success} actualitzats, ${failed} amb errors.`,
         errorAll: "No s'ha pogut actualitzar cap moviment.",

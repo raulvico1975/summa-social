@@ -1,17 +1,17 @@
 # Rollback Plan (auto) — Summa Social
 
-Generat: 2026-02-28 18:10
-Risc: ALT
-Backup curt: SKIPPED_NO_BUCKET
-SHA prod abans de publicar: aa7407f
-SHA main a publicar: aade1c7
+Generat: 2026-02-28 19:03
+Risc: MITJA
+Backup curt: NO_REQUIRED
+SHA prod abans de publicar: 885ab58
+SHA main a publicar: bcf8056
 
 ## Si cal marxa enrere rapida
 
 Opcio recomanada (preserva historial):
 ```bash
 git checkout main
-git revert aade1c7 --no-edit
+git revert bcf8056 --no-edit
 git push origin main
 bash scripts/deploy.sh
 ```
@@ -19,6 +19,6 @@ bash scripts/deploy.sh
 Emergencia critica (nomes si la produccio cau i no hi ha alternativa):
 ```bash
 git checkout prod
-git reset --hard aa7407f
+git reset --hard 885ab58
 git push origin prod --force-with-lease
 ```

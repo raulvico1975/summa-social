@@ -54,6 +54,7 @@ import {
   Undo2,
   Download,
   X,
+  Trash2,
 } from 'lucide-react';
 import type { Transaction, Category, Project, AnyContact, Donor, Supplier, Employee, ContactType } from '@/lib/data';
 import { SUPER_ADMIN_UID } from '@/lib/data';
@@ -65,7 +66,7 @@ import { StripeImporter } from '@/components/stripe-importer';
 import { SplitAmountDialog } from '@/components/transactions/split-amount-dialog';
 import { SplitDetailDialog } from '@/components/transactions/split-detail-dialog';
 import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
-import { collection, doc, writeBatch, query, orderBy } from 'firebase/firestore';
+import { collection, doc, writeBatch, query, orderBy, where, getDocs, deleteDoc, deleteField } from 'firebase/firestore';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Tag, XCircle, Search, FileX, Undo } from 'lucide-react';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -90,7 +91,7 @@ import { SepaReconcileModal } from '@/components/pending-documents/sepa-reconcil
 import { filterValidSelectItems } from '@/lib/ui/safe-select-options';
 import type { PrebankRemittance } from '@/lib/pending-documents/sepa-remittance';
 import { prebankRemittancesCollection } from '@/lib/pending-documents/sepa-remittance';
-import { where, getDocs } from 'firebase/firestore';
+import { pendingDocumentsCollection } from '@/lib/pending-documents/refs';
 import { filterActiveContacts } from '@/lib/contacts/filterActiveContacts';
 import { UndoProcessingDialog } from '@/components/undo-processing-dialog';
 import { ReturnEmailDraftDialog } from '@/components/returns/ReturnEmailDraftDialog';
@@ -109,6 +110,7 @@ import {
 } from '@/lib/transactions/can-delete-transaction';
 import { filterSplitChildTransactions } from '@/lib/splits/split-visibility';
 import { undoSplit } from '@/lib/splits/undoSplit';
+import { handleTransactionDelete, isFiscallyRelevantTransaction } from '@/lib/fiscal/softDeleteTransaction';
 
 interface TransactionsTableProps {
   initialDateFilter?: DateFilterValue | null;
@@ -238,6 +240,8 @@ export function TransactionsTable({ initialDateFilter = null, canEditMovements =
   const [isBulkCategoryDialogOpen, setIsBulkCategoryDialogOpen] = React.useState(false);
   const [bulkCategoryId, setBulkCategoryId] = React.useState<string | null>(null);
   const [isBulkUpdating, setIsBulkUpdating] = React.useState(false);
+  const [isBulkDeleteDialogOpen, setIsBulkDeleteDialogOpen] = React.useState(false);
+  const [isBulkDeleting, setIsBulkDeleting] = React.useState(false);
 
   // Helpers de selecció
   const toggleOne = React.useCallback((id: string) => {
@@ -948,24 +952,62 @@ export function TransactionsTable({ initialDateFilter = null, canEditMovements =
   // ═══════════════════════════════════════════════════════════════════════════
 
   const bulkT = t.movements?.table?.bulkSelection;
+  const isBulkSelectionBlocked = React.useCallback((tx: Transaction): boolean => {
+    if (getDeleteTransactionBlockedReason(tx)) return true;
+    if (tx.isSplit) return true;
+    if (!tx.parentTransactionId) return false;
+    return !!allTransactionsById[tx.parentTransactionId]?.isSplit;
+  }, [allTransactionsById]);
+  const selectedTransactions = React.useMemo(
+    () => Array.from(selectedIds)
+      .map((id) => allTransactionsById[id])
+      .filter((tx): tx is Transaction => !!tx && !tx.archivedAt && !isBulkSelectionBlocked(tx)),
+    [selectedIds, allTransactionsById, isBulkSelectionBlocked]
+  );
+  React.useEffect(() => {
+    setSelectedIds((prev) => {
+      if (prev.size === 0) return prev;
+      let changed = false;
+      const next = new Set<string>();
+      prev.forEach((id) => {
+        const tx = allTransactionsById[id];
+        if (tx && !isBulkSelectionBlocked(tx)) {
+          next.add(id);
+        } else {
+          changed = true;
+        }
+      });
+      return changed ? next : prev;
+    });
+  }, [allTransactionsById, isBulkSelectionBlocked]);
 
   // Derivats per a la capçalera
-  const visibleIds = React.useMemo(() => filteredTransactions.map(tx => tx.id), [filteredTransactions]);
+  const selectableVisibleIds = React.useMemo(
+    () => filteredTransactions.filter((tx) => !isBulkSelectionBlocked(tx)).map((tx) => tx.id),
+    [filteredTransactions, isBulkSelectionBlocked]
+  );
   const selectedCount = selectedIds.size;
-  const allVisibleSelected = visibleIds.length > 0 && visibleIds.every(id => selectedIds.has(id));
-  const someVisibleSelected = visibleIds.some(id => selectedIds.has(id));
+  const allVisibleSelected = selectableVisibleIds.length > 0 && selectableVisibleIds.every(id => selectedIds.has(id));
+  const someVisibleSelected = selectableVisibleIds.some(id => selectedIds.has(id));
   const checkboxState = allVisibleSelected ? 'checked' : someVisibleSelected ? 'indeterminate' : 'unchecked';
+  const blockedSelectedCount = React.useMemo(() => {
+    return Array.from(selectedIds).filter((id) => {
+      const tx = allTransactionsById[id];
+      if (!tx) return true;
+      return isBulkSelectionBlocked(tx);
+    }).length;
+  }, [selectedIds, allTransactionsById, isBulkSelectionBlocked]);
+  const deletableSelectedCount = selectedTransactions.length;
 
   // Determinar tipus de la selecció bulk (per filtrar categories i bloquejar mixed)
   const bulkSelectionType = React.useMemo(() => {
-    if (selectedIds.size === 0) return 'none' as const;
-    const selectedTxs = transactions?.filter(tx => selectedIds.has(tx.id)) || [];
-    const allPositive = selectedTxs.every(tx => tx.amount > 0);
-    const allNegative = selectedTxs.every(tx => tx.amount < 0);
+    if (selectedTransactions.length === 0) return 'none' as const;
+    const allPositive = selectedTransactions.every(tx => tx.amount > 0);
+    const allNegative = selectedTransactions.every(tx => tx.amount < 0);
     if (allPositive) return 'income' as const;
     if (allNegative) return 'expense' as const;
     return 'mixed' as const;
-  }, [selectedIds, transactions]);
+  }, [selectedTransactions]);
 
   const bulkAvailableCategories = React.useMemo(() => {
     if (!availableCategories || bulkSelectionType === 'mixed' || bulkSelectionType === 'none') return [];
@@ -977,10 +1019,10 @@ export function TransactionsTable({ initialDateFilter = null, canEditMovements =
 
   // Bulk update amb batching (màx 50 per batch)
   const handleBulkUpdateCategory = React.useCallback(async (categoryId: string | null) => {
-    if (!organizationId || selectedIds.size === 0) return;
+    if (!organizationId || selectedTransactions.length === 0) return;
 
     setIsBulkUpdating(true);
-    const idsToUpdate = Array.from(selectedIds);
+    const idsToUpdate = selectedTransactions.map((tx) => tx.id);
     const BATCH_SIZE = 50;
     let successCount = 0;
     let failCount = 0;
@@ -1061,7 +1103,7 @@ export function TransactionsTable({ initialDateFilter = null, canEditMovements =
     } finally {
       setIsBulkUpdating(false);
     }
-  }, [organizationId, selectedIds, transactions, availableCategories, firestore, getCategoryDisplayName, toast, bulkT, clearSelection]);
+  }, [organizationId, selectedTransactions, transactions, availableCategories, firestore, getCategoryDisplayName, toast, bulkT, clearSelection]);
 
   const handleOpenBulkCategoryDialog = React.useCallback(() => {
     setBulkCategoryId(null);
@@ -1076,6 +1118,120 @@ export function TransactionsTable({ initialDateFilter = null, canEditMovements =
     if (!bulkCategoryId) return;
     handleBulkUpdateCategory(bulkCategoryId);
   }, [bulkCategoryId, handleBulkUpdateCategory]);
+
+  const handleBulkDeleteSelected = React.useCallback(async () => {
+    if (!organizationId || selectedTransactions.length === 0) return;
+
+    setIsBulkDeleting(true);
+    trackUX('bulk.delete.start', { count: selectedTransactions.length });
+
+    let deletedCount = 0;
+    let archivedCount = 0;
+    const blockedCount = blockedSelectedCount;
+    let failedCount = 0;
+    let autoUnmatchedCount = 0;
+    const failedIds = new Set<string>();
+
+    try {
+      for (const tx of selectedTransactions) {
+        try {
+          const pendingQuery = query(
+            pendingDocumentsCollection(firestore, organizationId),
+            where('matchedTransactionId', '==', tx.id),
+            where('status', '==', 'matched')
+          );
+          const pendingSnap = await getDocs(pendingQuery);
+
+          if (!pendingSnap.empty) {
+            const BATCH_SIZE = 50;
+            for (let i = 0; i < pendingSnap.docs.length; i += BATCH_SIZE) {
+              const batch = writeBatch(firestore);
+              const chunk = pendingSnap.docs.slice(i, i + BATCH_SIZE);
+              for (const pendingDoc of chunk) {
+                batch.update(pendingDoc.ref, {
+                  status: 'confirmed',
+                  matchedTransactionId: deleteField(),
+                });
+              }
+              await batch.commit();
+            }
+            autoUnmatchedCount += pendingSnap.size;
+          }
+        } catch (error) {
+          console.error('[BulkDelete] Error unmatching pending docs:', error);
+          failedCount++;
+          failedIds.add(tx.id);
+          continue;
+        }
+
+        try {
+          if (isFiscallyRelevantTransaction(tx) && user?.uid) {
+            await handleTransactionDelete(tx, {
+              firestore,
+              orgId: organizationId,
+              userId: user.uid,
+              reason: 'user_delete',
+            });
+            archivedCount++;
+          } else if (isFiscallyRelevantTransaction(tx) && !user?.uid) {
+            throw new Error('No user context for fiscal archive');
+          } else {
+            await deleteDoc(doc(firestore, 'organizations', organizationId, 'transactions', tx.id));
+            deletedCount++;
+          }
+        } catch (error) {
+          console.error('[BulkDelete] Error deleting tx:', tx.id, error);
+          failedCount++;
+          failedIds.add(tx.id);
+        }
+      }
+
+      const processedCount = deletedCount + archivedCount;
+      if (processedCount > 0) {
+        toast({
+          title: bulkT?.successDeleted
+            ? bulkT.successDeleted(processedCount, archivedCount)
+            : `${processedCount} moviment${processedCount > 1 ? 's' : ''} eliminat${processedCount > 1 ? 's' : ''}${archivedCount > 0 ? ` (${archivedCount} arxivat${archivedCount > 1 ? 's' : ''})` : ''}.`,
+        });
+        trackUX('bulk.delete.success', { processedCount, archivedCount });
+      }
+
+      if (blockedCount > 0) {
+        toast({
+          variant: 'destructive',
+          title: bulkT?.blockedSkipped
+            ? bulkT.blockedSkipped(blockedCount)
+            : `${blockedCount} moviment${blockedCount > 1 ? 's' : ''} no es poden eliminar per restriccions de remesa/desglossament.`,
+        });
+      }
+
+      if (failedCount > 0) {
+        toast({
+          variant: 'destructive',
+          title: bulkT?.errorPartialDelete
+            ? bulkT.errorPartialDelete(processedCount, failedCount)
+            : `Completat parcialment: ${processedCount} eliminats/arxivats, ${failedCount} amb errors.`,
+        });
+        trackUX('bulk.delete.partial', { processedCount, failedCount });
+      }
+
+      if (processedCount === 0 && blockedCount === 0 && failedCount > 0) {
+        trackUX('bulk.delete.error', { count: selectedTransactions.length });
+      }
+
+      if (autoUnmatchedCount > 0) {
+        toast({
+          title: t.pendingDocs.toasts.autoUnmatchTitle,
+          description: t.pendingDocs.toasts.autoUnmatchDesc,
+        });
+      }
+
+      setSelectedIds(new Set(Array.from(failedIds)));
+      setIsBulkDeleteDialogOpen(false);
+    } finally {
+      setIsBulkDeleting(false);
+    }
+  }, [organizationId, selectedTransactions, blockedSelectedCount, firestore, user?.uid, toast, bulkT, t.pendingDocs.toasts]);
 
   // ═══════════════════════════════════════════════════════════════════════════
   // EXPORTAR EXCEL
@@ -1868,7 +2024,7 @@ export function TransactionsTable({ initialDateFilter = null, canEditMovements =
               variant="outline"
               size="sm"
               onClick={handleOpenBulkCategoryDialog}
-              disabled={isBulkUpdating || bulkSelectionType === 'mixed' || !availableCategories}
+              disabled={isBulkUpdating || isBulkDeleting || bulkSelectionType === 'mixed' || !availableCategories}
               className="h-8"
               aria-label={`Assignar categoria a ${selectedCount} moviments`}
               title={bulkSelectionType === 'mixed' ? (bulkT?.mixedTypesWarning ?? 'La selecció inclou ingressos i despeses. Desselecciona per assignar categoria.') : undefined}
@@ -1882,7 +2038,7 @@ export function TransactionsTable({ initialDateFilter = null, canEditMovements =
               variant="ghost"
               size="sm"
               onClick={handleBulkRemoveCategory}
-              disabled={isBulkUpdating}
+              disabled={isBulkUpdating || isBulkDeleting}
               className="h-8 text-muted-foreground hover:text-destructive"
               aria-label={`Treure categoria de ${selectedCount} moviments`}
             >
@@ -1892,6 +2048,21 @@ export function TransactionsTable({ initialDateFilter = null, canEditMovements =
                 <XCircle className="h-3.5 w-3.5 mr-1.5" />
               )}
               {bulkT?.removeCategory ?? 'Treure categoria'}
+            </Button>
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={() => setIsBulkDeleteDialogOpen(true)}
+              disabled={isBulkUpdating || isBulkDeleting || deletableSelectedCount === 0}
+              className="h-8"
+              aria-label={`Eliminar ${deletableSelectedCount} moviments seleccionats`}
+            >
+              {isBulkDeleting ? (
+                <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+              ) : (
+                <Trash2 className="h-3.5 w-3.5 mr-1.5" />
+              )}
+              {bulkT?.deleteSelected ?? 'Eliminar seleccionats'}
             </Button>
           </div>
         </div>
@@ -1983,7 +2154,8 @@ export function TransactionsTable({ initialDateFilter = null, canEditMovements =
                           (el as HTMLButtonElement & { indeterminate: boolean }).indeterminate = checkboxState === 'indeterminate';
                         }
                       }}
-                      onCheckedChange={() => toggleAllVisible(visibleIds)}
+                      onCheckedChange={() => toggleAllVisible(selectableVisibleIds)}
+                      disabled={selectableVisibleIds.length === 0}
                       aria-label={allVisibleSelected ? bulkT?.deselectAll ?? 'Deseleccionar tots' : bulkT?.selectAll ?? 'Seleccionar tots'}
                       className="h-4 w-4"
                     />
@@ -2033,6 +2205,7 @@ export function TransactionsTable({ initialDateFilter = null, canEditMovements =
                   isDocumentLoading={docLoadingStates[tx.id] || false}
                   isCategoryLoading={loadingStates[tx.id] || false}
                   isSelected={canBulkEdit ? selectedIds.has(tx.id) : undefined}
+                  isSelectionDisabled={canBulkEdit ? isBulkSelectionBlocked(tx) : undefined}
                   onToggleSelect={canBulkEdit ? toggleOne : undefined}
                   onDropFile={canBulkEdit ? handleDropFile : undefined}
                   dropHint={t.movements.table.dropToAttach || 'Deixa anar per adjuntar'}
@@ -2168,6 +2341,44 @@ export function TransactionsTable({ initialDateFilter = null, canEditMovements =
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog
+        open={isBulkDeleteDialogOpen}
+        onOpenChange={(open) => {
+          if (!open && !isBulkDeleting) setIsBulkDeleteDialogOpen(false);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {bulkT?.confirmDeleteTitle
+                ? bulkT.confirmDeleteTitle(deletableSelectedCount)
+                : `Eliminar ${deletableSelectedCount} moviment${deletableSelectedCount > 1 ? 's' : ''}?`}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {bulkT?.confirmDeleteDescription
+                ? bulkT.confirmDeleteDescription(deletableSelectedCount, blockedSelectedCount)
+                : `Aquesta acció no es pot desfer.${blockedSelectedCount > 0 ? ` ${blockedSelectedCount} seleccionat${blockedSelectedCount > 1 ? 's' : ''} no es poden eliminar i es descartaran.` : ''}`}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              onClick={() => setIsBulkDeleteDialogOpen(false)}
+              disabled={isBulkDeleting}
+            >
+              {t.common.cancel}
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleBulkDeleteSelected}
+              disabled={isBulkDeleting || deletableSelectedCount === 0}
+            >
+              {isBulkDeleting
+                ? (bulkT?.deleting ?? 'Eliminant...')
+                : (bulkT?.confirmDeleteAction ?? t.common.delete)}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Return Assignment Dialog */}
       <Dialog open={isReturnDialogOpen} onOpenChange={(open) => !open && handleCloseReturnDialog()}>
