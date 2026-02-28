@@ -38,12 +38,13 @@ import { suggestPendingDocumentMatches } from '@/lib/pending-documents';
 import { classifyTransactions, type ClassifiedRow } from '@/lib/transaction-dedupe';
 import { DedupeCandidateResolver } from '@/components/dedupe-candidate-resolver';
 import {
-  findHeaderRow,
-  type HeaderCandidate,
-} from '@/lib/importers/bank/findHeaderRow';
-import {
   BankStatementParseError,
   parseBankStatementRows,
+  shouldOpenManualMapping,
+  type ColumnMappingOverride,
+  type ParseBankStatementResult,
+  type ParseRiskSignals,
+  type ParseSummary,
   type ParsedBankStatementRow,
 } from '@/lib/importers/bank/bankStatementParser';
 
@@ -163,19 +164,6 @@ const mapParseErrorToMessage = (
   return t.importers.transaction.errors.cannotProcessContent;
 };
 
-const buildPreviewLines = (rows: unknown[][], headerRowIndex: number, maxRows: number = 5): string[] => {
-  const header = rows[headerRowIndex] ?? [];
-  const lines: string[] = [];
-  lines.push(`H${headerRowIndex + 1}: ${header.map((cell) => String(cell ?? '')).join(' | ')}`);
-
-  for (let i = headerRowIndex + 1; i < Math.min(rows.length, headerRowIndex + 1 + maxRows); i++) {
-    const row = rows[i] ?? [];
-    lines.push(`${i + 1}: ${row.map((cell) => String(cell ?? '')).join(' | ')}`);
-  }
-
-  return lines;
-};
-
 export function TransactionImporter({ availableCategories }: TransactionImporterProps) {
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const [isImporting, setIsImporting] = React.useState(false);
@@ -197,17 +185,24 @@ export function TransactionImporter({ availableCategories }: TransactionImporter
   const [pendingImportContext, setPendingImportContext] = React.useState<{
     bankAccountId: string;
     fileName: string | null;
-    rawData: ParsedBankStatementRow[];
+    totalRawRows: number;
   } | null>(null);
-  const [headerFallbackState, setHeaderFallbackState] = React.useState<{
+  const [previewSummary, setPreviewSummary] = React.useState<ParseSummary | null>(null);
+  const [previewRows, setPreviewRows] = React.useState<ParsedBankStatementRow[]>([]);
+  const [mappingState, setMappingState] = React.useState<{
     rows: unknown[][];
     bankAccountId: string | null;
     fileName: string | null;
-    candidates: HeaderCandidate[];
-    selectedHeaderRow: number;
-    previewRows: ParsedBankStatementRow[];
-    previewLines: string[];
-    previewError: string | null;
+    headerRowIndex: number;
+    columns: string[];
+    selectedMapping: {
+      operationDate: number;
+      description: number;
+      amount: number;
+      balanceAfter: number;
+    };
+    riskSignals: ParseRiskSignals;
+    riskMessages: string[];
   } | null>(null);
   const { toast } = useToast();
   const { firestore, auth } = useFirebase();
@@ -303,102 +298,119 @@ export function TransactionImporter({ availableCategories }: TransactionImporter
   };
 
   const startImportProcess = (file: File, bankAccountId: string | null) => {
-    setHeaderFallbackState(null);
+    setMappingState(null);
+    setPreviewSummary(null);
+    setPreviewRows([]);
     setIsImporting(true);
     if (file.name.endsWith('.csv')) {
-        parseCsv(file, bankAccountId);
+      parseCsv(file, bankAccountId);
     } else if (file.name.endsWith('.xlsx')) {
-        parseXlsx(file, bankAccountId);
+      parseXlsx(file, bankAccountId);
     } else {
-        toast({
-            variant: 'destructive',
-            title: t.importers.transaction.errors.unsupportedFormat,
-            description: t.importers.transaction.errors.unsupportedFormatDescription,
-        });
-        setIsImporting(false);
+      toast({
+        variant: 'destructive',
+        title: t.importers.transaction.errors.unsupportedFormat,
+        description: t.importers.transaction.errors.unsupportedFormatDescription,
+      });
+      setIsImporting(false);
     }
-  }
+  };
 
-  /**
-   * Detecta solapament amb transaccions existents i últim importRun
-   */
-  // La fricció de solapament ja es gestiona al diàleg de selecció de compte
-  // Aquesta funció ara simplement passa les dades a processar
   const checkOverlapAndConfirm = async (
-    parsedData: ParsedBankStatementRow[],
+    parseResult: ParseBankStatementResult,
     bankAccountId: string | null,
     fileName: string | null
   ) => {
-    return classifyParsedData(parsedData, bankAccountId, fileName);
+    return classifyParsedData(parseResult, bankAccountId, fileName);
   };
 
-  const updateLowConfidencePreview = (
-    rows: unknown[][],
-    selectedHeaderRow: number
-  ): {
-    previewRows: ParsedBankStatementRow[];
-    previewLines: string[];
-    previewError: string | null;
-  } => {
-    try {
-      const previewResult = parseBankStatementRows(rows, { headerRowIndex: selectedHeaderRow });
-      return {
-        previewRows: previewResult.rows.slice(0, 5),
-        previewLines: buildPreviewLines(rows, selectedHeaderRow, 5),
-        previewError: null,
-      };
-    } catch (error) {
-      return {
-        previewRows: [],
-        previewLines: buildPreviewLines(rows, selectedHeaderRow, 5),
-        previewError: mapParseErrorToMessage(error, t, tr),
-      };
+  const buildRiskMessages = (riskSignals: ParseRiskSignals): string[] => {
+    const messages: string[] = [];
+    if (riskSignals.lowConfidence) {
+      messages.push(tr('importers.transaction.mapping.risk.lowConfidence', 'Detecció de capçalera amb confiança baixa.'));
     }
+    if (riskSignals.missingRequiredFields.length > 0) {
+      messages.push(
+        tr(
+          'importers.transaction.mapping.risk.missingRequired',
+          `Falten camps requerits: ${riskSignals.missingRequiredFields.join(', ')}.`
+        )
+      );
+    }
+    if (riskSignals.operationDateDerived) {
+      messages.push(tr('importers.transaction.mapping.risk.derivedOperationDate', 'S’ha aplicat derivació de data operativa.'));
+    }
+    if (riskSignals.hasDebitCredit) {
+      messages.push(tr('importers.transaction.mapping.risk.debitCredit', 'S’han detectat columnes Debe/Haber.'));
+    }
+    if (riskSignals.datesInvalid > 0) {
+      messages.push(
+        tr(
+          'importers.transaction.mapping.risk.invalidDates',
+          `Hi ha ${riskSignals.datesInvalid} files amb data invàlida.`
+        )
+      );
+    }
+    if (riskSignals.amountInvalid > 0) {
+      messages.push(
+        tr(
+          'importers.transaction.mapping.risk.invalidAmounts',
+          `Hi ha ${riskSignals.amountInvalid} files amb import invàlid.`
+        )
+      );
+    }
+    if (riskSignals.balanceMismatchCount > 0) {
+      messages.push(
+        tr(
+          'importers.transaction.mapping.risk.balanceMismatch',
+          `Hi ha ${riskSignals.balanceMismatchCount} incoherències de saldo.`
+        )
+      );
+    }
+    return messages;
   };
 
   const processRowsMatrix = async (
     rows: unknown[][],
     bankAccountId: string | null,
     fileName: string | null,
-    options: { headerRowIndexOverride?: number; skipLowConfidenceDialog?: boolean } = {}
+    options: {
+      headerRowIndexOverride?: number;
+      columnMappingOverride?: ColumnMappingOverride;
+      skipMappingDialog?: boolean;
+    } = {}
   ): Promise<'processed' | 'deferred'> => {
     const normalizedRows = rows.map((row) => (Array.isArray(row) ? row : []));
-    const detection = findHeaderRow(normalizedRows);
-    const detectedIndex = detection.index;
+    const parsed = parseBankStatementRows(normalizedRows, {
+      headerRowIndex: options.headerRowIndexOverride,
+      columnMappingOverride: options.columnMappingOverride,
+    });
 
-    if (detectedIndex === null && options.headerRowIndexOverride === undefined) {
-      throw new BankStatementParseError('HEADER_NOT_FOUND');
-    }
+    if (!options.skipMappingDialog && shouldOpenManualMapping(parsed)) {
+      const columns = parsed.header.map(
+        (column, index) => column || `${tr('importers.transaction.mapping.column', 'Columna')} ${index + 1}`
+      );
 
-    const selectedHeaderRow = options.headerRowIndexOverride ?? detectedIndex!;
-    if (!options.skipLowConfidenceDialog && options.headerRowIndexOverride === undefined && detection.lowConfidence) {
-      const candidates = detection.topCandidates.length > 0
-        ? detection.topCandidates
-        : [{
-          index: selectedHeaderRow,
-          score: detection.score,
-          essentialMatched: 0,
-          matchedFields: [],
-          matchedByField: {},
-          lowConfidence: true,
-        }];
-      const previewState = updateLowConfidencePreview(normalizedRows, selectedHeaderRow);
-      setHeaderFallbackState({
+      setMappingState({
         rows: normalizedRows,
         bankAccountId,
         fileName,
-        candidates,
-        selectedHeaderRow,
-        previewRows: previewState.previewRows,
-        previewLines: previewState.previewLines,
-        previewError: previewState.previewError,
+        headerRowIndex: parsed.headerRowIndex,
+        columns,
+        selectedMapping: {
+          operationDate: parsed.columnMapping.operationDate,
+          description: parsed.columnMapping.description,
+          amount: parsed.columnMapping.amount,
+          balanceAfter: parsed.columnMapping.balanceAfter,
+        },
+        riskSignals: parsed.riskSignals,
+        riskMessages: buildRiskMessages(parsed.riskSignals),
       });
       setIsImporting(false);
       return 'deferred';
     }
 
-    const parsed = parseBankStatementRows(normalizedRows, { headerRowIndex: selectedHeaderRow });
-    await checkOverlapAndConfirm(parsed.rows, bankAccountId, fileName);
+    await checkOverlapAndConfirm(parsed, bankAccountId, fileName);
     return 'processed';
   };
 
@@ -520,7 +532,7 @@ export function TransactionImporter({ availableCategories }: TransactionImporter
   // ═══════════════════════════════════════════════════════════════════════════════
 
   const classifyParsedData = async (
-    data: ParsedBankStatementRow[],
+    parseResult: ParseBankStatementResult,
     bankAccountId: string | null,
     fileName: string | null
   ) => {
@@ -539,7 +551,7 @@ export function TransactionImporter({ availableCategories }: TransactionImporter
 
     try {
         // Parsejar files a transaccions, preservant rawRow per enrichment
-        const allParsedWithRaw = data
+        const allParsedWithRaw = parseResult.rows
         .map((row) => {
           const rawRow: Record<string, any> = { ...(row.rawRow || {}) };
           rawRow._opDate = row.operationDate;
@@ -618,8 +630,14 @@ export function TransactionImporter({ availableCategories }: TransactionImporter
 
         // Mostrar sempre resum previ abans d'importar
         setClassifiedResults(classified);
-        setPendingImportContext({ bankAccountId, fileName, rawData: data });
+        setPendingImportContext({
+          bankAccountId,
+          fileName,
+          totalRawRows: parseResult.summary.dataRowsCount,
+        });
         setDedupeSummary(summary);
+        setPreviewSummary(parseResult.summary);
+        setPreviewRows(parseResult.sampleRows);
         setIsCandidateDialogOpen(true);
         setIsImporting(false);
         return;
@@ -669,7 +687,7 @@ export function TransactionImporter({ availableCategories }: TransactionImporter
         transactionsToImport,
         pendingImportContext.bankAccountId,
         pendingImportContext.fileName,
-        pendingImportContext.rawData.length,
+        pendingImportContext.totalRawRows,
         stats
       );
     } else {
@@ -680,6 +698,8 @@ export function TransactionImporter({ availableCategories }: TransactionImporter
       setClassifiedResults(null);
       setPendingImportContext(null);
       setDedupeSummary(null);
+      setPreviewSummary(null);
+      setPreviewRows([]);
       setIsImporting(false);
     }
   };
@@ -689,44 +709,54 @@ export function TransactionImporter({ availableCategories }: TransactionImporter
     setClassifiedResults(null);
     setPendingImportContext(null);
     setDedupeSummary(null);
+    setPreviewSummary(null);
+    setPreviewRows([]);
     setIsImporting(false);
   };
 
-  const handleLowConfidenceHeaderChange = (value: string) => {
-    const selectedHeaderRow = Number.parseInt(value, 10);
-    setHeaderFallbackState((prev) => {
-      if (!prev || Number.isNaN(selectedHeaderRow)) return prev;
-      const preview = updateLowConfidencePreview(prev.rows, selectedHeaderRow);
+  const handleMappingFieldChange = (
+    field: 'operationDate' | 'description' | 'amount' | 'balanceAfter',
+    value: string
+  ) => {
+    const selectedValue = Number.parseInt(value, 10);
+    setMappingState((prev) => {
+      if (!prev || Number.isNaN(selectedValue)) return prev;
       return {
         ...prev,
-        selectedHeaderRow,
-        previewRows: preview.previewRows,
-        previewLines: preview.previewLines,
-        previewError: preview.previewError,
+        selectedMapping: {
+          ...prev.selectedMapping,
+          [field]: selectedValue,
+        },
       };
     });
   };
 
-  const handleLowConfidenceCancel = () => {
-    setHeaderFallbackState(null);
+  const handleMappingCancel = () => {
+    setMappingState(null);
     setIsImporting(false);
   };
 
-  const handleLowConfidenceContinue = async () => {
-    if (!headerFallbackState) return;
+  const handleMappingContinue = async () => {
+    if (!mappingState) return;
     setIsImporting(true);
 
     try {
       await processRowsMatrix(
-        headerFallbackState.rows,
-        headerFallbackState.bankAccountId,
-        headerFallbackState.fileName,
+        mappingState.rows,
+        mappingState.bankAccountId,
+        mappingState.fileName,
         {
-          headerRowIndexOverride: headerFallbackState.selectedHeaderRow,
-          skipLowConfidenceDialog: true,
+          headerRowIndexOverride: mappingState.headerRowIndex,
+          columnMappingOverride: {
+            operationDate: mappingState.selectedMapping.operationDate,
+            description: mappingState.selectedMapping.description,
+            amount: mappingState.selectedMapping.amount,
+            balanceAfter: mappingState.selectedMapping.balanceAfter,
+          },
+          skipMappingDialog: true,
         }
       );
-      setHeaderFallbackState(null);
+      setMappingState(null);
     } catch (error) {
       toast({
         variant: 'destructive',
@@ -736,6 +766,16 @@ export function TransactionImporter({ availableCategories }: TransactionImporter
       setIsImporting(false);
     }
   };
+
+  const canContinueWithMapping = React.useMemo(() => {
+    if (!mappingState) return false;
+    const hasAmountMapping = mappingState.selectedMapping.amount !== -1 || mappingState.riskSignals.hasDebitCredit;
+    return (
+      mappingState.selectedMapping.operationDate !== -1
+      && mappingState.selectedMapping.description !== -1
+      && hasAmountMapping
+    );
+  }, [mappingState]);
 
   // ═══════════════════════════════════════════════════════════════════════════════
   // FASE 2: EXECUCIÓ (contact matching + batch write + importRun)
@@ -757,6 +797,8 @@ export function TransactionImporter({ availableCategories }: TransactionImporter
     setClassifiedResults(null);
     setPendingImportContext(null);
     setDedupeSummary(null);
+    setPreviewSummary(null);
+    setPreviewRows([]);
 
     if (!organizationId) {
       setIsImporting(false);
@@ -1127,83 +1169,126 @@ export function TransactionImporter({ availableCategories }: TransactionImporter
         </DialogContent>
       </Dialog>
 
-      {/* Fallback manual: només baixa confiança en detecció de capçalera */}
       <Dialog
-        open={Boolean(headerFallbackState)}
+        open={Boolean(mappingState)}
         onOpenChange={(open) => {
-          if (!open) handleLowConfidenceCancel();
+          if (!open) handleMappingCancel();
         }}
       >
         <DialogContent className="sm:max-w-3xl">
           <DialogHeader>
             <DialogTitle>
-              {tr('importers.transaction.lowConfidence.title', 'Confirma la fila de capçalera')}
+              {tr('importers.transaction.mapping.title', 'Mapeig manual de camps')}
             </DialogTitle>
             <DialogDescription>
               {tr(
-                'importers.transaction.lowConfidence.description',
-                'No hem pogut detectar la capçalera amb prou confiança. Selecciona la fila correcta per continuar.'
+                'importers.transaction.mapping.description',
+                'Hem detectat senyals de risc. Revisa el mapeig abans de continuar amb la previsualització.'
               )}
             </DialogDescription>
           </DialogHeader>
 
-          {headerFallbackState && (
+          {mappingState && (
             <div className="space-y-4">
-              <div className="grid grid-cols-1 gap-2">
-                <Label>{tr('importers.transaction.lowConfidence.headerRowLabel', 'Fila de capçalera')}</Label>
-                <Select
-                  value={String(headerFallbackState.selectedHeaderRow)}
-                  onValueChange={handleLowConfidenceHeaderChange}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {headerFallbackState.candidates.map((candidate) => (
-                      <SelectItem key={candidate.index} value={String(candidate.index)}>
-                        {`Fila ${candidate.index + 1} · score ${candidate.score} · ${candidate.matchedFields.join(', ') || 'sense camps detectats'}`}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+              <div className="rounded-md border bg-muted/30 p-3 text-sm">
+                <p className="mb-2 font-medium">{tr('importers.transaction.mapping.riskTitle', 'Senyals detectades')}</p>
+                <ul className="list-disc space-y-1 pl-5 text-muted-foreground">
+                  {mappingState.riskMessages.map((message, index) => (
+                    <li key={`risk-${index}`}>{message}</li>
+                  ))}
+                </ul>
               </div>
 
-              <div className="rounded-md border p-3">
-                <p className="mb-2 text-sm font-medium">
-                  {tr('importers.transaction.lowConfidence.previewTitle', 'Previsualització (5 files)')}
-                </p>
-                {headerFallbackState.previewError ? (
-                  <p className="text-sm text-destructive">{headerFallbackState.previewError}</p>
-                ) : headerFallbackState.previewRows.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">{t.importers.transaction.noValidTransactions}</p>
-                ) : (
-                  <div className="space-y-2">
-                    {headerFallbackState.previewRows.map((row) => (
-                      <div key={row.rowIndex} className="rounded border bg-muted/30 px-2 py-1 text-xs">
-                        <p>{`${row.rowIndex}: ${row.operationDate} · ${row.description}`}</p>
-                        <p>{`Import: ${row.amount}${row.balanceAfter !== undefined ? ` · Saldo: ${row.balanceAfter}` : ''}`}</p>
-                      </div>
-                    ))}
-                  </div>
-                )}
-                {headerFallbackState.previewLines.length > 0 && (
-                  <pre className="mt-3 max-h-40 overflow-auto rounded bg-muted p-2 text-[11px]">
-                    {headerFallbackState.previewLines.join('\n')}
-                  </pre>
-                )}
+              <div className="grid grid-cols-1 gap-3">
+                <div className="grid grid-cols-1 gap-2">
+                  <Label>{tr('importers.transaction.mapping.field.operationDate', 'Data (requerit)')}</Label>
+                  <Select
+                    value={String(mappingState.selectedMapping.operationDate)}
+                    onValueChange={(value) => handleMappingFieldChange('operationDate', value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="-1">{tr('importers.transaction.mapping.none', '(cap)')}</SelectItem>
+                      {mappingState.columns.map((column, index) => (
+                        <SelectItem key={`op-${index}`} value={String(index)}>
+                          {`${index + 1}. ${column}`}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="grid grid-cols-1 gap-2">
+                  <Label>{tr('importers.transaction.mapping.field.description', 'Concepte / Descripció (requerit)')}</Label>
+                  <Select
+                    value={String(mappingState.selectedMapping.description)}
+                    onValueChange={(value) => handleMappingFieldChange('description', value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="-1">{tr('importers.transaction.mapping.none', '(cap)')}</SelectItem>
+                      {mappingState.columns.map((column, index) => (
+                        <SelectItem key={`desc-${index}`} value={String(index)}>
+                          {`${index + 1}. ${column}`}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="grid grid-cols-1 gap-2">
+                  <Label>{tr('importers.transaction.mapping.field.amount', 'Import (requerit)')}</Label>
+                  <Select
+                    value={String(mappingState.selectedMapping.amount)}
+                    onValueChange={(value) => handleMappingFieldChange('amount', value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="-1">{tr('importers.transaction.mapping.none', '(cap)')}</SelectItem>
+                      {mappingState.columns.map((column, index) => (
+                        <SelectItem key={`amount-${index}`} value={String(index)}>
+                          {`${index + 1}. ${column}`}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="grid grid-cols-1 gap-2">
+                  <Label>{tr('importers.transaction.mapping.field.balanceAfter', 'Saldo (opcional)')}</Label>
+                  <Select
+                    value={String(mappingState.selectedMapping.balanceAfter)}
+                    onValueChange={(value) => handleMappingFieldChange('balanceAfter', value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="-1">{tr('importers.transaction.mapping.none', '(cap)')}</SelectItem>
+                      {mappingState.columns.map((column, index) => (
+                        <SelectItem key={`balance-${index}`} value={String(index)}>
+                          {`${index + 1}. ${column}`}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
             </div>
           )}
 
           <DialogFooter>
-            <Button variant="outline" onClick={handleLowConfidenceCancel}>
+            <Button variant="outline" onClick={handleMappingCancel}>
               {t.common.cancel}
             </Button>
-            <Button
-              onClick={handleLowConfidenceContinue}
-              disabled={!headerFallbackState || Boolean(headerFallbackState.previewError)}
-            >
-              {t.common.continue}
+            <Button onClick={handleMappingContinue} disabled={!canContinueWithMapping}>
+              {tr('importers.transaction.mapping.applyAndPreview', 'Aplicar mapeig i previsualitzar')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1218,6 +1303,8 @@ export function TransactionImporter({ availableCategories }: TransactionImporter
         safeDuplicatesCount={dedupeSummary?.safeDuplicatesCount ?? (classifiedResults?.filter(c => c.status === 'DUPLICATE_SAFE').length ?? 0)}
         candidateCount={dedupeSummary?.candidateCount ?? (classifiedResults?.filter(c => c.status === 'DUPLICATE_CANDIDATE').length ?? 0)}
         totalCount={dedupeSummary?.totalCount ?? (classifiedResults?.length ?? 0)}
+        parseSummary={previewSummary}
+        sampleRows={previewRows}
         onContinue={handleCandidatesContinue}
         onCancel={handleCandidatesCancelled}
       />

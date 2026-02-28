@@ -23,6 +23,7 @@ import {
 import { useTranslations } from '@/i18n';
 import type { ClassifiedRow } from '@/lib/transaction-dedupe';
 import { getSafeDuplicateUi } from '@/lib/safe-duplicate-ui';
+import type { ParseSummary, ParsedBankStatementRow } from '@/lib/importers/bank/bankStatementParser';
 
 interface DedupeCandidateResolverProps {
   candidates: ClassifiedRow[];
@@ -31,6 +32,8 @@ interface DedupeCandidateResolverProps {
   safeDuplicatesCount: number;
   candidateCount: number;
   totalCount: number;
+  parseSummary: ParseSummary | null;
+  sampleRows: ParsedBankStatementRow[];
   onContinue: () => void;
   onCancel: () => void;
   open: boolean;
@@ -43,6 +46,8 @@ export function DedupeCandidateResolver({
   safeDuplicatesCount,
   candidateCount,
   totalCount,
+  parseSummary,
+  sampleRows,
   onContinue,
   onCancel,
   open,
@@ -66,6 +71,10 @@ export function DedupeCandidateResolver({
 
   const formatDate = (dateStr?: string) => {
     if (!dateStr) return '—';
+    const dateOnlyMatch = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (dateOnlyMatch) {
+      return `${dateOnlyMatch[3]}/${dateOnlyMatch[2]}/${dateOnlyMatch[1]}`;
+    }
     try {
       return new Date(dateStr).toLocaleDateString('ca-ES');
     } catch {
@@ -84,6 +93,12 @@ export function DedupeCandidateResolver({
   const getExistingId = (row: ClassifiedRow): string | null => {
     if (row.reason === 'INTRA_FILE') return null;
     return row.matchedExistingIds[0] ?? row.matchedExisting[0]?.id ?? null;
+  };
+
+  const warningLabels: Record<string, string> = {
+    operationDateDerived: tr('importers.transaction.preview.warning.operationDateDerived', 'Data derivada de columna alternativa'),
+    debitCreditFallback: tr('importers.transaction.preview.warning.debitCreditFallback', 'Import calculat amb Debe/Haber'),
+    balanceMismatch: tr('importers.transaction.preview.warning.balanceMismatch', 'Possible incoherència de saldo'),
   };
 
   if (!open) return null;
@@ -106,6 +121,14 @@ export function DedupeCandidateResolver({
 
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
           <div className="rounded-md border p-3">
+            <p className="text-xs text-muted-foreground">{tr('importers.transaction.preview.rowsDetected', 'Files detectades')}</p>
+            <p className="text-xl font-semibold">{parseSummary?.dataRowsCount ?? 0}</p>
+          </div>
+          <div className="rounded-md border p-3">
+            <p className="text-xs text-muted-foreground">{tr('importers.transaction.preview.rowsReady', 'Files preparades')}</p>
+            <p className="text-xl font-semibold">{parseSummary?.parsedRowsCount ?? 0}</p>
+          </div>
+          <div className="rounded-md border p-3">
             <p className="text-xs text-muted-foreground">{tr('importers.transaction.preImportSummaryNew', 'Nous')}</p>
             <p className="text-xl font-semibold">{newCount}</p>
           </div>
@@ -122,6 +145,70 @@ export function DedupeCandidateResolver({
             <p className="text-xl font-semibold">{totalCount}</p>
           </div>
         </div>
+
+        {parseSummary && (
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            <div className="rounded-md border p-3 text-sm">
+              <p className="font-medium">{tr('importers.transaction.preview.dateRange', 'Rang de dates')}</p>
+              <p className="text-muted-foreground">
+                {parseSummary.dateRange
+                  ? `${formatDate(parseSummary.dateRange.from)} - ${formatDate(parseSummary.dateRange.to)}`
+                  : '—'}
+              </p>
+            </div>
+            <div className="rounded-md border p-3 text-sm">
+              <p className="font-medium">{tr('importers.transaction.preview.totals', 'Totals')}</p>
+              <p className="text-muted-foreground">
+                {`${tr('importers.transaction.preview.income', 'Ingressos')}: ${formatAmount(parseSummary.totals.income)} · ${tr('importers.transaction.preview.expense', 'Despeses')}: ${formatAmount(-Math.abs(parseSummary.totals.expense))}`}
+              </p>
+            </div>
+            <div className="rounded-md border p-3 text-sm">
+              <p className="font-medium">{tr('importers.transaction.preview.balance', 'Saldo inicial/final')}</p>
+              <p className="text-muted-foreground">
+                {parseSummary.balances
+                  ? `${formatAmount(parseSummary.balances.initial)} -> ${formatAmount(parseSummary.balances.final)}`
+                  : tr('importers.transaction.preview.balanceUnavailable', 'No disponible')}
+              </p>
+            </div>
+            <div className="rounded-md border p-3 text-sm">
+              <p className="font-medium">{tr('importers.transaction.preview.warnings', 'Avisos')}</p>
+              <p className="text-muted-foreground">
+                {`${tr('importers.transaction.preview.invalidDates', 'Dates invàlides')}: ${parseSummary.warnings.datesInvalid} · ${tr('importers.transaction.preview.invalidAmounts', 'Imports invàlids')}: ${parseSummary.warnings.amountInvalid} · ${tr('importers.transaction.preview.balanceMismatch', 'Mismatches saldo')}: ${parseSummary.warnings.balanceMismatchCount}`}
+              </p>
+            </div>
+          </div>
+        )}
+
+        {sampleRows.length > 0 && (
+          <ScrollArea className="max-h-[260px] rounded-md border">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-[80px]">{tr('importers.transaction.preview.row', 'Fila')}</TableHead>
+                  <TableHead className="w-[120px]">{tr('importers.transaction.preview.date', 'Data')}</TableHead>
+                  <TableHead>{tr('importers.transaction.preview.description', 'Descripció')}</TableHead>
+                  <TableHead className="w-[120px] text-right">{tr('importers.transaction.preview.amount', 'Import')}</TableHead>
+                  <TableHead>{tr('importers.transaction.preview.rowWarnings', 'Avisos')}</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {sampleRows.map((row) => (
+                  <TableRow key={`preview-${row.rowIndex}`}>
+                    <TableCell className="text-xs">{row.rowIndex}</TableCell>
+                    <TableCell className="text-xs">{formatDate(row.operationDate)}</TableCell>
+                    <TableCell className="text-xs">{row.description}</TableCell>
+                    <TableCell className="text-right text-xs">{formatAmount(row.amount)}</TableCell>
+                    <TableCell className="text-xs">
+                      {row.warnings.length === 0
+                        ? '—'
+                        : row.warnings.map((warning) => warningLabels[warning] ?? warning).join(' · ')}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </ScrollArea>
+        )}
 
         {safeDuplicates.length > 0 && (
           <>
@@ -259,7 +346,7 @@ export function DedupeCandidateResolver({
             {t.importers?.transaction?.cancel ?? 'Cancel·lar'}
           </Button>
           <Button onClick={onContinue}>
-            {t.common?.continue ?? 'Continuar'}
+            {tr('importers.transaction.confirmImport', 'Confirmar importació')}
           </Button>
         </DialogFooter>
       </DialogContent>
