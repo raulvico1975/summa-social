@@ -4,14 +4,14 @@ Generat: 2026-02-28 17:53
 Risc: MITJA
 Backup curt: NO_REQUIRED
 SHA prod abans de publicar: 1de2925
-SHA main a publicar: f903b97
+SHA main a publicar: e6abfdb
 
 ## Si cal marxa enrere rapida
 
 Opcio recomanada (preserva historial):
 ```bash
 git checkout main
-git revert f903b97 --no-edit
+git revert e6abfdb --no-edit
 git push origin main
 bash scripts/deploy.sh
 ```
