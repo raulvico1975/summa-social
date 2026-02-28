@@ -36,6 +36,7 @@ import { useBankAccounts } from '@/hooks/use-bank-accounts';
 import Link from 'next/link';
 import { suggestPendingDocumentMatches } from '@/lib/pending-documents';
 import { classifyTransactions, type ClassifiedRow } from '@/lib/transaction-dedupe';
+import { buildImportSelection, computeDedupeSearchRange } from '@/lib/bank-import/dedupe-invariants';
 import { DedupeCandidateResolver } from '@/components/dedupe-candidate-resolver';
 import { RemittanceStyleMappingStep } from '@/components/importers/remittance-style-mapping-step';
 import {
@@ -73,21 +74,6 @@ interface TransactionImporterProps {
 // ═══════════════════════════════════════════════════════════════════════════════
 // HELPERS PER DEDUPE GLOBAL
 // ═══════════════════════════════════════════════════════════════════════════════
-
-/**
- * Calcula rang de dates (YYYY-MM-DD) d'un array de transaccions parsejades
- */
-function getDateRangeFromParsedRows(
-  txs: Array<{ date: string; operationDate?: string }>
-): { minDate: string; maxDate: string } | null {
-  const rangeValues = txs
-    .map((tx) => (tx.operationDate ? tx.operationDate : tx.date).split('T')[0])
-    .filter(Boolean)
-    .sort();
-  if (rangeValues.length === 0) return null;
-
-  return { minDate: rangeValues[0], maxDate: rangeValues[rangeValues.length - 1] };
-}
 
 /**
  * Fetch global de transaccions existents per (orgId, bankAccountId, rang de dates)
@@ -513,9 +499,9 @@ export function TransactionImporter({ availableCategories }: TransactionImporter
         const allParsedWithRaw = parseResult.rows
         .map((row) => {
           const rawRow: Record<string, any> = { ...(row.rawRow || {}) };
-          rawRow._opDate = row.operationDate;
+          rawRow.operationDate = row.operationDate;
           if (row.balanceAfter !== undefined && Number.isFinite(row.balanceAfter)) {
-            rawRow._balance = row.balanceAfter;
+            rawRow.balanceAfter = row.balanceAfter;
           }
 
           const transactionType = detectReturnType(row.description) || 'normal';
@@ -538,32 +524,26 @@ export function TransactionImporter({ availableCategories }: TransactionImporter
         });
 
         // Classificar amb dedupe (Mode A: cap bloqueig)
-        const dateRange = getDateRangeFromParsedRows(allParsedWithRaw.map(r => r.tx));
-        if (!dateRange) {
+        const dedupeSearchRange = computeDedupeSearchRange(allParsedWithRaw.map((r) => ({
+          date: r.tx.date,
+          operationDate: r.tx.operationDate,
+        })));
+        if (!dedupeSearchRange) {
             toast({ variant: 'destructive', title: t.importers.transaction.errors.processingError, description: 'No s\'han trobat dates vàlides al fitxer' });
             setIsImporting(false);
             return;
-        }
-
-        // E4: Ampliar rang amb opDate si cau fora del rang de valueDate
-        for (const { rawRow } of allParsedWithRaw) {
-          const opDate = rawRow._opDate;
-          if (opDate && typeof opDate === 'string') {
-            if (opDate < dateRange.minDate) dateRange.minDate = opDate;
-            if (opDate > dateRange.maxDate) dateRange.maxDate = opDate;
-          }
         }
 
         const existingInRange = await fetchExistingTransactionsForDedupe(
             firestore,
             organizationId,
             bankAccountId,
-            dateRange.minDate,
-            dateRange.maxDate
+            dedupeSearchRange.from,
+            dedupeSearchRange.to
         );
 
         // Classificar: 3 estats amb enrichment F. ejecución + Saldo
-        const extraFields = ['_opDate', '_balance'];
+        const extraFields = ['operationDate', 'balanceAfter'];
 
         const classified = classifyTransactions(allParsedWithRaw, existingInRange, bankAccountId, extraFields);
 
@@ -615,7 +595,7 @@ export function TransactionImporter({ availableCategories }: TransactionImporter
   // HANDLER: Resolució de candidats
   // ═══════════════════════════════════════════════════════════════════════════════
 
-  const handleCandidatesContinue = () => {
+  const handleCandidatesContinue = (options: { selectedCandidateIndexes: number[] }) => {
     setIsCandidateDialogOpen(false);
 
     if (!pendingImportContext || !classifiedResults) {
@@ -625,21 +605,9 @@ export function TransactionImporter({ availableCategories }: TransactionImporter
 
     setIsImporting(true);
 
-    const candidates = classifiedResults.filter(c => c.status === 'DUPLICATE_CANDIDATE');
-    const newTxs = classifiedResults.filter(c => c.status === 'NEW');
-    const safeDupes = classifiedResults.filter(c => c.status === 'DUPLICATE_SAFE');
-
-    const transactionsToImport = [
-      ...newTxs.map(c => c.tx),
-      ...candidates.map(c => c.tx),
-    ];
-
-    const stats = {
-      duplicateSkippedCount: safeDupes.length,
-      candidateCount: candidates.length,
-      candidateUserImportedCount: candidates.length,
-      candidateUserSkippedCount: 0,
-    };
+    const selection = buildImportSelection(classifiedResults, options.selectedCandidateIndexes);
+    const transactionsToImport = selection.transactionsToImport;
+    const stats = selection.stats;
 
     if (transactionsToImport.length > 0) {
       executeImport(
@@ -1214,6 +1182,7 @@ export function TransactionImporter({ availableCategories }: TransactionImporter
         open={isCandidateDialogOpen}
         candidates={classifiedResults?.filter(c => c.status === 'DUPLICATE_CANDIDATE') ?? []}
         safeDuplicates={classifiedResults?.filter(c => c.status === 'DUPLICATE_SAFE') ?? []}
+        newCount={classifiedResults?.filter(c => c.status === 'NEW').length ?? 0}
         parseSummary={previewSummary}
         sampleRows={previewRows}
         hasMappedBalance={previewHasMappedBalance}

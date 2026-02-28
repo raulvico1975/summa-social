@@ -26,6 +26,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { Checkbox } from '@/components/ui/checkbox';
 import { useTranslations } from '@/i18n';
 import type { ClassifiedRow } from '@/lib/transaction-dedupe';
 import { getSafeDuplicateUi } from '@/lib/safe-duplicate-ui';
@@ -34,10 +35,11 @@ import type { ParseSummary, ParsedBankStatementRow } from '@/lib/importers/bank/
 interface DedupeCandidateResolverProps {
   candidates: ClassifiedRow[];
   safeDuplicates: ClassifiedRow[];
+  newCount: number;
   parseSummary: ParseSummary | null;
   sampleRows: ParsedBankStatementRow[];
   hasMappedBalance: boolean;
-  onContinue: () => void;
+  onContinue: (options: { selectedCandidateIndexes: number[] }) => void;
   onCancel: () => void;
   open: boolean;
 }
@@ -45,6 +47,7 @@ interface DedupeCandidateResolverProps {
 export function DedupeCandidateResolver({
   candidates,
   safeDuplicates,
+  newCount,
   parseSummary,
   sampleRows,
   hasMappedBalance,
@@ -53,7 +56,10 @@ export function DedupeCandidateResolver({
   open,
 }: DedupeCandidateResolverProps) {
   const { t, tr } = useTranslations();
+  const [selectedCandidateIndexes, setSelectedCandidateIndexes] = React.useState<Set<number>>(new Set());
   const candidateCount = candidates.length;
+  const selectedCandidatesCount = selectedCandidateIndexes.size;
+  const allCandidatesSelected = candidateCount > 0 && selectedCandidatesCount === candidateCount;
   const warningsLabelByCode: Record<string, string> = {
     operationDateDerived: tr('importers.transaction.preview.warning.operationDateDerived', 'Data derivada de columna alternativa'),
     debitCreditFallback: tr('importers.transaction.preview.warning.debitCreditFallback', 'Import calculat amb Debe/Haber'),
@@ -108,6 +114,41 @@ export function DedupeCandidateResolver({
     if (row.reason === 'INTRA_FILE') return null;
     return row.matchedExistingIds[0] ?? row.matchedExisting[0]?.id ?? null;
   };
+
+  React.useEffect(() => {
+    if (open) {
+      setSelectedCandidateIndexes(new Set());
+    }
+  }, [open]);
+
+  const toggleCandidate = (index: number, checked: boolean) => {
+    setSelectedCandidateIndexes((prev) => {
+      const next = new Set(prev);
+      if (checked) {
+        next.add(index);
+      } else {
+        next.delete(index);
+      }
+      return next;
+    });
+  };
+
+  const toggleAllCandidates = (checked: boolean) => {
+    if (!checked) {
+      setSelectedCandidateIndexes(new Set());
+      return;
+    }
+
+    const next = new Set<number>();
+    for (let i = 0; i < candidateCount; i += 1) {
+      next.add(i);
+    }
+    setSelectedCandidateIndexes(next);
+  };
+
+  const importButtonLabel = candidateCount > 0
+    ? `Importar ${newCount} nous (${selectedCandidatesCount} candidats)`
+    : `Importar ${newCount} nous`;
 
   if (!open) return null;
 
@@ -376,12 +417,29 @@ export function DedupeCandidateResolver({
                 <AlertTriangle className="h-4 w-4" />
                 {tr('importers.transaction.preImportConflictsHint', "S'han detectat conflictes: revisa'ls abans de continuar.")}
               </p>
+              <div className="mt-2 flex items-start gap-2 border-t border-blue-200/60 pt-2 dark:border-blue-800/60">
+                <Checkbox
+                  id="select-all-candidates"
+                  checked={allCandidatesSelected}
+                  onCheckedChange={(checked) => toggleAllCandidates(checked === true)}
+                />
+                <label htmlFor="select-all-candidates" className="cursor-pointer text-xs leading-relaxed">
+                  {`Seleccionar tots els candidats (${candidateCount}).`}
+                </label>
+              </div>
+              <p className="mt-1 text-xs text-blue-700 dark:text-blue-300">
+                {`Seleccionats: ${selectedCandidatesCount} de ${candidateCount} candidats`}
+              </p>
+              <p className="mt-1 text-xs text-blue-700 dark:text-blue-300">
+                Per defecte només s’importen els moviments nous.
+              </p>
             </div>
 
             <ScrollArea className="max-h-[380px] rounded-md border">
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead className="w-[84px] text-center">Incloure</TableHead>
                     <TableHead className="w-[130px]">Data</TableHead>
                     <TableHead className="w-[120px] text-right">Import</TableHead>
                     <TableHead className="w-[120px] text-right">Saldo (nou)</TableHead>
@@ -392,8 +450,16 @@ export function DedupeCandidateResolver({
                 <TableBody>
                   {candidates.map((candidate, index) => {
                     const existing = candidate.matchedExisting[0];
+                    const checked = selectedCandidateIndexes.has(index);
                     return (
                       <TableRow key={`${candidate.tx.description}-${candidate.tx.date}-${index}`}>
+                        <TableCell className="text-center">
+                          <Checkbox
+                            id={`candidate-${index}`}
+                            checked={checked}
+                            onCheckedChange={(value) => toggleCandidate(index, value === true)}
+                          />
+                        </TableCell>
                         <TableCell className="whitespace-nowrap text-xs">
                           {formatDate(candidate.tx.operationDate ?? candidate.tx.date)}
                         </TableCell>
@@ -420,8 +486,12 @@ export function DedupeCandidateResolver({
           <Button variant="outline" onClick={onCancel}>
             {t.importers?.transaction?.cancel ?? 'Cancel·lar'}
           </Button>
-          <Button onClick={onContinue}>
-            {tr('importers.transaction.confirmImport', 'Confirmar importació')}
+          <Button
+            onClick={() => onContinue({
+              selectedCandidateIndexes: Array.from(selectedCandidateIndexes).sort((a, b) => a - b),
+            })}
+          >
+            {importButtonLabel}
           </Button>
         </DialogFooter>
       </DialogContent>
