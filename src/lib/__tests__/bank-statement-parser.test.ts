@@ -5,6 +5,7 @@ import {
   parseBankStatementRows,
   parseDateToIsoDate,
   parseSignedNumber,
+  shouldOpenManualMapping,
 } from '../importers/bank/bankStatementParser';
 
 describe('bank-statement-parser', () => {
@@ -48,6 +49,7 @@ describe('bank-statement-parser', () => {
     assert.strictEqual(result.rows[0].amount, -23.18);
     assert.strictEqual(result.rows[0].balanceAfter, 1234.56);
     assert.strictEqual(result.rows[1].amount, 300);
+    assert.strictEqual(shouldOpenManualMapping(result), false);
   });
 
   it('derives operationDate from valueDate when operation column is missing', () => {
@@ -64,6 +66,8 @@ describe('bank-statement-parser', () => {
     assert.strictEqual(result.rows[0].valueDate, '2026-02-03');
     assert.strictEqual(result.rows[0].operationDate, '2026-02-03');
     assert.strictEqual(result.rows[0].amount, -158.33);
+    assert.strictEqual(result.riskSignals.operationDateDerived, true);
+    assert.strictEqual(shouldOpenManualMapping(result), true);
   });
 
   it('parses CaixaBank-style header with mixed amount formats', () => {
@@ -96,6 +100,8 @@ describe('bank-statement-parser', () => {
     assert.strictEqual(result.rows.length, 2);
     assert.strictEqual(result.rows[0].amount, -120.5);
     assert.strictEqual(result.rows[1].amount, 45);
+    assert.strictEqual(result.riskSignals.hasDebitCredit, true);
+    assert.strictEqual(shouldOpenManualMapping(result), true);
   });
 
   it('prefers Importe over Debe/Haber when both are present', () => {

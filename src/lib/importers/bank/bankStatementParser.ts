@@ -8,8 +8,10 @@ import {
 
 const MIN_YEAR = 1900;
 const MAX_YEAR = 2100;
+const BALANCE_MISMATCH_TOLERANCE = 0.02;
+const DEFAULT_SAMPLE_SIZE = 5;
 
-type HeaderIndexMap = {
+export type ColumnMapping = {
   operationDate: number;
   valueDate: number;
   genericDate: number;
@@ -22,6 +24,16 @@ type HeaderIndexMap = {
   subcategory: number;
   comment: number;
 };
+
+export type ManualMappingField = 'operationDate' | 'description' | 'amount' | 'balanceAfter';
+export type RequiredMappingField = 'operationDate' | 'description' | 'amount';
+
+export type ColumnMappingOverride = Partial<Record<ManualMappingField, number>>;
+
+export type ParseWarningCode =
+  | 'operationDateDerived'
+  | 'debitCreditFallback'
+  | 'balanceMismatch';
 
 export type BankStatementParseErrorCode =
   | 'HEADER_NOT_FOUND'
@@ -49,19 +61,53 @@ export type ParsedBankStatementRow = {
   description: string;
   amount: number;
   balanceAfter?: number;
+  warnings: ParseWarningCode[];
   rawRow: Record<string, unknown>;
+};
+
+export type ParseRiskSignals = {
+  lowConfidence: boolean;
+  missingRequiredFields: RequiredMappingField[];
+  operationDateDerived: boolean;
+  hasDebitCredit: boolean;
+  datesInvalid: number;
+  amountInvalid: number;
+  balanceMismatchCount: number;
+};
+
+export type ParseSummary = {
+  sourceRowsCount: number;
+  dataRowsCount: number;
+  parsedRowsCount: number;
+  dateRange: { from: string; to: string } | null;
+  totals: {
+    income: number;
+    expense: number;
+    net: number;
+  };
+  balances: {
+    initial: number;
+    final: number;
+  } | null;
+  warnings: Pick<ParseRiskSignals, 'datesInvalid' | 'amountInvalid' | 'balanceMismatchCount'>;
 };
 
 export type ParseConfig = {
   scanLimit?: number;
   minEssentialMatches?: number;
   headerRowIndex?: number;
+  columnMappingOverride?: ColumnMappingOverride;
+  sampleSize?: number;
 };
 
 export type ParseBankStatementResult = {
   headerDetection: HeaderRowDetection;
   headerRowIndex: number;
   header: string[];
+  columnMapping: ColumnMapping;
+  riskSignals: ParseRiskSignals;
+  summary: ParseSummary;
+  sampleRows: ParsedBankStatementRow[];
   rows: ParsedBankStatementRow[];
 };
 
@@ -225,7 +271,7 @@ const isRowEmpty = (row: unknown[]): boolean => {
   return row.every((cell) => normalizeCell(cell) === '');
 };
 
-const buildHeaderIndexMap = (header: string[]): HeaderIndexMap => {
+const buildHeaderIndexMap = (header: string[]): ColumnMapping => {
   return {
     operationDate: findColumnIndexByKeywords(header, DEFAULT_BANK_HEADER_SYNONYMS.operationDate),
     valueDate: findColumnIndexByKeywords(header, DEFAULT_BANK_HEADER_SYNONYMS.valueDate),
@@ -239,6 +285,23 @@ const buildHeaderIndexMap = (header: string[]): HeaderIndexMap => {
     subcategory: findColumnIndexByKeywords(header, DEFAULT_BANK_HEADER_SYNONYMS.subcategory),
     comment: findColumnIndexByKeywords(header, DEFAULT_BANK_HEADER_SYNONYMS.comment),
   };
+};
+
+const applyColumnMappingOverride = (
+  base: ColumnMapping,
+  override?: ColumnMappingOverride
+): ColumnMapping => {
+  if (!override) return base;
+  const mapping: ColumnMapping = { ...base };
+
+  (Object.keys(override) as ManualMappingField[]).forEach((field) => {
+    const value = override[field];
+    if (typeof value === 'number' && Number.isInteger(value)) {
+      mapping[field] = value;
+    }
+  });
+
+  return mapping;
 };
 
 const buildRawRow = (header: string[], row: unknown[]): Record<string, unknown> => {
@@ -265,7 +328,7 @@ const buildDescription = (
   return parts.join(' · ');
 };
 
-const validateRequiredColumns = (indices: HeaderIndexMap): string[] => {
+const validateRequiredColumns = (indices: ColumnMapping): string[] => {
   const missing: string[] = [];
 
   const hasDate = indices.operationDate !== -1 || indices.valueDate !== -1 || indices.genericDate !== -1;
@@ -285,6 +348,43 @@ const validateRequiredColumns = (indices: HeaderIndexMap): string[] => {
   return missing;
 };
 
+const getMissingRequiredFields = (indices: ColumnMapping): RequiredMappingField[] => {
+  const missing: RequiredMappingField[] = [];
+  if (indices.operationDate === -1) {
+    missing.push('operationDate');
+  }
+  if (indices.description === -1 && indices.category === -1 && indices.subcategory === -1 && indices.comment === -1) {
+    missing.push('description');
+  }
+  if (indices.amount === -1 && indices.debit === -1 && indices.credit === -1) {
+    missing.push('amount');
+  }
+  return missing;
+};
+
+const hasBalanceColumn = (indices: ColumnMapping): boolean => indices.balanceAfter !== -1;
+
+const toFiniteAmount = (value: number): number => Number.parseFloat(value.toFixed(2));
+
+const computeDateRange = (rows: ParsedBankStatementRow[]): { from: string; to: string } | null => {
+  if (rows.length === 0) return null;
+  const values = rows.map((row) => row.operationDate).sort();
+  return { from: values[0], to: values[values.length - 1] };
+};
+
+export function shouldOpenManualMapping(result: ParseBankStatementResult): boolean {
+  const s = result.riskSignals;
+  return (
+    s.lowConfidence
+    || s.missingRequiredFields.length > 0
+    || s.operationDateDerived
+    || s.hasDebitCredit
+    || s.datesInvalid > 0
+    || s.amountInvalid > 0
+    || s.balanceMismatchCount > 0
+  );
+}
+
 export function parseBankStatementRows(
   rows: unknown[][],
   config: ParseConfig = {}
@@ -301,18 +401,37 @@ export function parseBankStatementRows(
   }
 
   const header = normalizedRows[headerRowIndex].map((cell) => String(cell ?? '').trim());
-  const indices = buildHeaderIndexMap(header);
+  const autoIndices = buildHeaderIndexMap(header);
+  const indices = applyColumnMappingOverride(autoIndices, config.columnMappingOverride);
   const missingColumns = validateRequiredColumns(indices);
   if (missingColumns.length > 0) {
     throw new BankStatementParseError('MISSING_REQUIRED_COLUMNS', { missingColumns });
   }
 
+  const riskSignals: ParseRiskSignals = {
+    lowConfidence: headerDetection.lowConfidence,
+    missingRequiredFields: getMissingRequiredFields(indices),
+    operationDateDerived: indices.operationDate === -1 && (indices.valueDate !== -1 || indices.genericDate !== -1),
+    hasDebitCredit: indices.debit !== -1 || indices.credit !== -1,
+    datesInvalid: 0,
+    amountInvalid: 0,
+    balanceMismatchCount: 0,
+  };
+
   const parsedRows: ParsedBankStatementRow[] = [];
+  let dataRowsCount = 0;
+  let totalIncome = 0;
+  let totalExpense = 0;
+  let runningBalance: number | null = null;
+  let initialBalance: number | null = null;
+  let finalBalance: number | null = null;
+  const sampleSize = config.sampleSize ?? DEFAULT_SAMPLE_SIZE;
 
   for (let rowIndex = headerRowIndex + 1; rowIndex < normalizedRows.length; rowIndex++) {
     const row = normalizedRows[rowIndex];
     if (isRowEmpty(row)) continue;
 
+    dataRowsCount += 1;
     const rawRow = buildRawRow(header, row);
     const opDateRaw = getCellByIndex(row, indices.operationDate);
     const valueDateRaw = getCellByIndex(row, indices.valueDate);
@@ -338,11 +457,17 @@ export function parseBankStatementRows(
     const genericDate = parseDateToIsoDate(genericDateRaw);
     const derivedOperationDate = operationDate || valueDate || genericDate;
     const effectiveDate = valueDate || operationDate || genericDate;
+    const warnings: ParseWarningCode[] = [];
+    const usedDerivedDate = !operationDate && Boolean(valueDate || genericDate);
 
     if (!derivedOperationDate || !effectiveDate) {
-      throw new BankStatementParseError('OPERATION_DATE_REQUIRED', {
-        rowIndex: rowIndex + 1,
-      });
+      riskSignals.datesInvalid += 1;
+      continue;
+    }
+
+    if (usedDerivedDate) {
+      riskSignals.operationDateDerived = true;
+      warnings.push('operationDateDerived');
     }
 
     const description = buildDescription(
@@ -352,10 +477,7 @@ export function parseBankStatementRows(
       getCellByIndex(row, indices.comment)
     );
     if (!description) {
-      throw new BankStatementParseError('INVALID_ROW', {
-        rowIndex: rowIndex + 1,
-        reason: 'missing_description',
-      });
+      continue;
     }
 
     let amount = parseSignedNumber(amountRaw);
@@ -363,15 +485,37 @@ export function parseBankStatementRows(
       const debit = parseSignedNumber(debitRaw);
       const credit = parseSignedNumber(creditRaw);
       if (debit === null && credit === null) {
-        throw new BankStatementParseError('INVALID_ROW', {
-          rowIndex: rowIndex + 1,
-          reason: 'missing_amount',
-        });
+        riskSignals.amountInvalid += 1;
+        continue;
       }
+      riskSignals.hasDebitCredit = true;
+      warnings.push('debitCreditFallback');
       amount = (credit === null ? 0 : Math.abs(credit)) - (debit === null ? 0 : Math.abs(debit));
     }
 
+    totalIncome += amount > 0 ? amount : 0;
+    totalExpense += amount < 0 ? Math.abs(amount) : 0;
+
     const balanceParsed = parseSignedNumber(getCellByIndex(row, indices.balanceAfter));
+    if (runningBalance !== null) {
+      const expected = toFiniteAmount(runningBalance + amount);
+      if (balanceParsed !== null) {
+        const delta = Math.abs(expected - balanceParsed);
+        if (delta > BALANCE_MISMATCH_TOLERANCE) {
+          riskSignals.balanceMismatchCount += 1;
+          warnings.push('balanceMismatch');
+        }
+      }
+    }
+
+    if (balanceParsed !== null) {
+      if (initialBalance === null) initialBalance = balanceParsed;
+      finalBalance = balanceParsed;
+      runningBalance = balanceParsed;
+    } else if (runningBalance !== null) {
+      runningBalance = toFiniteAmount(runningBalance + amount);
+    }
+
     const parsedRow: ParsedBankStatementRow = {
       rowIndex: rowIndex + 1,
       date: effectiveDate,
@@ -379,6 +523,7 @@ export function parseBankStatementRows(
       valueDate,
       description,
       amount,
+      warnings,
       rawRow: {
         ...rawRow,
         _date: toDateTimeIso(effectiveDate),
@@ -395,13 +540,48 @@ export function parseBankStatementRows(
   }
 
   if (parsedRows.length === 0) {
+    if (riskSignals.datesInvalid > 0) {
+      throw new BankStatementParseError('OPERATION_DATE_REQUIRED', {
+        datesInvalid: riskSignals.datesInvalid,
+      });
+    }
+    if (riskSignals.amountInvalid > 0) {
+      throw new BankStatementParseError('INVALID_ROW', {
+        amountInvalid: riskSignals.amountInvalid,
+      });
+    }
     throw new BankStatementParseError('NO_VALID_TRANSACTIONS');
   }
+
+  const summary: ParseSummary = {
+    sourceRowsCount: normalizedRows.length,
+    dataRowsCount,
+    parsedRowsCount: parsedRows.length,
+    dateRange: computeDateRange(parsedRows),
+    totals: {
+      income: toFiniteAmount(totalIncome),
+      expense: toFiniteAmount(totalExpense),
+      net: toFiniteAmount(totalIncome - totalExpense),
+    },
+    balances:
+      hasBalanceColumn(indices) && initialBalance !== null && finalBalance !== null
+        ? { initial: initialBalance, final: finalBalance }
+        : null,
+    warnings: {
+      datesInvalid: riskSignals.datesInvalid,
+      amountInvalid: riskSignals.amountInvalid,
+      balanceMismatchCount: riskSignals.balanceMismatchCount,
+    },
+  };
 
   return {
     headerDetection,
     headerRowIndex,
     header,
+    columnMapping: indices,
+    riskSignals,
+    summary,
+    sampleRows: parsedRows.slice(0, sampleSize),
     rows: parsedRows,
   };
 }
