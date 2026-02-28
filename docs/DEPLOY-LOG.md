@@ -81,6 +81,14 @@ Registre cronologic de desplegaments a produccio.
 | 2026-02-27 16:16 | 188437f | MITJA | No | 3 | OK |
 | 2026-02-27 16:26 | 17dfe76 | MITJA | No | 13 | OK |
 | 2026-02-28 09:24 | 39176a1 | MITJA | Si | 15 | OK |
+| 2026-02-28 10:23 | 2f45f26 | ALT | Si | 20 | PENDENT |
+
+### Nota 2026-02-28 (2f45f26)
+
+- P0 test coverage: SEPA pain.008/pain.001 + fiscal invariants/locks/undo.
+- No deps noves; CI report-only.
+- Extraccio minima de helpers purs per testabilitat a `processLocks.ts`, `children-ops.ts`, `undoProcessing.ts`.
+
 ## Decisions humanes (negoci)
 
 | Data | SHA | human_question_reason | business_impact | decision_taken |
