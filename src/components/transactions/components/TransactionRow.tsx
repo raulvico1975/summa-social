@@ -60,6 +60,7 @@ import type { Transaction, Category, Project, ContactType } from '@/lib/data';
 import { formatCurrencyEU, formatDateShort } from '@/lib/normalize';
 import { Checkbox } from '@/components/ui/checkbox';
 import { RowDropTarget } from '@/components/files/row-drop-target';
+import type { DeleteTransactionBlockedReason } from '@/lib/transactions/can-delete-transaction';
 
 // =============================================================================
 // HELPERS
@@ -121,6 +122,7 @@ interface TransactionRowProps {
   detectedPrebankRemittance?: { id: string; nbOfTxs: number; ctrlSum: number } | null;
   onReconcileSepa?: (tx: Transaction) => void;
   isSplitDeleteBlocked?: boolean;
+  deleteBlockedReason?: DeleteTransactionBlockedReason | null;
   // Translations
   t: {
     date: string;
@@ -160,6 +162,8 @@ interface TransactionRowProps {
     splitStripeRemittance: string;
     delete: string;
     deleteBlocked: string;
+    deleteBlockedParentRemittance: string;
+    deleteBlockedChildRemittance: string;
     viewRemittanceDetail: string;
     remittanceQuotes: string;
     remittanceProcessedLabel: string;
@@ -218,6 +222,7 @@ export const TransactionRow = React.memo(function TransactionRow({
   detectedPrebankRemittance,
   onReconcileSepa,
   isSplitDeleteBlocked,
+  deleteBlockedReason,
   t,
   getCategoryDisplayName,
 }: TransactionRowProps) {
@@ -234,6 +239,24 @@ export const TransactionRow = React.memo(function TransactionRow({
   const isReturnFee = tx.transactionType === 'return_fee';
   const isReturnedDonation = tx.donationStatus === 'returned';
   const canGenerateReturnEmail = isReturn && !!tx.contactId && tx.isRemittance !== true;
+  const deleteBlockedMessage = React.useMemo(() => {
+    if (deleteBlockedReason === 'parentRemittance') {
+      return t.deleteBlockedParentRemittance;
+    }
+    if (deleteBlockedReason === 'childRemittance') {
+      return t.deleteBlockedChildRemittance;
+    }
+    if (isSplitDeleteBlocked) {
+      return t.deleteBlocked;
+    }
+    return null;
+  }, [
+    deleteBlockedReason,
+    isSplitDeleteBlocked,
+    t.deleteBlocked,
+    t.deleteBlockedChildRemittance,
+    t.deleteBlockedParentRemittance,
+  ]);
   // Detecta transaccions via Stripe (donations, fees)
   const isFromStripe = tx.source === 'stripe';
   const canSplitAmount =
@@ -947,15 +970,10 @@ export const TransactionRow = React.memo(function TransactionRow({
               </DropdownMenuItem>
             )}
             <DropdownMenuSeparator />
-            {tx.isRemittance || tx.isRemittanceItem ? (
+            {deleteBlockedMessage ? (
               <DropdownMenuItem disabled className="text-muted-foreground cursor-not-allowed">
                 <Trash2 className="mr-2 h-4 w-4" />
-                {tx.isRemittance ? 'Primer desfés la remesa' : 'Forma part d\'una remesa'}
-              </DropdownMenuItem>
-            ) : isSplitDeleteBlocked ? (
-              <DropdownMenuItem disabled className="text-muted-foreground cursor-not-allowed">
-                <Trash2 className="mr-2 h-4 w-4" />
-                {t.deleteBlocked}
+                {deleteBlockedMessage}
               </DropdownMenuItem>
             ) : (
               <DropdownMenuItem className="text-rose-600 focus:text-rose-600" onClick={handleDelete}>
