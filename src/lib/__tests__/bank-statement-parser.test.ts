@@ -116,6 +116,51 @@ describe('bank-statement-parser', () => {
     assert.strictEqual(result.rows[0].amount, 12);
   });
 
+  it('validates coherent balances in ascending order', () => {
+    const rows: unknown[][] = [
+      ['Fecha', 'Concepto', 'Importe', 'Saldo'],
+      ['01/01/2025', 'Moviment 1', '+100,00', '100,00'],
+      ['02/01/2025', 'Moviment 2', '-20,00', '80,00'],
+      ['03/01/2025', 'Moviment 3', '+10,00', '90,00'],
+      ['04/01/2025', 'Moviment 4', '-30,00', '60,00'],
+      ['05/01/2025', 'Moviment 5', '+5,00', '65,00'],
+    ];
+
+    const result = parseBankStatementRows(rows);
+    assert.strictEqual(result.summary.warnings.balanceMismatchCount, 0);
+  });
+
+  it('validates coherent balances in descending order using previous amount rule', () => {
+    const rows: unknown[][] = [
+      ['Fecha', 'Concepto', 'Importe', 'Saldo'],
+      ['05/01/2025', 'Moviment 5', '+5,00', '65,00'],
+      ['04/01/2025', 'Moviment 4', '-30,00', '60,00'],
+      ['03/01/2025', 'Moviment 3', '+10,00', '90,00'],
+      ['02/01/2025', 'Moviment 2', '-20,00', '80,00'],
+      ['01/01/2025', 'Moviment 1', '+100,00', '100,00'],
+    ];
+
+    const result = parseBankStatementRows(rows);
+
+    assert.strictEqual(result.summary.warnings.balanceMismatchCount, 0);
+    assert.strictEqual(result.rows.some((row) => row.warnings.includes('balanceMismatch')), false);
+  });
+
+  it('regression: descending movements-style statement reports zero balance mismatches', () => {
+    const rows: unknown[][] = [
+      ['Resumen'],
+      ['F. VALOR', 'DESCRIPCIÓN', 'IMPORTE (€)', 'SALDO (€)'],
+      ['05/02/2026', 'Moviment 5', '+5,00', '65,00'],
+      ['04/02/2026', 'Moviment 4', '-30,00', '60,00'],
+      ['03/02/2026', 'Moviment 3', '+10,00', '90,00'],
+      ['02/02/2026', 'Moviment 2', '-20,00', '80,00'],
+      ['01/02/2026', 'Moviment 1', '+100,00', '100,00'],
+    ];
+
+    const result = parseBankStatementRows(rows);
+    assert.strictEqual(result.summary.warnings.balanceMismatchCount, 0);
+  });
+
   it('throws a blocking error when operation date cannot be derived', () => {
     const rows: unknown[][] = [
       ['Fecha', 'Concepto', 'Importe'],

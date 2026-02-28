@@ -9,6 +9,8 @@ import {
 const MIN_YEAR = 1900;
 const MAX_YEAR = 2100;
 const BALANCE_MISMATCH_TOLERANCE = 0.02;
+const BALANCE_ORDER_SAMPLE_SIZE = 10;
+const BALANCE_ORDER_MIN_CONFIDENCE = 0.6;
 const DEFAULT_SAMPLE_SIZE = 5;
 
 export type ColumnMapping = {
@@ -25,7 +27,12 @@ export type ColumnMapping = {
   comment: number;
 };
 
-export type ManualMappingField = 'operationDate' | 'description' | 'amount' | 'balanceAfter';
+export type ManualMappingField =
+  | 'operationDate'
+  | 'valueDate'
+  | 'description'
+  | 'amount'
+  | 'balanceAfter';
 export type RequiredMappingField = 'operationDate' | 'description' | 'amount';
 
 export type ColumnMappingOverride = Partial<Record<ManualMappingField, number>>;
@@ -110,6 +117,8 @@ export type ParseBankStatementResult = {
   sampleRows: ParsedBankStatementRow[];
   rows: ParsedBankStatementRow[];
 };
+
+type BalanceRowOrder = 'asc' | 'desc' | 'unknown';
 
 const hasValue = (value: unknown): boolean => {
   return value !== null && value !== undefined && String(value).trim() !== '';
@@ -372,6 +381,74 @@ const computeDateRange = (rows: ParsedBankStatementRow[]): { from: string; to: s
   return { from: values[0], to: values[values.length - 1] };
 };
 
+const detectBalanceRowOrder = (rows: ParsedBankStatementRow[]): BalanceRowOrder => {
+  const rowsWithBalance = rows
+    .filter((row) => typeof row.balanceAfter === 'number' && Number.isFinite(row.balanceAfter))
+    .slice(0, BALANCE_ORDER_SAMPLE_SIZE);
+
+  if (rowsWithBalance.length < 2) return 'unknown';
+
+  let ascVotes = 0;
+  let descVotes = 0;
+
+  for (let i = 0; i < rowsWithBalance.length - 1; i++) {
+    const currentDate = rowsWithBalance[i].operationDate;
+    const nextDate = rowsWithBalance[i + 1].operationDate;
+    if (currentDate === nextDate) continue;
+    if (currentDate < nextDate) {
+      ascVotes += 1;
+    } else {
+      descVotes += 1;
+    }
+  }
+
+  const totalVotes = ascVotes + descVotes;
+  if (totalVotes === 0) return 'unknown';
+
+  const winnerVotes = Math.max(ascVotes, descVotes);
+  if (winnerVotes / totalVotes < BALANCE_ORDER_MIN_CONFIDENCE) return 'unknown';
+
+  if (ascVotes === descVotes) return 'unknown';
+  return descVotes > ascVotes ? 'desc' : 'asc';
+};
+
+const computeBalanceMismatches = (
+  rows: ParsedBankStatementRow[],
+  order: BalanceRowOrder
+): number => {
+  if (order === 'unknown') return 0;
+
+  let mismatchCount = 0;
+
+  for (let i = 1; i < rows.length; i++) {
+    const prev = rows[i - 1];
+    const current = rows[i];
+
+    if (
+      typeof prev.balanceAfter !== 'number'
+      || !Number.isFinite(prev.balanceAfter)
+      || typeof current.balanceAfter !== 'number'
+      || !Number.isFinite(current.balanceAfter)
+    ) {
+      continue;
+    }
+
+    const expectedBalance = order === 'asc'
+      ? toFiniteAmount(prev.balanceAfter + current.amount)
+      : toFiniteAmount(prev.balanceAfter - prev.amount);
+
+    const delta = Math.abs(expectedBalance - current.balanceAfter);
+    if (delta > BALANCE_MISMATCH_TOLERANCE) {
+      mismatchCount += 1;
+      if (!current.warnings.includes('balanceMismatch')) {
+        current.warnings.push('balanceMismatch');
+      }
+    }
+  }
+
+  return mismatchCount;
+};
+
 export function shouldOpenManualMapping(result: ParseBankStatementResult): boolean {
   const s = result.riskSignals;
   return (
@@ -422,7 +499,6 @@ export function parseBankStatementRows(
   let dataRowsCount = 0;
   let totalIncome = 0;
   let totalExpense = 0;
-  let runningBalance: number | null = null;
   let initialBalance: number | null = null;
   let finalBalance: number | null = null;
   const sampleSize = config.sampleSize ?? DEFAULT_SAMPLE_SIZE;
@@ -497,23 +573,9 @@ export function parseBankStatementRows(
     totalExpense += amount < 0 ? Math.abs(amount) : 0;
 
     const balanceParsed = parseSignedNumber(getCellByIndex(row, indices.balanceAfter));
-    if (runningBalance !== null) {
-      const expected = toFiniteAmount(runningBalance + amount);
-      if (balanceParsed !== null) {
-        const delta = Math.abs(expected - balanceParsed);
-        if (delta > BALANCE_MISMATCH_TOLERANCE) {
-          riskSignals.balanceMismatchCount += 1;
-          warnings.push('balanceMismatch');
-        }
-      }
-    }
-
     if (balanceParsed !== null) {
       if (initialBalance === null) initialBalance = balanceParsed;
       finalBalance = balanceParsed;
-      runningBalance = balanceParsed;
-    } else if (runningBalance !== null) {
-      runningBalance = toFiniteAmount(runningBalance + amount);
     }
 
     const parsedRow: ParsedBankStatementRow = {
@@ -552,6 +614,9 @@ export function parseBankStatementRows(
     }
     throw new BankStatementParseError('NO_VALID_TRANSACTIONS');
   }
+
+  const balanceOrder = detectBalanceRowOrder(parsedRows);
+  riskSignals.balanceMismatchCount = computeBalanceMismatches(parsedRows, balanceOrder);
 
   const summary: ParseSummary = {
     sourceRowsCount: normalizedRows.length,
