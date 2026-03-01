@@ -1,0 +1,15 @@
+{
+  "fiscalPaths": [
+    "src/lib/fiscal/**",
+    "src/lib/model182*",
+    "src/components/donation-certificate*",
+    "src/components/donations-report*",
+    "src/components/donor-detail-drawer*",
+    "src/components/transactions/**"
+  ],
+  "evidencePaths": [
+    "src/lib/__tests__/**",
+    "tests/**",
+    "docs/QA-FISCAL.md"
+  ]
+}

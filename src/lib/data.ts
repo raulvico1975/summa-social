@@ -8,6 +8,7 @@
  * Tipus de transacció per identificar devolucions i imports Stripe
  */
 export type TransactionType = 'normal' | 'return' | 'return_fee' | 'donation' | 'fee';
+export type FiscalKind = 'donation' | 'non_fiscal' | 'pending_review';
 
 /**
  * Estat d'una donació
@@ -37,6 +38,19 @@ export type Transaction = {
    * - return_fee: Comissió bancària per devolució
    */
   transactionType?: TransactionType;
+
+  /**
+   * Classificació fiscal explícita de l'ingrés.
+   * null/undefined implica compatibilitat legacy.
+   */
+  fiscalKind?: FiscalKind | null;
+
+  /**
+   * Auditoria mínima de classificació fiscal.
+   */
+  fiscalKindSetAt?: string | null;
+  fiscalKindSetByUid?: string | null;
+  fiscalKindSetSource?: 'user' | 'system' | null;
   
   /**
    * Estat de la donació (només per ingressos de donants)

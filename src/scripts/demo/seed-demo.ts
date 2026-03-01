@@ -40,6 +40,11 @@ import {
   generateOffBankExpenses,
   generateExpenseLinks,
 } from './demo-generators';
+import {
+  FISCAL_ORACLE_AMOUNTS,
+  FISCAL_ORACLE_DEMO_IDS,
+  FISCAL_ORACLE_EXPECTED,
+} from '@/lib/fiscal/fiscal-oracle';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -64,10 +69,10 @@ const DEMO_ORG_SLUG = 'demo';
 // ─────────────────────────────────────────────────────────────────────────────
 
 /** Donant complet amb donació + devolució assignada (per demo de certificat) */
-const DEMO_WORK_DONOR_ID = `${DEMO_ID_PREFIX}donor_work_001`;
+const DEMO_WORK_DONOR_ID = FISCAL_ORACLE_DEMO_IDS.donorId;
 
 /** Devolució pendent d'assignar (per demo de workflow de resolució) */
-const DEMO_WORK_RETURN_UNASSIGNED_TX_ID = `${DEMO_ID_PREFIX}tx_return_unassigned_001`;
+const DEMO_WORK_RETURN_UNASSIGNED_TX_ID = FISCAL_ORACLE_DEMO_IDS.returnWithoutDonorTxId;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Constants IDs per SEPA IN remesa demo (mode 'work')
@@ -425,6 +430,17 @@ export async function runDemoSeed(
   if (demoMode === 'work') {
     console.log('[seed-demo] Afegint anomalies per mode work...');
 
+    const donationCategory = categories.find(
+      (cat) => cat.type === 'income' && cat.name === 'Donacions'
+    ) ?? categories.find((cat) => cat.type === 'income');
+    const membershipFeeCategory = categories.find(
+      (cat) => cat.type === 'income' && cat.name === 'Quotes socis'
+    ) ?? donationCategory;
+
+    if (!donationCategory || !membershipFeeCategory) {
+      throw new Error('[seed-demo] Falten categories fiscals income (Donacions/Quotes socis)');
+    }
+
     // Anomalia 1: 3 parells de duplicats (concepte i import similar, dates properes)
     for (let i = 0; i < WORK_ANOMALIES.duplicates; i++) {
       const baseTx = transactions[i * 5]; // Agafar cada 5a tx com a base
@@ -613,37 +629,75 @@ export async function runDemoSeed(
 
     // Transacció de donació (100€)
     const workDonationTx = {
-      id: `${DEMO_ID_PREFIX}tx_work_donation_001`,
+      id: FISCAL_ORACLE_DEMO_IDS.donationTxId,
       date: `${currentYear}-03-15`,
       description: 'Quota mensual Maria García',
-      amount: 100,
-      category: categories.find((c) => c.type === 'income')?.id,
+      amount: FISCAL_ORACLE_AMOUNTS.donation,
+      category: donationCategory.id,
       contactId: DEMO_WORK_DONOR_ID,
       contactType: 'donor' as const,
       source: 'bank',
       transactionType: 'normal',
+      fiscalKind: 'donation' as const,
+      archivedAt: null,
       createdAt: nowStr,
       isDemoData: true as const,
     };
     transactions.push(workDonationTx);
 
+    // Transacció explícita no fiscal (no ha de computar)
+    const workNonFiscalTx = {
+      id: FISCAL_ORACLE_DEMO_IDS.nonFiscalTxId,
+      date: `${currentYear}-03-20`,
+      description: 'Ingressos operatius no fiscals',
+      amount: FISCAL_ORACLE_AMOUNTS.nonFiscal,
+      category: membershipFeeCategory.id,
+      contactId: DEMO_WORK_DONOR_ID,
+      contactType: 'donor' as const,
+      source: 'bank',
+      transactionType: 'normal',
+      fiscalKind: 'non_fiscal' as const,
+      archivedAt: null,
+      createdAt: nowStr,
+      isDemoData: true as const,
+    };
+    transactions.push(workNonFiscalTx);
+
+    // Transacció pendent de classificació fiscal (exclosa de 182/certificats)
+    const workPendingReviewTx = {
+      id: FISCAL_ORACLE_DEMO_IDS.pendingTxId,
+      date: `${currentYear}-03-25`,
+      description: 'Ingrés pendent classificació fiscal',
+      amount: FISCAL_ORACLE_AMOUNTS.pending,
+      category: donationCategory.id,
+      contactId: DEMO_WORK_DONOR_ID,
+      contactType: 'donor' as const,
+      source: 'bank',
+      transactionType: 'normal',
+      archivedAt: null,
+      createdAt: nowStr,
+      isDemoData: true as const,
+    };
+    transactions.push(workPendingReviewTx);
+
     // Transacció de devolució assignada al mateix donant (-20€)
     const workReturnAssignedTx = {
-      id: `${DEMO_ID_PREFIX}tx_work_return_assigned_001`,
+      id: FISCAL_ORACLE_DEMO_IDS.returnWithDonorTxId,
       date: `${currentYear}-04-02`,
       description: 'DEVOLUCIÓN RECIBO - Maria García',
-      amount: -20,
-      category: categories.find((c) => c.type === 'income')?.id,
+      amount: FISCAL_ORACLE_AMOUNTS.returnWithDonor,
+      category: donationCategory.id,
       contactId: DEMO_WORK_DONOR_ID,
       contactType: 'donor' as const,
       source: 'bank',
       transactionType: 'return',
+      archivedAt: null,
       createdAt: nowStr,
       isDemoData: true as const,
     };
     transactions.push(workReturnAssignedTx);
 
-    console.log(`[seed-demo]   - Donant certificat: 1 donant amb donació (100€) + devolució assignada (-20€) = net 80€`);
+    console.log(`[seed-demo]   - Oracle fiscal: donació (120€) + no fiscal (45€) + pendent (35€) + devolució assignada (-20€)`);
 
     // ─────────────────────────────────────────────────────────────────────────
     // Cas especial 2: Devolució pendent d'assignar (sense contacte)
@@ -653,18 +707,19 @@ export async function runDemoSeed(
       id: DEMO_WORK_RETURN_UNASSIGNED_TX_ID,
       date: `${currentYear}-04-10`,
       description: 'DEVOLUCIÓN RECIBO CUOTA SOCIO',
-      amount: -35,
+      amount: FISCAL_ORACLE_AMOUNTS.returnWithoutDonor,
       category: undefined,
       contactId: undefined,
       contactType: undefined,
       source: 'bank',
       transactionType: 'return',
+      archivedAt: null,
       createdAt: nowStr,
       isDemoData: true as const,
     };
     transactions.push(workReturnUnassignedTx);
 
-    console.log(`[seed-demo]   - Devolució pendent: 1 devolució (-35€) sense contacte assignat`);
+    console.log(`[seed-demo]   - Devolució pendent: 1 devolució (${FISCAL_ORACLE_AMOUNTS.returnWithoutDonor}€) sense contacte assignat`);
 
     // ─────────────────────────────────────────────────────────────────────────
     // Cas especial 3: Remesa SEPA IN (1 pare + 8 línies assignades a donants)
@@ -898,9 +953,10 @@ export async function runDemoSeed(
       invariantErrors.push(`[short] transactions: esperats 100, obtinguts ${counts.transactions}`);
     }
   } else {
-    // Work: 100 base + 3 duplicats + 5 pendents + 3 traçabilitat + 3 casos especials (1 donació + 2 devolucions)
-    //       + 9 SEPA IN (1 pare + 8 línies) + 8 Stripe (1 pare + 6 donacions + 1 fee) = 131
-    const expectedWorkTx = 100 + WORK_ANOMALIES.duplicates + WORK_ANOMALIES.pending + 3 + 3 + 9 + 8;
+    // Work: 100 base + 3 duplicats + 5 pendents + 3 traçabilitat
+    //       + 5 casos oracle (donation/non_fiscal/pending + 2 returns)
+    //       + 9 SEPA IN (1 pare + 8 línies) + 8 Stripe (1 pare + 6 donacions + 1 fee) = 133
+    const expectedWorkTx = 100 + WORK_ANOMALIES.duplicates + WORK_ANOMALIES.pending + 3 + 5 + 9 + 8;
     if (counts.transactions !== expectedWorkTx) {
       invariantErrors.push(`[work] transactions: esperats ${expectedWorkTx}, obtinguts ${counts.transactions}`);
     }
@@ -915,22 +971,40 @@ export async function runDemoSeed(
       invariantErrors.push('[work] donant certificat no existeix');
     }
 
-    // 2. Transaccions del donant certificat
+    // 2. Transaccions oracle del donant certificat
     const workDonorTxs = transactions.filter((tx) => tx.contactId === DEMO_WORK_DONOR_ID);
-    const workDonorDonations = workDonorTxs.filter((tx) => tx.amount > 0);
-    const workDonorReturns = workDonorTxs.filter((tx) => tx.amount < 0 && tx.transactionType === 'return');
+    const donationTx = workDonorTxs.find((tx) => tx.id === FISCAL_ORACLE_DEMO_IDS.donationTxId);
+    const nonFiscalTx = workDonorTxs.find((tx) => tx.id === FISCAL_ORACLE_DEMO_IDS.nonFiscalTxId);
+    const pendingTx = workDonorTxs.find((tx) => tx.id === FISCAL_ORACLE_DEMO_IDS.pendingTxId);
+    const returnWithDonorTx = workDonorTxs.find((tx) => tx.id === FISCAL_ORACLE_DEMO_IDS.returnWithDonorTxId);
 
-    if (workDonorDonations.length < 1) {
-      invariantErrors.push('[work] donant certificat: falta donació positiva');
+    if (!donationTx || donationTx.fiscalKind !== 'donation' || donationTx.amount !== FISCAL_ORACLE_AMOUNTS.donation) {
+      invariantErrors.push('[work] oracle: falta ingrés amb fiscalKind=donation');
     }
-    if (workDonorReturns.length < 1) {
-      invariantErrors.push('[work] donant certificat: falta devolució assignada');
+    if (!nonFiscalTx || nonFiscalTx.fiscalKind !== 'non_fiscal' || nonFiscalTx.amount !== FISCAL_ORACLE_AMOUNTS.nonFiscal) {
+      invariantErrors.push('[work] oracle: falta ingrés amb fiscalKind=non_fiscal');
+    }
+    if (!pendingTx || (pendingTx.fiscalKind ?? null) !== null || pendingTx.amount !== FISCAL_ORACLE_AMOUNTS.pending) {
+      invariantErrors.push('[work] oracle: falta ingrés pending_review (sense fiscalKind)');
+    }
+    if (!returnWithDonorTx || returnWithDonorTx.amount !== FISCAL_ORACLE_AMOUNTS.returnWithDonor) {
+      invariantErrors.push('[work] oracle: falta return amb donant assignat');
     }
 
-    // Verificar net positiu
-    const workDonorNet = workDonorTxs.reduce((sum, tx) => sum + tx.amount, 0);
-    if (workDonorNet <= 0) {
-      invariantErrors.push(`[work] donant certificat: net ha de ser > 0, obtingut ${workDonorNet}`);
+    // Net oracle esperat: donation + stripe legacy + remittance legacy + return assignat
+    const oracleRelevantIds = new Set<string>([
+      FISCAL_ORACLE_DEMO_IDS.donationTxId,
+      FISCAL_ORACLE_DEMO_IDS.returnWithDonorTxId,
+      FISCAL_ORACLE_DEMO_IDS.stripeLegacyTxId,
+      FISCAL_ORACLE_DEMO_IDS.remittanceLegacyTxId,
+    ]);
+    const workDonorOracleNet = workDonorTxs
+      .filter((tx) => oracleRelevantIds.has(tx.id))
+      .reduce((sum, tx) => sum + tx.amount, 0);
+    if (Math.abs(workDonorOracleNet - FISCAL_ORACLE_EXPECTED.donorNet) > 0.01) {
+      invariantErrors.push(
+        `[work] oracle: net esperat ${FISCAL_ORACLE_EXPECTED.donorNet}, obtingut ${workDonorOracleNet}`
+      );
     }
 
     // 3. Devolució pendent d'assignar
