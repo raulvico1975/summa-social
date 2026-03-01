@@ -36,6 +36,7 @@ import { shouldShowWelcomeModal, isFirstAdmin } from '@/lib/onboarding';
 import { WelcomeOnboardingModal } from '@/components/onboarding/WelcomeOnboardingModal';
 import { OnboardingWizardModal } from '@/components/onboarding/OnboardingWizard';
 import { detectLegacyCategoryTransactions, logLegacyCategorySummary } from '@/lib/category-health';
+import { isVisibleInMovementsLedger } from '@/lib/transactions/remittance-visibility';
 
 interface TaxObligation {
   id: string;
@@ -564,14 +565,12 @@ export default function DashboardPage() {
   const isBankLedgerTx = React.useCallback((tx: Transaction) => {
     // 1) No sumar mai desglossaments amb parent
     if (tx.parentTransactionId) return false;
-    // 2) No sumar mai ítems de remesa
-    if (tx.isRemittanceItem === true) return false;
+    // 2) Visibilitat remeses/arxivades amb helper compartit de Moviments
+    if (!isVisibleInMovementsLedger(tx, { showArchived: false })) return false;
     // 3) No sumar mai transaccions internes Stripe (donacions i comissions desglossades)
     if (tx.transactionType === 'donation') return false;
     if (tx.transactionType === 'fee') return false;
-    // 4) No sumar mai files de remesa (si existeixen sense parent per bug)
-    if (tx.source === 'remittance') return false;
-    // 5) Devolucions bancàries reals SÍ compten (transactionType === 'return')
+    // 4) Devolucions bancàries reals SÍ compten (transactionType === 'return')
     return true;
   }, []);
 
@@ -583,7 +582,7 @@ export default function DashboardPage() {
 
     // DEV-only: validar que el ledger no conté transaccions que haurien de ser excloses
     if (process.env.NODE_ENV === 'development' && ledgerTxs.length > 0) {
-      const invalidRemittance = ledgerTxs.filter(tx => tx.isRemittanceItem === true || tx.source === 'remittance');
+      const invalidRemittance = ledgerTxs.filter(tx => !isVisibleInMovementsLedger(tx, { showArchived: false }));
       const invalidChildren = ledgerTxs.filter(tx => tx.parentTransactionId);
       if (invalidRemittance.length > 0 || invalidChildren.length > 0) {
         console.warn('[Dashboard] LEDGER CONTAMINATION DETECTED:', {

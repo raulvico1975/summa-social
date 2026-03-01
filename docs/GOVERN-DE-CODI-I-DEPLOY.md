@@ -74,6 +74,22 @@ Aquesta classificació determina els requisits de validació (secció 4).
 
 **Prerequisit estable de build:** `npm run build` requereix credencials Firebase mínimes (`NEXT_PUBLIC_FIREBASE_PROJECT_ID` i `NEXT_PUBLIC_FIREBASE_API_KEY`) via `.env.local` o variables d'entorn de shell/CI.
 
+### Regla P0 específica: filtre de Moviments
+
+Qualsevol canvi del filtre de visibilitat de Moviments es considera **P0** (govern de dades, no UI).
+
+**Obligatori al PR:**
+- Tests de filtre actualitzats/afegits (mínim unitaris del helper de visibilitat)
+- `verify-local` OK
+- `verify-ci` OK
+- Evidència de QA manual (checklist curt)
+
+**Checklist QA manual (4 passos):**
+1. Flores: cercar remesa a Moviments i validar que el pare 2025 és visible
+2. Validar que les filles de remesa no apareixen al llistat principal
+3. Toggle arxivats OFF: un moviment arxivat no es veu
+4. Toggle arxivats ON: el mateix moviment arxivat es veu
+
 ### Verificació post-deploy: contactes
 
 Si el deploy toca `donor-manager`, `supplier-manager`, `employee-manager` o `src/app/api/contacts/import/`:

@@ -8,6 +8,9 @@ describe('isVisibleInMovementsLedger', () => {
       isRemittance: true,
       isRemittanceItem: false,
       source: 'remittance',
+      archivedAt: null,
+    }, {
+      showArchived: false,
     });
     assert.equal(visible, true);
   });
@@ -17,7 +20,37 @@ describe('isVisibleInMovementsLedger', () => {
       isRemittance: false,
       isRemittanceItem: true,
       source: 'remittance',
+      archivedAt: null,
+    }, {
+      showArchived: false,
     });
     assert.equal(visible, false);
+  });
+
+  it('gestiona arxivades: showArchived OFF oculta, ON mostra', () => {
+    const tx = {
+      isRemittance: true,
+      isRemittanceItem: false,
+      source: 'manual',
+      archivedAt: '2026-03-01T10:00:00.000Z',
+    } as const;
+
+    const hidden = isVisibleInMovementsLedger(tx, { showArchived: false });
+    const visible = isVisibleInMovementsLedger(tx, { showArchived: true });
+
+    assert.equal(hidden, false);
+    assert.equal(visible, true);
+  });
+
+  it("no oculta per source='remittance' si no és filla", () => {
+    const visible = isVisibleInMovementsLedger({
+      isRemittance: false,
+      isRemittanceItem: false,
+      source: 'remittance',
+      archivedAt: null,
+    }, {
+      showArchived: false,
+    });
+    assert.equal(visible, true);
   });
 });
