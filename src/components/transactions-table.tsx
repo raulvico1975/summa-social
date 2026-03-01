@@ -104,6 +104,7 @@ import {
 } from '@/lib/fiscal/undoProcessing';
 import { detectLegacyCategoryTransactions, logLegacyCategorySummary } from '@/lib/category-health';
 import { sortTransactionsForTable } from '@/lib/transactions/sort-transactions-for-table';
+import { isVisibleInMovementsLedger } from '@/lib/transactions/remittance-visibility';
 import {
   getDeleteTransactionBlockedReason,
   type DeleteTransactionBlockedReason,
@@ -832,7 +833,7 @@ export function TransactionsTable({ initialDateFilter = null, canEditMovements =
     // Filtre per amagar quotes individuals de remeses
     // Utilitza isRemittanceItem per als nous, i source === 'remittance' per compatibilitat legacy
     if (hideRemittanceItems) {
-      result = result.filter(tx => !tx.isRemittanceItem && tx.source !== 'remittance');
+      result = result.filter(isVisibleInMovementsLedger);
     }
 
     // Filtre per amagar fills de "Desglossar import" (només es veu el pare bancari).
@@ -919,7 +920,7 @@ export function TransactionsTable({ initialDateFilter = null, canEditMovements =
 
     // Total del període = només apunts bancaris (ledger), excloent desglossaments interns
     const periodTotal = filterSplitChildTransactions(
-      transactions.filter(tx => !tx.isRemittanceItem && tx.source !== 'remittance'),
+      transactions.filter(isVisibleInMovementsLedger),
       allTransactionsById
     ).length;
 
