@@ -843,6 +843,23 @@ Els següents blocs estan **desactivats** (comentats al codi) a partir de v1.20:
 - Sense contacte
 - **Devolucions pendents** (NOU v1.8)
 
+### 3.2.4.1 Invariant UI de visibilitat (P0)
+
+La visibilitat de Moviments (ledger) té **ordre tancat de precedència** i s'implementa en un únic helper:
+
+`isVisibleInMovementsLedger(tx, { showArchived }: { showArchived: boolean }): boolean`
+
+**Ordre obligatori:**
+1. Si `isRemittanceItem === true` → **ocult**
+2. Si `showArchived === false` i `archivedAt` no és buit → **ocult**
+3. Altrament → **visible** (incloent `isRemittance === true`, independentment de `source`)
+
+**Contracte de govern tècnic:**
+- El helper ha de ser pur (input `tx + opts`, output `boolean`)
+- Sense dependències d'UI
+- Reutilització obligatòria a llistats/totals/exports de Moviments on existeixi filtre de visibilitat
+- Prohibit filtrar visibilitat de Moviments manualment dins components
+
 ### 3.2.5 Selecció Múltiple i Accions en Bloc (NOU v1.13)
 
 Permet seleccionar múltiples moviments i aplicar accions massives.

@@ -322,17 +322,18 @@ export function TransactionsTable({ initialDateFilter = null, canEditMovements =
 
   // Estat per toggle SuperAdmin "incloure arxivades"
   const [showArchived, setShowArchived] = React.useState(false);
+  const showArchivedInLedger = showArchived && isSuperAdmin;
 
   // Filtrar transaccions arxivades (soft-delete) - només SuperAdmin pot veure-les
   const activeTransactions = React.useMemo(() => {
     if (!allTransactions) return null;
-    if (showArchived && isSuperAdmin) {
+    if (showArchivedInLedger) {
       // SuperAdmin amb toggle: mostrar totes
       return allTransactions;
     }
     // Filtrar les que tenen archivedAt (soft-deleted)
     return allTransactions.filter(tx => !tx.archivedAt);
-  }, [allTransactions, showArchived, isSuperAdmin]);
+  }, [allTransactions, showArchivedInLedger]);
 
   // Aplicar filtre de dates primer
   const transactions = useTransactionFilters(activeTransactions ?? undefined, dateFilter);
@@ -830,10 +831,11 @@ export function TransactionsTable({ initialDateFilter = null, canEditMovements =
         result = transactions;
     }
 
-    // Filtre per amagar quotes individuals de remeses
-    // Utilitza isRemittanceItem per als nous, i source === 'remittance' per compatibilitat legacy
+    // Filtre de visibilitat ledger (contracte únic a remittance-visibility.ts)
     if (hideRemittanceItems) {
-      result = result.filter(isVisibleInMovementsLedger);
+      result = result.filter((tx) =>
+        isVisibleInMovementsLedger(tx, { showArchived: showArchivedInLedger })
+      );
     }
 
     // Filtre per amagar fills de "Desglossar import" (només es veu el pare bancari).
@@ -904,7 +906,7 @@ export function TransactionsTable({ initialDateFilter = null, canEditMovements =
       sortDateAsc,
       getDisplayDate,
     });
-  }, [transactions, tableFilter, expensesWithoutDoc, returnTransactions, uncategorizedTransactions, noContactTransactions, donationsNoContactTransactions, sortDateAsc, searchQuery, contactMap, projectMap, getCategoryDisplayName, hideRemittanceItems, contactIdFilter, donorMembershipMap, sourceFilter, bankAccountFilter, getDisplayDate, allTransactionsById]);
+  }, [transactions, tableFilter, expensesWithoutDoc, returnTransactions, uncategorizedTransactions, noContactTransactions, donationsNoContactTransactions, sortDateAsc, searchQuery, contactMap, projectMap, getCategoryDisplayName, hideRemittanceItems, contactIdFilter, donorMembershipMap, sourceFilter, bankAccountFilter, getDisplayDate, allTransactionsById, showArchivedInLedger]);
 
   // ═══════════════════════════════════════════════════════════════════════════
   // RESUM FILTRAT
@@ -920,7 +922,9 @@ export function TransactionsTable({ initialDateFilter = null, canEditMovements =
 
     // Total del període = només apunts bancaris (ledger), excloent desglossaments interns
     const periodTotal = filterSplitChildTransactions(
-      transactions.filter(isVisibleInMovementsLedger),
+      transactions.filter((tx) =>
+        isVisibleInMovementsLedger(tx, { showArchived: showArchivedInLedger })
+      ),
       allTransactionsById
     ).length;
 
@@ -931,7 +935,7 @@ export function TransactionsTable({ initialDateFilter = null, canEditMovements =
       income: visible.filter(tx => tx.amount > 0).reduce((sum, tx) => sum + tx.amount, 0),
       expenses: visible.filter(tx => tx.amount < 0).reduce((sum, tx) => sum + tx.amount, 0),
     };
-  }, [filteredTransactions, transactions, hasActiveFilter, allTransactionsById]);
+  }, [filteredTransactions, transactions, hasActiveFilter, allTransactionsById, showArchivedInLedger]);
 
   const clearAllFilters = React.useCallback(() => {
     setTableFilter('all');
