@@ -4,14 +4,14 @@ Generat: 2026-03-01 20:00
 Risc: BAIX
 Backup curt: NO_REQUIRED
 SHA prod abans de publicar: 9f50761
-SHA main a publicar: 447c626
+SHA main a publicar: ffaad53
 
 ## Si cal marxa enrere rapida
 
 Opcio recomanada (preserva historial):
 ```bash
 git checkout main
-git revert 447c626 --no-edit
+git revert ffaad53 --no-edit
 git push origin main
 bash scripts/deploy.sh
 ```
