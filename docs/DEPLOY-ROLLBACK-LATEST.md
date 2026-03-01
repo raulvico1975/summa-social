@@ -4,14 +4,14 @@ Generat: 2026-03-01 22:03
 Risc: MITJA
 Backup curt: NO_REQUIRED
 SHA prod abans de publicar: d4b62aa
-SHA main a publicar: 12441be
+SHA main a publicar: 77b5e7b
 
 ## Si cal marxa enrere rapida
 
 Opcio recomanada (preserva historial):
 ```bash
 git checkout main
-git revert 12441be --no-edit
+git revert 77b5e7b --no-edit
 git push origin main
 bash scripts/deploy.sh
 ```
