@@ -832,6 +832,24 @@ run_verifications() {
   echo ""
 }
 
+run_fiscal_oracle_predeploy() {
+  CURRENT_PHASE="Oracle fiscal predeploy"
+  echo "[5b/9] Executant oracle fiscal (bloquejant)..."
+  echo ""
+
+  if ! node --import tsx "$SCRIPT_DIR/fiscal/run-oracle.ts" --stage=predeploy; then
+    DEPLOY_BLOCK_REASON="FISCAL_ORACLE_FAIL (predeploy)"
+    DEPLOY_RESULT="BLOCKED_SAFE"
+    echo ""
+    echo "ERROR: FISCAL_ORACLE_FAIL"
+    echo "  Revisa el diff de mètriques oracle abans de publicar."
+    exit 1
+  fi
+
+  echo "  Oracle fiscal predeploy OK."
+  echo ""
+}
+
 # ============================================================
 # PAS 6 — Resum + decisio de negoci si hi ha risc ALT residual
 # ============================================================
@@ -1021,6 +1039,25 @@ post_production_3min_check() {
   echo ""
 }
 
+run_fiscal_oracle_postdeploy_monitor() {
+  CURRENT_PHASE="Oracle fiscal postdeploy"
+  echo "[8c/9] Oracle fiscal postdeploy..."
+  echo ""
+
+  if ! node --import tsx "$SCRIPT_DIR/fiscal/run-oracle.ts" --stage=postdeploy; then
+    DEPLOY_RESULT="PENDENT"
+    DEPLOY_BLOCK_REASON="FISCAL_ORACLE_FAIL (postdeploy)"
+    echo "  FISCAL_ORACLE_FAIL detectat en monitor postdeploy."
+    echo "  Incidència CRITICAL registrada a $INCIDENT_LOG."
+    append_incident_log
+    echo ""
+    return
+  fi
+
+  echo "  Oracle fiscal postdeploy OK."
+  echo ""
+}
+
 # ============================================================
 # PAS 9 — Deploy log
 # ============================================================
@@ -1109,15 +1146,20 @@ commit_deploy_logs_if_needed() {
   echo "[9b/9] Committant logs de deploy (si hi ha canvis)..."
   echo ""
 
-  git add "$DEPLOY_LOG" "$ROLLBACK_PLAN_FILE"
+  local tracked_files=("$DEPLOY_LOG" "$ROLLBACK_PLAN_FILE")
+  if [ -f "$PROJECT_DIR/$INCIDENT_LOG" ]; then
+    tracked_files+=("$INCIDENT_LOG")
+  fi
 
-  if git diff --cached --quiet -- "$DEPLOY_LOG" "$ROLLBACK_PLAN_FILE"; then
+  git add -- "${tracked_files[@]}"
+
+  if git diff --cached --quiet -- "${tracked_files[@]}"; then
     echo "  Sense canvis a logs de deploy. No es crea cap commit."
     echo ""
     return
   fi
 
-  git commit -m "chore(deploy): update deploy logs" -- "$DEPLOY_LOG" "$ROLLBACK_PLAN_FILE"
+  git commit -m "chore(deploy): update deploy logs" -- "${tracked_files[@]}"
   MAIN_SHA=$(git rev-parse --short HEAD)
   echo "  Commit de logs creat a main."
   echo ""
@@ -1138,6 +1180,7 @@ main() {
   auto_predeploy_backup
   fiscal_impact_gate         # Pas 4
   run_verifications          # Pas 5
+  run_fiscal_oracle_predeploy
   display_deploy_summary     # Pas 6
   handle_business_decision_for_residual_risk
   DEPLOY_PROD_BEFORE_SHA=$(git rev-parse --short prod)
@@ -1148,6 +1191,7 @@ main() {
   execute_merge_ritual       # Pas 7
   post_deploy_check          # Pas 8
   post_production_3min_check
+  run_fiscal_oracle_postdeploy_monitor
   prepare_rollback_plan
   append_deploy_log          # Pas 9
   commit_deploy_logs_if_needed

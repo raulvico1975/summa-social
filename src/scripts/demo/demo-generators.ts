@@ -80,6 +80,7 @@ interface DemoTransaction {
   document?: string; // URL del document
   source?: string;
   transactionType?: string;
+  fiscalKind?: 'donation' | 'non_fiscal' | 'pending_review' | null;
   // Camps per remeses
   isRemittance?: boolean;
   isRemittanceItem?: boolean;
