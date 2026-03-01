@@ -102,6 +102,7 @@ Registre cronologic de desplegaments a produccio.
 | 2026-03-01 11:04 | b97fc98 | BAIX | No | 2 | OK |
 | 2026-03-01 18:09 | d4b42bb | BAIX | No | 2 | OK |
 | 2026-03-01 19:12 | f460d53 | BAIX | No | 2 | OK |
+| 2026-03-01 19:46 | 491714d | ALT | Si | 12 | OK |
 ## Decisions humanes (negoci)
 
 | Data | SHA | human_question_reason | business_impact | decision_taken |
@@ -129,3 +130,5 @@ Registre cronologic de desplegaments a produccio.
 | 2026-02-28 10:46 | 57f3250 | SKIPPED_NO_BUCKET | - |
 | 2026-02-28 18:10 | 63d5bec | Risc ALT residual després de verificacions automàtiques. | podria afectar el processament de remeses, i l'entitat podria veure cobraments o assignacions que no toquen. | B_DEPLOY_WITH_VISIBLE_RISK |
 | 2026-02-28 18:10 | 63d5bec | SKIPPED_NO_BUCKET | - |
+| 2026-03-01 19:46 | 491714d | Risc ALT residual després de verificacions automàtiques. | podria alterar imports de donacions o devolucions, i l'entitat podria veure totals incorrectes en certificats o informes fiscals. | B_DEPLOY_WITH_VISIBLE_RISK |
+| 2026-03-01 19:46 | 491714d | SKIPPED_NO_BUCKET | - |
