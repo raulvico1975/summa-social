@@ -340,15 +340,6 @@ function validateRuntimeAndFiscalInvariants(
     };
   }
 
-  // Invariant A1: contactId segons tipus
-  if (tx.transactionType === 'return' && !tx.contactId) {
-    return {
-      ok: false,
-      error: `transactions[${index}] (return) requereix contactId`,
-      code: 'A1_RETURN_REQUIRES_CONTACT',
-    };
-  }
-
   if (tx.transactionType === 'fee' && !!tx.contactId) {
     return {
       ok: false,
