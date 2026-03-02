@@ -1,4 +1,11 @@
 import { type Firestore } from 'firebase-admin/firestore'
+import {
+  FISCAL_PENDING_REVIEW_ALERT_TYPE,
+  getCurrentFiscalYear,
+  isAlertExpired,
+  type AdminAlertStatus,
+} from '@/lib/admin/admin-alerts'
+import { calculateS9FiscalCoherence } from '@/lib/fiscal/sentinels/s9-fiscal-coherence'
 
 export type ControlStatus = 'ok' | 'warning' | 'critical'
 export type AlertPolicy = 'conservative'
@@ -23,6 +30,18 @@ export interface EntityRow {
   createdAt: string | null
   lastActivityAt: string | null
   taxId?: string
+  s9: EntityS9Summary
+}
+
+export interface EntityS9Summary {
+  year: number
+  pendingCount: number
+  pendingAmountCents: number
+  diagnosisTextCa: string
+  actionTextCa: string
+  alertStatus: AdminAlertStatus | null
+  alertId: string | null
+  alertExpiresAt: string | null
 }
 
 export interface KbBotSummary {
@@ -88,6 +107,15 @@ const ENTITY_ACTIVITY_QUERY_PLAN = [
   { collection: 'contacts', fields: ['updatedAt', 'createdAt'] },
 ] as const
 
+const S9_FISCAL_CATEGORY_NAME_KEYS = new Set([
+  'donations',
+  'memberfees',
+  'donaciones',
+  'cuotassocios',
+  'quotesdesocis',
+  'quotes',
+])
+
 export const CONTROL_TOWER_THRESHOLDS: ThresholdsApplied = {
   policy: 'conservative',
   system: {
@@ -148,6 +176,115 @@ function formatDateCaShort(iso: string | null): string {
     month: 'short',
     year: 'numeric',
   })
+}
+
+function normalizeStringArray(value: unknown): string[] {
+  if (!Array.isArray(value)) return []
+  return value.filter((item): item is string => typeof item === 'string' && item.trim().length > 0)
+}
+
+function normalizeKey(value: string): string {
+  return value
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/\s+/g, '')
+}
+
+function inferFiscalIncomeCategoryIds(
+  categoryDocs: Array<Record<string, unknown>>,
+  orgConfiguredIds: string[]
+): string[] {
+  const result = new Set(orgConfiguredIds)
+
+  for (const categoryDoc of categoryDocs) {
+    const categoryId = typeof categoryDoc.id === 'string' ? categoryDoc.id : null
+    const categoryName = typeof categoryDoc.name === 'string' ? categoryDoc.name : null
+
+    if (!categoryId || !categoryName) continue
+
+    if (S9_FISCAL_CATEGORY_NAME_KEYS.has(normalizeKey(categoryName))) {
+      result.add(categoryId)
+    }
+  }
+
+  return Array.from(result)
+}
+
+function normalizeS9AlertStatus(rawStatus: unknown, expiresAt: unknown, now: Date): AdminAlertStatus {
+  if (rawStatus === 'read') return 'read'
+  if (rawStatus === 'expired') return 'expired'
+
+  if (rawStatus === 'open') {
+    return isAlertExpired(expiresAt, now) ? 'expired' : 'open'
+  }
+
+  return isAlertExpired(expiresAt, now) ? 'expired' : 'open'
+}
+
+function resolveS9AlertState(
+  alerts: Array<{ id: string; data: Record<string, unknown> }>,
+  fiscalYear: number,
+  now: Date
+): {
+  alertStatus: AdminAlertStatus | null
+  alertId: string | null
+  alertExpiresAt: string | null
+} {
+  let latestAlert: {
+    id: string
+    createdAt: string | null
+    status: AdminAlertStatus
+    expiresAt: string | null
+  } | null = null
+
+  for (const alert of alerts) {
+    const payload = alert.data.payload as Record<string, unknown> | undefined
+    const alertYear = Number(payload?.year)
+    if (!Number.isFinite(alertYear) || alertYear !== fiscalYear) {
+      continue
+    }
+
+    const createdAtIso = toIsoOrNull(alert.data.createdAt)
+    const expiresAtIso = toIsoOrNull(alert.data.expiresAt)
+    const normalizedStatus = normalizeS9AlertStatus(alert.data.status, alert.data.expiresAt, now)
+
+    if (!latestAlert) {
+      latestAlert = {
+        id: alert.id,
+        createdAt: createdAtIso,
+        status: normalizedStatus,
+        expiresAt: expiresAtIso,
+      }
+      continue
+    }
+
+    const latestTime = latestAlert.createdAt ? new Date(latestAlert.createdAt).getTime() : -1
+    const currentTime = createdAtIso ? new Date(createdAtIso).getTime() : -1
+
+    if (currentTime > latestTime) {
+      latestAlert = {
+        id: alert.id,
+        createdAt: createdAtIso,
+        status: normalizedStatus,
+        expiresAt: expiresAtIso,
+      }
+    }
+  }
+
+  if (!latestAlert) {
+    return {
+      alertStatus: null,
+      alertId: null,
+      alertExpiresAt: null,
+    }
+  }
+
+  return {
+    alertStatus: latestAlert.status,
+    alertId: latestAlert.id,
+    alertExpiresAt: latestAlert.expiresAt,
+  }
 }
 
 export function evaluateSystemStatus(openIncidents: number, hasCriticalOpen: boolean): ControlStatus {
@@ -276,10 +413,119 @@ async function resolveEntityLastActivity(
   return pickMostRecentIso([...baseCandidates, ...sourceCandidates])
 }
 
+async function buildEntityS9Summary(
+  db: Firestore,
+  orgId: string,
+  fiscalYear: number,
+  now: Date,
+  orgConfiguredFiscalCategoryIds: string[]
+): Promise<EntityS9Summary> {
+  const yearStart = `${fiscalYear}-01-01`
+  const nextYearStart = `${fiscalYear + 1}-01-01`
+
+  const [categoriesSnap, transactionsSnap, alertsSnap] = await Promise.all([
+    db.collection(`organizations/${orgId}/categories`).get(),
+    db
+      .collection(`organizations/${orgId}/transactions`)
+      .where('date', '>=', yearStart)
+      .where('date', '<', nextYearStart)
+      .get(),
+    db
+      .collection(`organizations/${orgId}/adminAlerts`)
+      .where('type', '==', FISCAL_PENDING_REVIEW_ALERT_TYPE)
+      .get(),
+  ])
+
+  const categoryDocs = categoriesSnap.docs.map((doc) => ({
+    id: doc.id,
+    ...(doc.data() as Record<string, unknown>),
+  }))
+
+  const fiscalIncomeCategoryIds = inferFiscalIncomeCategoryIds(
+    categoryDocs,
+    orgConfiguredFiscalCategoryIds
+  )
+
+  const transactions = transactionsSnap.docs
+    .map((doc) => {
+      const data = doc.data() as Record<string, unknown>
+      const amount = Number(data.amount)
+      const date = typeof data.date === 'string' ? data.date : ''
+      if (!Number.isFinite(amount) || !date) return null
+
+      const transactionType: 'normal' | 'return' | 'return_fee' | 'donation' | 'fee' | undefined =
+        data.transactionType === 'normal' ||
+        data.transactionType === 'return' ||
+        data.transactionType === 'return_fee' ||
+        data.transactionType === 'donation' ||
+        data.transactionType === 'fee'
+          ? data.transactionType
+          : undefined
+
+      const contactType: 'donor' | 'supplier' | 'employee' | undefined =
+        data.contactType === 'donor' ||
+        data.contactType === 'supplier' ||
+        data.contactType === 'employee'
+          ? data.contactType
+          : undefined
+
+      const source: 'bank' | 'remittance' | 'manual' | 'stripe' | undefined =
+        data.source === 'bank' ||
+        data.source === 'remittance' ||
+        data.source === 'manual' ||
+        data.source === 'stripe'
+          ? data.source
+          : undefined
+
+      const fiscalKind: 'donation' | 'non_fiscal' | 'pending_review' | null =
+        data.fiscalKind === 'donation' ||
+        data.fiscalKind === 'non_fiscal' ||
+        data.fiscalKind === 'pending_review'
+          ? data.fiscalKind
+          : null
+
+      return {
+        id: doc.id,
+        date,
+        amount,
+        category: typeof data.category === 'string' ? data.category : null,
+        contactId: typeof data.contactId === 'string' ? data.contactId : null,
+        contactType,
+        source,
+        transactionType,
+        archivedAt: typeof data.archivedAt === 'string' ? data.archivedAt : null,
+        fiscalKind,
+      }
+    })
+    .filter((tx): tx is NonNullable<typeof tx> => tx !== null)
+
+  const s9 = calculateS9FiscalCoherence(transactions, { fiscalIncomeCategoryIds })
+  const alertState = resolveS9AlertState(
+    alertsSnap.docs.map((doc) => ({
+      id: doc.id,
+      data: doc.data() as Record<string, unknown>,
+    })),
+    fiscalYear,
+    now
+  )
+
+  return {
+    year: fiscalYear,
+    pendingCount: s9.pendingCount,
+    pendingAmountCents: s9.pendingAmountCents,
+    diagnosisTextCa: s9.diagnosisTextCa,
+    actionTextCa: s9.actionTextCa,
+    alertStatus: alertState.alertStatus,
+    alertId: alertState.alertId,
+    alertExpiresAt: alertState.alertExpiresAt,
+  }
+}
+
 export async function buildAdminControlTowerSummary(
   db: Firestore
 ): Promise<AdminControlTowerSummary> {
   const now = new Date()
+  const currentFiscalYear = getCurrentFiscalYear(now)
 
   const [
     incidentsSnap,
@@ -337,23 +583,37 @@ export async function buildAdminControlTowerSummary(
       ...(typeof data.taxId === 'string' ? { taxId: data.taxId } : {}),
       createdAt,
       orgUpdatedAt: toIsoOrNull(data.updatedAt),
+      configuredFiscalCategoryIds: normalizeStringArray(data.fiscalIncomeCategoryIds ?? data.fiscalCategoryIds),
     }
   })
 
   const entities: EntityRow[] = await Promise.all(
-    entitiesBase.map(async (entity) => ({
-      id: entity.id,
-      name: entity.name,
-      slug: entity.slug,
-      status: entity.status,
-      ...(entity.taxId ? { taxId: entity.taxId } : {}),
-      createdAt: entity.createdAt,
-      lastActivityAt:
-        (await resolveEntityLastActivity(db, entity.id, [
+    entitiesBase.map(async (entity) => {
+      const [lastActivityAt, s9] = await Promise.all([
+        resolveEntityLastActivity(db, entity.id, [
           entity.orgUpdatedAt,
           entity.createdAt,
-        ])) ?? entity.createdAt,
-    }))
+        ]),
+        buildEntityS9Summary(
+          db,
+          entity.id,
+          currentFiscalYear,
+          now,
+          entity.configuredFiscalCategoryIds
+        ),
+      ])
+
+      return {
+        id: entity.id,
+        name: entity.name,
+        slug: entity.slug,
+        status: entity.status,
+        ...(entity.taxId ? { taxId: entity.taxId } : {}),
+        createdAt: entity.createdAt,
+        lastActivityAt: lastActivityAt ?? entity.createdAt,
+        s9,
+      }
+    })
   )
 
   const startOfTodayUtc = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()))

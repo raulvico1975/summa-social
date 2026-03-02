@@ -4122,5 +4122,14 @@
   "importers.transaction.preview.warning.operationDateDerived": "Fecha derivada de columna alternativa",
   "importers.transaction.preview.warning.debitCreditFallback": "Importe calculado con Debe/Haber",
   "importers.transaction.preview.warning.balanceMismatch": "Posible incoherencia de saldo",
-  "permissionsDialog.restoreDefaults": "Restaurar por defecto"
+  "permissionsDialog.restoreDefaults": "Restaurar por defecto",
+  "admin.s9.title": "Coherencia fiscal real (S9)",
+  "admin.s9.pendingSummary": "{count} pendientes · {amount} ({year})",
+  "admin.s9.viewPendingCta": "Ver ingresos que no computan fiscalmente",
+  "admin.s9.notifyOrgCta": "Enviar aviso a la entidad",
+  "admin.s9.notifyOrgSent": "Aviso enviado a la entidad",
+  "dashboard.alerts.fiscalPending.title": "Coherencia fiscal pendiente",
+  "dashboard.alerts.fiscalPending.body": "Hay {count} ingresos asignados que no computan fiscalmente ({amount}) en el ejercicio {year}.",
+  "dashboard.alerts.fiscalPending.ctaReview": "Revisar ahora",
+  "dashboard.alerts.fiscalPending.ctaMarkRead": "He revisado"
 }

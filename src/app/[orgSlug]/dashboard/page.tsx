@@ -8,10 +8,10 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import Link from 'next/link';
-import { DollarSign, TrendingUp, TrendingDown, Rocket, Heart, AlertTriangle, FolderKanban, CalendarClock, Share2, Copy, Mail, PartyPopper, Info, FileSpreadsheet, FileText, RefreshCcw, Pencil, Settings } from 'lucide-react';
+import { DollarSign, TrendingUp, TrendingDown, Rocket, Heart, AlertTriangle, FolderKanban, CalendarClock, Share2, Copy, Mail, PartyPopper, Info, FileSpreadsheet, FileText, RefreshCcw, Pencil, Settings, Loader2 } from 'lucide-react';
 import type { Transaction, Contact, Project, Donor, Category, OrganizationMember } from '@/lib/data';
 import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
-import { collection } from 'firebase/firestore';
+import { collection, query, where } from 'firebase/firestore';
 import { useTranslations } from '@/i18n';
 import { useCurrentOrganization, useOrgUrl } from '@/hooks/organization-provider';
 import { formatCurrencyEU } from '@/lib/normalize';
@@ -37,6 +37,7 @@ import { WelcomeOnboardingModal } from '@/components/onboarding/WelcomeOnboardin
 import { OnboardingWizardModal } from '@/components/onboarding/OnboardingWizard';
 import { detectLegacyCategoryTransactions, logLegacyCategorySummary } from '@/lib/category-health';
 import { isVisibleInMovementsLedger } from '@/lib/transactions/remittance-visibility';
+import { FISCAL_PENDING_REVIEW_ALERT_TYPE, toDateFromFirestoreValue } from '@/lib/admin/admin-alerts';
 
 interface TaxObligation {
   id: string;
@@ -59,6 +60,19 @@ interface Celebration {
   messageKey: string;
   messageParams?: Record<string, any>;
   priority: number;
+}
+
+interface DashboardAdminAlert {
+  id: string;
+  type: string;
+  status: 'open' | 'read' | 'expired';
+  expiresAt?: unknown;
+  payload?: {
+    pendingCount?: number;
+    pendingAmountCents?: number;
+    year?: number;
+  };
+  createdAt?: unknown;
 }
 
 // Component per mostrar comparativa amb any anterior
@@ -550,6 +564,20 @@ export default function DashboardPage() {
     [firestore, organizationId]
   );
   const { data: categories } = useCollection<Category>(categoriesQuery);
+  const [isMarkingFiscalAlertRead, setIsMarkingFiscalAlertRead] = React.useState(false);
+
+  const fiscalAlertsQuery = useMemoFirebase(
+    () => {
+      if (!organizationId || userRole !== 'admin') return null;
+      return query(
+        collection(firestore, 'organizations', organizationId, 'adminAlerts'),
+        where('type', '==', FISCAL_PENDING_REVIEW_ALERT_TYPE),
+        where('status', '==', 'open')
+      );
+    },
+    [firestore, organizationId, userRole]
+  );
+  const { data: fiscalAlerts } = useCollection<DashboardAdminAlert>(fiscalAlertsQuery);
   const [dateFilter, setDateFilter] = React.useState<DateFilterValue>({ type: 'all' });
   const dateFilteredTransactions = useTransactionFilters(transactions || undefined, dateFilter);
 
@@ -720,6 +748,69 @@ export default function DashboardPage() {
     },
     [buildUrl, periodQuery],
   );
+  const fiscalPendingMovementsUrl = React.useMemo(
+    () => buildUrl('/dashboard/movimientos?fiscal=pending'),
+    [buildUrl]
+  );
+
+  const activeFiscalPendingAlert = React.useMemo(() => {
+    if (!fiscalAlerts || userRole !== 'admin') return null;
+
+    const now = new Date();
+    const candidates = fiscalAlerts
+      .filter((alert) => {
+        if (alert.type !== FISCAL_PENDING_REVIEW_ALERT_TYPE) return false;
+        if (alert.status !== 'open') return false;
+        const expiresAt = toDateFromFirestoreValue(alert.expiresAt);
+        if (!expiresAt) return false;
+        return expiresAt.getTime() > now.getTime();
+      })
+      .sort((a, b) => {
+        const aTime = toDateFromFirestoreValue(a.createdAt)?.getTime() ?? 0;
+        const bTime = toDateFromFirestoreValue(b.createdAt)?.getTime() ?? 0;
+        return bTime - aTime;
+      });
+
+    return candidates[0] ?? null;
+  }, [fiscalAlerts, userRole]);
+
+  const handleMarkFiscalPendingAlertRead = React.useCallback(async () => {
+    if (!organizationId || !user || !activeFiscalPendingAlert?.id) return;
+
+    setIsMarkingFiscalAlertRead(true);
+    try {
+      const idToken = await user.getIdToken();
+      await fetch('/api/admin-alerts/mark-read', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${idToken}`,
+        },
+        body: JSON.stringify({
+          orgId: organizationId,
+          alertId: activeFiscalPendingAlert.id,
+        }),
+      });
+    } catch (error) {
+      console.error('[dashboard] mark fiscal alert read error:', error);
+    } finally {
+      setIsMarkingFiscalAlertRead(false);
+    }
+  }, [activeFiscalPendingAlert?.id, organizationId, user]);
+
+  const fiscalPendingAlertBody = React.useMemo(() => {
+    if (!activeFiscalPendingAlert) return '';
+
+    const pendingCount = Number(activeFiscalPendingAlert.payload?.pendingCount ?? 0);
+    const pendingAmountCents = Number(activeFiscalPendingAlert.payload?.pendingAmountCents ?? 0);
+    const year = Number(activeFiscalPendingAlert.payload?.year ?? new Date().getFullYear());
+
+    return tri('dashboard.alerts.fiscalPending.body', {
+      count: pendingCount,
+      amount: formatCurrencyEU(pendingAmountCents / 100),
+      year,
+    });
+  }, [activeFiscalPendingAlert, tri]);
 
   // Ref per gestionar timeout i evitar memory leaks
   const copyTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
@@ -1400,6 +1491,32 @@ ${tr("dashboard.generatedWith")}`;
           <span className="hidden sm:inline">{tr("dashboard.shareSummary")}</span>
         </Button>
       </div>
+
+      {userRole === 'admin' && activeFiscalPendingAlert && (
+        <Card className="border-amber-300 bg-amber-50/60">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">{tr('dashboard.alerts.fiscalPending.title')}</CardTitle>
+          </CardHeader>
+          <CardContent className="pt-0 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <p className="text-sm text-amber-900">{fiscalPendingAlertBody}</p>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" asChild>
+                <Link href={fiscalPendingMovementsUrl}>
+                  {tr('dashboard.alerts.fiscalPending.ctaReview')}
+                </Link>
+              </Button>
+              <Button
+                size="sm"
+                onClick={handleMarkFiscalPendingAlertRead}
+                disabled={isMarkingFiscalAlertRead}
+              >
+                {isMarkingFiscalAlertRead && <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />}
+                {tr('dashboard.alerts.fiscalPending.ctaMarkRead')}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* OCULTAT TEMPORALMENT - Celebracions
       {celebrations.length > 0 && (

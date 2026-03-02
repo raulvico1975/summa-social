@@ -30,6 +30,10 @@ export default function MovimientosPage() {
   const { t } = useTranslations();
   const searchParams = useSearchParams();
   const initialPeriodFilter = React.useMemo(() => fromPeriodQuery(searchParams), [searchParams]);
+  const initialFiscalFilter = React.useMemo(
+    () => (searchParams.get('fiscal') === 'pending' ? 'pending' : null),
+    [searchParams]
+  );
   const canImportExtracts = can('moviments.importarExtractes');
   const canEditMovements = can('moviments.editar');
 
@@ -118,6 +122,7 @@ export default function MovimientosPage() {
         <div className="w-full">
           <TransactionsTable
             initialDateFilter={initialPeriodFilter ?? undefined}
+            initialFiscalFilter={initialFiscalFilter}
             canEditMovements={canEditMovements}
           />
         </div>

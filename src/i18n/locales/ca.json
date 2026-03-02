@@ -4122,5 +4122,14 @@
   "importers.transaction.preview.warning.operationDateDerived": "Data derivada de columna alternativa",
   "importers.transaction.preview.warning.debitCreditFallback": "Import calculat amb Debe/Haber",
   "importers.transaction.preview.warning.balanceMismatch": "Possible incoherència de saldo",
-  "permissionsDialog.restoreDefaults": "Restaurar per defecte"
+  "permissionsDialog.restoreDefaults": "Restaurar per defecte",
+  "admin.s9.title": "Coherència fiscal real (S9)",
+  "admin.s9.pendingSummary": "{count} pendents · {amount} ({year})",
+  "admin.s9.viewPendingCta": "Veure ingressos que no compten fiscalment",
+  "admin.s9.notifyOrgCta": "Enviar avís a l'entitat",
+  "admin.s9.notifyOrgSent": "Avís enviat a l'entitat",
+  "dashboard.alerts.fiscalPending.title": "Coherència fiscal pendent",
+  "dashboard.alerts.fiscalPending.body": "Hi ha {count} ingressos assignats que no computen fiscalment ({amount}) a l'exercici {year}.",
+  "dashboard.alerts.fiscalPending.ctaReview": "Revisar ara",
+  "dashboard.alerts.fiscalPending.ctaMarkRead": "He revisat"
 }

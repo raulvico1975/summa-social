@@ -634,6 +634,17 @@ service cloud.firestore {
                       getMemberRole(orgId) in ['admin', 'user']);
         allow write: if false;
       }
+
+      // ─────────────────────────────────────────────────────────────────────
+      // ADMIN ALERTS (avisos interns per admins de l'entitat)
+      // Path: /organizations/{orgId}/adminAlerts/{alertId}
+      // Escriptura només via API (Admin SDK)
+      // ─────────────────────────────────────────────────────────────────────
+
+      match /adminAlerts/{alertId} {
+        allow read: if isSuperAdmin() || isAdminOf(orgId);
+        allow write: if false;
+      }
     }
   }
 }
