@@ -494,7 +494,8 @@ function AdminPageContent() {
 
   const handleViewFiscalPending = (org: AdminControlTowerSummary['entities'][number]) => {
     sessionStorage.setItem('adminViewingOrgId', org.id);
-    router.push(`/${org.slug}/dashboard/movimientos?fiscal=pending`);
+    const currentYear = new Date().getFullYear();
+    router.push(`/${org.slug}/dashboard/movimientos?fiscal=pending&year=${currentYear}`);
   };
 
   const handleNotifyOrganization = async (org: AdminControlTowerSummary['entities'][number]) => {

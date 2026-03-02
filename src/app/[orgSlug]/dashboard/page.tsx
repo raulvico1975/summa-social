@@ -749,7 +749,10 @@ export default function DashboardPage() {
     [buildUrl, periodQuery],
   );
   const fiscalPendingMovementsUrl = React.useMemo(
-    () => buildUrl('/dashboard/movimientos?fiscal=pending'),
+    () => {
+      const currentYear = new Date().getFullYear();
+      return buildUrl(`/dashboard/movimientos?fiscal=pending&year=${currentYear}`);
+    },
     [buildUrl]
   );
 
