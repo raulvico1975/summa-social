@@ -34,6 +34,7 @@ const createTransaction = (overrides: Partial<Transaction> = {}): Transaction =>
   contactId: 'donor-1',
   date: '2024-06-15',
   amount: 100,
+  transactionType: 'donation',
   ...overrides,
 });
 
@@ -64,7 +65,25 @@ describe('calculateTransactionNetAmount', () => {
   });
 
   it('retorna 0 per transaccions que no són donacions ni devolucions', () => {
-    const tx = createTransaction({ amount: -100 }); // despesa sense transactionType
+    const tx = createTransaction({ amount: -100, transactionType: undefined }); // despesa sense transactionType
+    assert.strictEqual(calculateTransactionNetAmount(tx), 0);
+  });
+
+  it('retorna 0 per transaccions arxivades', () => {
+    const tx = createTransaction({
+      amount: 100,
+      transactionType: 'donation',
+      archivedAt: '2024-06-20T10:00:00.000Z',
+    });
+    assert.strictEqual(calculateTransactionNetAmount(tx), 0);
+  });
+
+  it('retorna 0 per pares de remesa', () => {
+    const tx = createTransaction({
+      amount: 100,
+      transactionType: 'donation',
+      isRemittance: true,
+    });
     assert.strictEqual(calculateTransactionNetAmount(tx), 0);
   });
 });
@@ -87,6 +106,22 @@ describe('isReturnTransaction', () => {
   it('retorna false per una donació normal', () => {
     const tx = createTransaction({ amount: 100 });
     assert.strictEqual(isReturnTransaction(tx), false);
+  });
+
+  it('retorna false si està arxivada o és pare de remesa', () => {
+    const archivedReturn = createTransaction({
+      transactionType: 'return',
+      amount: -50,
+      archivedAt: '2024-06-21T00:00:00.000Z',
+    });
+    const remittanceReturn = createTransaction({
+      transactionType: 'return',
+      amount: -40,
+      isRemittance: true,
+    });
+
+    assert.strictEqual(isReturnTransaction(archivedReturn), false);
+    assert.strictEqual(isReturnTransaction(remittanceReturn), false);
   });
 });
 
@@ -191,6 +226,21 @@ describe('calculateModel182Totals - Devolucions', () => {
     assert.strictEqual(result.donorTotals[0].returnedAmount, 40);
     assert.strictEqual(result.stats.excludedReturns, 1);
     assert.strictEqual(result.stats.excludedAmount, 40);
+  });
+
+  it('ignora pares de remesa i transaccions arxivades', () => {
+    const donors = [createDonor({ id: 'donor-1' })];
+    const transactions = [
+      createTransaction({ id: 'tx-1', contactId: 'donor-1', amount: 100, transactionType: 'donation', date: '2024-03-01' }),
+      createTransaction({ id: 'tx-2', contactId: 'donor-1', amount: -20, transactionType: 'return', date: '2024-04-01', archivedAt: '2024-04-02T00:00:00.000Z' }),
+      createTransaction({ id: 'tx-3', contactId: 'donor-1', amount: 50, transactionType: 'donation', date: '2024-05-01', isRemittance: true }),
+    ];
+
+    const result = calculateModel182Totals(transactions, donors, 2024);
+
+    assert.strictEqual(result.donorTotals.length, 1);
+    assert.strictEqual(result.donorTotals[0].totalAmount, 100);
+    assert.strictEqual(result.donorTotals[0].returnedAmount, 0);
   });
 
   it('exclou donant si devolucions >= donacions', () => {

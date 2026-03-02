@@ -8,7 +8,7 @@
 
 import type { Transaction, AnyContact, Donor } from '@/lib/data';
 import type { DonationReportRow } from '@/lib/model182-aeat';
-import { isFiscalDonationCandidate } from '@/lib/fiscal/is-fiscal-donation-candidate';
+import { calculateTransactionNetAmount } from '@/lib/model182';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // FUNCIÓ PRINCIPAL
@@ -64,13 +64,7 @@ export function buildModel182Candidates(
       };
     }
 
-    let netAmount = 0;
-
-    if (tx.transactionType === 'return' && tx.amount < 0) {
-      netAmount = tx.amount; // ja és negatiu
-    } else if (tx.amount > 0 && isFiscalDonationCandidate(tx)) {
-      netAmount = tx.amount;
-    }
+    const netAmount = calculateTransactionNetAmount(tx);
 
     if (txYear === year) {
       if (netAmount > 0) {
