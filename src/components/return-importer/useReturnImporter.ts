@@ -1124,6 +1124,25 @@ export function useReturnImporter(options: UseReturnImporterOptions = {}) {
           continue;
         }
 
+        const inferredAmount = returnItem.matchedTransaction?.amount ?? -Math.abs(returnItem.amount);
+        const inferredSource = returnItem.matchedTransaction?.source ?? 'bank';
+
+        // Guardrail fiscal P0 abans d'escriure return sobre el moviment original.
+        assertFiscalTxCanBeSaved(
+          {
+            transactionType: 'return',
+            amount: inferredAmount,
+            contactId: returnItem.matchedDonor.id,
+            source: inferredSource,
+          },
+          {
+            firestore,
+            orgId: organizationId,
+            operation: 'createReturn',
+            route: '/return-importer',
+          }
+        );
+
         // ACTUALITZAR LA TRANSACCIÓ DEL BANC amb contactId i transactionType
         const txRef = doc(firestore, 'organizations', organizationId, 'transactions', returnItem.matchedTransactionId);
         await updateDoc(txRef, {

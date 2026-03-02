@@ -19,12 +19,15 @@ export interface Donor {
 }
 
 export interface Transaction {
-  id: string;
-  contactId: string | null;
+  id?: string;
+  contactId?: string | null;
   date: string;
   amount: number;
   transactionType?: string;    // 'return' per devolucions
   donationStatus?: string;     // 'returned' per donacions retornades
+  archivedAt?: string | null;  // soft-delete: excloure del còmput fiscal
+  isRemittance?: boolean;      // pare de remesa: ignorar del còmput fiscal
+  isSplit?: boolean;           // pare de split: ignorar del còmput fiscal
 }
 
 export interface DonorTotals {
@@ -51,23 +54,39 @@ export interface Model182Result {
 // FUNCIONS AUXILIARS
 // =============================================================================
 
+function isArchivedTransaction(tx: Transaction): boolean {
+  return tx.archivedAt != null && tx.archivedAt !== '';
+}
+
+function isRemittanceParent(tx: Transaction): boolean {
+  return tx.isRemittance === true;
+}
+
+function isSplitParent(tx: Transaction): boolean {
+  return tx.isSplit === true;
+}
+
 /**
  * Calcula l'import net d'una transacció segons el seu tipus
  */
 export function calculateTransactionNetAmount(tx: Transaction): number {
+  if (isArchivedTransaction(tx) || isRemittanceParent(tx) || isSplitParent(tx)) {
+    return 0;
+  }
+
   // Devolució → valor negatiu
   if (tx.transactionType === 'return' && tx.amount < 0) {
     return tx.amount; // ja és negatiu
   }
 
-  // Donació vàlida → valor positiu
-  if (tx.amount > 0 && tx.donationStatus !== 'returned') {
-    return tx.amount;
-  }
-
   // Donació marcada com retornada → valor negatiu
   if (tx.amount > 0 && tx.donationStatus === 'returned') {
     return -tx.amount;
+  }
+
+  // Donació fiscal vàlida → valor positiu
+  if (tx.amount > 0 && tx.transactionType === 'donation') {
+    return tx.amount;
   }
 
   // Altres casos (despeses, etc.) → 0
@@ -78,6 +97,10 @@ export function calculateTransactionNetAmount(tx: Transaction): number {
  * Determina si una transacció és una devolució o donació retornada
  */
 export function isReturnTransaction(tx: Transaction): boolean {
+  if (isArchivedTransaction(tx) || isRemittanceParent(tx) || isSplitParent(tx)) {
+    return false;
+  }
+
   return (tx.transactionType === 'return' && tx.amount < 0) ||
          (tx.amount > 0 && tx.donationStatus === 'returned');
 }

@@ -55,7 +55,7 @@ import { MobileListItem } from '@/components/mobile/mobile-list-item';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { MOBILE_ACTIONS_BAR, MOBILE_CTA_PRIMARY } from '@/lib/ui/mobile-actions';
-import { isFiscalDonationCandidate } from '@/lib/fiscal/is-fiscal-donation-candidate';
+import { calculateTransactionNetAmount, isReturnTransaction } from '@/lib/model182';
 
 let xlsxModulePromise: Promise<typeof import('xlsx')> | null = null;
 
@@ -290,18 +290,10 @@ export function DonationsReportGenerator() {
         // ═══════════════════════════════════════════════════════════════════════
 
         // Calcular import net de la transacció
-        let netAmount = 0;
-
-        if (tx.transactionType === 'return' && tx.amount < 0) {
-          // Devolució → restar
-          netAmount = tx.amount; // ja és negatiu
-          if (txYear === year) {
-            excludedReturns++;
-            excludedAmount += Math.abs(tx.amount);
-          }
-        } else if (tx.amount > 0 && isFiscalDonationCandidate(tx)) {
-          // Donació fiscal vàlida → sumar
-          netAmount = tx.amount;
+        const netAmount = calculateTransactionNetAmount(tx);
+        if (txYear === year && isReturnTransaction(tx) && netAmount < 0) {
+          excludedReturns++;
+          excludedAmount += Math.abs(netAmount);
         }
 
         // Acumular segons l'any
