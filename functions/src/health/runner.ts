@@ -69,6 +69,33 @@ function toList<T>(snapshot: FirebaseFirestore.QuerySnapshot): T[] {
   return snapshot.docs.map((doc) => ({ id: doc.id, ...(doc.data() as Record<string, unknown>) } as T));
 }
 
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return Object.prototype.toString.call(value) === "[object Object]" && value?.constructor === Object;
+}
+
+function stripUndefinedDeep<T>(value: T): T {
+  if (value === undefined) return value;
+
+  if (Array.isArray(value)) {
+    return value
+      .map((item) => stripUndefinedDeep(item))
+      .filter((item) => item !== undefined) as unknown as T;
+  }
+
+  if (!isPlainObject(value)) {
+    return value;
+  }
+
+  const out: Record<string, unknown> = {};
+  for (const [key, raw] of Object.entries(value)) {
+    if (raw === undefined) continue;
+    const sanitized = stripUndefinedDeep(raw);
+    if (sanitized === undefined) continue;
+    out[key] = sanitized;
+  }
+  return out as T;
+}
+
 async function cleanupOldSnapshots(
   snapshotsRef: FirebaseFirestore.CollectionReference,
   now: Date
@@ -171,11 +198,13 @@ async function writeFailedSnapshot(params: {
     updatedAt: admin.firestore.FieldValue.serverTimestamp(),
   };
 
+  const failedPayload = stripUndefinedDeep({
+    ...failedSnapshot,
+    createdAt: admin.firestore.FieldValue.serverTimestamp(),
+  });
+
   await ref.set(
-    {
-      ...failedSnapshot,
-      createdAt: admin.firestore.FieldValue.serverTimestamp(),
-    },
+    failedPayload as FirebaseFirestore.DocumentData,
     { merge: true }
   );
 }
@@ -289,7 +318,7 @@ export async function runNightlyHealthForOrganization(params: {
     const checks = {} as HealthChecksMap;
     for (const id of HEALTH_CHECK_IDS) {
       const raw = rawChecks[id];
-      checks[id] = {
+      const block = {
         id,
         title: CHECK_META[id].title,
         severity: CHECK_META[id].severity,
@@ -297,8 +326,11 @@ export async function runNightlyHealthForOrganization(params: {
         sampleIds: Array.isArray(raw.sampleIds) ? raw.sampleIds.slice(0, 10) : [],
         hasIssues: raw.count > 0,
         examples: raw.examples,
-        details: raw.details,
       };
+      if (raw.details !== undefined) {
+        block.details = raw.details;
+      }
+      checks[id] = block;
     }
 
     const results = {} as HealthResultsMap;
@@ -410,11 +442,13 @@ export async function runNightlyHealthForOrganization(params: {
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     };
 
+    const snapshotPayload = stripUndefinedDeep({
+      ...snapshot,
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
     await snapshotsRef.doc(runDate).set(
-      {
-        ...snapshot,
-        createdAt: admin.firestore.FieldValue.serverTimestamp(),
-      },
+      snapshotPayload as FirebaseFirestore.DocumentData,
       { merge: true }
     );
 
