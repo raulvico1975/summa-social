@@ -29,7 +29,23 @@ export default function MovimientosPage() {
   const { can } = usePermissions();
   const { t } = useTranslations();
   const searchParams = useSearchParams();
-  const initialPeriodFilter = React.useMemo(() => fromPeriodQuery(searchParams), [searchParams]);
+  const initialPeriodFilter = React.useMemo(() => {
+    const fiscalParam = searchParams.get('fiscal');
+    const yearParam = searchParams.get('year');
+    const parsedYear = Number.parseInt(yearParam ?? '', 10);
+
+    if (fiscalParam === 'pending' && Number.isInteger(parsedYear)) {
+      return {
+        type: 'custom' as const,
+        customRange: {
+          from: new Date(Date.UTC(parsedYear, 0, 1)),
+          to: new Date(Date.UTC(parsedYear, 11, 31)),
+        },
+      };
+    }
+
+    return fromPeriodQuery(searchParams);
+  }, [searchParams]);
   const initialFiscalFilter = React.useMemo(
     () => (searchParams.get('fiscal') === 'pending' ? 'pending' : null),
     [searchParams]
