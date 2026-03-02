@@ -12,6 +12,7 @@ import { useToast } from '@/hooks/use-toast';
 import { jsPDF } from 'jspdf';
 import { getPeriodicitySuffix } from '@/lib/donors/periodicity-suffix';
 import { isFiscalDonationCandidate } from '@/lib/fiscal/is-fiscal-donation-candidate';
+import { calculateDonorNet } from '@/lib/fiscal/calculateDonorNet';
 
 // UI Components
 import {
@@ -248,15 +249,32 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
     let lastReturnDate: string | null = null;
     const returnItems: ReturnItem[] = [];
 
-    // Per al càlcul NET (criteri conservador, coherent amb certificats)
-    let currentYearGross = 0;
-    let currentYearReturned = 0;
-
-    // Per a l'any anterior
     let previousYearTotal = 0;
     let previousYearCount = 0;
-    let previousYearGross = 0;
-    let previousYearReturned = 0;
+
+    const currentYearNetResult = donor ? calculateDonorNet({
+      transactions,
+      donorId: donor.id,
+      year: currentYear,
+    }) : {
+      grossDonationsCents: 0,
+      returnsCents: 0,
+      netCents: 0,
+      donationsCount: 0,
+      returnsCount: 0,
+    };
+
+    const previousYearNetResult = donor ? calculateDonorNet({
+      transactions,
+      donorId: donor.id,
+      year: currentYear - 1,
+    }) : {
+      grossDonationsCents: 0,
+      returnsCents: 0,
+      netCents: 0,
+      donationsCount: 0,
+      returnsCount: 0,
+    };
 
     transactions.forEach(tx => {
       if (tx.amount > 0 && isFiscalDonationCandidate(tx)) {
@@ -276,23 +294,10 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
         }
       }
 
-      // CRITERI CONSERVADOR per a import net certificable (mateix que certificats)
-      if (tx.amount > 0 && isFiscalDonationCandidate(tx) && tx.date.startsWith(currentYearStr)) {
-        currentYearGross += tx.amount;
-      }
-      if (tx.amount < 0 && tx.transactionType === 'return' && tx.date.startsWith(currentYearStr)) {
-        currentYearReturned += Math.abs(tx.amount);
-      }
-
-      // ANY ANTERIOR - Càlcul NET
-      if (tx.amount > 0 && isFiscalDonationCandidate(tx) && tx.date.startsWith(previousYearStr)) {
-        previousYearGross += tx.amount;
-      }
-      if (tx.amount < 0 && tx.transactionType === 'return' && tx.date.startsWith(previousYearStr)) {
-        previousYearReturned += Math.abs(tx.amount);
-      }
-
-      if (tx.amount < 0 && tx.transactionType === 'return') {
+      if (
+        (tx.amount < 0 && tx.transactionType === 'return') ||
+        (tx.amount > 0 && tx.donationStatus === 'returned')
+      ) {
         // Devolució (per al bloc de devolucions)
         returnsCount++;
         returnsAmount += Math.abs(tx.amount);
@@ -318,16 +323,16 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
       currentYearCount,
       lastDonationDate,
       returns: { count: returnsCount, amount: returnsAmount, lastDate: lastReturnDate, items: recentReturns },
-      currentYearGross,
-      currentYearReturned,
-      currentYearNet: Math.max(0, currentYearGross - currentYearReturned),
+      currentYearGross: currentYearNetResult.grossDonationsCents / 100,
+      currentYearReturned: Math.abs(currentYearNetResult.returnsCents) / 100,
+      currentYearNet: Math.max(0, currentYearNetResult.netCents / 100),
       previousYear: previousYearTotal,
       previousYearCount,
-      previousYearGross,
-      previousYearReturned,
-      previousYearNet: Math.max(0, previousYearGross - previousYearReturned),
+      previousYearGross: previousYearNetResult.grossDonationsCents / 100,
+      previousYearReturned: Math.abs(previousYearNetResult.returnsCents) / 100,
+      previousYearNet: Math.max(0, previousYearNetResult.netCents / 100),
     };
-  }, [transactions, currentYear]);
+  }, [transactions, currentYear, donor]);
 
   // Per defecte: historial obert si <= 5 donacions
   React.useEffect(() => {
@@ -347,10 +352,13 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
 
       // Filtrar per estat
       if (filterStatus === 'returns') {
-        return tx.transactionType === 'return';
+        return (tx.transactionType === 'return' && tx.amount < 0) ||
+          (tx.amount > 0 && tx.donationStatus === 'returned');
       }
       // 'all': mostrar donacions vàlides i devolucions
-      return (tx.amount > 0 && isFiscalDonationCandidate(tx)) || tx.transactionType === 'return';
+      return (tx.amount > 0 && isFiscalDonationCandidate(tx)) ||
+        (tx.transactionType === 'return' && tx.amount < 0) ||
+        (tx.amount > 0 && tx.donationStatus === 'returned');
     });
   }, [transactions, selectedYear, filterStatus]);
 
@@ -633,11 +641,15 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
       isFiscalDonationCandidate(tx)
     ) || [];
 
-    // Totes les devolucions del donant dins l'any (excloure return_fee)
+    // Totes les devolucions del donant dins l'any:
+    // - transactionType='return' (amount negatiu)
+    // - donationStatus='returned' (neutralització de donació positiva)
     const yearReturns = transactions?.filter(tx =>
       tx.date.startsWith(year) &&
-      tx.amount < 0 &&
-      tx.transactionType === 'return'
+      (
+        (tx.amount < 0 && tx.transactionType === 'return') ||
+        (tx.amount > 0 && tx.donationStatus === 'returned')
+      )
     ) || [];
 
     const grossAmount = yearDonations.reduce((sum, tx) => sum + tx.amount, 0);
@@ -1158,11 +1170,15 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
       isFiscalDonationCandidate(tx)
     ) || [];
 
-    // Totes les devolucions del donant dins l'any (excloure return_fee)
+    // Totes les devolucions del donant dins l'any:
+    // - transactionType='return' (amount negatiu)
+    // - donationStatus='returned' (neutralització de donació positiva)
     const yearReturns = transactions?.filter(tx =>
       tx.date.startsWith(year) &&
-      tx.amount < 0 &&
-      tx.transactionType === 'return'
+      (
+        (tx.amount < 0 && tx.transactionType === 'return') ||
+        (tx.amount > 0 && tx.donationStatus === 'returned')
+      )
     ) || [];
 
     const grossAmount = yearDonations.reduce((sum, tx) => sum + tx.amount, 0);

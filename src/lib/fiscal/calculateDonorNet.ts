@@ -2,7 +2,7 @@
 // Motor únic de càlcul fiscal per donants
 // Centralitza la lògica duplicada en donor-detail-drawer, donation-certificate-generator, etc.
 
-import { isFiscalDonationCandidate } from '@/lib/fiscal/is-fiscal-donation-candidate';
+import { calculateTransactionNetAmount, isReturnTransaction } from '@/lib/model182';
 
 /**
  * Input per al càlcul del net fiscal d'un donant
@@ -12,9 +12,11 @@ export interface DonorNetInput {
     amount: number;
     date: string;
     transactionType?: string;
+    donationStatus?: string;
     contactId?: string | null;
     archivedAt?: string | null;
     isSplit?: boolean;
+    isRemittance?: boolean;
   }>;
   donorId: string;
   year: number;
@@ -37,8 +39,9 @@ export interface DonorNetResult {
  * Calcula el net fiscal d'un donant per a un any específic.
  *
  * Criteris:
- * - Donacions: només transactionType === 'donation' (criteri fiscal únic)
- * - Devolucions: transactionType === 'return' i amount < 0
+ * - Donacions fiscals: transactionType === 'donation'
+ * - Devolucions: transactionType === 'return' (amount < 0) o donationStatus === 'returned'
+ * - Exclusions: archivedAt informat o pare de remesa (isRemittance === true)
  * - Net: gross + returns (returns són negatius, per tant és una resta)
  *
  * NO fa clamp a 0: si hi ha més devolucions que donacions, retorna negatiu.
@@ -59,16 +62,15 @@ export function calculateDonorNet(input: DonorNetInput): DonorNetResult {
     // Només transaccions de l'any especificat
     if (!tx.date.startsWith(yearStr)) continue;
 
-    // Donació fiscal vàlida (helper unificat)
-    if (tx.amount > 0 && isFiscalDonationCandidate(tx)) {
-      grossDonationsCents += Math.round(tx.amount * 100);
+    const netAmount = calculateTransactionNetAmount(tx);
+    if (netAmount > 0) {
+      grossDonationsCents += Math.round(netAmount * 100);
       donationsCount++;
     }
 
-    // Devolució: transactionType === 'return' i amount < 0
-    if (tx.transactionType === 'return' && tx.amount < 0) {
+    if (netAmount < 0 && isReturnTransaction(tx)) {
       // returnsCents serà negatiu
-      returnsCents += Math.round(tx.amount * 100);
+      returnsCents += Math.round(netAmount * 100);
       returnsCount++;
     }
   }

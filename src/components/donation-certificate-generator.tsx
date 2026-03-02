@@ -345,13 +345,17 @@ export function DonationCertificateGenerator() {
                txDate <= yearEnd;
       });
 
-      // CRITERI CONSERVADOR: totes les devolucions (transactionType==='return') del donant dins l'any
-      // Exclou return_fee. No requereix linkedTransactionId - qualsevol devolució assignada compta.
-      // P0: Excloure transaccions arxivades (soft-delete) - no compten fiscalment
+      // CRITERI CONSERVADOR: totes les devolucions del donant dins l'any
+      // Inclou:
+      // - transactionType==='return' (amount negatiu)
+      // - donationStatus==='returned' (neutralitza donació positiva)
+      // Exclou return_fee.
       const yearReturns = allTransactions.filter(tx => {
         const txDate = tx.date.substring(0, 10);
-        return tx.amount < 0 &&
-               tx.transactionType === 'return' &&
+        return (
+               (tx.amount < 0 && tx.transactionType === 'return') ||
+               (tx.amount > 0 && tx.donationStatus === 'returned')
+               ) &&
                tx.contactId &&
                tx.contactType === 'donor' &&
                txDate >= yearStart &&
