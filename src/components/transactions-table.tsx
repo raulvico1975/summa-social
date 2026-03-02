@@ -112,9 +112,11 @@ import {
 import { filterSplitChildTransactions } from '@/lib/splits/split-visibility';
 import { undoSplit } from '@/lib/splits/undoSplit';
 import { handleTransactionDelete, isFiscallyRelevantTransaction } from '@/lib/fiscal/softDeleteTransaction';
+import { isS9PendingFiscalTransaction } from '@/lib/fiscal/sentinels/s9-fiscal-coherence';
 
 interface TransactionsTableProps {
   initialDateFilter?: DateFilterValue | null;
+  initialFiscalFilter?: 'pending' | null;
   canEditMovements?: boolean;
 }
 
@@ -128,7 +130,11 @@ const ReturnImporter = dynamic(
   { ssr: false },
 );
 
-export function TransactionsTable({ initialDateFilter = null, canEditMovements = true }: TransactionsTableProps = {}) {
+export function TransactionsTable({
+  initialDateFilter = null,
+  initialFiscalFilter = null,
+  canEditMovements = true
+}: TransactionsTableProps = {}) {
   const { firestore, user, storage } = useFirebase();
   const { organizationId, organization } = useCurrentOrganization();
   const { t, language, tr } = useTranslations();
@@ -168,8 +174,11 @@ export function TransactionsTable({ initialDateFilter = null, canEditMovements =
       const params = new URLSearchParams(window.location.search);
       const filter = params.get('filter');
       const contactId = params.get('contactId');
+      const fiscal = params.get('fiscal');
 
-      if (isTransactionUrlFilter(filter)) {
+      if (fiscal === 'pending') {
+        setTableFilter('fiscalPending');
+      } else if (isTransactionUrlFilter(filter)) {
         setTableFilter(filter);
       }
 
@@ -178,6 +187,11 @@ export function TransactionsTable({ initialDateFilter = null, canEditMovements =
       }
     }
   }, []);
+
+  React.useEffect(() => {
+    if (initialFiscalFilter !== 'pending') return;
+    setTableFilter((prev) => (prev === 'fiscalPending' ? prev : 'fiscalPending'));
+  }, [initialFiscalFilter]);
 
   React.useEffect(() => {
     if (!initialDateFilter) return;
@@ -760,6 +774,11 @@ export function TransactionsTable({ initialDateFilter = null, canEditMovements =
     );
   }, [transactions]);
 
+  const fiscalPendingTransactions = React.useMemo(() => {
+    if (!transactions) return [];
+    return transactions.filter(tx => isS9PendingFiscalTransaction(tx));
+  }, [transactions]);
+
   // Transaccions filtrades i ordenades per data (més recents primer)
   const filteredTransactions = React.useMemo(() => {
     if (!transactions) return [];
@@ -826,6 +845,9 @@ export function TransactionsTable({ initialDateFilter = null, canEditMovements =
         break;
       case 'donationsNoContact':
         result = donationsNoContactTransactions;
+        break;
+      case 'fiscalPending':
+        result = fiscalPendingTransactions;
         break;
       default:
         result = transactions;
@@ -906,7 +928,7 @@ export function TransactionsTable({ initialDateFilter = null, canEditMovements =
       sortDateAsc,
       getDisplayDate,
     });
-  }, [transactions, tableFilter, expensesWithoutDoc, returnTransactions, uncategorizedTransactions, noContactTransactions, donationsNoContactTransactions, sortDateAsc, searchQuery, contactMap, projectMap, getCategoryDisplayName, hideRemittanceItems, contactIdFilter, donorMembershipMap, sourceFilter, bankAccountFilter, getDisplayDate, allTransactionsById, showArchivedInLedger]);
+  }, [transactions, tableFilter, expensesWithoutDoc, returnTransactions, uncategorizedTransactions, noContactTransactions, donationsNoContactTransactions, fiscalPendingTransactions, sortDateAsc, searchQuery, contactMap, projectMap, getCategoryDisplayName, hideRemittanceItems, contactIdFilter, donorMembershipMap, sourceFilter, bankAccountFilter, getDisplayDate, allTransactionsById, showArchivedInLedger]);
 
   // ═══════════════════════════════════════════════════════════════════════════
   // RESUM FILTRAT
@@ -948,6 +970,7 @@ export function TransactionsTable({ initialDateFilter = null, canEditMovements =
       const url = new URL(window.location.href);
       url.searchParams.delete('filter');
       url.searchParams.delete('contactId');
+      url.searchParams.delete('fiscal');
       window.history.replaceState({}, '', url.toString());
     }
   }, []);

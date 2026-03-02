@@ -64,6 +64,8 @@ import {
   Megaphone,
   Database,
   Wrench,
+  Scale,
+  Send,
 } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -118,7 +120,7 @@ function AdminPageContent() {
   const { user, firestore, auth, isUserLoading } = useFirebase();
   const { toast } = useToast();
   const isMobile = useIsMobile();
-  const { t, language } = useTranslations();
+  const { t, tr, language } = useTranslations();
   const reason = searchParams.get('reason');
 
   const [isSuperAdmin, setIsSuperAdmin] = React.useState<boolean | null>(null);
@@ -152,6 +154,22 @@ function AdminPageContent() {
   const [selectedDemoMode, setSelectedDemoMode] = React.useState<'short' | 'work'>('short');
 
   const [backupOrgId, setBackupOrgId] = React.useState<string | null>(null);
+  const [notifyingOrgId, setNotifyingOrgId] = React.useState<string | null>(null);
+
+  const tri = React.useCallback(
+    (key: string, params: Record<string, string | number>) =>
+      tr(key).replace(/\{(\w+)\}/g, (_, k) => String(params[k] ?? `{${k}}`)),
+    [tr]
+  );
+
+  const currencyFormatter = React.useMemo(
+    () =>
+      new Intl.NumberFormat(language === 'es' ? 'es-ES' : 'ca-ES', {
+        style: 'currency',
+        currency: 'EUR',
+      }),
+    [language]
+  );
 
   React.useEffect(() => {
     if (!user) {
@@ -474,6 +492,58 @@ function AdminPageContent() {
     }
   };
 
+  const handleViewFiscalPending = (org: AdminControlTowerSummary['entities'][number]) => {
+    sessionStorage.setItem('adminViewingOrgId', org.id);
+    router.push(`/${org.slug}/dashboard/movimientos?fiscal=pending`);
+  };
+
+  const handleNotifyOrganization = async (org: AdminControlTowerSummary['entities'][number]) => {
+    if (!user) return;
+
+    const s9 = org.s9;
+    if (!s9 || s9.pendingCount < 5) return;
+
+    setNotifyingOrgId(org.id);
+    try {
+      const idToken = await user.getIdToken();
+      const response = await fetch('/api/admin-alerts/create', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${idToken}`,
+        },
+        body: JSON.stringify({
+          orgId: org.id,
+          type: 'fiscal_pending_review',
+          payload: {
+            pendingCount: s9.pendingCount,
+            pendingAmountCents: s9.pendingAmountCents,
+            year: s9.year,
+          },
+        }),
+      });
+
+      const data = await response.json();
+      if (!response.ok || !data.ok) {
+        throw new Error(data.error || 'No s\'ha pogut crear l\'avís');
+      }
+
+      toast({
+        title: tr('admin.s9.notifyOrgSent', 'Avís enviat a l\'entitat'),
+      });
+      refreshSummary();
+    } catch (error) {
+      console.error('[admin] notify org fiscal alert error:', error);
+      toast({
+        variant: 'destructive',
+        title: t.common?.error ?? 'Error',
+        description: (error as Error).message || 'No s\'ha pogut enviar l\'avís',
+      });
+    } finally {
+      setNotifyingOrgId(null);
+    }
+  };
+
   const getStatusBadge = (status: AdminControlTowerSummary['entities'][number]['status']) => {
     switch (status) {
       case 'active':
@@ -485,6 +555,19 @@ function AdminPageContent() {
       default:
         return <Badge variant="outline">{status}</Badge>;
     }
+  };
+
+  const getAlertStatusBadge = (status: 'open' | 'read' | 'expired' | null) => {
+    if (status === 'open') {
+      return <Badge className="bg-green-100 text-green-800 border-green-300">open</Badge>;
+    }
+    if (status === 'read') {
+      return <Badge variant="secondary">read</Badge>;
+    }
+    if (status === 'expired') {
+      return <Badge variant="outline">expired</Badge>;
+    }
+    return <span className="text-xs text-muted-foreground">—</span>;
   };
 
   const handleLogout = async () => {
@@ -898,6 +981,95 @@ function AdminPageContent() {
                   </TableBody>
                 </Table>
               )}
+            </CardContent>
+          </Card>
+        </AdminSection>
+
+        <AdminSection
+          id="coherencia-fiscal"
+          title={tr('admin.s9.title', 'Coherència fiscal real (S9)')}
+          description="Ingressos assignats que no estan computant fiscalment aquest any."
+          tone="warn"
+        >
+          <Card>
+            <CardContent className="pt-6">
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Entitat</TableHead>
+                      <TableHead>Pendents fiscals</TableHead>
+                      <TableHead>Diagnòstic</TableHead>
+                      <TableHead>Accions</TableHead>
+                      <TableHead>Avís</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {entities.length > 0 ? (
+                      entities.map((org) => {
+                        const s9 = org.s9;
+                        const amountLabel = currencyFormatter.format((s9?.pendingAmountCents ?? 0) / 100);
+                        const pendingSummary = tri('admin.s9.pendingSummary', {
+                          count: s9?.pendingCount ?? 0,
+                          amount: amountLabel,
+                          year: s9?.year ?? new Date().getFullYear(),
+                        });
+
+                        return (
+                          <TableRow key={`s9-${org.id}`}>
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                <Scale className="h-4 w-4 text-muted-foreground" />
+                                <div>
+                                  <div className="font-medium">{org.name}</div>
+                                  <div className="text-xs text-muted-foreground">/{org.slug}</div>
+                                </div>
+                              </div>
+                            </TableCell>
+                            <TableCell className="font-medium">{pendingSummary}</TableCell>
+                            <TableCell>
+                              <p className="text-sm">{s9?.diagnosisTextCa ?? 'Sense diagnòstic'}</p>
+                              <p className="text-xs text-muted-foreground mt-1">{s9?.actionTextCa ?? ''}</p>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex flex-col items-start gap-2">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-7 px-2 text-xs"
+                                  onClick={() => handleViewFiscalPending(org)}
+                                >
+                                  {tr('admin.s9.viewPendingCta', 'Veure ingressos que no compten fiscalment')}
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  className="h-7 px-2 text-xs"
+                                  disabled={(s9?.pendingCount ?? 0) < 5 || notifyingOrgId === org.id}
+                                  onClick={() => handleNotifyOrganization(org)}
+                                >
+                                  {notifyingOrgId === org.id ? (
+                                    <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                                  ) : (
+                                    <Send className="h-3.5 w-3.5 mr-1.5" />
+                                  )}
+                                  {tr('admin.s9.notifyOrgCta', 'Enviar avís a l’entitat')}
+                                </Button>
+                              </div>
+                            </TableCell>
+                            <TableCell>{getAlertStatusBadge(s9?.alertStatus ?? null)}</TableCell>
+                          </TableRow>
+                        );
+                      })
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={5} className="text-center text-muted-foreground h-24">
+                          Sense entitats disponibles.
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
             </CardContent>
           </Card>
         </AdminSection>

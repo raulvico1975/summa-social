@@ -33,6 +33,7 @@ export type TableFilter =
   | 'uncategorized'
   | 'noContact'
   | 'donationsNoContact'
+  | 'fiscalPending'
   | 'income'
   | 'expenses'
   | 'expensesWithoutDoc'

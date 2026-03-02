@@ -4254,5 +4254,14 @@
   "importers.transaction.preview.warning.operationDateDerived": "Data derivada de coluna alternativa",
   "importers.transaction.preview.warning.debitCreditFallback": "Valor calculado com Débito/Crédito",
   "importers.transaction.preview.warning.balanceMismatch": "Possível incoerência de saldo",
-  "permissionsDialog.restoreDefaults": "Restaurar predefinições"
+  "permissionsDialog.restoreDefaults": "Restaurar predefinições",
+  "admin.s9.title": "Coerência fiscal real (S9)",
+  "admin.s9.pendingSummary": "{count} pendentes · {amount} ({year})",
+  "admin.s9.viewPendingCta": "Ver receitas que não contam fiscalmente",
+  "admin.s9.notifyOrgCta": "Enviar aviso para a entidade",
+  "admin.s9.notifyOrgSent": "Aviso enviado para a entidade",
+  "dashboard.alerts.fiscalPending.title": "Coerência fiscal pendente",
+  "dashboard.alerts.fiscalPending.body": "Há {count} receitas atribuídas que não contam fiscalmente ({amount}) no exercício {year}.",
+  "dashboard.alerts.fiscalPending.ctaReview": "Revisar agora",
+  "dashboard.alerts.fiscalPending.ctaMarkRead": "Já revisei"
 }

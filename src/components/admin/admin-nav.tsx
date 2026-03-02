@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import { cn } from '@/lib/utils';
-import { Shield, Building2, BrainCircuit, FileText, Megaphone, Settings } from 'lucide-react';
+import { Shield, Building2, BrainCircuit, FileText, Megaphone, Settings, Scale } from 'lucide-react';
 
 interface NavItem {
   id: string;
@@ -13,6 +13,7 @@ interface NavItem {
 const navItems: NavItem[] = [
   { id: 'estat', label: 'Estat', icon: <Shield className="h-3.5 w-3.5" /> },
   { id: 'entitats', label: 'Entitats', icon: <Building2 className="h-3.5 w-3.5" /> },
+  { id: 'coherencia-fiscal', label: 'S9 Fiscal', icon: <Scale className="h-3.5 w-3.5" /> },
   { id: 'coneixement', label: 'Bot', icon: <BrainCircuit className="h-3.5 w-3.5" /> },
   { id: 'editorial', label: 'Cervell ajuda', icon: <FileText className="h-3.5 w-3.5" /> },
   { id: 'comunicacio', label: 'Comunicació', icon: <Megaphone className="h-3.5 w-3.5" /> },
