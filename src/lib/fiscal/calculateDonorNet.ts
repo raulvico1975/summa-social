@@ -2,7 +2,10 @@
 // Motor únic de càlcul fiscal per donants
 // Centralitza la lògica duplicada en donor-detail-drawer, donation-certificate-generator, etc.
 
-import { calculateTransactionNetAmount, isReturnTransaction } from '@/lib/model182';
+import {
+  calculateFiscalTransactionNetAmount,
+  isFiscalReturnLikeTransaction,
+} from '@/lib/fiscal/transaction-net';
 
 /**
  * Input per al càlcul del net fiscal d'un donant
@@ -62,13 +65,13 @@ export function calculateDonorNet(input: DonorNetInput): DonorNetResult {
     // Només transaccions de l'any especificat
     if (!tx.date.startsWith(yearStr)) continue;
 
-    const netAmount = calculateTransactionNetAmount(tx);
+    const netAmount = calculateFiscalTransactionNetAmount(tx);
     if (netAmount > 0) {
       grossDonationsCents += Math.round(netAmount * 100);
       donationsCount++;
     }
 
-    if (netAmount < 0 && isReturnTransaction(tx)) {
+    if (netAmount < 0 && isFiscalReturnLikeTransaction(tx)) {
       // returnsCents serà negatiu
       returnsCents += Math.round(netAmount * 100);
       returnsCount++;

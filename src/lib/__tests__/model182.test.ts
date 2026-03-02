@@ -243,6 +243,40 @@ describe('calculateModel182Totals - Devolucions', () => {
     assert.strictEqual(result.donorTotals[0].returnedAmount, 0);
   });
 
+  it('ignora pare de remesa sense contactId i compta filles actives', () => {
+    const donors = [createDonor({ id: 'donor-1' })];
+    const transactions = [
+      createTransaction({
+        id: 'tx-parent',
+        contactId: null,
+        amount: 150,
+        transactionType: 'donation',
+        date: '2024-03-01',
+        isRemittance: true,
+      }),
+      createTransaction({
+        id: 'tx-child-donation',
+        contactId: 'donor-1',
+        amount: 100,
+        transactionType: 'donation',
+        date: '2024-03-01',
+      }),
+      createTransaction({
+        id: 'tx-child-return',
+        contactId: 'donor-1',
+        amount: -20,
+        transactionType: 'return',
+        date: '2024-03-15',
+      }),
+    ];
+
+    const result = calculateModel182Totals(transactions, donors, 2024);
+
+    assert.strictEqual(result.donorTotals.length, 1);
+    assert.strictEqual(result.donorTotals[0].totalAmount, 80);
+    assert.strictEqual(result.donorTotals[0].returnedAmount, 20);
+  });
+
   it('exclou donant si devolucions >= donacions', () => {
     const donors = [createDonor({ id: 'donor-1' })];
     const transactions = [

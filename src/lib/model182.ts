@@ -5,6 +5,11 @@
  * per tal de poder ser testejada fàcilment amb tests unitaris.
  */
 
+import {
+  calculateFiscalTransactionNetAmount,
+  isFiscalReturnLikeTransaction,
+} from '@/lib/fiscal/transaction-net';
+
 // =============================================================================
 // TIPUS
 // =============================================================================
@@ -50,59 +55,18 @@ export interface Model182Result {
   };
 }
 
-// =============================================================================
-// FUNCIONS AUXILIARS
-// =============================================================================
-
-function isArchivedTransaction(tx: Transaction): boolean {
-  return tx.archivedAt != null && tx.archivedAt !== '';
-}
-
-function isRemittanceParent(tx: Transaction): boolean {
-  return tx.isRemittance === true;
-}
-
-function isSplitParent(tx: Transaction): boolean {
-  return tx.isSplit === true;
-}
-
 /**
  * Calcula l'import net d'una transacció segons el seu tipus
  */
 export function calculateTransactionNetAmount(tx: Transaction): number {
-  if (isArchivedTransaction(tx) || isRemittanceParent(tx) || isSplitParent(tx)) {
-    return 0;
-  }
-
-  // Devolució → valor negatiu
-  if (tx.transactionType === 'return' && tx.amount < 0) {
-    return tx.amount; // ja és negatiu
-  }
-
-  // Donació marcada com retornada → valor negatiu
-  if (tx.amount > 0 && tx.donationStatus === 'returned') {
-    return -tx.amount;
-  }
-
-  // Donació fiscal vàlida → valor positiu
-  if (tx.amount > 0 && tx.transactionType === 'donation') {
-    return tx.amount;
-  }
-
-  // Altres casos (despeses, etc.) → 0
-  return 0;
+  return calculateFiscalTransactionNetAmount(tx);
 }
 
 /**
  * Determina si una transacció és una devolució o donació retornada
  */
 export function isReturnTransaction(tx: Transaction): boolean {
-  if (isArchivedTransaction(tx) || isRemittanceParent(tx) || isSplitParent(tx)) {
-    return false;
-  }
-
-  return (tx.transactionType === 'return' && tx.amount < 0) ||
-         (tx.amount > 0 && tx.donationStatus === 'returned');
+  return isFiscalReturnLikeTransaction(tx);
 }
 
 // =============================================================================
