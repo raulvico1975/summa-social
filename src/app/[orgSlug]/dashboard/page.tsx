@@ -358,7 +358,7 @@ function TopCategoriesTable({
 
 export default function DashboardPage() {
   const { firestore, user } = useFirebase();
-  const { organizationId, organization, userRole, isLoading: isOrganizationLoading } = useCurrentOrganization();
+  const { organizationId, organization, userRole, member, isLoading: isOrganizationLoading } = useCurrentOrganization();
   const { t, tr, language } = useTranslations();
   const locale = language === 'es' ? 'es-ES' : 'ca-ES';
   // Helper local per interpolació de placeholders {key} en claus JSON
@@ -565,19 +565,27 @@ export default function DashboardPage() {
   );
   const { data: categories } = useCollection<Category>(categoriesQuery);
   const [isMarkingFiscalAlertRead, setIsMarkingFiscalAlertRead] = React.useState(false);
+  const canReadFiscalAlerts = !isOrganizationLoading
+    && !!organizationId
+    && userRole === 'admin'
+    && member?.role === 'admin';
 
   const fiscalAlertsQuery = useMemoFirebase(
     () => {
-      if (!organizationId || isOrganizationLoading || userRole !== 'admin') return null;
+      if (!canReadFiscalAlerts || !organizationId) return null;
       return query(
         collection(firestore, 'organizations', organizationId, 'adminAlerts'),
         where('type', '==', FISCAL_PENDING_REVIEW_ALERT_TYPE),
         where('status', '==', 'open')
       );
     },
-    [firestore, organizationId, isOrganizationLoading, userRole]
+    [canReadFiscalAlerts, firestore, organizationId]
   );
-  const { data: fiscalAlerts } = useCollection<DashboardAdminAlert>(fiscalAlertsQuery);
+  const { data: fiscalAlerts } = useCollection<DashboardAdminAlert>(
+    fiscalAlertsQuery,
+    [],
+    { ignorePermissionDenied: true }
+  );
   const [dateFilter, setDateFilter] = React.useState<DateFilterValue>({ type: 'all' });
   const dateFilteredTransactions = useTransactionFilters(transactions || undefined, dateFilter);
 

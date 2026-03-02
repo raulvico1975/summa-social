@@ -25,6 +25,12 @@ export interface UseCollectionResult<T> {
   error: FirestoreError | Error | null; // Error object, or null.
 }
 
+export interface UseCollectionOptions {
+  // Si és true, un permission-denied no s'eleva com a error global.
+  // Útil per queries condicionals (ex: dades només per admins).
+  ignorePermissionDenied?: boolean;
+}
+
 /* Internal implementation of Query:
   https://github.com/firebase/firebase-js-sdk/blob/c5f08a9bc5da0d2b0207802c972d53724ccef055/packages/firestore/src/lite-api/reference.ts#L143
 */
@@ -53,10 +59,12 @@ export interface InternalQuery extends Query<DocumentData> {
  */
 export function useCollection<T = any>(
     memoizedTargetRefOrQuery: ((CollectionReference<DocumentData> | Query<DocumentData>) & {__memo?: boolean})  | null | undefined,
-    deps: any[] = []
+    deps: any[] = [],
+    options: UseCollectionOptions = {}
 ): UseCollectionResult<T> {
   type ResultItemType = WithId<T>;
   type StateDataType = ResultItemType[] | null;
+  const ignorePermissionDenied = options.ignorePermissionDenied === true;
 
   const [data, setData] = useState<StateDataType>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -86,38 +94,46 @@ export function useCollection<T = any>(
         setIsLoading(false);
       },
       (error: FirestoreError) => {
-        // This logic extracts the path from either a ref or a query
-        const path: string =
-          memoizedTargetRefOrQuery.type === 'collection'
-            ? (memoizedTargetRefOrQuery as CollectionReference).path
-            : (memoizedTargetRefOrQuery as unknown as InternalQuery)._query.path.canonicalString()
+        setData(null);
+        setIsLoading(false);
 
-        const contextualError = new FirestorePermissionError({
-          operation: 'list',
-          path,
-        })
+        if (error.code === 'permission-denied') {
+          // This logic extracts the path from either a ref or a query
+          const path: string =
+            memoizedTargetRefOrQuery.type === 'collection'
+              ? (memoizedTargetRefOrQuery as CollectionReference).path
+              : (memoizedTargetRefOrQuery as unknown as InternalQuery)._query.path.canonicalString();
 
-        setError(contextualError)
-        setData(null)
-        setIsLoading(false)
+          const contextualError = new FirestorePermissionError({
+            operation: 'list',
+            path,
+          });
 
-        // GUARD: No emetre error global si l'usuari no està autenticat.
-        // Això és esperable durant logout (listeners es desmunten després del signOut).
-        // Si auth === null, l'error és esperat i no hem de mostrar la pàgina d'error.
-        if (contextualError.request.auth === null) {
-          // Debug log desactivat per defecte (descomentar per debugging)
-          // console.log('[useCollection] Ignoring permission error (user not authenticated):', path);
+          setError(contextualError);
+
+          // GUARD: No emetre error global si l'usuari no està autenticat.
+          if (contextualError.request.auth === null) {
+            return;
+          }
+
+          // GUARD: casos on el permission-denied és esperable per disseny de UI
+          if (ignorePermissionDenied) {
+            return;
+          }
+
+          // trigger global error propagation
+          errorEmitter.emit('permission-error', contextualError);
           return;
         }
 
-        // trigger global error propagation
-        errorEmitter.emit('permission-error', contextualError);
+        // Altres errors (ex: failed-precondition, unavailable) no s'han de disfressar de permisos
+        setError(error);
       }
     );
 
     return () => unsubscribe();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [memoizedTargetRefOrQuery, ...deps]); // Re-run if the target query/reference or custom deps change.
+  }, [memoizedTargetRefOrQuery, ignorePermissionDenied, ...deps]); // Re-run if the target query/reference or custom deps change.
   
   if(memoizedTargetRefOrQuery && deps.length === 0 && !memoizedTargetRefOrQuery.__memo) {
     // This is a dev-time check, but it's important.
