@@ -8,6 +8,7 @@ export interface DonorSummaryTransaction {
   date: string;
   transactionType?: string;
   donationStatus?: string;
+  linkedTransactionId?: string | null;
   archivedAt?: string | null;
   isSplit?: boolean;
   isRemittance?: boolean;
@@ -45,6 +46,7 @@ export interface DonorSummaryResult {
   previousYearNet: number;
   includedDonationIds: string[];
   includedReturnIds: string[];
+  effectiveReturnIds: string[];
   validDonationsCount: number;
   currentYearDonationCandidatesCount: number;
   excludedIdsByReason: Record<string, string[]>;
@@ -59,23 +61,24 @@ export interface DonorSummaryInput {
   year: number;
 }
 
-function getTransactionKey(tx: DonorSummaryTransaction): string {
+export function getDonorSummaryTransactionKey(tx: DonorSummaryTransaction): string {
   if (tx.id && tx.id.trim().length > 0) {
     return tx.id;
   }
 
   const transactionType = tx.transactionType ?? '';
   const donationStatus = tx.donationStatus ?? '';
+  const linkedTransactionId = tx.linkedTransactionId ?? '';
   const contactId = tx.contactId ?? '';
   const archivedFlag = tx.archivedAt ? 'archived' : '';
   const splitFlag = tx.isSplit ? 'split' : '';
   const remittanceFlag = tx.isRemittance ? 'remit' : '';
-  return `noid:${tx.date}:${tx.amount}:${transactionType}:${donationStatus}:${contactId}:${archivedFlag}:${splitFlag}:${remittanceFlag}`;
+  return `noid:${tx.date}:${tx.amount}:${transactionType}:${donationStatus}:${linkedTransactionId}:${contactId}:${archivedFlag}:${splitFlag}:${remittanceFlag}`;
 }
 
 export function buildDonorSummaryDatasetFingerprint(input: DonorSummaryInput): string {
   const txIds = input.transactions
-    .map(tx => getTransactionKey(tx))
+    .map(tx => getDonorSummaryTransactionKey(tx))
     .sort();
 
   return `${input.donorId}|${input.year}|${txIds.join(',')}`;
@@ -88,6 +91,14 @@ export function isDrawerDonationCandidate(tx: Pick<DonorSummaryTransaction, 'amo
 export function isDrawerReturnCandidate(tx: Pick<DonorSummaryTransaction, 'amount' | 'transactionType' | 'donationStatus'>): boolean {
   return (tx.amount < 0 && tx.transactionType === 'return') ||
     (tx.amount > 0 && tx.donationStatus === 'returned');
+}
+
+function isNegativeReturnTransaction(tx: Pick<DonorSummaryTransaction, 'amount' | 'transactionType'>): boolean {
+  return tx.amount < 0 && tx.transactionType === 'return';
+}
+
+function isReturnedDonationTransaction(tx: Pick<DonorSummaryTransaction, 'amount' | 'donationStatus'>): boolean {
+  return tx.amount > 0 && tx.donationStatus === 'returned';
 }
 
 export function createEmptyDonorSummary(input: DonorSummaryInput): DonorSummaryResult {
@@ -108,6 +119,7 @@ export function createEmptyDonorSummary(input: DonorSummaryInput): DonorSummaryR
     previousYearNet: 0,
     includedDonationIds: [],
     includedReturnIds: [],
+    effectiveReturnIds: [],
     validDonationsCount: 0,
     currentYearDonationCandidatesCount: 0,
     excludedIdsByReason: {
@@ -146,15 +158,27 @@ export function calculateDonorSummary(input: DonorSummaryInput): DonorSummaryRes
 
   const includedDonationIds: string[] = [];
   const includedReturnIds: string[] = [];
+  const effectiveReturnIds: string[] = [];
   const excludedIdsByReason: Record<string, string[]> = {
     nonPositiveAmount: [],
     archived: [],
     splitParent: [],
     notFiscalDonationCandidate: [],
   };
+  const transactionsById = new Map<string, DonorSummaryTransaction>();
+  const linkedDonationIdsFromNegativeReturns = new Set<string>();
 
   input.transactions.forEach((tx) => {
-    const txKey = getTransactionKey(tx);
+    if (tx.id && tx.id.trim().length > 0) {
+      transactionsById.set(tx.id, tx);
+    }
+    if (isNegativeReturnTransaction(tx) && tx.linkedTransactionId) {
+      linkedDonationIdsFromNegativeReturns.add(tx.linkedTransactionId);
+    }
+  });
+
+  input.transactions.forEach((tx) => {
+    const txKey = getDonorSummaryTransactionKey(tx);
 
     if (isDrawerDonationCandidate(tx)) {
       totalHistoric += tx.amount;
@@ -190,19 +214,40 @@ export function calculateDonorSummary(input: DonorSummaryInput): DonorSummaryRes
     }
 
     if (isDrawerReturnCandidate(tx)) {
-      returnsCount++;
-      returnsAmount += Math.abs(tx.amount);
-
-      if (!lastReturnDate || tx.date > lastReturnDate) {
-        lastReturnDate = tx.date;
+      let isEffectiveReturn = true;
+      if (isReturnedDonationTransaction(tx)) {
+        const directlyLinkedTransaction = tx.linkedTransactionId
+          ? transactionsById.get(tx.linkedTransactionId)
+          : undefined;
+        const hasDirectLinkedNegativeReturn = !!(
+          directlyLinkedTransaction &&
+          isNegativeReturnTransaction(directlyLinkedTransaction)
+        );
+        const hasReverseLinkedNegativeReturn = !!(
+          tx.id &&
+          linkedDonationIdsFromNegativeReturns.has(tx.id)
+        );
+        if (hasDirectLinkedNegativeReturn || hasReverseLinkedNegativeReturn) {
+          isEffectiveReturn = false;
+        }
       }
 
-      returnItems.push({
-        id: txKey,
-        date: tx.date,
-        amount: Math.abs(tx.amount),
-        description: tx.note || tx.description || '',
-      });
+      if (isEffectiveReturn) {
+        effectiveReturnIds.push(txKey);
+        returnsCount++;
+        returnsAmount += Math.abs(tx.amount);
+
+        if (!lastReturnDate || tx.date > lastReturnDate) {
+          lastReturnDate = tx.date;
+        }
+
+        returnItems.push({
+          id: txKey,
+          date: tx.date,
+          amount: Math.abs(tx.amount),
+          description: tx.note || tx.description || '',
+        });
+      }
     }
 
     // IDs inclosos en còmput fiscal net: mateix criteri que calculateDonorNet/model182
@@ -254,6 +299,7 @@ export function calculateDonorSummary(input: DonorSummaryInput): DonorSummaryRes
     previousYearNet: Math.max(0, previousYearNetResult.netCents / 100),
     includedDonationIds,
     includedReturnIds,
+    effectiveReturnIds,
     validDonationsCount: includedDonationIds.length,
     currentYearDonationCandidatesCount: currentYearCount,
     excludedIdsByReason,

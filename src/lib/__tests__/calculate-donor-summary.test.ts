@@ -17,6 +17,7 @@ function tx(overrides: Partial<DonorSummaryTransaction> & Pick<DonorSummaryTrans
     date: overrides.date,
     transactionType: overrides.transactionType ?? (overrides.amount > 0 ? 'donation' : undefined),
     donationStatus: overrides.donationStatus,
+    linkedTransactionId: overrides.linkedTransactionId,
     archivedAt: overrides.archivedAt,
     isSplit: overrides.isSplit,
     isRemittance: overrides.isRemittance,
@@ -111,6 +112,44 @@ describe('calculateDonorSummary', () => {
     });
 
     assert.equal(fingerprint, 'donor-1|2026|a,b');
+  });
+
+  it('deduplica devolució enllaçada (return negatiu + donation returned) al bloc de devolucions del drawer', () => {
+    const transactions: DonorSummaryTransaction[] = [
+      tx({
+        id: 'd-link',
+        amount: 10,
+        date: '2026-01-09',
+        transactionType: 'donation',
+        donationStatus: 'returned',
+        linkedTransactionId: 'r-link',
+      }),
+      tx({
+        id: 'r-link',
+        amount: -10,
+        date: '2026-01-09',
+        transactionType: 'return',
+        linkedTransactionId: 'd-link',
+      }),
+      tx({
+        id: 'd-unlinked-returned',
+        amount: 5,
+        date: '2026-01-10',
+        transactionType: 'donation',
+        donationStatus: 'returned',
+      }),
+    ];
+
+    const result = calculateDonorSummary({
+      transactions,
+      donorId: 'donor-1',
+      year: 2026,
+    });
+
+    assert.equal(result.returns.count, 2);
+    assert.equal(result.returns.amount, 15);
+    assert.deepEqual(result.effectiveReturnIds, ['r-link', 'd-unlinked-returned']);
+    assert.deepEqual(result.returns.items.map(item => item.id), ['d-unlinked-returned', 'r-link']);
   });
 
   it('manté fingerprint estable sense id encara que canviï l’ordre del dataset', () => {
