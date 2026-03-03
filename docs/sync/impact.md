@@ -2,17 +2,13 @@
 
 ## Metadata
 - date: 2026-03-03
-- change_scope: Implementacio base operativa Help+Bot i govern de sincronitzacio
+- change_scope: Hotfix fiscal al drawer per evitar doble comptatge de devolucions vinculades
 
 ## Declaracio obligatoria
 - help_topics_updated:
-  - project-open
-  - movement-import-bank
-  - split-remittance
-  - stripe-import
-  - donor-create
+  - (cap)
 - manual_updated: no
 - manual_sections:
 - faq_updated: no
 - faq_questions:
-- justification_if_no_change: No hi ha canvi funcional de producte; es crea infraestructura operativa i contingut de Help.
+- justification_if_no_change: No hi ha canvi de flux d'usuari ni textos del manual/FAQ; s'aplica correccio de calcul fiscal i s'afegeix validacio operativa a docs/QA-FISCAL.md (VF-5b).
