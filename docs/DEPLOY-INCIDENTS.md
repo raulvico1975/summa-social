@@ -20,3 +20,6 @@ Registre curt d'incidències de deploy bloquejat o incomplet.
 | 2026-02-28 19:01 | Preflight git | BAIX | fa0bfbc | 885ab58 | BLOCKED_SAFE | Hi ha canvis pendents sense tancar abans de publicar. | Pendent |
 | 2026-02-28 19:01 | Preflight git | BAIX | dc0587d | 885ab58 | BLOCKED_SAFE | Hi ha canvis pendents sense tancar abans de publicar. | Pendent |
 | 2026-02-28 19:34 | Verificacions | ALT | d0291b3 | 2e5ef88 | BLOCKED_SAFE | La verificacio de CI no ha passat. | Pendent |
+| 2026-03-03 16:50 | Preflight git | BAIX | 840a1e9 | 071108e | BLOCKED_SAFE | El deploy nomes es pot fer des de main. | Pendent |
+| 2026-03-03 20:15 | Preflight git | BAIX | 840a1e9 | 071108e | BLOCKED_SAFE | El deploy nomes es pot fer des de main. | Pendent |
+| 2026-03-03 20:18 | Preflight git | BAIX | 840a1e9 | 72e885d | BLOCKED_SAFE | El deploy nomes es pot fer des de main. | Pendent |

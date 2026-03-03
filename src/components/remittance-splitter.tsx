@@ -2028,7 +2028,7 @@ export function RemittanceSplitter({
                 <Eye className="h-4 w-4" />
                 {t.movements.splitter.preview(previewRows.length)}
               </Label>
-              <ScrollArea className="h-[180px] rounded-md border">
+              <ScrollArea className="h-[180px] rounded-md border border-border/80 bg-card">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -2068,7 +2068,7 @@ export function RemittanceSplitter({
             </div>
 
             {/* Mapejat de columnes */}
-            <div className="space-y-3 rounded-lg border p-4">
+            <div className="space-y-3 rounded-lg border border-border/80 bg-muted/20 p-4">
               <Label className="font-medium">{t.movements.splitter.fieldMapping}</Label>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="space-y-1">
@@ -2335,8 +2335,8 @@ export function RemittanceSplitter({
                   </>
                 )}
 
-                {/* Separador visual */}
-                <div className="h-5 w-px bg-border mx-1" />
+                {/* Separador visual amb més contrast (el de 1px quedava massa subtil) */}
+                <div className="mx-1 h-5 w-[1.5px] shrink-0 bg-border/90" aria-hidden="true" />
 
                 {/* Import total compacte */}
                 <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-sm ${
@@ -2392,7 +2392,7 @@ export function RemittanceSplitter({
                           {t.movements.splitter.applyToAll}
                         </Button>
                       </div>
-                      <div className="h-4 w-px bg-border" />
+                      <div className="h-4 w-[1.5px] shrink-0 bg-border/90" aria-hidden="true" />
                     </>
                   )}
 

@@ -50,7 +50,9 @@ interface TransactionRowMobileProps {
   categoryDisplayName: string;
   onEdit: (tx: Transaction) => void;
   onDelete: (tx: Transaction) => void;
+  onSplitRemittance?: (tx: Transaction) => void;
   onSplitAmount?: (tx: Transaction) => void;
+  onSplitStripeRemittance?: (tx: Transaction) => void;
   onOpenSplitDetail?: (txId: string) => void;
   onUndoSplit?: (txId: string) => void;
   onUndoRemittance?: (tx: Transaction) => void;
@@ -72,6 +74,9 @@ interface TransactionRowMobileProps {
     edit: string;
     delete: string;
     splitAmount: string;
+    splitRemittance?: string;
+    splitPaymentRemittance?: string;
+    splitStripeRemittance?: string;
     deleteBlocked: string;
     deleteBlockedParentRemittance: string;
     deleteBlockedChildRemittance: string;
@@ -94,7 +99,9 @@ export const TransactionRowMobile = React.memo(function TransactionRowMobile({
   categoryDisplayName,
   onEdit,
   onDelete,
+  onSplitRemittance,
   onSplitAmount,
+  onSplitStripeRemittance,
   onOpenSplitDetail,
   onUndoSplit,
   onUndoRemittance,
@@ -116,15 +123,48 @@ export const TransactionRowMobile = React.memo(function TransactionRowMobile({
   const hasDocument = !!tx.document;
   const hasBalanceAfter = typeof tx.balanceAfter === 'number' && Number.isFinite(tx.balanceAfter);
   const balanceText = hasBalanceAfter ? formatCurrencyEU(Math.abs(tx.balanceAfter!)) : '—';
+  const isFromStripe = tx.source === 'stripe';
   const canSplitAmount =
     tx.amount > 0 &&
     !tx.isRemittance &&
     !tx.isRemittanceItem &&
     !tx.isSplit &&
     !tx.parentTransactionId &&
-    tx.source !== 'stripe' &&
+    !isFromStripe &&
     tx.transactionType !== 'donation' &&
     tx.transactionType !== 'fee';
+  const canSplitIncomeRemittance =
+    tx.amount > 0 &&
+    !isReturn &&
+    !isReturnFee &&
+    !tx.isRemittance &&
+    !tx.isRemittanceItem &&
+    !isFromStripe;
+  const canSplitPaymentRemittance =
+    tx.amount < 0 &&
+    !isReturn &&
+    !isReturnFee &&
+    !tx.isRemittance &&
+    !tx.isRemittanceItem &&
+    !isFromStripe;
+  const canSplitStripeRemittance = React.useMemo(() => {
+    const isIncome = tx.amount > 0;
+    const isNotAlreadyDivided = tx.transactionType !== 'donation' && tx.transactionType !== 'fee';
+    const isNotRemittance = !tx.isRemittance;
+
+    if (!isIncome || !isNotAlreadyDivided || !isNotRemittance) {
+      return false;
+    }
+
+    if (tx.source === 'stripe') {
+      return true;
+    }
+
+    if (tx.source) return false;
+
+    const descUpper = tx.description?.toUpperCase() || '';
+    return descUpper.includes('STRIPE') || descUpper.includes('TRANSFERENCIA DE STRIPE');
+  }, [tx.amount, tx.description, tx.isRemittance, tx.source, tx.transactionType]);
   const deleteBlockedMessage = React.useMemo(() => {
     if (deleteBlockedReason === 'parentRemittance') {
       return t.deleteBlockedParentRemittance;
@@ -242,6 +282,24 @@ export const TransactionRowMobile = React.memo(function TransactionRowMobile({
       onSplitAmount(tx);
     }, 50);
   }, [onSplitAmount, tx]);
+
+  const handleSplitRemittance = React.useCallback(() => {
+    if (!onSplitRemittance) return;
+    setIsMenuOpen(false);
+    setTimeout(() => {
+      if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
+      onSplitRemittance(tx);
+    }, 50);
+  }, [onSplitRemittance, tx]);
+
+  const handleSplitStripeRemittance = React.useCallback(() => {
+    if (!onSplitStripeRemittance) return;
+    setIsMenuOpen(false);
+    setTimeout(() => {
+      if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
+      onSplitStripeRemittance(tx);
+    }, 50);
+  }, [onSplitStripeRemittance, tx]);
 
   return (
     <div className={`border rounded-lg p-3 ${bgClass}`}>
@@ -390,10 +448,28 @@ export const TransactionRowMobile = React.memo(function TransactionRowMobile({
               </DropdownMenuItem>
             )}
             <DropdownMenuSeparator />
+            {canSplitStripeRemittance && onSplitStripeRemittance && (
+              <DropdownMenuItem onClick={handleSplitStripeRemittance}>
+                <GitMerge className="h-4 w-4 mr-2 text-purple-600" />
+                {t.splitStripeRemittance || 'Dividir Remesa Stripe'}
+              </DropdownMenuItem>
+            )}
             {canSplitAmount && onSplitAmount && (
               <DropdownMenuItem onClick={handleSplitAmount}>
                 <GitMerge className="h-4 w-4 mr-2" />
                 {t.splitAmount}
+              </DropdownMenuItem>
+            )}
+            {canSplitIncomeRemittance && onSplitRemittance && (
+              <DropdownMenuItem onClick={handleSplitRemittance}>
+                <GitMerge className="h-4 w-4 mr-2" />
+                {t.splitRemittance || 'Dividir Remesa'}
+              </DropdownMenuItem>
+            )}
+            {canSplitPaymentRemittance && onSplitRemittance && (
+              <DropdownMenuItem onClick={handleSplitRemittance}>
+                <GitMerge className="h-4 w-4 mr-2 text-orange-600" />
+                {t.splitPaymentRemittance || 'Dividir remesa pagaments'}
               </DropdownMenuItem>
             )}
             {canShowUndoSplitAction(tx) && onUndoSplit && (

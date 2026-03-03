@@ -210,6 +210,8 @@ export type Transaction = {
   balanceAfter?: number;
   /** Data operació en format ISO YYYY-MM-DD (si existeix). */
   operationDate?: string;
+  /** Data valor bancària (opcional). */
+  valueDate?: string;
   /** Motiu intern de detecció de duplicat fort (només importació). */
   duplicateReason?: string;
 

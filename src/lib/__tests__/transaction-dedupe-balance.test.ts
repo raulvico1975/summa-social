@@ -124,7 +124,7 @@ describe('transaction dedupe with balanceAfter strong rule', () => {
     assert.deepEqual(result[0].matchedExistingIds, ['tx-legacy']);
   });
 
-  it('legacy proxy-date miss per data no fa match', () => {
+  it('legacy proxy-date miss per data entra com a candidat near-date', () => {
     const existing = [makeExisting({
       id: 'tx-legacy',
       date: '2026-02-10T00:00:00.000Z',
@@ -142,8 +142,9 @@ describe('transaction dedupe with balanceAfter strong rule', () => {
     const result = classifyTransactions(parsed, existing, 'acc-1');
 
     assert.equal(result.length, 1);
-    assert.equal(result[0].status, 'NEW');
+    assert.equal(result[0].status, 'DUPLICATE_CANDIDATE');
     assert.notEqual(result[0].tx.duplicateReason, 'balance+amount+proxyDate');
+    assert.ok(result[0].tx.duplicateReason?.includes('nearDate'));
   });
 
   it('legacy proxy-date miss per amount no fa match', () => {

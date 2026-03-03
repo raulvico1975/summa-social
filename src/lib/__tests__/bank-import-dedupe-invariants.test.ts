@@ -101,4 +101,18 @@ describe('bank import dedupe invariants', () => {
     assert.equal(selection.stats.candidateUserImportedCount, 1);
     assert.equal(selection.stats.candidateUserSkippedCount, 2);
   });
+
+  it('T4: el rang de dedupe es pot ampliar amb tolerància de dies', () => {
+    const range = computeDedupeSearchRange(
+      [{
+        date: '2026-02-10T00:00:00.000Z',
+        operationDate: '2026-02-10',
+      }],
+      { toleranceDays: 3 }
+    );
+
+    assert.ok(range);
+    assert.equal(range?.from, '2026-02-07');
+    assert.equal(range?.to, '2026-02-13');
+  });
 });

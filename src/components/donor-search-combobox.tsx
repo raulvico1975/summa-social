@@ -69,7 +69,7 @@ export function DonorSearchCombobox({
   };
 
   return (
-    <div ref={containerRef} className={cn("relative", className)}>
+    <div ref={containerRef} className={cn("relative w-full min-w-0", className)}>
       {/* Trigger Button */}
       <Button
         type="button"
@@ -77,20 +77,20 @@ export function DonorSearchCombobox({
         role="combobox"
         aria-expanded={open}
         onClick={() => setOpen(!open)}
-        className="w-full justify-between"
+        className="w-full min-w-0 justify-between overflow-hidden"
       >
         {selectedDonor ? (
-          <span className="flex items-center gap-2 truncate">
+          <span className="flex min-w-0 flex-1 items-center gap-2">
             <Heart className="h-4 w-4 text-red-500 shrink-0" />
             <span className="truncate">{selectedDonor.name}</span>
             {selectedDonor.taxId && (
-              <span className="text-muted-foreground text-xs">({selectedDonor.taxId})</span>
+              <span className="truncate text-muted-foreground text-xs">({selectedDonor.taxId})</span>
             )}
           </span>
         ) : (
-          <span className="text-muted-foreground flex items-center gap-2">
+          <span className="text-muted-foreground flex min-w-0 flex-1 items-center gap-2">
             <Search className="h-4 w-4" />
-            {placeholderText}
+            <span className="truncate">{placeholderText}</span>
           </span>
         )}
         {selectedDonor ? (
@@ -105,14 +105,14 @@ export function DonorSearchCombobox({
 
       {/* Dropdown */}
       {open && (
-        <div className="absolute top-full left-0 right-0 mt-1 z-[9999] bg-popover border rounded-md shadow-lg">
+        <div className="absolute top-full left-0 right-0 mt-1 z-[9999] min-w-0 rounded-md border bg-popover shadow-lg">
           {/* Search Input */}
           <div className="p-2 border-b">
             <Input
               placeholder={t.donorSearchCombobox?.searchPlaceholder || "Cerca per nom o DNI..."}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="h-8"
+              className="h-8 min-w-0"
               autoFocus
             />
           </div>

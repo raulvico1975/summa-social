@@ -527,10 +527,13 @@ export function TransactionImporter({ availableCategories }: TransactionImporter
         });
 
         // Classificar amb dedupe (Mode A: cap bloqueig)
-        const dedupeSearchRange = computeDedupeSearchRange(allParsedWithRaw.map((r) => ({
-          date: r.tx.date,
-          operationDate: r.tx.operationDate,
-        })));
+        const dedupeSearchRange = computeDedupeSearchRange(
+          allParsedWithRaw.map((r) => ({
+            date: r.tx.date,
+            operationDate: r.tx.operationDate,
+          })),
+          { toleranceDays: 3 }
+        );
         if (!dedupeSearchRange) {
             toast({ variant: 'destructive', title: t.importers.transaction.errors.processingError, description: 'No s\'han trobat dates vàlides al fitxer' });
             setIsImporting(false);

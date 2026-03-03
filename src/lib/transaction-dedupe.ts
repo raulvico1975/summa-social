@@ -54,6 +54,8 @@ export interface DedupeTransaction {
   bankAccountId?: string | null;
 }
 
+const NEAR_DATE_TOLERANCE_DAYS = 3;
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // NORMALITZACIONS
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -81,6 +83,34 @@ export function normalizeDescriptionForDedupe(desc: string): string {
 export function normalizeDateForDedupe(date: string | Date): string {
   const d = typeof date === 'string' ? new Date(date) : date;
   return d.toISOString().split('T')[0]; // YYYY-MM-DD
+}
+
+function toUtcMsFromDateKey(dateKey: string): number | null {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateKey);
+  if (!match) return null;
+
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  if (!Number.isInteger(year) || !Number.isInteger(month) || !Number.isInteger(day)) return null;
+
+  return Date.UTC(year, month - 1, day);
+}
+
+function getComparableDateKey(tx: {
+  date: string;
+  operationDate?: string;
+  valueDate?: string;
+}): string {
+  return normalizeDateForDedupe(tx.operationDate || tx.valueDate || tx.date);
+}
+
+function getAbsDayDiff(dateAKey: string, dateBKey: string): number | null {
+  const aMs = toUtcMsFromDateKey(dateAKey);
+  const bMs = toUtcMsFromDateKey(dateBKey);
+  if (aMs === null || bMs === null) return null;
+  const diffMs = Math.abs(aMs - bMs);
+  return Math.round(diffMs / (24 * 60 * 60 * 1000));
 }
 
 /**
@@ -189,6 +219,17 @@ function createLegacyBalanceProxyDateKey(tx: {
   return `${accountPrefix}:legbal:${balanceAfterCents}|${amountCents}|${dateKey}`;
 }
 
+function createNearDateKey(tx: {
+  description: string;
+  amount: number;
+  bankAccountId?: string | null;
+}): string {
+  const accountPrefix = tx.bankAccountId || 'no-account';
+  const amountCents = normalizeAmountForDedupe(tx.amount);
+  const descKey = normalizeDescriptionForDedupe(tx.description);
+  return `${accountPrefix}:near:${amountCents}|${descKey}`;
+}
+
 function hasFullModernBalanceData(tx: {
   operationDate?: unknown;
   balanceAfter?: unknown;
@@ -264,6 +305,7 @@ export function classifyTransactions(
   const existingByBalanceAmountDateKey = new Map<string, ExistingTx[]>();
   const existingByLegacyBalanceKey = new Map<string, ExistingTx[]>();
   const existingByBaseKey = new Map<string, ExistingTx[]>();
+  const existingByNearDateKey = new Map<string, ExistingTx[]>();
 
   for (const etx of existingTransactions) {
     const key = createDedupeKey({
@@ -319,6 +361,15 @@ export function classifyTransactions(
       arr.push({ id: etx.id, tx: etx });
       existingByLegacyBalanceKey.set(legacyBalanceKey, arr);
     }
+
+    const nearDateKey = createNearDateKey({
+      description: etx.description,
+      amount: etx.amount,
+      bankAccountId: etx.bankAccountId,
+    });
+    const nearArr = existingByNearDateKey.get(nearDateKey) || [];
+    nearArr.push({ id: etx.id, tx: etx });
+    existingByNearDateKey.set(nearDateKey, nearArr);
   }
 
   // Seguiment intra-fitxer: usa la mateixa noció de clau
@@ -467,6 +518,46 @@ export function classifyTransactions(
     // 5. Sense bankRef/saldo fort/legacy: comprovar match per clau base
     const baseMatches = existingByBaseKey.get(effectiveKey);
     if (!baseMatches || baseMatches.length === 0) {
+      const incomingComparableDateKey = getComparableDateKey({
+        date: tx.date,
+        operationDate: tx.operationDate,
+        valueDate: tx.valueDate,
+      });
+      const nearDateKey = createNearDateKey({
+        description: tx.description,
+        amount: tx.amount,
+        bankAccountId,
+      });
+      const nearDateMatches = (existingByNearDateKey.get(nearDateKey) || []).filter((m) => {
+        const existingComparableDateKey = getComparableDateKey({
+          date: m.tx.date,
+          operationDate: m.tx.operationDate,
+          valueDate: m.tx.valueDate,
+        });
+        const dayDiff = getAbsDayDiff(incomingComparableDateKey, existingComparableDateKey);
+        return dayDiff !== null && dayDiff <= NEAR_DATE_TOLERANCE_DAYS;
+      });
+
+      if (nearDateMatches.length > 0) {
+        results.push({
+          tx: { ...tx, duplicateReason: `amount+description+nearDate<=${NEAR_DATE_TOLERANCE_DAYS}d` },
+          status: 'DUPLICATE_CANDIDATE',
+          reason: 'BASE_KEY',
+          matchedExistingIds: nearDateMatches.map((m) => m.id),
+          matchedExisting: nearDateMatches.map((m) => ({
+            id: m.id,
+            date: m.tx.date,
+            description: m.tx.description,
+            amount: m.tx.amount,
+            operationDate: m.tx.operationDate,
+            balanceAfter: m.tx.balanceAfter,
+          })),
+          rawRow,
+          userDecision: null,
+        });
+        continue;
+      }
+
       // Sense match → NEW
       results.push({
         tx,

@@ -7,6 +7,10 @@ export interface DedupeSearchRangeInput {
   operationDate?: string | null;
 }
 
+export interface DedupeSearchRangeOptions {
+  toleranceDays?: number;
+}
+
 function toDateOnly(value: string | null | undefined): string | null {
   if (!value || typeof value !== 'string') return null;
   const trimmed = value.trim();
@@ -24,8 +28,12 @@ function toDateOnly(value: string | null | undefined): string | null {
  * - mai excloure el camp date del moviment.
  */
 export function computeDedupeSearchRange(
-  txs: DedupeSearchRangeInput[]
+  txs: DedupeSearchRangeInput[],
+  options: DedupeSearchRangeOptions = {}
 ): { from: string; to: string } | null {
+  const toleranceDays = Number.isInteger(options.toleranceDays) && (options.toleranceDays as number) > 0
+    ? (options.toleranceDays as number)
+    : 0;
   const values = txs
     .flatMap((tx) => {
       const date = toDateOnly(tx.date);
@@ -41,7 +49,21 @@ export function computeDedupeSearchRange(
 
   if (values.length === 0) return null;
 
-  return { from: values[0], to: values[values.length - 1] };
+  if (toleranceDays === 0) {
+    return { from: values[0], to: values[values.length - 1] };
+  }
+
+  const fromDate = new Date(`${values[0]}T00:00:00.000Z`);
+  const toDate = new Date(`${values[values.length - 1]}T00:00:00.000Z`);
+  const dayMs = 24 * 60 * 60 * 1000;
+
+  const fromWithTolerance = new Date(fromDate.getTime() - (toleranceDays * dayMs));
+  const toWithTolerance = new Date(toDate.getTime() + (toleranceDays * dayMs));
+
+  return {
+    from: fromWithTolerance.toISOString().slice(0, 10),
+    to: toWithTolerance.toISOString().slice(0, 10),
+  };
 }
 
 export interface ImportSelectionResult {

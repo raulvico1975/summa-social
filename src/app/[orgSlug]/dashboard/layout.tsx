@@ -88,9 +88,14 @@ function useSidebarCollapseBehavior() {
 
 function OrganizationDependentLayout({ children }: { children: React.ReactNode }) {
   useInitializeOrganizationData();
+  const pathname = usePathname();
 
   // Sidebar collapse behavior
   const { sidebarOpen, handleOpenChange } = useSidebarCollapseBehavior();
+  const isMovementsRoute = pathname.includes('/dashboard/movimientos');
+  const fabRailClass = isMovementsRoute
+    ? 'fixed bottom-6 left-4 z-50 flex flex-col items-start gap-3 lg:left-auto lg:right-6 lg:items-end'
+    : 'fixed bottom-6 right-6 z-50 flex flex-col items-end gap-3';
 
   // DEV-ONLY: Horizontal scroll detector - troba l'element culpable
   React.useEffect(() => {
@@ -151,8 +156,8 @@ function OrganizationDependentLayout({ children }: { children: React.ReactNode }
         </div>
       </SidebarProvider>
 
-      {/* FAB rail: stack vertical de botons flotants a baix-dreta */}
-      <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-3">
+      {/* FAB rail: a Moviments en pantalles petites va a baix-esquerra per no tapar opcions de fila */}
+      <div className={fabRailClass}>
         <ProductUpdatesFab />
         <BotFab />
       </div>

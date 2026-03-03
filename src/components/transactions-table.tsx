@@ -1797,6 +1797,7 @@ export function TransactionsTable({
     edit: t.movements.table.edit,
     splitAmount: tr('movements.split.action'),
     splitRemittance: t.movements.table.splitRemittance,
+    splitPaymentRemittance: t.movements.table.splitPaymentRemittance,
     splitStripeRemittance: t.movements.table.splitStripeRemittance,
     delete: t.movements.table.delete,
     deleteBlocked: tr('movements.split.deleteBlocked'),
@@ -2128,7 +2129,9 @@ export function TransactionsTable({
               categoryDisplayName={getCategoryDisplayName(tx.category)}
               onEdit={handleEditClick}
               onDelete={handleDeleteWithSplitGuard}
+              onSplitRemittance={handleSplitRemittance}
               onSplitAmount={handleSplitAmount}
+              onSplitStripeRemittance={handleSplitStripeRemittance}
               onOpenSplitDetail={handleOpenSplitDetail}
               onUndoSplit={handleUndoSplit}
               onUndoRemittance={handleUndoRemittance}
@@ -2411,8 +2414,8 @@ export function TransactionsTable({
 
       {/* Return Assignment Dialog */}
       <Dialog open={isReturnDialogOpen} onOpenChange={(open) => !open && handleCloseReturnDialog()}>
-        <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
+        <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-lg">
+          <DialogHeader className="min-w-0 pr-8">
             <DialogTitle className="flex items-center gap-2 text-red-600">
               <Undo2 className="h-5 w-5" />
               {t.movements.table.assignAffectedDonor}
@@ -2423,11 +2426,11 @@ export function TransactionsTable({
           </DialogHeader>
           
           {returnTransaction && (
-            <div className="space-y-4 py-4">
+            <div className="min-w-0 space-y-4 py-4">
               {/* Info de la devolució */}
-              <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+              <div className="min-w-0 overflow-hidden rounded-lg border border-red-200 bg-red-50 p-3">
                 <p className="text-sm font-medium text-red-800">{t.movements.table.returnInfo}</p>
-                <p className="text-sm text-red-600 truncate">{returnTransaction.description}</p>
+                <p className="break-words text-sm text-red-600">{returnTransaction.description}</p>
                 <p className="text-lg font-bold text-red-700 mt-1">
                   {formatCurrencyEU(returnTransaction.amount)}
                 </p>
@@ -2438,6 +2441,7 @@ export function TransactionsTable({
               <div className="space-y-2">
                 <Label>{t.movements.table.affectedDonor}</Label>
                 <DonorSearchCombobox
+                  className="min-w-0"
                   donors={donors}
                   value={returnDonorId}
                   onSelect={(donorId) => {
