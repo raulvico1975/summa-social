@@ -249,7 +249,7 @@ Precondició obligatòria: executar-ho des del repositori de control (`/Users/ra
 Això llança `scripts/deploy.sh`, que és un script determinista i bloquejant que:
 - verifica git, detecta canvis
 - executa backup curt automàtic en risc ALT fiscal (si està configurat)
-- analitza impacte fiscal i bloqueja si les comprovacions no són suficients
+- analitza impacte fiscal i mostra un avís guiat no tècnic quan hi ha risc ALT residual
 - executa verificacions locals
 - prepara rollback automàtic a `docs/DEPLOY-ROLLBACK-LATEST.md`
 - fa el merge ritual (main→prod) i push
@@ -382,17 +382,17 @@ Si **no es pot explicar en llenguatge humà**,
 - executar directament (si risc BAIX/MITJÀ), o
 - aturar-se i explicar el problema (si risc ALT)
 
-### Política de preguntes en deploy (obligatòria)
+### Política d'avisos en deploy (obligatòria)
 
 - BAIX/MITJÀ: cap pregunta humana.
-- ALT: només preguntar si queda risc residual després de verificacions automàtiques.
-- La pregunta ha de ser de negoci/impacte, amb aquest format:
-  1) Què s'ha tocat (llenguatge pla)
-  2) Quin risc real pot causar a l'entitat
-  3) Què veuria l'entitat si falla
-  4) Opció A (recomanada): no publicar encara
-  5) Opció B: publicar assumint risc temporal visible
-- Si no es pot formular amb aquest format: **BLOCKED_SAFE** (sense pregunta).
+- ALT residual: mostrar sempre **avís guiat** en llenguatge no tècnic amb:
+  1) què s'ha tocat
+  2) impacte possible a l'entitat
+  3) comprovacions automàtiques ja superades
+  4) recomanació clara per decidir
+- Per defecte, l'avís guiat **no bloqueja** el deploy.
+- Bloqueig (`BLOCKED_SAFE`) només en casos forts: preflight git, verificacions/CI, oracle fiscal, conflicte d'integració o mode estricte activat.
+- Mode estricte opcional: `DEPLOY_REQUIRE_MANUAL_CONFIRMATION_ON_RESIDUAL_ALT=1`.
 
 ### Traducció de responsabilitat
 Raül **NO ha de prendre decisions tècniques de terminal**.

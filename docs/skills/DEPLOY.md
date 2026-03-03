@@ -20,12 +20,16 @@ Això executa el ritual de deploy complet de forma determinista i bloquejant:
 2. Detectar canvis i classificar risc
 3. Verificació fiscal (bloquejant si toca àrea fiscal)
 4. Verificacions locals (verify-local.sh + verify-ci.sh)
-5. Confirmació final
+5. Avís guiat no tècnic si hi ha risc ALT residual (per defecte, no bloquejant)
 6. Merge main→prod + push
 7. Post-deploy check automàtic (SHA + smoke test amb URL auto-resolta)
 8. Registre a `docs/DEPLOY-LOG.md`
 
 El script gestiona conflictes de merge, verificacions fallides i abort net.
+
+Mode estricte opcional:
+- `DEPLOY_REQUIRE_MANUAL_CONFIRMATION_ON_RESIDUAL_ALT=1` per bloquejar risc ALT residual.
+- `DOC_SYNC_STRICT=1` per fer bloquejant tot el gate de sincronització documental.
 
 ---
 

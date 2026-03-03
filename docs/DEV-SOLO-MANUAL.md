@@ -183,6 +183,8 @@ En cas de test intern del mecanisme, pot ser necessari utilitzar `git add -f` pe
 
 Guia ràpida d'execució: [scripts/verify-fiscal.md](../scripts/verify-fiscal.md)
 
+Nota docs: `check-doc-sync` és flexible per defecte (warnings) i bloqueja en incoherències greus. Si vols bloqueig estricte per tota la part documental, executa amb `DOC_SYNC_STRICT=1`.
+
 ---
 
 ### 4.3 Desplegament
@@ -214,10 +216,10 @@ Si no vols reservar àrea, usa `npm run inicia` / `npm run implementa` sense arg
 4. Analitza impacte fiscal/econòmic del canvi
 5. Executa verificacions (i18n, typecheck, tests, build)
 6. Si el risc és BAIX/MITJÀ: continua automàticament
-7. Si el risc és ALT residual: pot demanar **decisió de negoci** (mai tècnica)
+7. Si el risc és ALT residual: mostra **avís guiat de negoci** (mai tècnic) i continua per defecte
 8. Fa el merge i push (main→prod)
 9. Fa post-check automàtic (SHA remot + smoke amb URL auto-resolta)
-10. Registra el deploy a `docs/DEPLOY-LOG.md` (inclou decisió humana si n'hi ha)
+10. Registra el deploy a `docs/DEPLOY-LOG.md` (inclou avís guiat si n'hi ha)
 
 Per defecte, si no es defineixen URLs de comprovació, el sistema intenta deduir-les automàticament a partir de `DEPLOY_BASE_URL` o de la URL publicada detectada a `firebase.json`.
 
@@ -225,11 +227,12 @@ Per defecte, si no es defineixen URLs de comprovació, el sistema intenta deduir
 - Solapament detectat a `acabat` (prova prèvia de merge) → el canvi queda guardat a la teva branca; cal reintentar després d'actualitzar o resoldre el conflicte.
 - Conflicte de merge → el script aborta i torna a `main`. Resol el conflicte manualment.
 - Verificació falla → corregeix els errors i torna a executar `npm run publica`.
-- Si no es pot expressar impacte en llenguatge de negoci → bloqueja `BLOCKED_SAFE`.
+- En risc ALT residual, el sistema t'avisa amb llenguatge de negoci i recomanació clara.
+- Mode estricte opcional: `DEPLOY_REQUIRE_MANUAL_CONFIRMATION_ON_RESIDUAL_ALT=1` (sí bloqueja risc ALT residual).
 
-**Important (preguntes humanes):**
+**Important (avisos de negoci):**
 - MAI preguntes tècniques (comandes, flags, branques, merge, logs).
-- Sempre en format impacte d'entitat: què pot veure malament i quina decisió de negoci cal prendre.
+- Sempre en format impacte d'entitat: què s'ha tocat, què pot veure malament, què ja està validat i quina recomanació es fa.
 
 **Guia obligatòria al CEO:**
 - Bloc `RESUM NO TÈCNIC` abans de recomanar `Acabat`.

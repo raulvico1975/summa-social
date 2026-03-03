@@ -1,4 +1,4 @@
-# Plantilla — Quan el deploy es bloqueja
+# Plantilla — Quan el deploy es bloqueja o avisa
 
 Si el script de deploy s'atura amb un avís, copia i enganxa això aquí (o a Claude Code) omplint els buits:
 
@@ -23,6 +23,26 @@ Dubte:
 
 ---
 
+Si el script **no bloqueja** però mostra avís guiat de risc ALT residual, usa això:
+
+```
+DEPLOY AMB AVIS GUIAT
+
+Que s'ha tocat (text del script):
+<enganxa el resum no tecnic>
+
+Impacte possible indicat:
+<enganxa la frase d'impacte>
+
+Recomanacio del sistema:
+<enganxa la recomanacio>
+
+Decisio de negoci aplicada:
+"Publicar ara" / "Validar 1 cas real abans"
+```
+
+---
+
 ## Com respondré
 
 - **Segueix** / **No segueix**
@@ -31,4 +51,4 @@ Dubte:
 
 ---
 
-*Última actualització: 2026-02-13*
+*Última actualització: 2026-03-03*

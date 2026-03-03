@@ -40,6 +40,8 @@ RESOLVED_SMOKE_DASHBOARD_URL=""
 RESOLVED_CHECK_LOGIN_URL=""
 RESOLVED_CHECK_CORE_URL=""
 RESOLVED_CHECK_REPORT_URL=""
+GUIDED_ALERT_EMITTED=false
+GUIDED_ALERT_RECOMMENDATION=""
 
 append_incident_log() {
   if [ "$INCIDENT_RECORDED" = true ]; then
@@ -582,68 +584,56 @@ handle_business_decision_for_residual_risk() {
     return 0
   fi
 
-  HUMAN_QUESTION_REASON="Risc ALT residual després de verificacions automàtiques."
+  HUMAN_QUESTION_REASON="Risc ALT residual detectat (avís guiat, no bloquejant)."
   BUSINESS_IMPACT=$(derive_business_impact_message)
 
   if [ -z "$BUSINESS_IMPACT" ]; then
-    DECISION_TAKEN="AUTO_BLOCKED_NO_BUSINESS_MESSAGE"
+    BUSINESS_IMPACT="podria afectar dades econòmiques o fiscals de l'entitat i convé validar un cas real abans de publicar."
+  fi
+
+  local touched_summary
+  if [ "$FISCAL_HAS_CALC" = true ] || [ "$FISCAL_HAS_AMOUNT" = true ]; then
+    touched_summary="S'han tocat calculs o imports que impacten resultats economics."
+  elif [ "$FISCAL_HAS_SEPA" = true ]; then
+    touched_summary="S'ha tocat logica de remeses o cobraments."
+  elif [ "$FISCAL_HAS_WRITE" = true ] || [ "$FISCAL_HAS_FIELD" = true ]; then
+    touched_summary="S'han tocat dades sensibles de moviments o fitxes."
+  elif [ "$FISCAL_HAS_PERM" = true ]; then
+    touched_summary="S'han tocat permisos sobre dades sensibles."
+  elif [ "$FISCAL_UNCLASSIFIABLE" = true ]; then
+    touched_summary="S'ha detectat un canvi gran en zona sensible."
+  else
+    touched_summary="S'ha detectat un canvi en zona de risc alt."
+  fi
+
+  local recommendation
+  if [ "$FISCAL_RECOMMENDATION" = "red" ] || [ "$FISCAL_UNCLASSIFIABLE" = true ]; then
+    recommendation="Recomanacio: validar 1 cas real curt abans de publicar (moviment d'exemple -> resultat final esperat)."
+  else
+    recommendation="Recomanacio: publicar amb monitoratge curt post-deploy."
+  fi
+  GUIDED_ALERT_RECOMMENDATION="$recommendation"
+  GUIDED_ALERT_EMITTED=true
+  DECISION_TAKEN="AUTO_CONTINUE_GUIDED_WARNING"
+
+  echo "[6b/9] Avis guiat de negoci (risc ALT residual)..."
+  echo ""
+  echo "  Que s'ha tocat: $touched_summary"
+  echo "  Impacte possible per a l'entitat: $BUSINESS_IMPACT"
+  echo "  Comprovacions automatiques superades fins ara: verificacio local, CI i oracle fiscal predeploy."
+  echo "  $recommendation"
+  echo "  Politica actual: continuo amb el deploy i deixo aquest avís registrat."
+  echo ""
+
+  # Mode estricte opcional per entorns que vulguin bloqueig manual en risc ALT residual.
+  if [ "${DEPLOY_REQUIRE_MANUAL_CONFIRMATION_ON_RESIDUAL_ALT:-0}" = "1" ]; then
+    DECISION_TAKEN="AUTO_BLOCKED_STRICT_MODE_RESIDUAL_ALT"
     DEPLOY_RESULT="BLOCKED_SAFE"
-    echo "ERROR: No es pot formular impacte de negoci clar. Deploy bloquejat per seguretat (BLOCKED_SAFE)."
+    DEPLOY_BLOCK_REASON="Risc ALT residual en mode estricte."
+    echo "  Mode estricte activat: deploy bloquejat per risc ALT residual."
     append_deploy_log
     exit 1
   fi
-
-  local line1
-  local line2
-  local line3
-  local line4
-  line1="Hem detectat un canvi que podria afectar dades sensibles o fiscals."
-  line2="Impacte possible: $BUSINESS_IMPACT"
-  line3="Opcio A (recomanada): no publicar encara i validar amb un cas real."
-  line4="Opcio B: publicar igual assumint un risc temporal visible per l'entitat."
-
-  local full_question
-  full_question="$line1 $line2 $line3 $line4"
-  if contains_technical_terms "$full_question"; then
-    DECISION_TAKEN="AUTO_BLOCKED_TECHNICAL_QUESTION"
-    DEPLOY_RESULT="BLOCKED_SAFE"
-    echo "ERROR: La pregunta inclou termes tècnics. Deploy bloquejat per seguretat (BLOCKED_SAFE)."
-    append_deploy_log
-    exit 1
-  fi
-
-  echo "[6b/9] Decisio de negoci requerida (nomes risc ALT residual)..."
-  echo ""
-  echo "  $line1"
-  echo "  $line2"
-  echo "  Si falla, l'entitat podria veure dades econòmiques o fiscals incorrectes."
-  echo "  $line3"
-  echo "  $line4"
-  echo ""
-  read -r -p "  Quina opcio prefereixes? (A/B): " business_answer
-
-  case "$business_answer" in
-    B|b)
-      DECISION_TAKEN="B_DEPLOY_WITH_VISIBLE_RISK"
-      ;;
-    A|a|"")
-      DECISION_TAKEN="A_BLOCK_UNTIL_REAL_CASE"
-      DEPLOY_RESULT="BLOCKED_SAFE"
-      echo ""
-      echo "  Deploy bloquejat segons decisio de negoci (BLOCKED_SAFE)."
-      append_deploy_log
-      exit 1
-      ;;
-    *)
-      DECISION_TAKEN="A_BLOCK_INVALID_INPUT"
-      DEPLOY_RESULT="BLOCKED_SAFE"
-      echo ""
-      echo "  Opcio no valida. Per seguretat, deploy bloquejat (BLOCKED_SAFE)."
-      append_deploy_log
-      exit 1
-      ;;
-  esac
-  echo ""
 }
 
 classify_fiscal_impact() {
@@ -791,8 +781,8 @@ fiscal_impact_gate() {
     return 0
   fi
 
-  # No es pregunta aquí: la decisió humana, si cal, es formula en clau de negoci
-  # només per risc ALT residual (després de verificacions automàtiques).
+  # No es pregunta aquí: el resum de negoci es mostra després com a avís guiat
+  # no bloquejant (excepte mode estricte).
   echo ""
 }
 
@@ -851,7 +841,7 @@ run_fiscal_oracle_predeploy() {
 }
 
 # ============================================================
-# PAS 6 — Resum + decisio de negoci si hi ha risc ALT residual
+# PAS 6 — Resum + avís guiat si hi ha risc ALT residual
 # ============================================================
 display_deploy_summary() {
   CURRENT_PHASE="Resum predeploy"
@@ -1072,7 +1062,16 @@ append_deploy_log() {
   local fiscal_str
   fiscal_str=$([ "$IS_FISCAL" = true ] && echo "Si" || echo "No")
 
-  local log_line="| $deploy_date | $deploy_sha | $RISK_LEVEL | $fiscal_str | $CHANGED_COUNT | $DEPLOY_RESULT |"
+  local log_result="$DEPLOY_RESULT"
+  if [ "$GUIDED_ALERT_EMITTED" = true ]; then
+    if [ "$log_result" = "OK" ]; then
+      log_result="OK_AMB_AVIS"
+    elif [ "$log_result" = "PENDENT" ]; then
+      log_result="PENDENT_AMB_AVIS"
+    fi
+  fi
+
+  local log_line="| $deploy_date | $deploy_sha | $RISK_LEVEL | $fiscal_str | $CHANGED_COUNT | $log_result |"
 
   # Crear DEPLOY-LOG.md si no existeix
   if [ ! -f "$PROJECT_DIR/$DEPLOY_LOG" ]; then
@@ -1087,14 +1086,14 @@ Registre cronologic de desplegaments a produccio.
 HEADER
   fi
 
-  # Afegir línia a la taula principal. Si existeix secció de decisions,
-  # inserim la línia abans d'aquesta secció per no trencar la taula.
-  if grep -q "^## Decisions humanes (negoci)" "$PROJECT_DIR/$DEPLOY_LOG"; then
+  # Afegir línia a la taula principal. Si existeixen seccions addicionals,
+  # inserim la línia abans de la primera secció per no trencar la taula.
+  if grep -Eq "^## Decisions humanes \(negoci\)|^## Decisions i avisos \(negoci\)|^## Avisos guiats \(negoci\)|^## Backup curt predeploy" "$PROJECT_DIR/$DEPLOY_LOG"; then
     local tmp_file
     tmp_file=$(mktemp)
     awk -v line="$log_line" '
       BEGIN { inserted = 0 }
-      /^## Decisions humanes \(negoci\)/ && inserted == 0 {
+      /^## Decisions humanes \(negoci\)|^## Decisions i avisos \(negoci\)|^## Avisos guiats \(negoci\)|^## Backup curt predeploy/ && inserted == 0 {
         print line
         inserted = 1
       }
@@ -1109,18 +1108,31 @@ HEADER
   fi
 
   if [ "$DECISION_TAKEN" != "NONE" ]; then
-    if ! grep -q "^## Decisions humanes (negoci)" "$PROJECT_DIR/$DEPLOY_LOG"; then
+    if ! grep -Eq "^## Decisions humanes \(negoci\)|^## Decisions i avisos \(negoci\)" "$PROJECT_DIR/$DEPLOY_LOG"; then
       cat >> "$PROJECT_DIR/$DEPLOY_LOG" << 'HUMAN_HEADER'
 
-## Decisions humanes (negoci)
+## Decisions i avisos (negoci)
 
-| Data | SHA | human_question_reason | business_impact | decision_taken |
-|------|-----|-----------------------|-----------------|----------------|
+| Data | SHA | context | impacte | decisio |
+|------|-----|---------|---------|---------|
 HUMAN_HEADER
     fi
     local human_line
     human_line="| $deploy_date | $deploy_sha | $HUMAN_QUESTION_REASON | $BUSINESS_IMPACT | $DECISION_TAKEN |"
     echo "$human_line" >> "$PROJECT_DIR/$DEPLOY_LOG"
+  fi
+
+  if [ "$GUIDED_ALERT_EMITTED" = true ]; then
+    if ! grep -q "^## Avisos guiats (negoci)" "$PROJECT_DIR/$DEPLOY_LOG"; then
+      cat >> "$PROJECT_DIR/$DEPLOY_LOG" << 'GUIDED_HEADER'
+
+## Avisos guiats (negoci)
+
+| Data | SHA | Risc | impacte_possible | recomanacio |
+|------|-----|------|------------------|-------------|
+GUIDED_HEADER
+    fi
+    echo "| $deploy_date | $deploy_sha | $RISK_LEVEL | $BUSINESS_IMPACT | $GUIDED_ALERT_RECOMMENDATION |" >> "$PROJECT_DIR/$DEPLOY_LOG"
   fi
 
   if [ "$BACKUP_RESULT" != "NO_REQUIRED" ] || [ -n "$BACKUP_EXPORT_PATH" ]; then

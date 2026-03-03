@@ -155,7 +155,7 @@ No cal cap flag manual per integrar.
 5. **Anàlisi fiscal i d'impacte** — detecta si el canvi pot afectar diners, saldos o fiscalitat.
 6. Verificacions locals (`verify-local.sh` + `verify-ci.sh`)
 7. Resum
-8. **Decisió humana només si cal**: únicament amb risc ALT residual no demostrable amb verificacions automàtiques.
+8. **Avís guiat de negoci** si hi ha risc ALT residual: no tècnic, amb impacte possible i recomanació clara.
 9. **Pla de rollback automàtic** guardat a `docs/DEPLOY-ROLLBACK-LATEST.md`
 10. Merge ritual (main→prod + push)
 11. Post-deploy check automàtic (SHA remot + smoke amb URLs resoltes automàticament)
@@ -197,6 +197,7 @@ No cal cap flag manual per integrar.
 - Si no hi ha URLs de smoke definides, el sistema prova automàticament amb `DEPLOY_BASE_URL` o amb la URL publicada detectada a `firebase.json`.
 - Cua d'integració única per `acabat` (evita integracions simultànies sobre `main`).
 - Prova prèvia de merge a `acabat` per detectar solapaments abans d'integrar.
+- `check-doc-sync` en mode flexible per defecte (warnings). Si cal bloqueig estricte de documentació: `DOC_SYNC_STRICT=1`.
 
 ### Missatge de commit
 
@@ -210,17 +211,15 @@ Claude només pot reportar un d'aquests tres estats:
 - `Preparat per producció`
 - `A producció`
 
-### Regla de preguntes humanes (no tècniques)
+### Regla d'avisos de negoci (no tècnics)
 
 - **BAIX/MITJÀ:** cap pregunta humana.
-- **ALT:** només es pregunta si queda risc residual després de verificacions automàtiques.
-- **Format obligatori de pregunta:** impacte per l'entitat (què pot veure malament, què pot passar si falla, opcions A/B no tècniques).
+- **ALT residual:** no es pregunta per defecte; es mostra un **avís guiat**.
+- **Format obligatori de l'avís:** impacte per l'entitat (què s'ha tocat, què pot veure malament, què ja està validat, recomanació clara).
 - **Prohibit preguntar** sobre comandes, flags, branques, merges o logs tècnics.
-- Si no es pot formular la pregunta en llenguatge de negoci, **no es pregunta** i el deploy queda **`BLOCKED_SAFE`**.
-- Si hi ha pregunta, es registra al deploy log amb:
-  - `human_question_reason`
-  - `business_impact`
-  - `decision_taken`
+- **Bloqueig només en casos forts:** preflight git, verificacions/CI, oracle fiscal, conflicte d'integració.
+- Mode estricte opcional: `DEPLOY_REQUIRE_MANUAL_CONFIRMATION_ON_RESIDUAL_ALT=1` (amb aquest mode, risc ALT residual sí bloqueja).
+- Els avisos guiats es registren al deploy log.
 
 ### Restriccions Claude Code
 

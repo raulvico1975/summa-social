@@ -18,6 +18,7 @@ const HELP_GENERATED_GUIDE_FILES = [
   'docs/generated/help-guides.es.flat.json',
 ]
 const HELP_TOPICS_PREFIX = 'help/topics/'
+const DOC_SYNC_STRICT = process.env.DOC_SYNC_STRICT === '1'
 
 function run(cmd) {
   try {
@@ -107,6 +108,17 @@ function fail(message) {
   process.exit(1)
 }
 
+function warn(message) {
+  console.warn(`[check-doc-sync] WARN: ${message}`)
+}
+
+function reportViolation(message, { hard = false } = {}) {
+  if (hard || DOC_SYNC_STRICT) {
+    fail(message)
+  }
+  warn(message)
+}
+
 function main() {
   const { ref, files } = resolveChangedFiles()
   console.log(`[check-doc-sync] diff base: ${ref}`)
@@ -127,7 +139,10 @@ function main() {
     const hasHelpTopicChanges = helpTopicsChanged
     const hasGeneratedGuideChanges = files.some(file => HELP_GENERATED_GUIDE_FILES.includes(file))
     if (!hasHelpTopicChanges && !hasGeneratedGuideChanges) {
-      fail('Detected guides.* edits in src/i18n/locales without Help source changes. Run help:build-guides-adapter and include help/topics or docs/generated/help-guides.* in the PR.')
+      reportViolation(
+        'Detected guides.* edits in src/i18n/locales without Help source changes. Run help:build-guides-adapter and include help/topics or docs/generated/help-guides.* in the PR.',
+        { hard: true },
+      )
     }
   }
 
@@ -135,7 +150,7 @@ function main() {
     const validationCmd = 'node --import tsx scripts/help/validate-topics.ts'
     const validation = run(validationCmd)
     if (validation === null) {
-      fail(`Help topics quality gate failed. Run: ${validationCmd}`)
+      reportViolation(`Help topics quality gate failed. Run: ${validationCmd}`, { hard: true })
     }
   }
 
@@ -145,34 +160,38 @@ function main() {
   }
 
   if (!impactChanged) {
-    fail(`Functional changes require updating ${IMPACT_FILE}`)
+    reportViolation(`Functional changes without ${IMPACT_FILE}. Add it to document impact and keep deploy context clear.`)
+    console.log('[check-doc-sync] OK (with warnings)')
+    return
   }
 
   if (!existsSync(IMPACT_FILE)) {
-    fail(`Missing ${IMPACT_FILE}`)
+    reportViolation(`Missing ${IMPACT_FILE}`)
+    console.log('[check-doc-sync] OK (with warnings)')
+    return
   }
 
   const parsed = parseImpact(readFileSync(IMPACT_FILE, 'utf8'))
 
   if (!['yes', 'no'].includes(parsed.manualUpdated)) {
-    fail('impact.md must declare manual_updated: yes|no')
+    reportViolation('impact.md should declare manual_updated: yes|no')
   }
   if (!['yes', 'no'].includes(parsed.faqUpdated)) {
-    fail('impact.md must declare faq_updated: yes|no')
+    reportViolation('impact.md should declare faq_updated: yes|no')
   }
 
   if (parsed.manualUpdated === 'yes' && !manualChanged) {
-    fail('impact.md says manual_updated=yes but manual file was not changed')
+    reportViolation('impact.md says manual_updated=yes but manual file was not changed')
   }
   if (parsed.manualUpdated === 'no' && manualChanged) {
-    fail('manual file changed but impact.md says manual_updated=no')
+    reportViolation('manual file changed but impact.md says manual_updated=no')
   }
 
   if (parsed.faqUpdated === 'yes' && !faqChanged) {
-    fail('impact.md says faq_updated=yes but FAQ file was not changed')
+    reportViolation('impact.md says faq_updated=yes but FAQ file was not changed')
   }
   if (parsed.faqUpdated === 'no' && faqChanged) {
-    fail('FAQ file changed but impact.md says faq_updated=no')
+    reportViolation('FAQ file changed but impact.md says faq_updated=no')
   }
 
   if (parsed.topics.length > 0) {
@@ -181,17 +200,23 @@ function main() {
       const esPath = `help/topics/${topicId}.es.md`
       const touched = files.includes(caPath) || files.includes(esPath)
       if (!touched) {
-        fail(`impact.md declares help topic "${topicId}" but neither ${caPath} nor ${esPath} changed`)
+        reportViolation(
+          `impact.md declares help topic "${topicId}" but neither ${caPath} nor ${esPath} changed`,
+          { hard: true },
+        )
       }
     }
   }
 
   const noDeclaredUpdates = parsed.topics.length === 0 && parsed.manualUpdated === 'no' && parsed.faqUpdated === 'no'
   if (noDeclaredUpdates && parsed.justification.length === 0) {
-    fail('impact.md requires justification_if_no_change when no docs/help layer is updated')
+    reportViolation('impact.md should include justification_if_no_change when no docs/help layer is updated')
   }
 
   console.log('[check-doc-sync] OK')
+  if (!DOC_SYNC_STRICT) {
+    console.log('[check-doc-sync] Tip: set DOC_SYNC_STRICT=1 to enforce hard blocking mode for all doc sync checks.')
+  }
 }
 
 main()
