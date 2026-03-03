@@ -11,8 +11,14 @@ import { useTranslations } from '@/i18n';
 import { useToast } from '@/hooks/use-toast';
 import { jsPDF } from 'jspdf';
 import { getPeriodicitySuffix } from '@/lib/donors/periodicity-suffix';
-import { isFiscalDonationCandidate } from '@/lib/fiscal/is-fiscal-donation-candidate';
-import { calculateDonorNet } from '@/lib/fiscal/calculateDonorNet';
+import {
+  buildDonorSummaryDatasetFingerprint,
+  calculateDonorSummary,
+  createEmptyDonorSummary,
+  isDrawerDonationCandidate,
+  isDrawerReturnCandidate,
+  type DonorSummaryResult,
+} from '@/lib/fiscal/calculateDonorSummary';
 
 // UI Components
 import {
@@ -89,36 +95,6 @@ interface DonorDetailDrawerProps {
   onEdit: (donor: Donor) => void;
 }
 
-interface ReturnItem {
-  date: string;
-  amount: number;
-  description: string;
-}
-
-interface DonationSummary {
-  totalHistoric: number;
-  totalHistoricCount: number;
-  currentYear: number;
-  currentYearCount: number;
-  lastDonationDate: string | null;
-  returns: {
-    count: number;
-    amount: number;
-    lastDate: string | null;
-    items: ReturnItem[];
-  };
-  // Per a la targeta "Import net certificable"
-  currentYearGross: number;
-  currentYearReturned: number;
-  currentYearNet: number;
-  // Comparativa amb any anterior
-  previousYear: number;
-  previousYearCount: number;
-  previousYearGross: number;
-  previousYearReturned: number;
-  previousYearNet: number;
-}
-
 // ════════════════════════════════════════════════════════════════════════════
 // COMPONENT
 // ════════════════════════════════════════════════════════════════════════════
@@ -137,6 +113,10 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
   const [isGeneratingPdf, setIsGeneratingPdf] = React.useState(false);
   const [isSendingEmail, setIsSendingEmail] = React.useState(false);
   const itemsPerPage = 10;
+  const selectedYearNumber = React.useMemo(() => {
+    const parsedYear = Number.parseInt(selectedYear, 10);
+    return Number.isFinite(parsedYear) ? parsedYear : currentYear;
+  }, [selectedYear, currentYear]);
 
   const getAuthHeaders = async (): Promise<Record<string, string> | null> => {
     const idToken = await user?.getIdToken();
@@ -216,128 +196,27 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
     return Array.from(years).sort((a, b) => Number(b) - Number(a));
   }, [transactions, currentYear]);
 
-  // Calcular resums
-  const summary = React.useMemo<DonationSummary>(() => {
-    if (!transactions) {
-      return {
-        totalHistoric: 0,
-        totalHistoricCount: 0,
-        currentYear: 0,
-        currentYearCount: 0,
-        lastDonationDate: null,
-        returns: { count: 0, amount: 0, lastDate: null, items: [] },
-        currentYearGross: 0,
-        currentYearReturned: 0,
-        currentYearNet: 0,
-        previousYear: 0,
-        previousYearCount: 0,
-        previousYearGross: 0,
-        previousYearReturned: 0,
-        previousYearNet: 0,
-      };
+  // Calcular resum fiscal (font única de veritat)
+  const summary = React.useMemo<DonorSummaryResult>(() => {
+    if (!donor) {
+      return createEmptyDonorSummary({
+        transactions: transactions ?? [],
+        donorId: '',
+        year: selectedYearNumber,
+      });
     }
 
-    const currentYearStr = String(currentYear);
-    const previousYearStr = String(currentYear - 1);
-    let totalHistoric = 0;
-    let totalHistoricCount = 0;
-    let currentYearTotal = 0;
-    let currentYearCount = 0;
-    let lastDonationDate: string | null = null;
-    let returnsCount = 0;
-    let returnsAmount = 0;
-    let lastReturnDate: string | null = null;
-    const returnItems: ReturnItem[] = [];
-
-    let previousYearTotal = 0;
-    let previousYearCount = 0;
-
-    const currentYearNetResult = donor ? calculateDonorNet({
-      transactions,
+    return calculateDonorSummary({
+      transactions: transactions ?? [],
       donorId: donor.id,
-      year: currentYear,
-    }) : {
-      grossDonationsCents: 0,
-      returnsCents: 0,
-      netCents: 0,
-      donationsCount: 0,
-      returnsCount: 0,
-    };
-
-    const previousYearNetResult = donor ? calculateDonorNet({
-      transactions,
-      donorId: donor.id,
-      year: currentYear - 1,
-    }) : {
-      grossDonationsCents: 0,
-      returnsCents: 0,
-      netCents: 0,
-      donationsCount: 0,
-      returnsCount: 0,
-    };
-
-    transactions.forEach(tx => {
-      if (tx.amount > 0 && isFiscalDonationCandidate(tx)) {
-        // Donació vàlida (per mostrar a la UI)
-        totalHistoric += tx.amount;
-        totalHistoricCount++;
-        if (tx.date.startsWith(currentYearStr)) {
-          currentYearTotal += tx.amount;
-          currentYearCount++;
-        }
-        if (tx.date.startsWith(previousYearStr)) {
-          previousYearTotal += tx.amount;
-          previousYearCount++;
-        }
-        if (!lastDonationDate || tx.date > lastDonationDate) {
-          lastDonationDate = tx.date;
-        }
-      }
-
-      if (
-        (tx.amount < 0 && tx.transactionType === 'return') ||
-        (tx.amount > 0 && tx.donationStatus === 'returned')
-      ) {
-        // Devolució (per al bloc de devolucions)
-        returnsCount++;
-        returnsAmount += Math.abs(tx.amount);
-        if (!lastReturnDate || tx.date > lastReturnDate) {
-          lastReturnDate = tx.date;
-        }
-        returnItems.push({
-          date: tx.date,
-          amount: Math.abs(tx.amount),
-          description: tx.note || tx.description || '',
-        });
-      }
+      year: selectedYearNumber,
     });
-
-    // Ordenar devolucions per data descendent i agafar les últimes 5
-    returnItems.sort((a, b) => b.date.localeCompare(a.date));
-    const recentReturns = returnItems.slice(0, 5);
-
-    return {
-      totalHistoric,
-      totalHistoricCount,
-      currentYear: currentYearTotal,
-      currentYearCount,
-      lastDonationDate,
-      returns: { count: returnsCount, amount: returnsAmount, lastDate: lastReturnDate, items: recentReturns },
-      currentYearGross: currentYearNetResult.grossDonationsCents / 100,
-      currentYearReturned: Math.abs(currentYearNetResult.returnsCents) / 100,
-      currentYearNet: Math.max(0, currentYearNetResult.netCents / 100),
-      previousYear: previousYearTotal,
-      previousYearCount,
-      previousYearGross: previousYearNetResult.grossDonationsCents / 100,
-      previousYearReturned: Math.abs(previousYearNetResult.returnsCents) / 100,
-      previousYearNet: Math.max(0, previousYearNetResult.netCents / 100),
-    };
-  }, [transactions, currentYear, donor]);
+  }, [transactions, selectedYearNumber, donor]);
 
   // Per defecte: historial obert si <= 5 donacions
   React.useEffect(() => {
     if (transactions && transactions.length > 0) {
-      const donationsCount = transactions.filter(tx => tx.amount > 0 && isFiscalDonationCandidate(tx)).length;
+      const donationsCount = transactions.filter(isDrawerDonationCandidate).length;
       setIsHistoryOpen(donationsCount <= 5);
     }
   }, [transactions]);
@@ -352,13 +231,10 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
 
       // Filtrar per estat
       if (filterStatus === 'returns') {
-        return (tx.transactionType === 'return' && tx.amount < 0) ||
-          (tx.amount > 0 && tx.donationStatus === 'returned');
+        return isDrawerReturnCandidate(tx);
       }
       // 'all': mostrar donacions vàlides i devolucions
-      return (tx.amount > 0 && isFiscalDonationCandidate(tx)) ||
-        (tx.transactionType === 'return' && tx.amount < 0) ||
-        (tx.amount > 0 && tx.donationStatus === 'returned');
+      return isDrawerDonationCandidate(tx) || isDrawerReturnCandidate(tx);
     });
   }, [transactions, selectedYear, filterStatus]);
 
@@ -626,35 +502,63 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
     }
   };
 
+  const resolveAnnualCertificateScope = (year: string) => {
+    if (!donor || !transactions) return null;
+
+    const parsedYear = Number.parseInt(year, 10);
+    if (!Number.isFinite(parsedYear)) {
+      toast({
+        variant: 'destructive',
+        title: t.common.error,
+        description: "Any fiscal no vàlid",
+      });
+      return null;
+    }
+
+    if (parsedYear !== summary.scopeYear) {
+      toast({
+        variant: 'destructive',
+        title: t.common.error,
+        description: `Selecciona l'any ${year} al filtre abans de generar o enviar el certificat anual.`,
+      });
+      return null;
+    }
+
+    const expectedFingerprint = buildDonorSummaryDatasetFingerprint({
+      transactions,
+      donorId: donor.id,
+      year: parsedYear,
+    });
+
+    if (
+      summary.scopeDonorId !== donor.id ||
+      summary.scopeYear !== parsedYear ||
+      summary.datasetFingerprint !== expectedFingerprint
+    ) {
+      toast({
+        variant: 'destructive',
+        title: t.common.error,
+        description: 'Dades de fitxa i certificat no alineades. Recarrega i torna-ho a provar.',
+      });
+      return null;
+    }
+
+    return {
+      yearLabel: String(parsedYear),
+      grossAmount: summary.currentYearGross,
+      returnedAmount: summary.currentYearReturned,
+      netAmount: summary.currentYearNet,
+      donationsCount: summary.currentYearDonationCandidatesCount,
+    };
+  };
+
   // Generar certificat anual
   const generateAnnualCertificate = async (year: string) => {
     if (!donor || !organization) return;
+    const annualScope = resolveAnnualCertificateScope(year);
+    if (!annualScope) return;
 
-    // ═══════════════════════════════════════════════════════════════════════════
-    // CRITERI CONSERVADOR (coherent amb donation-certificate-generator.tsx)
-    // ═══════════════════════════════════════════════════════════════════════════
-
-    // Criteri fiscal únic: només transactionType='donation'
-    const yearDonations = transactions?.filter(tx =>
-      tx.date.startsWith(year) &&
-      tx.amount > 0 &&
-      isFiscalDonationCandidate(tx)
-    ) || [];
-
-    // Totes les devolucions del donant dins l'any:
-    // - transactionType='return' (amount negatiu)
-    // - donationStatus='returned' (neutralització de donació positiva)
-    const yearReturns = transactions?.filter(tx =>
-      tx.date.startsWith(year) &&
-      (
-        (tx.amount < 0 && tx.transactionType === 'return') ||
-        (tx.amount > 0 && tx.donationStatus === 'returned')
-      )
-    ) || [];
-
-    const grossAmount = yearDonations.reduce((sum, tx) => sum + tx.amount, 0);
-    const returnedAmount = yearReturns.reduce((sum, tx) => sum + Math.abs(tx.amount), 0);
-    const netAmount = Math.max(0, grossAmount - returnedAmount);
+    const { yearLabel, grossAmount, returnedAmount, netAmount, donationsCount } = annualScope;
 
     if (netAmount === 0) {
       toast({
@@ -753,7 +657,7 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
       y += 7;
       doc.setFontSize(12);
       doc.setFont('helvetica', 'normal');
-      doc.text(t.certificates.pdf.fiscalYear(year), pageWidth / 2, y, { align: 'center' });
+      doc.text(t.certificates.pdf.fiscalYear(yearLabel), pageWidth / 2, y, { align: 'center' });
       y += 18;
 
       // ═══════════════════════════════════════════════════════════════════════
@@ -794,8 +698,8 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
       const donorAddress = donorAddressParts.length > 0 ? donorAddressParts.join(', ') : '';
       // Usar plantilla institucional consistent amb el certificat massiu
       const paragraph1 = donorAddress
-        ? t.certificates.pdf.donorBodyWithAddress(donor.name, donor.taxId || 'N/A', donorAddress, year, formatCurrencyEU(netAmount), yearDonations.length)
-        : t.certificates.pdf.donorBody(donor.name, donor.taxId || 'N/A', year, formatCurrencyEU(netAmount), yearDonations.length);
+        ? t.certificates.pdf.donorBodyWithAddress(donor.name, donor.taxId || 'N/A', donorAddress, yearLabel, formatCurrencyEU(netAmount), donationsCount)
+        : t.certificates.pdf.donorBody(donor.name, donor.taxId || 'N/A', yearLabel, formatCurrencyEU(netAmount), donationsCount);
       const paragraph1Wrapped = doc.splitTextToSize(paragraph1, contentWidth);
       doc.text(paragraph1Wrapped, margin, y);
       y += paragraph1Wrapped.length * lineHeight + 6;
@@ -892,7 +796,7 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
       }
 
       // Descarregar
-      const fileName = `Certificat_Anual_${year}_${donor.name.replace(/\s+/g, '_')}.pdf`;
+      const fileName = `Certificat_Anual_${yearLabel}_${donor.name.replace(/\s+/g, '_')}.pdf`;
       doc.save(fileName);
 
       toast({
@@ -1159,31 +1063,10 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
       return;
     }
 
-    // ═══════════════════════════════════════════════════════════════════════════
-    // CRITERI CONSERVADOR (coherent amb donation-certificate-generator.tsx)
-    // ═══════════════════════════════════════════════════════════════════════════
+    const annualScope = resolveAnnualCertificateScope(year);
+    if (!annualScope) return;
 
-    // Criteri fiscal únic: només transactionType='donation'
-    const yearDonations = transactions?.filter(tx =>
-      tx.date.startsWith(year) &&
-      tx.amount > 0 &&
-      isFiscalDonationCandidate(tx)
-    ) || [];
-
-    // Totes les devolucions del donant dins l'any:
-    // - transactionType='return' (amount negatiu)
-    // - donationStatus='returned' (neutralització de donació positiva)
-    const yearReturns = transactions?.filter(tx =>
-      tx.date.startsWith(year) &&
-      (
-        (tx.amount < 0 && tx.transactionType === 'return') ||
-        (tx.amount > 0 && tx.donationStatus === 'returned')
-      )
-    ) || [];
-
-    const grossAmount = yearDonations.reduce((sum, tx) => sum + tx.amount, 0);
-    const returnedAmount = yearReturns.reduce((sum, tx) => sum + Math.abs(tx.amount), 0);
-    const netAmount = Math.max(0, grossAmount - returnedAmount);
+    const { yearLabel, grossAmount, returnedAmount, netAmount, donationsCount } = annualScope;
 
     if (netAmount === 0) {
       toast({
@@ -1276,7 +1159,7 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
       y += 7;
       doc.setFontSize(12);
       doc.setFont('helvetica', 'normal');
-      doc.text(t.certificates.pdf.fiscalYear(year), pageWidth / 2, y, { align: 'center' });
+      doc.text(t.certificates.pdf.fiscalYear(yearLabel), pageWidth / 2, y, { align: 'center' });
       y += 18;
 
       // Cos del certificat
@@ -1309,8 +1192,8 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
       const donorAddress = donorAddressParts.length > 0 ? donorAddressParts.join(', ') : '';
       // Usar plantilla institucional consistent amb el certificat massiu
       const paragraph1 = donorAddress
-        ? t.certificates.pdf.donorBodyWithAddress(donor.name, donor.taxId || 'N/A', donorAddress, year, formatCurrencyEU(netAmount), yearDonations.length)
-        : t.certificates.pdf.donorBody(donor.name, donor.taxId || 'N/A', year, formatCurrencyEU(netAmount), yearDonations.length);
+        ? t.certificates.pdf.donorBodyWithAddress(donor.name, donor.taxId || 'N/A', donorAddress, yearLabel, formatCurrencyEU(netAmount), donationsCount)
+        : t.certificates.pdf.donorBody(donor.name, donor.taxId || 'N/A', yearLabel, formatCurrencyEU(netAmount), donationsCount);
       const paragraph1Wrapped = doc.splitTextToSize(paragraph1, contentWidth);
       doc.text(paragraph1Wrapped, margin, y);
       y += paragraph1Wrapped.length * lineHeight + 6;
@@ -1376,7 +1259,7 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
             email: donor.email,
             pdfBase64,
           }],
-          year,
+          year: yearLabel,
         }),
       });
 
@@ -1498,7 +1381,7 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
               <CardHeader className="pb-2">
                 <CardTitle className="text-xs font-medium text-muted-foreground flex items-center gap-1">
                   <Calendar className="h-3 w-3" />
-                  {t.donorDetail.currentYear} ({currentYear})
+                  {t.donorDetail.currentYear} ({summary.scopeYear})
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -1509,7 +1392,7 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
                   {summary.currentYearCount} {summary.currentYearCount === 1 ? t.donorDetail.donation : t.donorDetail.donations}
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Any anterior ({currentYear - 1}): {formatCurrencyEU(summary.previousYear)}
+                  Any anterior ({summary.scopeYear - 1}): {formatCurrencyEU(summary.previousYear)}
                 </p>
               </CardContent>
             </Card>
@@ -1534,7 +1417,7 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
               <CardHeader className="pb-2">
                 <CardTitle className="text-xs font-medium text-muted-foreground flex items-center gap-1">
                   <FileText className="h-3 w-3" />
-                  {t.donorDetail.netCertifiable} ({currentYear})
+                  {t.donorDetail.netCertifiable} ({summary.scopeYear})
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -1551,7 +1434,7 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
                   </p>
                 )}
                 <p className="text-xs text-muted-foreground mt-1">
-                  Any anterior ({currentYear - 1}): {formatCurrencyEU(summary.previousYearNet)}
+                  Any anterior ({summary.scopeYear - 1}): {formatCurrencyEU(summary.previousYearNet)}
                 </p>
               </CardContent>
             </Card>
