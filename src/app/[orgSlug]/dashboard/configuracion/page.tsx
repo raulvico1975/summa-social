@@ -1,7 +1,6 @@
 'use client';
 
 import { CategoryManager } from '@/components/category-manager';
-import { PasswordChangeForm } from '@/components/password-change-form';
 import { OrganizationSettings } from '@/components/organization-settings';
 import { LanguageSelector } from '@/components/language-selector';
 import { MembersManager } from '@/components/members-manager';
@@ -84,7 +83,6 @@ export default function SettingsPage() {
         <h2 className="text-lg font-semibold mb-4">{t.settings.userSettingsTitle}</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <LanguageSelector />
-          <PasswordChangeForm />
         </div>
       </div>
 
