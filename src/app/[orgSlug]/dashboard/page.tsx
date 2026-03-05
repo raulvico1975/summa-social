@@ -41,7 +41,6 @@ import { OnboardingWizardModal } from '@/components/onboarding/OnboardingWizard'
 import { detectLegacyCategoryTransactions, logLegacyCategorySummary } from '@/lib/category-health';
 import { isVisibleInMovementsLedger } from '@/lib/transactions/remittance-visibility';
 import { FISCAL_PENDING_REVIEW_ALERT_TYPE, toDateFromFirestoreValue } from '@/lib/admin/admin-alerts';
-import { FinancialRestrictedPlaceholder } from '@/components/dashboard/financial-restricted-placeholder';
 
 interface TaxObligation {
   id: string;
@@ -1637,7 +1636,7 @@ ${tr("dashboard.generatedWith")}`;
           BLOC A — DINERS (veritat bancària, ledger)
           Dataset: filteredTransactions (només apunts del banc)
           ═══════════════════════════════════════════════════════════════════════════════ */}
-      {canViewFinancial ? (
+      {canViewFinancial && (
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="flex items-center gap-2">
@@ -1682,8 +1681,6 @@ ${tr("dashboard.generatedWith")}`;
             </div>
           </CardContent>
         </Card>
-      ) : (
-        <FinancialRestrictedPlaceholder />
       )}
 
       {/* ═══════════════════════════════════════════════════════════════════════════════
@@ -1839,7 +1836,7 @@ ${tr("dashboard.generatedWith")}`;
         </CardContent>
       </Card>
 
-      {canViewFinancial ? (
+      {canViewFinancial &&
         shouldShowProjectExpenses && (
           <Card>
             <CardHeader className="pb-2">
@@ -1888,12 +1885,9 @@ ${tr("dashboard.generatedWith")}`;
               </div>
             </CardContent>
           </Card>
-        )
-      ) : (
-        <FinancialRestrictedPlaceholder />
-      )}
+        )}
 
-      {canViewFinancial ? (
+      {canViewFinancial && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -1938,8 +1932,6 @@ ${tr("dashboard.generatedWith")}`;
             </div>
           </CardContent>
         </Card>
-      ) : (
-        <FinancialRestrictedPlaceholder />
       )}
 
       {/* BLOC ALERTES COMENTAT TEMPORALMENT
@@ -1987,7 +1979,7 @@ ${tr("dashboard.generatedWith")}`;
       </Card>
       */}
 
-      {canViewFinancial ? (
+      {canViewFinancial && (
         <TopCategoriesTable
           transactions={expenseTransactions}
           categories={categories}
@@ -2005,8 +1997,6 @@ ${tr("dashboard.generatedWith")}`;
           }}
           buildUrl={buildUrl}
         />
-      ) : (
-        <FinancialRestrictedPlaceholder />
       )}
 
       {canViewFinancial && (
