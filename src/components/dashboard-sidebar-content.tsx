@@ -40,18 +40,23 @@ import { Logo } from '@/components/logo';
 import { useFirebase } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { useTranslations } from '@/i18n';
-import { signOut as firebaseSignOut } from 'firebase/auth';
+import { sendPasswordResetEmail, signOut as firebaseSignOut } from 'firebase/auth';
 import { useCurrentOrganization, useOrgUrl } from '@/hooks/organization-provider';
 import { usePermissions } from '@/hooks/use-permissions';
 import type { PermissionKey } from '@/lib/permissions';
 
 const SUPER_ADMIN_UID = 'f2AHJqjXiOZkYajwkOnZ8RY6h2k2';
 
+function resolveAuthLanguage(language: string): string {
+  const supported = new Set(['ca', 'es', 'fr', 'pt', 'en']);
+  return supported.has(language) ? language : 'en';
+}
+
 export function DashboardSidebarContent() {
   const pathname = usePathname();
   const router = useRouter();
   const { auth: firebaseAuth } = useFirebase();
-  const { t } = useTranslations();
+  const { t, tr, language } = useTranslations();
   const { toast } = useToast();
   const { state: sidebarState, isMobile, setOpenMobile } = useSidebar();
   const { can, canAccessProjectsArea } = usePermissions();
@@ -96,6 +101,43 @@ export function DashboardSidebarContent() {
     } catch (error) {
        console.error("Error signing out: ", error);
        toast({ variant: 'destructive', title: t.common.error, description: t.sidebar.logoutError });
+    }
+  };
+
+  // SECURITY RULE
+  // Password change must remain accessible independently
+  // of organization permissions.
+  const handleChangePassword = async () => {
+    const email = firebaseAuth.currentUser?.email;
+    if (!email) {
+      toast({
+        variant: 'destructive',
+        title: t.common.error,
+        description: tr('userMenu.changePasswordErrorNoEmail', "No hi ha cap correu associat a aquest compte."),
+      });
+      return;
+    }
+
+    try {
+      firebaseAuth.languageCode = resolveAuthLanguage(language);
+      await sendPasswordResetEmail(firebaseAuth, email);
+      toast({
+        title: tr('userMenu.changePasswordSentTitle', 'Correu enviat'),
+        description: tr(
+          'userMenu.changePasswordSentDescription',
+          "T'hem enviat un correu per restablir la contrasenya."
+        ),
+      });
+    } catch (error) {
+      console.error('Error sending password reset email:', error);
+      toast({
+        variant: 'destructive',
+        title: t.common.error,
+        description: tr(
+          'userMenu.changePasswordError',
+          "No hem pogut enviar el correu de restabliment. Torna-ho a provar."
+        ),
+      });
     }
   };
 
@@ -442,6 +484,11 @@ export function DashboardSidebarContent() {
                 <Shield className="h-4 w-4" />
                 <span>{t.sidebar.privacy}</span>
               </a>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+          <SidebarMenuItem>
+            <SidebarMenuButton onClick={handleChangePassword}>
+              <span>{tr('userMenu.changePassword', 'Canviar contrasenya')}</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
           <SidebarMenuItem>
