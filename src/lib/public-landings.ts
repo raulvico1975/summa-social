@@ -757,6 +757,13 @@ const DONOR_MANAGEMENT_CONTENT_CA: PublicLandingContent = {
       'Això fa difícil saber qui són realment els donants actius, quant ha aportat cada persona i quins socis paguen quotes regularment.',
       'Summa Social centralitza la gestió de donants en un únic lloc.',
     ],
+    media: {
+      type: 'video',
+      src: '/visuals/landings/gestio-donants/animations/anima-gestio-socis.webm',
+      mp4FallbackSrc: '/visuals/landings/gestio-donants/animations/anima-gestio-socis.mp4',
+      poster: '/visuals/landings/gestio-donants/optimized/anima-gestio-socis-poster.webp',
+      alt: 'Animació de la gestió de donants a Summa Social',
+    },
   },
   problem: {
     title: 'El problema habitual amb les bases de donants',
