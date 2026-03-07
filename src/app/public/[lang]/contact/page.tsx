@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { Logo } from '@/components/logo';
+import { PublicDirectContact } from '@/components/public/PublicDirectContact';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Mail } from 'lucide-react';
 import { SUPPORT_EMAIL } from '@/lib/constants';
@@ -16,6 +17,13 @@ import { getPublicTranslations } from '@/i18n/public';
 interface PageProps {
   params: Promise<{ lang: string }>;
 }
+
+const ALTERNATIVE_CONTACT_COPY: Record<PublicLocale, string> = {
+  ca: 'Si ho prefereixes, també ens pots contactar per telèfon o WhatsApp.',
+  es: 'Si lo prefieres, también puedes contactarnos por teléfono o WhatsApp.',
+  fr: 'Si vous préférez, vous pouvez aussi nous contacter par téléphone ou WhatsApp.',
+  pt: 'Se preferires, também podes contactar-nos por telefone ou WhatsApp.',
+};
 
 export function generateStaticParams() {
   return PUBLIC_LOCALES.map((lang) => ({ lang }));
@@ -67,6 +75,12 @@ export default async function ContactPage({ params }: PageProps) {
               </a>
             </div>
             <p className="text-sm text-muted-foreground">{t.contact.responseTime}</p>
+            <div className="border-t border-border/60 pt-4">
+              <p className="text-sm text-muted-foreground mb-4">{ALTERNATIVE_CONTACT_COPY[locale]}</p>
+              <div className="flex justify-center text-left">
+                <PublicDirectContact locale={locale} />
+              </div>
+            </div>
           </div>
 
           <Button asChild variant="ghost" size="sm">
