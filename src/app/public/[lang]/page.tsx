@@ -5,7 +5,7 @@ import Image from 'next/image';
 import { PublicDirectContact } from '@/components/public/PublicDirectContact';
 import { Logo } from '@/components/logo';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, Upload, Settings, FileCheck } from 'lucide-react';
+import { ArrowRight, Upload, Settings, FileCheck, Download } from 'lucide-react';
 import {
   PUBLIC_LOCALES,
   isValidPublicLocale,
@@ -205,42 +205,65 @@ export default async function HomePage({ params }: PageProps) {
       </section>
 
       {/* ═══════════════════════════════════════════════════════════════════════
-          C) WORKFLOW — 3 passos
+          C) WORKFLOW — 4 passos
           ═══════════════════════════════════════════════════════════════════════ */}
       <section className="px-6 py-16 lg:py-20">
         <div className="mx-auto max-w-5xl">
           <h2 className="text-2xl font-semibold text-center mb-12">{t.home.workflow.title}</h2>
+          <p className="mx-auto mb-12 max-w-2xl text-center text-lg text-muted-foreground">
+            {t.home.workflow.lead}
+          </p>
 
-          <div className="grid gap-8 md:grid-cols-3">
+          <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
             {/* Pas 1 */}
-            <div className="text-center space-y-4">
-              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-primary/10 text-primary">
-                <Upload className="h-6 w-6" />
+            <div className="rounded-2xl border border-border/60 bg-background p-6 shadow-sm">
+              <div className="flex items-start justify-between gap-4">
+                <span className="text-5xl font-black leading-none text-primary/25">1</span>
+                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
+                  <Upload className="h-5 w-5" />
+                </div>
               </div>
-              <h3 className="text-lg font-semibold">{t.home.workflow.step1.title}</h3>
-              <p className="text-sm text-muted-foreground">{t.home.workflow.step1.description}</p>
+              <h3 className="mt-6 text-xl font-semibold">{t.home.workflow.step1.title}</h3>
+              <p className="mt-3 text-sm leading-6 text-muted-foreground">{t.home.workflow.step1.description}</p>
             </div>
 
             {/* Pas 2 */}
-            <div className="text-center space-y-4">
-              <div className="relative mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-primary/10 text-primary">
-                <Settings className="h-6 w-6" />
-                {/* Badge +IA estil Spark */}
-                <span className="absolute -top-1 -right-1 flex items-center gap-0.5 rounded-full bg-gradient-to-r from-violet-500 to-fuchsia-500 px-1.5 py-0.5 text-[10px] font-bold text-white shadow-sm">
-                  +IA
-                </span>
+            <div className="rounded-2xl border border-border/60 bg-background p-6 shadow-sm">
+              <div className="flex items-start justify-between gap-4">
+                <span className="text-5xl font-black leading-none text-primary/25">2</span>
+                <div className="relative flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
+                  <Settings className="h-5 w-5" />
+                  <span className="absolute -top-1 -right-1 flex items-center gap-0.5 rounded-full bg-gradient-to-r from-violet-500 to-fuchsia-500 px-1.5 py-0.5 text-[10px] font-bold text-white shadow-sm">
+                    +IA
+                  </span>
+                </div>
               </div>
-              <h3 className="text-lg font-semibold">{t.home.workflow.step2.title}</h3>
-              <p className="text-sm text-muted-foreground">{t.home.workflow.step2.description}</p>
+              <h3 className="mt-6 text-xl font-semibold">{t.home.workflow.step2.title}</h3>
+              <p className="mt-3 text-sm leading-6 text-muted-foreground">{t.home.workflow.step2.description}</p>
             </div>
 
             {/* Pas 3 */}
-            <div className="text-center space-y-4">
-              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-primary/10 text-primary">
-                <FileCheck className="h-6 w-6" />
+            <div className="rounded-2xl border border-border/60 bg-background p-6 shadow-sm">
+              <div className="flex items-start justify-between gap-4">
+                <span className="text-5xl font-black leading-none text-primary/25">3</span>
+                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
+                  <FileCheck className="h-5 w-5" />
+                </div>
               </div>
-              <h3 className="text-lg font-semibold">{t.home.workflow.step3.title}</h3>
-              <p className="text-sm text-muted-foreground">{t.home.workflow.step3.description}</p>
+              <h3 className="mt-6 text-xl font-semibold">{t.home.workflow.step3.title}</h3>
+              <p className="mt-3 text-sm leading-6 text-muted-foreground">{t.home.workflow.step3.description}</p>
+            </div>
+
+            {/* Pas 4 */}
+            <div className="rounded-2xl border border-border/60 bg-muted/20 p-6 shadow-sm">
+              <div className="flex items-start justify-between gap-4">
+                <span className="text-5xl font-black leading-none text-primary/25">4</span>
+                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
+                  <Download className="h-5 w-5" />
+                </div>
+              </div>
+              <h3 className="mt-6 text-xl font-semibold">{t.home.workflow.step4.title}</h3>
+              <p className="mt-3 text-sm leading-6 text-muted-foreground">{t.home.workflow.step4.description}</p>
             </div>
           </div>
         </div>
