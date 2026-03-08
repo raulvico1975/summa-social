@@ -162,6 +162,12 @@ export interface PublicTranslations {
       organizationLabel: string;
       messageLabel: string;
       submit: string;
+      sending: string;
+      success: string;
+      error: string;
+      invalidName: string;
+      invalidEmail: string;
+      invalidMessage: string;
       helper: string;
     };
   };
@@ -590,7 +596,13 @@ const ca: PublicTranslations = {
       organizationLabel: 'Entitat',
       messageLabel: 'Missatge',
       submit: 'Enviar contacte',
-      helper: 'El formulari obrirà el teu client de correu amb el missatge preparat.',
+      sending: 'Enviant missatge...',
+      success: 'Missatge enviat. Et respondrem tan aviat com sigui possible.',
+      error: "No hem pogut enviar el missatge ara mateix. Torna-ho a provar d'aquí una estona o escriu-nos al correu directe.",
+      invalidName: 'Escriu un nom vàlid.',
+      invalidEmail: 'Escriu un correu electrònic vàlid.',
+      invalidMessage: 'El missatge ha de tenir almenys 10 caràcters.',
+      helper: "Explica'ns el teu cas i et respondrem per correu.",
     },
   },
   home: {
@@ -1146,7 +1158,13 @@ const es: PublicTranslations = {
       organizationLabel: 'Entidad',
       messageLabel: 'Mensaje',
       submit: 'Enviar contacto',
-      helper: 'El formulario abrirá tu cliente de correo con el mensaje preparado.',
+      sending: 'Enviando mensaje...',
+      success: 'Mensaje enviado. Te responderemos lo antes posible.',
+      error: 'No hemos podido enviar el mensaje ahora mismo. Vuelve a intentarlo más tarde o escríbenos al correo directo.',
+      invalidName: 'Escribe un nombre válido.',
+      invalidEmail: 'Escribe un correo electrónico válido.',
+      invalidMessage: 'El mensaje debe tener al menos 10 caracteres.',
+      helper: 'Cuéntanos tu caso y te responderemos por correo.',
     },
   },
   home: {
@@ -1701,7 +1719,13 @@ const fr: PublicTranslations = {
       organizationLabel: 'Organisation',
       messageLabel: 'Message',
       submit: 'Envoyer le contact',
-      helper: 'Le formulaire ouvrira votre client email avec le message préparé.',
+      sending: 'Envoi du message...',
+      success: 'Message envoyé. Nous vous répondrons dans les meilleurs délais.',
+      error: "Nous n'avons pas pu envoyer le message pour le moment. Réessayez plus tard ou écrivez-nous à l'email direct.",
+      invalidName: 'Saisissez un nom valide.',
+      invalidEmail: 'Saisissez une adresse email valide.',
+      invalidMessage: 'Le message doit contenir au moins 10 caractères.',
+      helper: 'Expliquez-nous votre situation et nous vous répondrons par email.',
     },
   },
   home: {
@@ -2255,7 +2279,13 @@ const pt: PublicTranslations = {
       organizationLabel: 'Entidade',
       messageLabel: 'Mensagem',
       submit: 'Enviar contacto',
-      helper: 'O formulário abrirá o seu cliente de email com a mensagem preparada.',
+      sending: 'A enviar mensagem...',
+      success: 'Mensagem enviada. Responderemos o mais brevemente possível.',
+      error: 'Não foi possível enviar a mensagem agora. Tente novamente mais tarde ou escreva-nos para o email direto.',
+      invalidName: 'Escreva um nome válido.',
+      invalidEmail: 'Escreva um email válido.',
+      invalidMessage: 'A mensagem deve ter pelo menos 10 caracteres.',
+      helper: 'Explique-nos o seu caso e responderemos por email.',
     },
   },
   home: {
