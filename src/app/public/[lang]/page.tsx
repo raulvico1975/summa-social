@@ -113,14 +113,14 @@ export default async function HomePage({ params }: PageProps) {
           <div className="grid gap-12 lg:grid-cols-[0.9fr_1.1fr] lg:gap-16 items-center">
             {/* Columna esquerra: Text */}
             <div className="space-y-6 text-center lg:text-left">
-              <div className="flex items-center justify-center lg:justify-start gap-3">
+              <div className="flex items-center justify-center gap-2 lg:justify-start">
                 <Logo className="h-12 w-12 lg:h-14 lg:w-14 text-primary" />
-                <p className="text-sm font-semibold uppercase tracking-[0.24em] text-primary">
+                <span className="text-lg font-semibold font-headline text-primary">
                   {t.common.appName}
-                </p>
+                </span>
               </div>
 
-              <h1 className="text-4xl font-bold tracking-tight sm:text-5xl lg:text-6xl">
+              <h1 className="mx-auto max-w-3xl text-[2.75rem] font-extrabold leading-[1.02] tracking-[-0.03em] text-foreground sm:text-[3.5rem] lg:mx-0 lg:text-[3.35rem] 2xl:text-7xl">
                 {t.home.heroTagline}
               </h1>
 
@@ -130,10 +130,6 @@ export default async function HomePage({ params }: PageProps) {
 
               <p className="text-base text-muted-foreground/80 sm:text-lg">
                 {t.cta.supporting}
-              </p>
-
-              <p className="text-sm text-muted-foreground/80">
-                {t.home.hero.bridgeLine}
               </p>
 
               {/* Imatge en mòbil: entre text i CTAs */}
