@@ -5,7 +5,7 @@
 **Autor:** Raül Vico (CEO/CTO)
 
 **Complementaris:**
-- `docs/OPENCLAW-MIRROR.md`
+- `docs/operations/OPENCLAW-MIRROR.md`
 
 ---
 
@@ -73,6 +73,12 @@ Aquesta classificació determina els requisits de validació (secció 4).
 | **ALT** | build + smoke + checklist manual (`tests/CHECKLIST-MANUAL.md`) |
 
 **Prerequisit estable de build:** `npm run build` requereix credencials Firebase mínimes (`NEXT_PUBLIC_FIREBASE_PROJECT_ID` i `NEXT_PUBLIC_FIREBASE_API_KEY`) via `.env.local` o variables d'entorn de shell/CI.
+
+**Variables de deploy per contacte públic:** si el canvi toca `src/app/public/[lang]/contact/` o `src/app/api/contact/`, producció ha de tenir:
+- `RESEND_API_KEY`
+- `CONTACT_FORM_TO_EMAIL`
+
+Sense aquesta configuració, `/api/contact` respon `503` i el formulari públic mostra error controlat sense enviar correu.
 
 ### Regla P0 específica: filtre de Moviments
 
@@ -262,7 +268,7 @@ Firebase App Hosting redesplegarà automàticament.
 
 Per incidents específics (bot, API, Storage, etc.), escenaris detallats i temps estimats:
 
-👉 **Veure [`DEPLOY-ROLLBACK.md`](./DEPLOY-ROLLBACK.md)**
+👉 **Veure [`docs/operations/DEPLOY-ROLLBACK.md`](./operations/DEPLOY-ROLLBACK.md)**
 
 Aquest document conté:
 - Escenaris d'error específics (bot, diagnostics, Storage JSON, etc.)

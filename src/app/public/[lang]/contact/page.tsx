@@ -62,13 +62,19 @@ export default async function ContactPage({ params }: PageProps) {
           <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
             <div className="rounded-lg bg-muted/50 p-6">
               <PublicContactForm
-                email={SUPPORT_EMAIL}
+                locale={locale}
                 labels={{
                   nameLabel: t.contact.form.nameLabel,
                   emailLabel: t.contact.form.emailLabel,
                   organizationLabel: t.contact.form.organizationLabel,
                   messageLabel: t.contact.form.messageLabel,
                   submit: t.contact.form.submit,
+                  sending: t.contact.form.sending,
+                  success: t.contact.form.success,
+                  error: t.contact.form.error,
+                  invalidName: t.contact.form.invalidName,
+                  invalidEmail: t.contact.form.invalidEmail,
+                  invalidMessage: t.contact.form.invalidMessage,
                   helper: t.contact.form.helper,
                 }}
               />
