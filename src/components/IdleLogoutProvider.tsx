@@ -5,6 +5,7 @@ import { signOut } from 'firebase/auth';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth, useUser } from '@/firebase/provider';
 import { toast } from '@/hooks/use-toast';
+import { broadcastLogoutSync } from '@/lib/session-sync';
 
 type Props = {
   children: React.ReactNode;
@@ -105,6 +106,7 @@ export function IdleLogoutProvider({
     if (didLogoutRef.current) return;
     didLogoutRef.current = true;
     clearTimers();
+    broadcastLogoutSync(reason);
 
     // Usem pathnameRef.current per tenir el valor actual, no el capturat pel closure
     const currentPathname = pathnameRef.current;

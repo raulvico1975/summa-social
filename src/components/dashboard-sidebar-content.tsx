@@ -43,6 +43,7 @@ import { sendPasswordResetEmail, signOut as firebaseSignOut } from 'firebase/aut
 import { useCurrentOrganization, useOrgUrl } from '@/hooks/organization-provider';
 import { usePermissions } from '@/hooks/use-permissions';
 import type { PermissionKey } from '@/lib/permissions';
+import { broadcastLogoutSync } from '@/lib/session-sync';
 
 const SUPER_ADMIN_UID = 'f2AHJqjXiOZkYajwkOnZ8RY6h2k2';
 
@@ -81,6 +82,7 @@ export function DashboardSidebarContent() {
     try {
       // Guardar el slug abans de tancar sessió per poder redirigir després
       const savedOrgSlug = orgSlug;
+      broadcastLogoutSync('manual');
 
       // Netejar sessionStorage si el Super Admin estava veient una altra org
       sessionStorage.removeItem('adminViewingOrgId');

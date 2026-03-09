@@ -2,7 +2,9 @@
 
 import { useEffect, useContext, useRef } from 'react';
 import { usePathname } from 'next/navigation';
+import { signOut } from 'firebase/auth';
 import { FirebaseContext } from '@/firebase/provider';
+import { subscribeToLogoutSync } from '@/lib/session-sync';
 
 /**
  * Paths que NO requereixen autenticació (zones públiques)
@@ -133,6 +135,38 @@ export function AuthRedirectGuard() {
       hasRedirectedRef.current = false;
     }
   }, [firebaseContext?.user, firebaseContext?.isUserLoading, pathname]);
+
+  useEffect(() => {
+    return subscribeToLogoutSync(() => {
+      if (hasRedirectedRef.current) {
+        return;
+      }
+
+      if (pathname.includes('/login')) {
+        return;
+      }
+
+      if (isPublicPath(pathname)) {
+        return;
+      }
+
+      const orgSlug = extractOrgSlugFromPath(pathname);
+      hasRedirectedRef.current = true;
+
+      if (firebaseContext?.auth?.currentUser) {
+        void signOut(firebaseContext.auth).catch(() => {
+          // Ignorem errors: el redirect és la xarxa de seguretat.
+        });
+      }
+
+      if (orgSlug) {
+        window.location.assign(`/${orgSlug}/login`);
+        return;
+      }
+
+      window.location.assign('/');
+    });
+  }, [firebaseContext?.auth, pathname]);
 
   // Aquest component no renderitza res
   return null;
