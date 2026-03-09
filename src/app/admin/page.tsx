@@ -78,6 +78,7 @@ import { ProductUpdatesSection } from '@/components/admin/product-updates-sectio
 import { I18nManager } from '@/components/super-admin/i18n-manager';
 import { KbLearningManager } from '@/components/super-admin/kb-learning-manager';
 import { KbRuntimeDiagnostics } from '@/components/super-admin/kb-runtime-diagnostics';
+import { broadcastLogoutSync } from '@/lib/session-sync';
 import { HelpAuditSection } from '@/components/admin/help-audit-section';
 import { SuperAdminsManager } from '@/components/admin/super-admins-manager';
 import { EditorialCenter } from '@/components/admin/editorial-center';
@@ -572,6 +573,7 @@ function AdminPageContent() {
   };
 
   const handleLogout = async () => {
+    broadcastLogoutSync('manual');
     try {
       await signOut(auth);
     } catch (error) {

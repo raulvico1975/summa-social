@@ -11,6 +11,7 @@ import type { Organization, OrganizationRole, UserProfile, OrganizationMember } 
 import { Loader2, AlertCircle, LogOut } from 'lucide-react';
 import { User, signOut } from 'firebase/auth';
 import { isDemoEnv } from '@/lib/demo/isDemoOrg';
+import { broadcastLogoutSync } from '@/lib/session-sync';
 
 interface OrganizationContextType {
   organization: Organization | null;
@@ -359,6 +360,7 @@ export function OrganizationProvider({ children, orgSlug }: OrganizationProvider
   // immediatament i evitar que el dashboard es mostri buit durant la transició.
   const handleLogout = async () => {
     const loginUrl = orgSlug ? `/${orgSlug}/login` : '/';
+    broadcastLogoutSync('access_denied');
     try {
       await signOut(auth);
     } catch (err) {

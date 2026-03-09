@@ -13,6 +13,7 @@ import { Loader2, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { signOut } from 'firebase/auth';
+import { broadcastLogoutSync } from '@/lib/session-sync';
 
 type PageState = 'loading' | 'error' | 'no-org';
 
@@ -137,6 +138,7 @@ function RedirectContent() {
   }, [user, isUserLoading, firestore, router, nextPath]);
 
   const handleLogout = async () => {
+    broadcastLogoutSync('manual');
     try {
       await signOut(auth);
       router.replace('/login');
