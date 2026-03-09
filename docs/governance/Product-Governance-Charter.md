@@ -1,289 +1,166 @@
 # Product Governance Charter
 
-**Summa Social — Govern del producte**  
-*Versió 2.1 · document vinculant · ÚS INTERN*
-
----
+**Govern del producte Summa Social**  
+*Versió 3.0 · intern · actualitzat el 8 març 2026*
 
 ## 1. Propòsit
 
-Aquest document estableix **com creix Summa Social**, **amb qui**, **a quin ritme** i **amb quins límits**.
+Aquest document fixa els límits de producte i de servei de Summa Social perquè les decisions futures siguin coherents amb el que el sistema és avui.
 
-És la **constitució del producte**. Qualsevol decisió futura s'ha de justificar contra aquest marc.
+La font funcional principal continua sent:
 
-No és orientatiu. No és temporal. No depèn de l'estat d'ànim.
+- `docs/SUMMA-SOCIAL-REFERENCIA-COMPLETA.md`
 
----
+Aquest charter resumeix criteris de govern, no substitueix el document mestre.
 
 ## 2. Naturalesa del producte
 
-Summa Social **no és un SaaS generalista**.
+Summa Social és:
 
-És:
-* Consultoria amb software custom
-* Orientada a ONGs petites i mitjanes
-* Onboarding manual i acompanyat
-* Creixement explícitament limitat
-* Relació directa amb cada client
+- software especialitzat per a entitats socials d'Espanya
+- orientat a operativa financera real
+- pensat per creixement controlat i acompanyament directe
+- mantingut sota un model de servei prudent, no de SaaS massiu
 
-Qualsevol decisió que contradigui aquest principi **no és vàlida**.
+Summa Social **no** és:
 
----
+- un ERP generalista
+- una comptabilitat formal completa
+- un CRM comercial genèric
+- una plataforma multi-país
+- una integració bancària Open Banking
 
-## 3. Model d'accés
+## 3. Blocs de producte vigents
 
-❌ No hi ha signup automàtic  
-❌ No hi ha self-service  
-❌ No hi ha accés sense procés previ
+Els blocs estratègics actius són tres:
 
-Cada instància:
-* Es crea manualment
-* Després d'un procés de qualificació
-* Amb acceptació de condicions de servei
+### 3.1 Conciliació bancària real
 
-**Ritme màxim:** 1 ONG nova cada 2–3 mesos.
+Inclou:
 
----
+- multicomptes bancaris
+- imports d'extractes
+- categorització i matching determinista
+- remeses i devolucions
+- controls d'integritat i diagnòstic
 
-## 4. Fases de creixement i validació
+### 3.2 Fiscalitat fina orientada a gestoria
 
-### Fase 1 · ONGs 1–3 (PILOT)
+Inclou:
 
-**Objectiu:** estabilitat i detecció d'errors crítics
+- Model 182
+- Model 347
+- certificats de donació
+- export per AEAT i gestoria
+- importador Stripe dins el flux fiscal real
 
-**Criteri d'èxit:**
-* 0 errors crítics durant 3 mesos consecutius
+### 3.3 Projectes, documents i justificació econòmica
 
-**Indicadors orientatius:**
-* Temps de resolució mitjà < 48h
-* Feedback qualitatiu positiu
+Inclou:
 
-**Intern:** Aquestes ONGs saben que són pilot i col·laboren activament en millores.
+- documents pendents
+- liquidacions
+- despeses de terreny
+- projectes, partides i assignacions
+- export per al finançador
 
----
+## 4. Capacitats complementàries admeses
 
-### Fase 2 · ONGs 4–5 (VALIDACIÓ)
+També formen part del producte quan reforcen els blocs anteriors:
 
-**Prerequisit:**
-* Fase 1 completada (6 mesos sense errors crítics)
+- dashboard i mètriques
+- gestió de contactes i permisos
+- i18n i contingut públic
+- ajuda contextual, guies i support bot
+- eines internes de SuperAdmin
+- backup/export local per a suport, migració o auditoria
 
-**Acció obligatòria:**
-* **Validació professional externa**
-* 2–3 sessions amb senior Next.js/Firebase
-* Cost estimat: 400–600 €
-* Lliurable: informe amb riscos crítics/altes/baixos
+## 5. Criteris de priorització
 
-**Sense informe aprovat, no s'avança.**
+Davant de noves decisions, l'ordre és:
 
-**Intern:** A partir d'aquí, el producte ja no és "pilot", és servei consolidat.
+1. protegir integritat de dades i fiscalitat
+2. reforçar conciliació i fluxos reals d'usuari
+3. reduir risc operatiu i suport manual
+4. millorar justificació econòmica i exportabilitat
+5. només després, millores secundàries de confort o expansió
 
----
+## 6. Regles de govern
 
-### Fase 3 · ONGs 6–10 (CONSOLIDACIÓ)
+### 6.1 Qualsevol canvi ha de respectar
 
-**Prerequisits:**
-* Validació professional aprovada
-* 0 errors crítics durant 12 mesos
+- document mestre
+- patrons de codi obligatoris
+- invariants Firestore i fiscals
+- model actual Next.js + Firebase
 
-**Acció obligatòria:**
-* Auditoria tècnica profunda (1.000–1.500 €)
+### 6.2 No es consideren línies de producte actives
 
-**Decisió estratègica:**
-* Continuar solo o contractar suport tècnic
+- backups al núvol per a clients
+- funcionalitats de voluntariat
+- onboarding self-service
+- expansió a ERP complet
+- automatismes no supervisats que decideixin per l'entitat en àrees fiscals o de conciliació
 
----
+## 7. Model de servei
 
-### Límit absolut
+El producte s'ofereix sota un model prudent:
 
-**10–15 ONGs màxim.**
+- alta implicació manual en onboarding i suport
+- creixement limitat
+- decisions de desplegament i risc molt controlades
+- preferència per fiabilitat davant expansió ràpida
 
-Més enllà, el model solo no és viable.
+La política comercial exacta, preus o capacitat màxima operativa poden canviar; aquest document només fixa que el model no és de creixement massiu ni autoservei obert.
 
-Aquest límit és **acceptat i no negociable**.
+## 8. Risc i incidents crítics
 
----
+Es consideren crítics, com a mínim:
 
-## 5. Regla d'or (gestió del risc)
+- pèrdua de dades
+- càlcul fiscal erroni
+- corrupció d'invariants de remeses o imports
+- impossibilitat de recuperar informació clau d'una entitat
 
-### 5.1 Error crític
+Davant d'un incident crític:
 
-Es considera error crític:
-* Pèrdua de dades
-* Càlcul fiscal erroni
-* Impossibilitat de recuperar informació
-* Inconsistència greu en informes oficials
+- es prioritza estabilització
+- no s'expandeix abast
+- es congelen canvis no essencials fins entendre la causa
 
----
+## 9. Sortida i no lock-in
 
-### 5.2 Criteri de bloqueig
+Principi:
 
-**Davant 1 sol error crític:**
+> Cap entitat ha de quedar bloquejada dins del producte.
 
-➡️ **STOP immediat d'onboardings nous**
+Mecanisme actiu avui:
 
-No es reprèn fins que:
-* Problema resolt
-* Fix validat
-* Estabilitat confirmada (mínim 2 setmanes)
+- backup local complet en JSON, generat per SuperAdmin
 
-**No hi ha excepcions.**
+Mecanismes complementaris:
 
----
+- exportacions parcials JSON/CSV al panell `super-admin` d'organització
 
-### 5.3 Comunicació d'errors crítics
+Important:
 
-**Protocol obligatori:**
+- els backups al núvol no formen part del contracte actiu del producte perquè estan desactivats per defecte
+- el format canònic de sortida actual és JSON
 
-* Comunicació a totes les ONGs: màxim 24h
-* Explicació en termes no tècnics
-* Workaround temporal (si existeix): 24h
-* Actualitzacions cada 48h fins a resolució
+## 10. Decisions que requereixen elevació explícita
 
-**Principi:** Cap ONG s'assabenta de l'error per tercers.
+Cal decisió explícita abans de tirar endavant si es proposa:
 
----
+- afegir una línia de producte fora dels 3 blocs
+- activar funcionalitats cloud desactivades
+- introduir dependències noves amb impacte arquitectònic
+- canviar esquemes de dades de forma destructiva
+- convertir Summa Social en producte autoservei massiu
 
-### 5.4 Terminis de resolució
+## 11. Documents relacionats
 
-| Acció | Termini |
-|-------|---------|
-| Comunicació | 24h |
-| Mitigació/workaround | 24h |
-| Resolució definitiva | 72h (objectiu), màxim 30 dies |
-
-**Si no es resol en 30 dies:**
-* Activació del Pla B per a l'ONG afectada
-* Reevaluació de viabilitat del producte
-
----
-
-## 6. Temps de resposta (orientatius)
-
-| Tipus | Resposta | Resolució objectiu |
-|-------|----------|-------------------|
-| Crítica | 4h laborables | 72h |
-| Alta | 24h | 1 setmana |
-| Mitjana | 72h | 2 setmanes |
-| Baixa | Sense compromís | Sense compromís |
-
-**Horari de suport:** Dilluns-divendres, 9-18h  
-**Crítiques:** Disponibilitat ampliada (fins 22h)
-
-Aquests són **objectius orientatius**, no garanties contractuals.  
-La disponibilitat **no està garantida 24/7**.
-
----
-
-## 7. Pla B (principi ètic)
-
-> **Cap ONG pot quedar atrapada dins Summa Social.**
-
-Per tant:
-
-✅ Exportació completa sempre disponible (Excel/CSV)  
-✅ Backup extern assistit (setmanal a Drive de l'ONG)  
-✅ Procés de sortida executable i conegut  
-✅ Cost de sortida: 0 €
-
-**Sortida voluntària:**
-* Notificació recomanada: 30 dies
-* Però efectiva immediatament si l'ONG ho desitja
-* Exportació + documentació lliurada en 7 dies
-
-**Dades:**
-* Retenció: 90 dies per defecte
-* **Excepte obligacions legals** (factures, auditories, etc.)
-* **O instrucció explícita del client** (esborrat immediat o conservació ampliada)
-
----
-
-## 8. Qualificació d'ONGs
-
-Només s'accepten ONGs que compleixin:
-
-* Pressupost anual < 300.000 €
-* Disposició a col·laborar en millores
-* Acceptació de condicions de servei
-* Acceptació de limitacions funcionals i d'abast
-
-**Si l'ONG creix:**
-* Fins a 500.000 €: avaluació cas per cas
-* Per sobre de 500.000 €: migració obligatòria a solució més robusta
-
----
-
-## 9. Posicionament davant tercers
-
-Quan es qüestiona la viabilitat del projecte:
-
-> *"Summa Social no és una app pública.*  
-> *És consultoria amb software custom.*  
-> *Accés manual, creixement limitat (10–15 ONGs màx), risc gestionat amb:*
-> - *Procés d'onboarding acompanyat*
-> - *Validacions professionals externes*
-> - *Protocol d'emergència amb exportació garantida*
-> 
-> *Les entitats ho saben, ho accepten i treballen acompanyades."*
-
-Si això no s'entén, no és un debat tècnic, sinó de model mental.
-
----
-
-## 10. Revisió d'aquest document
-
-**Freqüència obligatòria:**
-* Cada 6 mesos (revisió ordinària)
-* Després de cada error crític
-* Abans d'entrar a nova fase
-
-**Responsable:** Raül
-
-**Versionat:**
-* Versió actual: 2.1
-* Canvis menors: +0.1
-* Canvis estructurals: +1.0
-
----
-
-## 11. Documents operatius vinculats
-
-Aquest Charter es complementa amb:
-
-**Documents interns:**
-1. **Onboarding Playbook**  
-   *(Procés detallat de migració i formació)*
-
-2. **Data Exit Plan**  
-   *(Procediment tècnic d'exportació i sortida)*
-
-**Documents contractuals:**
-3. **Service Agreement Template**  
-   *(Contracte amb ONGs)*
-
-Aquests documents són **executius**, no normatius.  
-El Charter prevaleix en cas de conflicte.
-
----
-
-## 12. Compromís final
-
-Aquest document:
-
-* És vinculant mentre Summa Social existeixi
-* Només es pot incomplir per força major documentada i comunicada a totes les ONGs
-
-**Excepcions requereixen:**
-* Notificació prèvia
-* Justificació
-* Pla d'acció
-
----
-
-**Estat:** aprovat  
-**Responsable:** Raül  
-**Versió:** 2.1  
-**Data:** 2026-01-04  
-
----
-
-**FI DEL CHARTER**
+- `docs/SUMMA-SOCIAL-REFERENCIA-COMPLETA.md`
+- `docs/DEV-SOLO-MANUAL.md`
+- `docs/PATRONS-CODI-OBLIGATORIS.md`
+- `docs/trust/Data-Exit-Plan.md`
+- `docs/contracts/Service-Agreement-Template.md`

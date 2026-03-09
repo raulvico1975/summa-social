@@ -22,7 +22,7 @@ export default function QuickExpenseLayout({
   const orgSlug = params.orgSlug as string;
 
   return (
-    <OrganizationProvider orgSlug={orgSlug}>
+    <OrganizationProvider key={orgSlug} orgSlug={orgSlug}>
       <InitializeData>
         <div className="min-h-[100dvh] bg-background">
           {children}

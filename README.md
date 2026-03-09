@@ -91,6 +91,7 @@ Gestors, administradors i tresorers d'entitats sense ànim de lucre que necessit
 
 ## Documentació
 
+- [Índex de documentació](docs/README.md) — Mapa i criteri d'ordre de `/docs`
 - [Manual de referència complet](docs/SUMMA-SOCIAL-REFERENCIA-COMPLETA.md) — Document mestre del projecte
 - [Catàleg de funcionalitats](docs/CATALEG-FUNCIONALITATS.md) — Referència ràpida
 - [Manual d'usuari](docs/manual-usuari-summa-social.md) — Per a usuaris finals

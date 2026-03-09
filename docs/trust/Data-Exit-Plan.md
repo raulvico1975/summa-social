@@ -1,564 +1,184 @@
-# Data Exit Plan (Pla B)
+# Data Exit Plan
 
-**Procediment d'exportació i sortida**  
-*Versió 1.0 · ÚS INTERN*
-
----
+**Procediment intern de sortida i lliurament de dades**  
+*Versió 2.0 · actualitzat el 8 març 2026*
 
 ## 1. Propòsit
 
-Aquest document descriu **el procediment tècnic i operatiu** per executar el Pla B: exportació completa de dades i sortida d'una ONG de Summa Social.
+Aquest document defineix el procediment real i vigent per facilitar la sortida d'una entitat de Summa Social sense bloqueig tecnològic.
 
----
+Principi base:
 
-## 2. Escenaris d'activació
+> Cap entitat ha de quedar atrapada a Summa Social.
 
-**El Pla B s'activa en qualsevol d'aquests casos:**
+## 2. Mecanismes reals disponibles avui
 
-1. **Sortida voluntària de l'ONG**
-   * Decisió de migrar a altre sistema
-   * Decisió de tornar a Excel
-   * Qualsevol altre motiu
+### 2.1 Export canònic complet
 
-2. **Error crític irresoluble**
-   * Problema tècnic no resoluble en 30 dies
-   * Pèrdua de confiança de l'ONG
+Mecanisme oficial:
 
-3. **Creixement de l'ONG**
-   * Pressupost > 500.000 €
-   * Necessitat de funcionalitats que Summa no ofereix
+- **Backup local JSON** generat server-side
+- Accés: **només SuperAdmin**
+- Punt d'entrada: `/admin` -> menú d'organització -> **Backup local**
+- Ruta tècnica: `GET /api/admin/orgs/{orgId}/backup/local`
 
-4. **Tancament del producte Summa Social**
-   * Decisió de Raül de tancar el servei
-   * Impossibilitat de continuar mantenint-lo
+Aquest és el mecanisme que s'ha d'utilitzar per a una sortida completa o una migració.
 
----
+### 2.2 Exportacions auxiliars
 
-## 3. Principi fonamental
+Per a revisió o lliuraments parcials, existeix també el panell:
 
-> **Cap ONG pot quedar atrapada dins Summa Social.**
+- `/{orgSlug}/dashboard/super-admin`
 
-Per tant:
+Allà hi ha:
 
-* L'exportació ha de ser **completa**
-* L'exportació ha de ser **comprensible** (sense coneixements tècnics)
-* L'exportació ha de ser **usable** (directament a Excel o importable a altre sistema)
-* El procés ha de ser **ràpid** (màxim 7 dies)
-* El cost ha de ser **zero**
+- exportació JSON parcial seleccionable
+- exportacions CSV individuals de conjunts concrets
 
----
+Aquestes exportacions són útils com a suport operatiu, però **no substitueixen** el backup local complet.
 
-## 4. Què s'exporta
+### 2.3 El que NO és mecanisme actiu
 
-### 4.1 Contingut de l'exportació
+- Els backups al núvol (Dropbox / Google Drive) estan **desactivats per defecte**
+- No formen part del procés oficial de sortida
+- No s'han d'oferir com a compromís operatiu ni contractual
 
-**Fitxer principal: Excel (.xlsx) amb múltiples fulls**
+## 3. Contingut del backup complet
 
-**Full 1: Moviments**
+Segons la implementació actual a `src/lib/admin/org-backup-export.ts`, el backup complet inclou:
 
-Tots els moviments bancaris registrats.
+- `organization`
+- `categories`
+- `bankAccounts`
+- `members`
+- `transactions`
+- `contacts`
+- `remittances`
+- `pendingDocuments`
+- `expenseReports`
+- `projectModule.projects`
+- `projectModule.budgetLines`
+- `projectModule.expenses`
 
-Camps:
-* ID moviment
-* Data
-* Concepte
-* Import
-* Tipus (ingrés/despesa)
-* Compte bancària (IBAN)
-* Categoria
-* Subcategoria
-* Contacte assignat (nom + NIF)
-* Estat (pendent/assignat)
-* Data de creació
-* Data de modificació
-* Notes (si existeixen)
+### Exclusions deliberades
 
----
+No s'hi inclouen:
 
-**Full 2: Contactes**
+- tokens (`accessToken`, `refreshToken`)
+- URLs signades (`downloadUrl`, `signedUrl`, `tempUrl`)
+- URLs de Storage com `logoUrl`, `signatureUrl`, `document`, `documentUrl`
+- fitxers binaris de Storage
 
-Tots els contactes (donants, proveïdors, treballadors).
+### Format de sortida
 
-Camps:
-* ID contacte
-* Tipus (donant/proveïdor/treballador)
-* Nom / Raó social
-* NIF/CIF/NIE/Passaport
-* Email
-* Telèfon
-* Adreça completa
-* Codi postal
-* Població
-* Província
-* País
-* Categoria per defecte
-* Notes
-* Data de creació
-* Actiu (sí/no)
+Fitxer descarregat:
 
----
+```text
+summa_backup_{slug}_{YYYY-MM-DD}.json
+```
 
-**Full 3: Comptes bancàries**
-
-Totes les comptes bancàries de l'ONG.
-
-Camps:
-* IBAN
-* Nom del compte
-* Entitat bancària
-* Saldo actual
-* Data d'últim moviment
-* Estat (actiu/inactiu)
-
----
-
-**Full 4: Remeses**
-
-Totes les remeses creades (si l'ONG utilitza aquesta funcionalitat).
-
-Camps:
-* ID remesa
-* Data
-* Import total
-* Número de moviments inclosos
-* Moviments inclosos (llista d'IDs)
-* Estat
-* Notes
-
----
-
-**Full 5: Categories**
-
-Totes les categories i subcategories.
-
-Camps:
-* Nom categoria
-* Tipus (ingrés/despesa)
-* Subcategories associades (llista)
-* Color (si assignat)
-
----
-
-**Full 6: Models fiscals generats**
-
-Històric de models fiscals generats.
-
-Camps:
-* Any
-* Model (182/347)
-* Data de generació
-* Número de registres
-* Link al fitxer generat (si disponible)
-
----
-
-**Full 7: Configuració**
-
-Configuració general de l'ONG.
-
-Camps:
-* Nom de l'organització
-* NIF
-* Any fiscal
-* Moneda
-* Regles d'assignació automàtica (si configurades)
-* Altres paràmetres personalitzats
-
----
-
-### 4.2 Fitxers addicionals
-
-**README.txt** (text pla)
-
-Explicació en català de:
-* Contingut del fitxer Excel
-* Com interpretar les dades
-* Següents passos recomanats
-* Contacte per a dubtes
-
-**validation.json** (validació tècnica)
+Estructura base:
 
 ```json
 {
-  "exportDate": "2026-01-04T10:30:00Z",
-  "organizationId": "org_abc123",
-  "organizationName": "Fundació Exemple",
-  "totalMovements": 1523,
-  "totalContacts": 234,
-  "totalAccounts": 3,
-  "totalRemittances": 12,
-  "checksum": "a3f2c9d8..."
+  "schemaVersion": 1,
+  "exportedAt": "2026-03-08T12:00:00.000Z",
+  "orgId": "abc123",
+  "orgSlug": "entitat-demo",
+  "counts": {},
+  "data": {}
 }
 ```
 
----
+## 4. Procediment operatiu de sortida
 
-## 5. Com executar l'exportació
+### Pas 1. Confirmar la petició
 
-### 5.1 Mètode actual (manual via UI)
+Registrar internament:
 
-**Pas 1: Accedir a Summa Social**
+- entitat afectada
+- data de petició
+- persona que la sol·licita
+- abast desitjat: només exportació o baixa completa del servei
 
-* Login com a SuperAdmin o Admin de l'ONG
+### Pas 2. Determinar el lliurable
 
-**Pas 2: Anar a Configuració > Exportar dades**
+Per defecte, lliurable mínim:
 
-* Seleccionar "Exportació completa"
-* Confirmar acció
+- backup local complet en JSON
 
-**Pas 3: Generar exportació**
+Opcionalment, si ajuda a la transició:
 
-* El sistema genera el fitxer Excel
-* Pot trigar 1-5 minuts segons volum de dades
+- CSVs parcials
+- sessió breu d'explicació del dataset
 
-**Pas 4: Descarregar fitxer**
+### Pas 3. Generar l'export
 
-* Descarregar fitxer .xlsx
-* Guardar en lloc segur
+1. Accedir com a SuperAdmin
+2. Executar el backup local de l'organització
+3. Verificar que el fitxer descarregat conté `counts` coherents
+4. Si cal, complementar amb exportacions parcials del panell `super-admin`
 
-**Pas 5: Validar exportació**
+### Pas 4. Validació mínima abans d'entregar
 
-* Obrir Excel
-* Comprovar que hi ha tots els fulls
-* Validar número de moviments (comparar amb últim informe)
-* Validar saldos finals (comparar amb extractes)
+Checklist:
 
----
+- el fitxer obre correctament
+- `orgId` i `orgSlug` corresponen a l'entitat
+- hi ha dades a les col·leccions esperades
+- no hi ha tokens ni URLs signades visibles
+- el nom del fitxer és correcte
 
-### 5.2 Mètode futur (script automatitzat)
+### Pas 5. Entrega
 
-**NOTA:** Aquest mètode encara NO està implementat. S'implementarà abans d'arribar a 5 ONGs.
+L'entrega s'ha de fer per un canal acordat i prudent.
 
-**Esbós del script:**
+Regla:
 
-```bash
-# Script a crear: /scripts/export-full.js
+- no compartir enllaços públics de llarga durada
+- no enviar tokens ni credencials
+- si hi ha dubte, comprimir i xifrar el fitxer abans d'enviar-lo
 
-# Execució:
-npm run export:full -- --orgId=<ID_ORGANIZACIO>
+### Pas 6. Tancament operatiu
 
-# Output:
-# - export_<ORGID>_<TIMESTAMP>.xlsx
-# - export_<ORGID>_<TIMESTAMP>_README.txt
-# - export_<ORGID>_<TIMESTAMP>_validation.json
-```
+Després de l'entrega:
 
-**Funcionalitats del script:**
+- confirmar recepció
+- oferir una sessió curta de validació si cal
+- documentar si l'accés a l'app queda desactivat immediatament o en data pactada
 
-* Exportar totes les col·leccions de Firestore de l'ONG
-* Generar Excel amb múltiples fulls
-* Generar README automàtic
-* Generar validació amb checksum
-* Pujar fitxers a Google Drive de l'ONG (opcional)
+## 5. Temps objectiu
 
-**Prioritat d'implementació:** ALTA (abans de Fase 2)
+Objectius interns recomanats:
 
----
+- resposta inicial: dins de 2 dies laborables
+- generació i lliurament de l'export: dins de 7 dies naturals, si no hi ha incidència tècnica greu
 
-## 6. Procés complet de sortida
+Això és un objectiu operatiu, no un compromís tècnic automàtic del sistema.
 
-### 6.1 Timeline estàndard
+## 6. Responsabilitats
 
-**Dia 0: Notificació de sortida**
+### Summa Social
 
-* ONG notifica voluntat de sortir (email formal)
-* Raül confirma rebuda en 24h
-* Acordar data d'exportació
+- generar l'export disponible segons els mecanismes reals del producte
+- lliurar-lo sense secrets ni material sensible innecessari
+- aclarir l'estructura del dataset si l'entitat ho necessita
 
-**Dia 1-3: Preparació de l'exportació**
+### Entitat
 
-* Raül revisa que totes les dades estan correctes
-* Executa exportació completa
-* Valida fitxers generats
+- custodiar el fitxer rebut
+- decidir la migració a un altre sistema
+- validar funcionalment que el lliurable és suficient per al seu ús
 
-**Dia 3-7: Lliurament i validació**
+## 7. Notes importants
 
-* Raül envia fitxers a l'ONG (email + Drive)
-* ONG descarrega i revisa
-* Sessió de validació (opcional, 1h):
-  * Revisar junts les dades exportades
-  * Resoldre dubtes sobre camps
-  * Validar que tot està present
+- El format canònic actual de sortida és **JSON**
+- Si una entitat necessita Excel o CSV com a format principal de migració, això s'ha de tractar com a suport addicional, no com a contracte implícit del producte
+- Aquest document no regula retencions legals ni esborrat definitiu; això s'ha d'alinear amb el contracte de servei, la política de privacitat i les obligacions legals aplicables
 
-**Dia 7-14: Període de transició**
+## 8. Referències
 
-* ONG pot accedir a Summa Social (només lectura)
-* ONG migra dades a nou sistema
-* Raül disponible per a consultes
-
-**Dia 14-30: Confirmació de migració**
-
-* ONG confirma que té totes les dades al nou sistema
-* ONG confirma que ja no necessita accés a Summa
-
-**Dia 30-90: Període de conservació**
-
-* Dades mantingudes a Firestore (només accessible per Raül)
-* ONG pot sol·licitar nova exportació si cal
-* Backup setmanal segueix actiu (opcional)
-
-**Dia 90: Esborrat definitiu**
-
-* Notificació a l'ONG 15 dies abans
-* Esborrat complet de Firestore
-* Confirmació d'esborrat enviada a l'ONG
-* Tancament definitiu
-
----
-
-### 6.2 Excepcions al timeline
-
-**Si l'ONG vol esborrat immediat:**
-
-* Exportació en 3 dies
-* Esborrat en 7 dies (en lloc de 90)
-* Però avisar que és irreversible
-
-**Si hi ha obligacions legals de conservació:**
-
-* Factures emeses (6 anys per llei espanyola)
-* Models fiscals presentats (4 anys)
-* Conservació anonimitzada si escau
-* Notificar a l'ONG els terminis legals
-
----
-
-## 7. Documentació lliurada amb l'exportació
-
-### 7.1 README.txt (plantilla)
-
-```
-EXPORTACIÓ COMPLETA - SUMMA SOCIAL
-===================================
-
-Organització: [Nom de l'ONG]
-NIF: [NIF]
-Data d'exportació: [Data i hora]
-Període de dades: [Data inici] - [Data fi]
-
----
-
-CONTINGUT DEL FITXER EXCEL
----------------------------
-
-Aquest fitxer conté totes les dades de la vostra organització
-que estaven emmagatzemades a Summa Social.
-
-Fulls del document:
-
-1. MOVIMENTS
-   - Tots els moviments bancaris registrats
-   - Ordenats per data (més recent primer)
-   - Inclou: data, concepte, import, compte, categoria, contacte
-
-2. CONTACTES
-   - Donants, proveïdors, treballadors
-   - Inclou: nom, NIF, adreça, email, telèfon, categoria per defecte
-
-3. COMPTES BANCÀRIES
-   - IBAN i saldo actual de cada compte
-   - Hauria de coincidir amb els extractes bancaris
-
-4. REMESES
-   - Remeses creades (si n'heu utilitzat)
-   - Inclou: data, import total, moviments inclosos
-
-5. CATEGORIES
-   - Categories i subcategories utilitzades
-   - Tipus: ingrés o despesa
-
-6. MODELS FISCALS
-   - Històric de models 182/347 generats
-   - Data de generació i número de registres
-
-7. CONFIGURACIÓ
-   - Paràmetres generals de l'organització
-   - Regles d'assignació automàtica (si configurades)
-
----
-
-COM VALIDAR LES DADES
-----------------------
-
-1. Comparar número de moviments amb el vostre últim informe
-2. Validar saldos finals amb els extractes bancaris
-3. Comprovar que els contactes principals hi són tots
-4. Revisar que les categories són correctes
-
-Si detecteu alguna diferència o falta alguna dada,
-contacteu amb Raül en els propers 30 dies.
-
----
-
-SEGÜENTS PASSOS RECOMANATS
----------------------------
-
-1. Guardar aquest fitxer en lloc segur (amb còpia de seguretat)
-2. Validar que totes les dades són correctes
-3. Importar a nou sistema (si escau):
-   - Per a Excel: ja està llest per utilitzar
-   - Per a altre software: utilitzar fulls CSV
-4. Conservar aquest fitxer almenys 6 anys (obligació legal)
-
----
-
-SUPORT POST-EXPORTACIÓ
------------------------
-
-Durant els propers 30 dies, podeu contactar per:
-- Dubtes sobre les dades exportades
-- Aclariments sobre camps o formats
-- Orientació per a migració a altre sistema
-
-Contacte: raul@summasocial.cat
-Horari: Dilluns-divendres, 9-18h
-
----
-
-ATENCIÓ: DADES SENSIBLES
--------------------------
-
-Aquest fitxer conté informació sensible de la vostra organització
-(dades financeres, dades personals de donants i proveïdors).
-
-Recomanacions de seguretat:
-- Guardar en carpeta protegida amb contrasenya
-- No compartir per email sense xifrar
-- No pujar a núvols públics sense protecció
-- Esborrar còpies innecessàries
-
----
-
-Gràcies per haver confiat en Summa Social.
-
-Raül Vico
-Summa Social
-2026
-```
-
----
-
-### 7.2 Guia de migració (segons destí)
-
-**Si l'ONG va a Excel:**
-
-* El fitxer ja està llest per utilitzar
-* Poden filtrar i pivotar segons necessitats
-* Recomanar mantenir backups
-
-**Si l'ONG va a altre software:**
-
-* Explicar com exportar cada full a CSV
-* Orientar sobre camps obligatoris del nou sistema
-* Recomanar validar saldos després d'importar
-
-**Si l'ONG va a sistema comptable:**
-
-* El full "Moviments" és la base
-* Hauran d'associar categories a pla comptable del nou sistema
-* Recomanar recalcular saldos
-
----
-
-## 8. Suport post-exportació
-
-### 8.1 Què ofereix Raül (inclòs)
-
-**Sessió de revisió (1 hora):**
-
-* Validació conjunta de dades exportades
-* Aclariments sobre camps
-* Orientació per a migració (general)
-
-**Suport per email (30 dies):**
-
-* Consultes sobre dades exportades
-* Dubtes sobre formats
-* Aclariments tècnics
-
----
-
-### 8.2 Què NO ofereix Raül
-
-**Importació a nou sistema:**
-
-* No és responsabilitat de Raül
-* Pot orientar, però no executar
-
-**Formació en nou sistema:**
-
-* Fora de l'abast del servei
-
-**Manteniment de dades després d'exportació:**
-
-* Les dades són responsabilitat de l'ONG
-
----
-
-## 9. Checklist d'execució del Pla B
-
-**Per utilitzar cada cop que s'activa el Pla B:**
-
-### ☐ FASE 1: NOTIFICACIÓ I PREPARACIÓ
-
-- [ ] Rebuda notificació de sortida de l'ONG
-- [ ] Confirmació enviada en 24h
-- [ ] Data d'exportació acordada
-- [ ] Motiu de sortida documentat (intern)
-
----
-
-### ☐ FASE 2: EXPORTACIÓ
-
-- [ ] Revisió prèvia de dades (coherència, saldos)
-- [ ] Execució d'exportació completa
-- [ ] Validació de fitxers generats:
-  - [ ] Excel amb tots els fulls
-  - [ ] README.txt generat
-  - [ ] validation.json generat
-- [ ] Validació de contingut:
-  - [ ] Número de moviments correcte
-  - [ ] Saldos finals correctes
-  - [ ] Contactes principals presents
-  - [ ] Categories completes
-
----
-
-### ☐ FASE 3: LLIURAMENT
-
-- [ ] Fitxers enviats a l'ONG (email + Drive)
-- [ ] Sessió de validació agendada (si escau)
-- [ ] ONG confirma recepció
-- [ ] ONG valida contingut
-
----
-
-### ☐ FASE 4: TRANSICIÓ
-
-- [ ] Accés de l'ONG canviat a només lectura
-- [ ] Disponibilitat per a consultes durant 30 dies
-- [ ] ONG confirma migració completa
-- [ ] ONG confirma que ja no necessita accés
-
----
-
-### ☐ FASE 5: CONSERVACIÓ I ESBORRAT
-
-- [ ] Dades mantingudes a Firestore (30-90 dies segons cas)
-- [ ] Notificació d'esborrat enviada 15 dies abans
-- [ ] Esborrat complet de Firestore executat
-- [ ] Confirmació d'esborrat enviada a l'ONG
-- [ ] Documentació interna actualitzada (ONG ja no activa)
-
----
-
-### ☐ DOCUMENTACIÓ POST-SORTIDA
-
-- [ ] Motiu de sortida documentat
-- [ ] Feedback recollit (què va bé, què no)
-- [ ] Lliçons apreses documentades
-- [ ] Millores proposades (si escau)
-
----
-
-**FI DEL DATA EXIT PLAN**
+- `docs/SUMMA-SOCIAL-REFERENCIA-COMPLETA.md`
+- `docs/security/PRIVACY_POLICY.md`
+- `docs/security/TOMs.md`
+- `docs/contracts/Service-Agreement-Template.md`

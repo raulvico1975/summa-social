@@ -1,0 +1,62 @@
+{
+  "id": "howto-assign-bank-movement",
+  "type": "howto",
+  "domain": "transactions",
+  "risk": "safe",
+  "guardrail": "none",
+  "answerMode": "full",
+  "title": {
+    "ca": "Assignar un moviment bancari",
+    "es": "Asignar un movimiento bancario"
+  },
+  "intents": {
+    "ca": [
+      "com assigno un moviment bancari",
+      "com assigno contacte i categoria a un moviment",
+      "moviment sense assignar",
+      "com corregeixo un moviment sense contacte"
+    ],
+    "es": [
+      "cómo asigno un movimiento bancario",
+      "cómo asigno contacto y categoría a un movimiento",
+      "movimiento sin asignar",
+      "cómo corrijo un movimiento sin contacto"
+    ]
+  },
+  "guideId": null,
+  "answer": {
+    "ca": "Per assignar un moviment:\n1. Ves a Moviments.\n2. Clica directament sobre el moviment a la taula.\n3. Edita els camps que necessitis, especialment \"Categoria\" i \"Contacte\".\n4. Comprova que el canvi queda guardat automàticament.\n\nSi només vols trobar pendents, obre abans Filtres i aplica \"Sense categoritzar\" o \"Sense contacte\".",
+    "es": "Para asignar un movimiento:\n1. Ve a Movimientos.\n2. Haz clic directamente sobre el movimiento en la tabla.\n3. Edita los campos que necesites, especialmente \"Categoría\" y \"Contacto\".\n4. Comprueba que el cambio queda guardado automáticamente.\n\nSi solo quieres encontrar pendientes, abre antes Filtros y aplica \"Sin categorizar\" o \"Sin contacto\"."
+  },
+  "uiPaths": [
+    "Moviments > Clic sobre el moviment",
+    "Moviments > Filtres"
+  ],
+  "needsSnapshot": false,
+  "keywords": [
+    "moviment",
+    "categoria",
+    "contacte",
+    "assignar"
+  ],
+  "source_faq": [
+    "Q29",
+    "Q30"
+  ],
+  "source_manual": [
+    "5.3",
+    "5.4"
+  ],
+  "source_guides": [
+    "editMovement"
+  ],
+  "related": [
+    "guide-edit-movement",
+    "howto-movement-unassigned-alerts"
+  ],
+  "error_key": null,
+  "symptom": {
+    "ca": null,
+    "es": null
+  }
+}

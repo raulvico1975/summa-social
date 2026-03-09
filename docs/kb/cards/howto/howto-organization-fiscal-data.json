@@ -1,0 +1,56 @@
+{
+  "id": "howto-organization-fiscal-data",
+  "type": "howto",
+  "domain": "config",
+  "risk": "safe",
+  "guardrail": "none",
+  "answerMode": "full",
+  "title": {
+    "ca": "Canviar les dades fiscals de l'entitat",
+    "es": "Cambiar los datos fiscales de la entidad"
+  },
+  "intents": {
+    "ca": [
+      "com canvio les dades fiscals de l'entitat",
+      "com edito les dades de l'organització",
+      "canviar cif de l'entitat",
+      "configurar signant de certificats"
+    ],
+    "es": [
+      "cómo cambio los datos fiscales de la entidad",
+      "cómo edito los datos de la organización",
+      "cambiar cif de la entidad",
+      "configurar firmante de certificados"
+    ]
+  },
+  "guideId": null,
+  "answer": {
+    "ca": "Per editar les dades de l'entitat:\n1. Ves a Configuració.\n2. Dins de \"Dades de l'Organització\", revisa i actualitza \"Nom de l'organització\", \"CIF\", adreça, CP, ciutat, província, telèfon, email i web.\n3. Si cal, puja el \"Logo\".\n4. A la secció \"Certificats de donació\", revisa l'idioma, la \"Firma digitalitzada\", el \"Nom del signant\" i el \"Càrrec del signant\".\n5. Clica \"Guardar\".\n\nAquestes dades surten als documents i certificats de l'entitat.",
+    "es": "Para editar los datos de la entidad:\n1. Ve a Configuración.\n2. Dentro de \"Datos de la Organización\", revisa y actualiza \"Nombre de la organización\", \"CIF\", dirección, CP, ciudad, provincia, teléfono, email y web.\n3. Si hace falta, sube el \"Logo\".\n4. En la sección \"Certificados de donación\", revisa el idioma, la \"Firma digitalizada\", el \"Nombre del firmante\" y el \"Cargo del firmante\".\n5. Haz clic en \"Guardar\".\n\nEstos datos salen en los documentos y certificados de la entidad."
+  },
+  "uiPaths": [
+    "Configuració > Dades de l'Organització"
+  ],
+  "needsSnapshot": false,
+  "keywords": [
+    "organització",
+    "cif",
+    "signant",
+    "firma",
+    "logo"
+  ],
+  "source_faq": [],
+  "source_manual": [
+    "2.2"
+  ],
+  "source_guides": [],
+  "related": [
+    "manual-change-logo",
+    "manual-signature-setup"
+  ],
+  "error_key": null,
+  "symptom": {
+    "ca": null,
+    "es": null
+  }
+}

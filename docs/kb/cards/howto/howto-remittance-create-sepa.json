@@ -1,0 +1,58 @@
+{
+  "id": "howto-remittance-create-sepa",
+  "type": "howto",
+  "domain": "sepa",
+  "risk": "guarded",
+  "guardrail": "b1_sepa",
+  "answerMode": "full",
+  "title": {
+    "ca": "Crear una remesa de quotes",
+    "es": "Crear una remesa de cuotas"
+  },
+  "intents": {
+    "ca": [
+      "com creo una remesa de quotes",
+      "com genero una remesa sepa de cobrament",
+      "remeses de cobrament",
+      "com cobro quotes per domiciliació"
+    ],
+    "es": [
+      "cómo creo una remesa de cuotas",
+      "cómo genero una remesa sepa de cobro",
+      "remesas de cobro",
+      "cómo cobro cuotas por domiciliación"
+    ]
+  },
+  "guideId": null,
+  "answer": {
+    "ca": "Per generar una remesa de cobrament:\n1. Ves a Donants > Remeses de cobrament.\n2. Abans, comprova a Configuració > Comptes bancaris que el compte té informat el \"Creditor ID SEPA (ICS)\".\n3. Al Pas 1, selecciona el compte bancari i la data de cobrament.\n4. Al Pas 2, revisa la selecció de socis.\n5. Al Pas 3, revisa l'import total i els socis inclosos.\n6. Clica \"Generar\" i descarrega l'XML pain.008.\n\nImportant: els socis sense IBAN o amb quota = 0 queden fora automàticament.",
+    "es": "Para generar una remesa de cobro:\n1. Ve a Donantes > Remesas de cobro.\n2. Antes, comprueba en Configuración > Cuentas bancarias que la cuenta tiene informado el \"Creditor ID SEPA (ICS)\".\n3. En el Paso 1, selecciona la cuenta bancaria y la fecha de cobro.\n4. En el Paso 2, revisa la selección de socios.\n5. En el Paso 3, revisa el importe total y los socios incluidos.\n6. Haz clic en \"Generar\" y descarga el XML pain.008.\n\nImportante: los socios sin IBAN o con cuota = 0 quedan fuera automáticamente."
+  },
+  "uiPaths": [
+    "Donants > Remeses de cobrament",
+    "Configuració > Comptes bancaris"
+  ],
+  "needsSnapshot": false,
+  "keywords": [
+    "remesa",
+    "sepa",
+    "cobrament",
+    "ics",
+    "pain.008"
+  ],
+  "source_faq": [],
+  "source_manual": [
+    "6.a",
+    "2.4"
+  ],
+  "source_guides": [],
+  "related": [
+    "guide-remittances",
+    "howto-remittance-review-before-send"
+  ],
+  "error_key": null,
+  "symptom": {
+    "ca": null,
+    "es": null
+  }
+}

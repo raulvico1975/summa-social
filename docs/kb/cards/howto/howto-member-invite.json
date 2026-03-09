@@ -1,0 +1,55 @@
+{
+  "id": "howto-member-invite",
+  "type": "howto",
+  "domain": "config",
+  "risk": "safe",
+  "guardrail": "none",
+  "answerMode": "full",
+  "title": {
+    "ca": "Convidar un nou usuari",
+    "es": "Invitar a un nuevo usuario"
+  },
+  "intents": {
+    "ca": [
+      "com convido un nou usuari",
+      "com convido un membre",
+      "afegir usuari a l'equip",
+      "crear invitació d'usuari"
+    ],
+    "es": [
+      "cómo invito a un nuevo usuario",
+      "cómo invito a un miembro",
+      "añadir usuario al equipo",
+      "crear invitación de usuario"
+    ]
+  },
+  "guideId": null,
+  "answer": {
+    "ca": "Si tens rol d'administrador:\n1. Ves a Configuració > Membres.\n2. Clica \"Convidar Membre\".\n3. Escriu l'email.\n4. Tria el rol: \"Administrador\", \"Usuari\" o \"Visualitzador\".\n5. Si cal, ajusta els permisos inicials.\n6. Clica \"Crear invitació\".\n\nEl flux genera una invitació per compartir amb la persona convidada.",
+    "es": "Si tienes rol de administrador:\n1. Ve a Configuración > Miembros.\n2. Haz clic en \"Invitar Miembro\".\n3. Escribe el email.\n4. Elige el rol: \"Administrador\", \"Usuario\" o \"Visualizador\".\n5. Si hace falta, ajusta los permisos iniciales.\n6. Haz clic en \"Crear invitación\".\n\nEl flujo genera una invitación para compartir con la persona invitada."
+  },
+  "uiPaths": [
+    "Configuració > Membres"
+  ],
+  "needsSnapshot": false,
+  "keywords": [
+    "membres",
+    "invitació",
+    "usuari",
+    "rol"
+  ],
+  "source_faq": [],
+  "source_manual": [
+    "2.1"
+  ],
+  "source_guides": [],
+  "related": [
+    "guide-access-security",
+    "howto-member-user-permissions"
+  ],
+  "error_key": null,
+  "symptom": {
+    "ca": null,
+    "es": null
+  }
+}

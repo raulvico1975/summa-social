@@ -2,10 +2,10 @@
 
 'use client';
 
-import React, { createContext, useContext, ReactNode, useMemo } from 'react';
-import { useParams, useRouter, usePathname, useSearchParams } from 'next/navigation';
-import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, collectionGroup, query, where, getDocs, doc, getDoc, limit } from 'firebase/firestore';
+import React, { createContext, useContext, ReactNode } from 'react';
+import { useRouter, usePathname, useSearchParams } from 'next/navigation';
+import { useFirebase } from '@/firebase';
+import { collectionGroup, query, where, getDocs, doc, getDoc, limit } from 'firebase/firestore';
 import { generateUniqueSlug, reserveSlug } from '@/lib/slugs';
 import type { Organization, OrganizationRole, UserProfile, OrganizationMember } from '@/lib/data';
 import { Loader2, AlertCircle, LogOut } from 'lucide-react';
@@ -63,6 +63,10 @@ function useOrganizationBySlug(orgSlug?: string) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const nextPath = React.useMemo(() => {
+    const currentQuery = searchParams.toString();
+    return currentQuery ? `${pathname}?${currentQuery}` : pathname;
+  }, [pathname, searchParams]);
 
   const [organization, setOrganization] = React.useState<Organization | null>(null);
   const [organizationId, setOrganizationId] = React.useState<string | null>(null);
@@ -73,33 +77,42 @@ function useOrganizationBySlug(orgSlug?: string) {
   const [error, setError] = React.useState<Error | null>(null);
 
   React.useEffect(() => {
-    // Si encara estem carregant l'usuari, esperem
-    if (isUserLoading) {
+    if (isUserLoading || user) {
       return;
     }
 
-    // Si no hi ha usuari autenticat, redirigim a login preservant la ruta actual
-    // IMPORTANT: Mantenim isLoading=true per evitar flash (mostrar spinner fins redirect)
-    if (!user) {
-      // Construir el next amb pathname + searchParams
-      const currentQuery = searchParams.toString();
-      const fullPath = currentQuery ? `${pathname}?${currentQuery}` : pathname;
-      const nextParam = encodeURIComponent(fullPath);
+    // Si no hi ha usuari autenticat, redirigim a login preservant la ruta actual.
+    // Mantenim el spinner i no reinicialitzem l'organització en cada canvi de pestanya.
+    const nextParam = encodeURIComponent(nextPath);
+    router.replace(`/login?next=${nextParam}`);
+  }, [isUserLoading, nextPath, router, user]);
 
-      // Redirigir a login amb next (usem /login global que ja gestiona idioma)
-      router.replace(`/login?next=${nextParam}`);
+  React.useEffect(() => {
+    if (isUserLoading || !user) {
       return;
     }
+
+    let isCancelled = false;
+
+    const runIfActive = (callback: () => void) => {
+      if (!isCancelled) {
+        callback();
+      }
+    };
+
+    const resetOrganizationState = () => {
+      runIfActive(() => setIsLoading(true));
+      runIfActive(() => setError(null));
+      runIfActive(() => setOrganization(null));
+      runIfActive(() => setOrganizationId(null));
+      runIfActive(() => setUserProfile(null));
+      runIfActive(() => setMember(null));
+      // Evita rols stale entre canvis d'organització (important per queries protegides)
+      runIfActive(() => setUserRole(null));
+    };
 
     const loadOrganization = async () => {
-      setIsLoading(true);
-      setError(null);
-      setOrganization(null);
-      setOrganizationId(null);
-      setUserProfile(null);
-      setMember(null);
-      // Evita rols stale entre canvis d'organització (important per queries protegides)
-      setUserRole(null);
+      resetOrganizationState();
 
       try {
         let orgDoc: Organization | null = null;
@@ -161,7 +174,7 @@ function useOrganizationBySlug(orgSlug?: string) {
             const memberSnap = await getDoc(memberRef);
             if (memberSnap.exists()) {
               const memberData = memberSnap.data();
-              setUserRole(memberData.role as OrganizationRole);
+              runIfActive(() => setUserRole(memberData.role as OrganizationRole));
             } else {
               // No és membre directe, però té accés (SuperAdmin o hasOrgInProfile via rules)
               // Comportament esperat per SuperAdmins: poden accedir a qualsevol org sense membership.
@@ -171,23 +184,21 @@ function useOrganizationBySlug(orgSlug?: string) {
                 const saSnap = await getDoc(saRef);
                 const isSuperAdmin = saSnap.exists();
                 if (process.env.NODE_ENV !== 'production') {
-                  // eslint-disable-next-line no-console
                   console.debug('[ORG_PROVIDER] Access without membership:', isSuperAdmin ? 'SuperAdmin' : 'hasOrgInProfile', 'uid=', user.uid);
                 }
-                setUserRole(isSuperAdmin ? 'admin' : 'viewer');
+                runIfActive(() => setUserRole(isSuperAdmin ? 'admin' : 'viewer'));
               } else {
                 // DEMO: assignar admin a tots
-                setUserRole('admin');
+                runIfActive(() => setUserRole('admin'));
               }
             }
-          } catch (memberErr) {
+          } catch {
             // Si falla la lectura del membre (permission-denied), assumim viewer
             // (l'accés a l'org ja està validat pel canary)
             if (process.env.NODE_ENV !== 'production') {
-              // eslint-disable-next-line no-console
               console.debug('[ORG_PROVIDER] Member read failed, assuming viewer role');
             }
-            setUserRole('viewer');
+            runIfActive(() => setUserRole('viewer'));
           }
 
         } else {
@@ -224,7 +235,7 @@ function useOrganizationBySlug(orgSlug?: string) {
               // Extreure l'orgId del path: organizations/{orgId}/members/{userId}
               const pathParts = memberDoc.ref.path.split('/');
               orgId = pathParts[1]; // organizations/{orgId}/members/{userId}
-              setUserRole(memberData.role as OrganizationRole);
+              runIfActive(() => setUserRole(memberData.role as OrganizationRole));
             }
           }
 
@@ -258,8 +269,12 @@ function useOrganizationBySlug(orgSlug?: string) {
           console.log(`Slug generat i reservat: "${newSlug}"`);
         }
 
-        setOrganization(orgDoc);
-        setOrganizationId(orgId);
+        if (isCancelled) {
+          return;
+        }
+
+        runIfActive(() => setOrganization(orgDoc));
+        runIfActive(() => setOrganizationId(orgId));
 
         // Carregar perfil + dades de membre (permisos granulars)
         const profileRef = doc(firestore, 'organizations', orgId, 'members', user.uid);
@@ -276,15 +291,15 @@ function useOrganizationBySlug(orgSlug?: string) {
               ? profileData.userGrants.filter((value: unknown): value is string => typeof value === 'string')
               : undefined;
 
-            setUserProfile({
+            runIfActive(() => setUserProfile({
               organizationId: profileData.organizationId ?? orgId,
               role,
               displayName: profileData.displayName ?? user.displayName ?? '',
               email: profileData.email ?? user.email ?? undefined,
               organizations: profileData.organizations,
-            });
+            }));
 
-            setMember({
+            runIfActive(() => setMember({
               userId: profileData.userId ?? user.uid,
               email: profileData.email ?? user.email ?? '',
               displayName: profileData.displayName ?? user.displayName ?? '',
@@ -294,44 +309,50 @@ function useOrganizationBySlug(orgSlug?: string) {
               invitationId: profileData.invitationId,
               userOverrides,
               userGrants,
-            });
-            setUserRole(role);
+            }));
+            runIfActive(() => setUserRole(role));
           } else {
-            setUserProfile(null);
-            setMember(null);
+            runIfActive(() => setUserProfile(null));
+            runIfActive(() => setMember(null));
           }
-        } catch (memberProfileErr) {
+        } catch {
           if (process.env.NODE_ENV !== 'production') {
-            // eslint-disable-next-line no-console
             console.debug('[ORG_PROVIDER] Member profile read failed');
           }
-          setUserProfile(null);
-          setMember(null);
+          runIfActive(() => setUserProfile(null));
+          runIfActive(() => setMember(null));
         }
 
       } catch (err) {
+        if (isCancelled) {
+          return;
+        }
+
         // AccessDeniedError: accés denegat per Firestore Rules (canary read failed)
         if (err instanceof AccessDeniedError) {
           console.log('[ORG_PROVIDER] Access denied by Firestore Rules');
-          setError(err);
+          runIfActive(() => setError(err));
         } else if (isPermissionDenied(err)) {
           // Error de permisos genèric de Firestore
           console.log('[ORG_PROVIDER] Permission denied error:', (err as any)?.code || err);
-          setError(new AccessDeniedError());
+          runIfActive(() => setError(new AccessDeniedError()));
         } else {
           // Altres errors (network, not found, etc.)
           if (!isDemoEnv()) {
             console.error('[ORG_PROVIDER] Error loading organization:', err);
           }
-          setError(err instanceof Error ? err : new Error('Error desconegut'));
+          runIfActive(() => setError(err instanceof Error ? err : new Error('Error desconegut')));
         }
       } finally {
-        setIsLoading(false);
+        runIfActive(() => setIsLoading(false));
       }
     };
 
     loadOrganization();
-  }, [firestore, user, isUserLoading, orgSlug, router, pathname, searchParams]);
+    return () => {
+      isCancelled = true;
+    };
+  }, [firestore, isUserLoading, orgSlug, user]);
 
   return {
     organization,

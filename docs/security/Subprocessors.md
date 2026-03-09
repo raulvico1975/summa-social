@@ -1,19 +1,51 @@
 # Subprocessors — Summa Social
 
-**Versió**: 1.0  
-**Última actualització**: 15 Febrer 2026
+**Versió**: 2.0  
+**Última actualització**: 8 març 2026
 
-## Llista de subencarregats
+## 1. Objectiu
 
-| Proveïdor | Servei | Finalitat | Ubicació principal de dades |
-|-----------|--------|-----------|-----------------------------|
-| Google Cloud / Firebase | Authentication | Gestió d'identitat i accés | EUA/Global (segons servei) |
-| Google Cloud / Firebase | Firestore | Base de dades aplicativa | UE (`eur3`) |
-| Google Cloud / Firebase | Storage | Emmagatzematge de fitxers | UE (`eur3`) |
-| Google Cloud / Firebase | Hosting | Servei web i assets | Global (CDN) |
+Aquest document llista els principals proveïdors externs que intervenen en el tractament de dades dins del funcionament actual de Summa Social.
 
-## Notes de govern
+## 2. Llista actual
 
-- Summa Social actua com a encarregat per a les dades de les entitats clients.
-- Les condicions de tractament i garanties internacionals es basen en els termes vigents de Google Cloud/Firebase.
-- Qualsevol canvi de subencarregat s'ha de reflectir en aquest document i a `PRIVACY_POLICY.md`.
+| Proveïdor | Servei | Finalitat principal | Notes |
+|-----------|--------|---------------------|-------|
+| Google Cloud / Firebase | Firebase Authentication | Identitat, autenticació i gestió d'accés | Login i verificació d'usuaris |
+| Google Cloud / Firebase | Firestore | Base de dades aplicativa | `firebase.json` declara base de dades a `us-central1` |
+| Google Cloud / Firebase | Storage | Emmagatzematge de fitxers | Documents i fitxers del producte |
+| Google Cloud / Firebase | App Hosting / Hosting | Servei web i publicació de l'app | Entrega de l'aplicació i redirecció pública |
+| Google Cloud / Firebase | Cloud Functions | Processos backend i automatitzacions | Exports, alertes, salut, tasques programades |
+| Resend | Correu electrònic transaccional / operatiu | Formulari de contacte, certificats i alertes per email | S'usa via API HTTPS |
+
+## 3. Aclariments importants
+
+### 3.1 Backups al núvol per a clients
+
+Existeix codi per a Dropbox i Google Drive, però:
+
+- estan desactivats per defecte
+- no formen part del servei actiu estàndard
+- no es consideren subencarregats actius del servei base mentre aquesta funcionalitat no s'ofereixi operativament
+
+Si en el futur s'activen de forma real per a clients, aquest document s'haurà d'actualitzar.
+
+### 3.2 Ubicacions i infraestructura
+
+- Les ubicacions exactes poden dependre de la configuració vigent del projecte i de l'arquitectura del proveïdor.
+- Quan el repo permet confirmar-ho, s'indica explícitament.
+- Quan no es pot afirmar amb precisió suficient des del codi/configuració disponible, no es força una regió concreta.
+
+## 4. Govern i manteniment
+
+- Qualsevol canvi material de proveïdor o d'ús d'un proveïdor existent s'ha de reflectir aquí.
+- Aquesta llista s'ha de revisar juntament amb:
+  - `docs/security/PRIVACY_POLICY.md`
+  - `docs/security/TOMs.md`
+
+## 5. Notes de rol
+
+En relació amb les dades de les entitats clientes:
+
+- Summa Social actua com a encarregat del tractament
+- aquests proveïdors actuen com a subencarregats o infraestructura de suport del servei, segons el cas
