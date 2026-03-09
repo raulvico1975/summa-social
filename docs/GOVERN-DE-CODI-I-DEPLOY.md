@@ -5,7 +5,7 @@
 **Autor:** Raül Vico (CEO/CTO)
 
 **Complementaris:**
-- `docs/OPENCLAW-MIRROR.md`
+- `docs/operations/OPENCLAW-MIRROR.md`
 
 ---
 
@@ -268,7 +268,7 @@ Firebase App Hosting redesplegarà automàticament.
 
 Per incidents específics (bot, API, Storage, etc.), escenaris detallats i temps estimats:
 
-👉 **Veure [`docs/DEPLOY-ROLLBACK.md`](./DEPLOY-ROLLBACK.md)**
+👉 **Veure [`docs/operations/DEPLOY-ROLLBACK.md`](./operations/DEPLOY-ROLLBACK.md)**
 
 Aquest document conté:
 - Escenaris d'error específics (bot, diagnostics, Storage JSON, etc.)
