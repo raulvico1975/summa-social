@@ -1,0 +1,55 @@
+{
+  "id": "howto-donor-export",
+  "type": "howto",
+  "domain": "donors",
+  "risk": "safe",
+  "guardrail": "none",
+  "answerMode": "full",
+  "title": {
+    "ca": "Exportar dades de donants",
+    "es": "Exportar datos de donantes"
+  },
+  "intents": {
+    "ca": [
+      "com exporto dades de donants",
+      "com exporto la llista de donants",
+      "baixar excel de donants",
+      "exportar socis"
+    ],
+    "es": [
+      "cómo exporto datos de donantes",
+      "cómo exporto la lista de donantes",
+      "bajar excel de donantes",
+      "exportar socios"
+    ]
+  },
+  "guideId": null,
+  "answer": {
+    "ca": "Per exportar donants:\n1. Ves a Donants.\n2. A la capçalera de la pantalla, fes servir l'acció d'exportació amb el tooltip \"Exportar llista de donants a Excel\".\n3. Es descarrega un Excel amb camps com Nom, NIF, Quota, IBAN, Estat i Persona de contacte.\n\nSi tens filtres actius, revisa abans si vols exportar tota la base o només el que tens en pantalla.",
+    "es": "Para exportar donantes:\n1. Ve a Donantes.\n2. En la cabecera de la pantalla, usa la acción de exportación con el tooltip \"Exportar lista de donantes a Excel\".\n3. Se descarga un Excel con campos como Nombre, NIF, Cuota, IBAN, Estado y Persona de contacto.\n\nSi tienes filtros activos, revisa antes si quieres exportar toda la base o solo lo que tienes en pantalla."
+  },
+  "uiPaths": [
+    "Donants > Exportar llista de donants a Excel"
+  ],
+  "needsSnapshot": false,
+  "keywords": [
+    "exportar",
+    "excel",
+    "donants",
+    "socis"
+  ],
+  "source_faq": [],
+  "source_manual": [
+    "3.9"
+  ],
+  "source_guides": [],
+  "related": [
+    "guide-donors",
+    "guide-import-donors"
+  ],
+  "error_key": null,
+  "symptom": {
+    "ca": null,
+    "es": null
+  }
+}

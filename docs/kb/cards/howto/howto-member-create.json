@@ -1,0 +1,60 @@
+{
+  "id": "howto-member-create",
+  "type": "howto",
+  "domain": "donors",
+  "risk": "safe",
+  "guardrail": "none",
+  "answerMode": "full",
+  "title": {
+    "ca": "Donar d'alta un nou soci",
+    "es": "Dar de alta a un nuevo socio"
+  },
+  "intents": {
+    "ca": [
+      "com dono d'alta un nou soci",
+      "com creo un soci",
+      "afegir un nou soci",
+      "alta nou soci",
+      "com afegeixo un soci recurrent"
+    ],
+    "es": [
+      "cómo doy de alta a un nuevo socio",
+      "cómo creo un socio",
+      "añadir un nuevo socio",
+      "alta nuevo socio",
+      "cómo añado un socio recurrente"
+    ]
+  },
+  "guideId": null,
+  "answer": {
+    "ca": "Per donar d'alta un soci:\n1. Ves a Donants.\n2. Clica \"Nou donant\".\n3. Omple com a mínim \"Nom\", \"DNI/CIF\" i \"Codi postal\".\n4. A \"Modalitat\", selecciona \"Soci/a\".\n5. Informa \"Import de quota (per cobrament)\" i \"Periodicitat\".\n6. A la secció \"Banc\", informa l'\"IBAN\".\n7. Clica \"Guardar Donant\".\n\nComprovació final: el soci apareix al llistat amb la modalitat \"Soci/a\".",
+    "es": "Para dar de alta a un socio:\n1. Ve a Donantes.\n2. Haz clic en \"Nuevo donante\".\n3. Completa como mínimo \"Nombre\", \"DNI/CIF\" y \"Código postal\".\n4. En \"Modalidad\", selecciona \"Socio/a\".\n5. Informa \"Importe de cuota (por cobro)\" y \"Periodicidad\".\n6. En la sección \"Banco\", informa el \"IBAN\".\n7. Haz clic en \"Guardar Donante\".\n\nComprobación final: el socio aparece en el listado con la modalidad \"Socio/a\"."
+  },
+  "uiPaths": [
+    "Donants > Nou donant"
+  ],
+  "needsSnapshot": false,
+  "keywords": [
+    "soci",
+    "nou donant",
+    "modalitat",
+    "quota",
+    "periodicitat",
+    "iban"
+  ],
+  "source_faq": [],
+  "source_manual": [
+    "3.2"
+  ],
+  "source_guides": [],
+  "related": [
+    "guide-donors",
+    "howto-donor-update-iban",
+    "howto-donor-update-fee"
+  ],
+  "error_key": null,
+  "symptom": {
+    "ca": null,
+    "es": null
+  }
+}

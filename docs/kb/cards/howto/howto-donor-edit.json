@@ -1,0 +1,57 @@
+{
+  "id": "howto-donor-edit",
+  "type": "howto",
+  "domain": "donors",
+  "risk": "safe",
+  "guardrail": "none",
+  "answerMode": "full",
+  "title": {
+    "ca": "Editar les dades d'un soci",
+    "es": "Editar los datos de un socio"
+  },
+  "intents": {
+    "ca": [
+      "com edito les dades d'un soci",
+      "com modifico un soci",
+      "editar fitxa d'un soci",
+      "canviar dades d'un soci"
+    ],
+    "es": [
+      "cómo edito los datos de un socio",
+      "cómo modifico un socio",
+      "editar ficha de un socio",
+      "cambiar datos de un socio"
+    ]
+  },
+  "guideId": null,
+  "answer": {
+    "ca": "Per editar un soci:\n1. Ves a Donants.\n2. Clica el nom del soci per obrir la fitxa lateral.\n3. Clica \"Editar\".\n4. Actualitza els camps necessaris de la fitxa.\n5. Clica \"Guardar Donant\".\n\nComprovació final: en tornar a la fitxa lateral, ja hi veus les dades actualitzades.",
+    "es": "Para editar un socio:\n1. Ve a Donantes.\n2. Haz clic en el nombre del socio para abrir la ficha lateral.\n3. Haz clic en \"Editar\".\n4. Actualiza los campos necesarios de la ficha.\n5. Haz clic en \"Guardar Donante\".\n\nComprobación final: al volver a la ficha lateral ya ves los datos actualizados."
+  },
+  "uiPaths": [
+    "Donants > Nom del donant > Editar"
+  ],
+  "needsSnapshot": false,
+  "keywords": [
+    "editar",
+    "fitxa",
+    "soci",
+    "donant"
+  ],
+  "source_faq": [],
+  "source_manual": [
+    "3.5",
+    "3.6"
+  ],
+  "source_guides": [],
+  "related": [
+    "guide-donors",
+    "howto-donor-update-iban",
+    "howto-donor-update-fee"
+  ],
+  "error_key": null,
+  "symptom": {
+    "ca": null,
+    "es": null
+  }
+}

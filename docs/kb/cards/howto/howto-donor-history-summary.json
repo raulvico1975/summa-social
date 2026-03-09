@@ -1,0 +1,56 @@
+{
+  "id": "howto-donor-history-summary",
+  "type": "howto",
+  "domain": "donors",
+  "risk": "safe",
+  "guardrail": "none",
+  "answerMode": "full",
+  "title": {
+    "ca": "Veure el resum i l'historial d'un soci",
+    "es": "Ver el resumen y el historial de un socio"
+  },
+  "intents": {
+    "ca": [
+      "com veig l'historial d'un soci",
+      "com veig el resum de donacions d'un donant",
+      "on veig les quotes que ha pagat un soci",
+      "fitxa lateral del soci"
+    ],
+    "es": [
+      "cómo veo el historial de un socio",
+      "cómo veo el resumen de donaciones de un donante",
+      "dónde veo las cuotas que ha pagado un socio",
+      "ficha lateral del socio"
+    ]
+  },
+  "guideId": null,
+  "answer": {
+    "ca": "Per veure el resum d'un soci:\n1. Ves a Donants.\n2. Clica el nom del soci per obrir la fitxa lateral.\n3. Revisa el bloc \"Resum\".\n4. A la mateixa fitxa hi tens l'historial de quotes i donacions, l'historial de devolucions i el resum per any.\n\nDes d'aquesta fitxa també pots fer servir les accions \"Editar\" i \"Generar certificat\".",
+    "es": "Para ver el resumen de un socio:\n1. Ve a Donantes.\n2. Haz clic en el nombre del socio para abrir la ficha lateral.\n3. Revisa el bloque \"Resumen\".\n4. En esa misma ficha tienes el historial de cuotas y donaciones, el historial de devoluciones y el resumen por año.\n\nDesde esta ficha también puedes usar las acciones \"Editar\" y \"Generar certificado\"."
+  },
+  "uiPaths": [
+    "Donants > Nom del donant"
+  ],
+  "needsSnapshot": false,
+  "keywords": [
+    "resum",
+    "historial",
+    "quotes",
+    "donacions",
+    "devolucions"
+  ],
+  "source_faq": [],
+  "source_manual": [
+    "3.6"
+  ],
+  "source_guides": [],
+  "related": [
+    "manual-member-paid-quotas",
+    "guide-donor-certificate"
+  ],
+  "error_key": null,
+  "symptom": {
+    "ca": null,
+    "es": null
+  }
+}

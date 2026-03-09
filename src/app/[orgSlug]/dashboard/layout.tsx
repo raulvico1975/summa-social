@@ -170,7 +170,7 @@ export default function OrgDashboardLayout({ children }: { children: React.React
   const orgSlug = params.orgSlug as string;
 
   return (
-    <OrganizationProvider orgSlug={orgSlug}>
+    <OrganizationProvider key={orgSlug} orgSlug={orgSlug}>
       <OrganizationDependentLayout>
         {children}
       </OrganizationDependentLayout>
