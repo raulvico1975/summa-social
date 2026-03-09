@@ -1,5 +1,9 @@
 # Remeses IN: Legacy i Robustesa
 
+> ESTAT 2026-03-08: document de procediment acotat.
+> Serveix com a playbook de sanejament i criteri per remeses IN legacy.
+> No substitueix el document mestre ni la documentació general de remeses; s'ha d'usar només quan hi ha incidència legacy o necessitat de sanejament.
+
 **Versió:** 1.1
 **Data:** 2026-01-21
 **Autor:** Raül Vico (CEO/CTO)

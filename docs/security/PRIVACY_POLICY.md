@@ -1,141 +1,171 @@
 # Política de Privacitat — Summa Social
 
-**Última actualització**: 15 Febrer 2026
+**Última actualització**: 8 març 2026  
 **Contacte de privacitat**: privacy@summasocial.app
-
----
 
 ## 1. Qui som
 
-**Summa Social** és una aplicació de gestió financera per a entitats socials, desenvolupada i mantinguda per Raül Vico, que actua com a responsable del tractament de les dades dels usuaris de l'aplicació.
+Summa Social és un servei de gestió financera per a entitats socials.
 
-- **Responsable del tractament** (per a dades d'usuaris de l'aplicació): Summa Social / Raül Vico
-- **Encarregat del tractament** (per a dades de les entitats clients): Summa Social actua per compte de cada entitat, que és la responsable de les dades dels seus donants, socis, proveïdors i treballadors.
+A efectes de protecció de dades:
 
----
+- per a les dades dels usuaris de l'aplicació i els formularis propis del servei, Summa Social / Raül Vico actua com a responsable del tractament quan correspongui
+- per a les dades operatives que cada entitat introdueix a la plataforma, Summa Social actua com a encarregat del tractament per compte de l'entitat client
 
 ## 2. Quines dades tractem
 
-### 2.1 Usuaris de l'aplicació (Summa Social és responsable)
+### 2.1 Dades d'usuaris de l'aplicació
 
-| Dada | Finalitat |
-|------|-----------|
-| Email | Identificació i accés al compte |
-| Nom | Personalització de la interfície |
-| Rol | Control d'accés (Admin, User, Viewer) |
-| Organitzacions | Gestió multi-organització |
+Podem tractar:
 
-Les credencials d'accés (contrasenyes) són gestionades per Firebase Authentication i no són accessibles per Summa Social.
+- email
+- nom o display name
+- rol i pertinença a una o més organitzacions
+- dades tècniques mínimes d'autenticació i sessió
 
-### 2.2 Dades de les entitats (Summa Social és encarregat)
+Finalitats principals:
 
-Summa Social tracta les següents dades per compte de les entitats clients:
+- accés i autenticació
+- gestió de permisos
+- operativa interna de la plataforma
+- resposta a incidències i suport
 
-- **Donants i socis**: nom, NIF, IBAN, adreça, email, telèfon
-- **Proveïdors**: nom, NIF, dades de contacte
-- **Treballadors**: nom, NIF, dades laborals
-- **Moviments bancaris**: data, import, concepte, categoria
+### 2.2 Dades operatives de les entitats clientes
 
-La base legal i el deure d'informar els interessats (donants, socis, etc.) correspon a cada entitat com a responsable del tractament.
+Segons l'ús que faci cada entitat, la plataforma pot contenir:
 
-**Summa Social no tracta dades de categories especials segons l'Art. 9 del RGPD.**
+- dades de contactes: donants, socis, proveïdors i treballadors
+- moviments bancaris i dades associades
+- categories, projectes i assignacions
+- documents pendents i justificants
+- remeses, devolucions, certificats i altres artefactes fiscals o operatius
 
----
+La base legal per informar i legitimar el tractament davant dels interessats finals correspon a cada entitat com a responsable del tractament.
 
-## 3. Base legal del tractament
+## 3. Finalitats del tractament
 
-| Tractament | Base legal |
-|------------|------------|
-| Usuaris de l'aplicació | Execució del contracte de servei (Art. 6.1.b RGPD) |
-| Dades de les entitats | Segons instruccions del responsable (entitat) |
+### 3.1 Com a responsable
 
----
+Summa Social tracta dades pròpies per:
 
-## 4. Destinataris de les dades
+- gestionar comptes d'usuari i accés al servei
+- respondre consultes rebudes a través de canals de contacte
+- enviar comunicacions operatives vinculades al servei
+- protegir la seguretat i la integritat de la plataforma
 
-### 4.1 Subencarregats
+### 3.2 Com a encarregat
 
-Summa Social utilitza els següents serveis de Google/Firebase per al funcionament de l'aplicació:
+Summa Social tracta dades de les entitats per:
 
-| Servei | Ubicació | Garanties |
-|--------|----------|-----------|
-| Firebase Authentication | EUA | Clàusules Contractuals Tipus (SCC) + Marc UE-EUA |
-| Firebase Firestore | UE (eur3) | Dades dins l'Espai Econòmic Europeu |
-| Firebase Storage | UE (eur3) | Dades dins l'Espai Econòmic Europeu |
-| Firebase Hosting | Global (CDN) | Només assets i aplicació web |
+- prestar les funcionalitats contractades del producte
+- permetre conciliació, fiscalitat, documents i justificació econòmica
+- facilitar suport tècnic i resolució d'incidències
+- generar exportacions i lliurables quan l'entitat o el servei ho requereixin
 
-Més detalls al document intern [Subprocessors.md](./Subprocessors.md).
+## 4. Base legal
 
-### 4.2 Cessions per obligació legal
+| Tractament | Base principal |
+|------------|----------------|
+| Gestió d'usuaris del servei | Execució de la relació contractual o mesures precontractuals |
+| Consultes rebudes per canals de contacte | Interès legítim o mesures precontractuals |
+| Tractament de dades de les entitats clientes | Execució del contracte i instruccions de l'entitat responsable |
 
-Les entitats clients poden cedir dades a:
-- **Agència Tributària**: Model 182 (donatius), Model 347 (operacions amb tercers)
-- **Entitats bancàries**: Gestió de remeses i rebuts
+## 5. Destinataris i subencarregats
 
-Aquestes cessions són responsabilitat de cada entitat.
+Per operar el servei, Summa Social utilitza infraestructura i proveïdors tecnològics.
 
----
+Els principals són:
 
-## 5. Conservació de les dades
+- Google Cloud / Firebase
+- Resend, per a determinats enviaments de correu electrònic transaccional o operatiu
 
-| Tipus de dada | Termini |
-|---------------|---------|
-| Usuaris de l'aplicació | Mentre el compte estigui actiu + 12 mesos |
-| Dades fiscals (entitats) | Mínim 6 anys (obligacions mercantils i comptables) |
-| Altres dades de contactes | Segons política del responsable (entitat) |
+Detall actualitzat a:
 
-Les còpies de seguretat es conserven durant períodes limitats i es gestionen segons les mesures descrites al document intern de seguretat.
+- `docs/security/Subprocessors.md`
 
----
+### Cessions per obligació legal
 
-## 6. Els teus drets
+Quan l'entitat client usa funcionalitats fiscals o bancàries, les dades poden acabar comunicant-se a tercers per decisió o obligació de l'entitat, com ara:
 
-Com a interessat, tens dret a:
+- Agència Tributària
+- entitats bancàries
 
-- **Accés**: Sol·licitar una còpia de les teves dades
-- **Rectificació**: Corregir dades inexactes
-- **Supressió**: Sol·licitar l'eliminació de les teves dades
-- **Oposició**: Oposar-te a determinats tractaments
-- **Limitació**: Sol·licitar la restricció del tractament
-- **Portabilitat**: Rebre les teves dades en format estructurat
+Aquestes comunicacions formen part de l'operativa de l'entitat i no alteren que Summa Social actuï com a encarregat respecte d'aquestes dades.
 
-### Com exercir els teus drets
+## 6. Conservació
 
-- **Usuaris de l'aplicació**: Escriu a privacy@summasocial.app
-- **Donants, socis o altres interessats d'una entitat**: Contacta directament amb l'entitat corresponent. Summa Social assistirà l'entitat en la gestió de la teva sol·licitud.
+La conservació depèn del tipus de dada i del rol de Summa Social.
 
-Termini de resposta: 1 mes (ampliable a 2 en casos complexos).
+### 6.1 Dades d'usuaris del servei
 
-Si consideres que els teus drets no han estat atesos correctament, pots presentar una reclamació davant l'[Agència Espanyola de Protecció de Dades (AEPD)](https://www.aepd.es).
+Es conserven mentre el compte sigui necessari per prestar el servei i, un cop finalitzada la relació, durant el temps mínim necessari per motius legals, de seguretat o de defensa davant reclamacions.
 
----
+### 6.2 Dades de les entitats
+
+Es conserven mentre la relació de servei estigui activa o mentre l'entitat ho instrueixi dins del marc contractual i legal aplicable.
+
+En cas de sortida:
+
+- el mecanisme canònic de portabilitat actual és l'export complet en JSON
+- el tractament posterior i la possible retenció s'han de regir pel contracte, les obligacions legals i les instruccions aplicables
+
+Referència:
+
+- `docs/trust/Data-Exit-Plan.md`
 
 ## 7. Seguretat
 
-Summa Social implementa mesures tècniques i organitzatives per protegir les dades:
+Summa Social aplica mesures tècniques i organitzatives proporcionades al servei, incloent:
 
-- Xifratge en trànsit (HTTPS/TLS)
-- Xifratge en repòs (infraestructura Google)
-- Control d'accés per rols
-- Aïllament de dades entre organitzacions
-- Gestió de sessions amb caducitat i mecanismes de tancament de sessió
+- xifratge en trànsit
+- xifratge en repòs proporcionat per la infraestructura cloud
+- control d'accés per rols i permisos
+- separació de dades per organització
+- validacions server-side en fluxos sensibles
+- logs tècnics i mecanismes de diagnòstic
 
-Més detalls al document intern [TOMs.md](./TOMs.md).
+Detall resumit a:
 
----
+- `docs/security/TOMs.md`
 
-## 8. Canvis en aquesta política
+## 8. Drets de les persones interessades
 
-Qualsevol modificació d'aquesta política es comunicarà als usuaris a través de l'aplicació. La data d'"Última actualització" reflecteix la versió vigent.
+Els drets poden incloure:
 
----
+- accés
+- rectificació
+- supressió
+- oposició
+- limitació
+- portabilitat
 
-## 9. Contacte
+### Com exercir-los
 
-Per a qualsevol qüestió relacionada amb la privacitat:
+- si ets usuari directe del servei: escriu a `privacy@summasocial.app`
+- si les teves dades són dins de la plataforma d'una entitat client: contacta primer amb l'entitat corresponent, que és la responsable del tractament d'aquestes dades
 
-**Email**: privacy@summasocial.app
-**Responsable intern**: Raül Vico
-**Titular del servei**: Raül Vico (Espanya)
+Summa Social assistirà l'entitat quan sigui necessari dins del seu rol d'encarregat.
 
-**Delegat de Protecció de Dades (DPD/DPO)**: no aplicable (Summa Social no està obligada a designar DPD segons l'Art. 37 RGPD).
+## 9. Transferències internacionals
+
+Alguns proveïdors tecnològics poden implicar tractament o suport fora de l'Espai Econòmic Europeu, segons la seva arquitectura i condicions vigents.
+
+Quan això passi, Summa Social es recolza en els mecanismes contractuals i garanties oferts pel proveïdor corresponent, segons la seva documentació vigent.
+
+Per això és important consultar també:
+
+- `docs/security/Subprocessors.md`
+
+## 10. Canvis d'aquesta política
+
+La present política es pot actualitzar per adaptar-se a canvis del producte, de la infraestructura o del marc legal.
+
+La data d'última actualització indica la versió vigent d'aquest document intern.
+
+## 11. Contacte
+
+Per qüestions de privacitat:
+
+- Email: `privacy@summasocial.app`
+- Responsable intern: Raül Vico
+- Titular del servei: Raül Vico (Espanya)

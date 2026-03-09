@@ -1,0 +1,57 @@
+{
+  "id": "howto-donor-update-iban",
+  "type": "howto",
+  "domain": "donors",
+  "risk": "safe",
+  "guardrail": "none",
+  "answerMode": "full",
+  "title": {
+    "ca": "Modificar l'IBAN d'un soci",
+    "es": "Modificar el IBAN de un socio"
+  },
+  "intents": {
+    "ca": [
+      "com modifico l'iban d'un soci",
+      "com canvio el compte bancari d'un soci",
+      "on edito l'iban del soci",
+      "canviar iban soci"
+    ],
+    "es": [
+      "cómo modifico el iban de un socio",
+      "cómo cambio la cuenta bancaria de un socio",
+      "dónde edito el iban del socio",
+      "cambiar iban socio"
+    ]
+  },
+  "guideId": null,
+  "answer": {
+    "ca": "Per canviar l'IBAN d'un soci:\n1. Ves a Donants.\n2. Clica el nom del soci i després \"Editar\".\n3. A la secció \"Banc\", actualitza el camp \"IBAN\".\n4. Clica \"Guardar Donant\".\n\nImportant: si el soci és recurrent i no té IBAN, no entrarà a la remesa de cobrament.",
+    "es": "Para cambiar el IBAN de un socio:\n1. Ve a Donantes.\n2. Haz clic en el nombre del socio y después en \"Editar\".\n3. En la sección \"Banco\", actualiza el campo \"IBAN\".\n4. Haz clic en \"Guardar Donante\".\n\nImportante: si el socio es recurrente y no tiene IBAN, no entrará en la remesa de cobro."
+  },
+  "uiPaths": [
+    "Donants > Nom del donant > Editar"
+  ],
+  "needsSnapshot": false,
+  "keywords": [
+    "iban",
+    "compte bancari",
+    "soci",
+    "remesa"
+  ],
+  "source_faq": [],
+  "source_manual": [
+    "3.4",
+    "6.a"
+  ],
+  "source_guides": [],
+  "related": [
+    "guide-update-donors",
+    "howto-member-create",
+    "howto-remittance-create-sepa"
+  ],
+  "error_key": null,
+  "symptom": {
+    "ca": null,
+    "es": null
+  }
+}

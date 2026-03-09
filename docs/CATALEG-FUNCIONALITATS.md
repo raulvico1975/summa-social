@@ -1,26 +1,59 @@
-# Catàleg de Funcionalitats — Summa Social
+# Catàleg de funcionalitats — mapa ràpid
 
-**Última actualització**: 7 Març 2026
+Aquest document és una porta d'entrada curta.
 
-## Mòduls principals
+No descriu el producte al detall; per això ja existeixen:
 
-- Dashboard operatiu: saldo, activitat i alertes de control.
-- Moviments: importació, categorització, filtres i conciliació.
-- Documents pendents: pujada, adjunts, revisió i relació amb moviments.
-- Documents sobre moviments i despeses: drag & drop de factures i comprovants.
-- Donants/Proveïdors/Treballadors: gestió de contactes i cicle de vida.
-- Remeses i devolucions: processament IN/OUT, undo i controls d'invariants.
-- Remeses SEPA pain.008: generació de cobrament per periodicitat.
-- Informes fiscals: Model 182, Model 347 i certificats de donació (PDF, ZIP i enviament per email des de l'app).
-- Liquidacions: despeses de viatge, tiquets, quilometratge i PDF.
-- Mòdul de projectes: projectes, pressupost, partides, assignacions i despeses de terreny.
-- Justificació econòmica: Excel i ZIP de factures/comprovants, en ordre cronològic o per partides, llest per enviar al finançador.
-- Manual i Hub de guies: suport contextual per a usuaris.
-- SuperAdmin: administració global i operacions de plataforma.
+- `docs/SUMMA-SOCIAL-REFERENCIA-COMPLETA.md`
+- `docs/manual-usuari-summa-social.md`
+- `docs/FAQ_SUMMA_SOCIAL.md`
 
-## Referències
+## Què cobreix Summa Social
 
-- Manual usuari: `docs/manual-usuari-summa-social.md`
-- FAQ: `docs/FAQ_SUMMA_SOCIAL.md`
-- Referència mestra (context tècnic complet): `docs/SUMMA-SOCIAL-REFERENCIA-COMPLETA.md`
-- Historial de canvis: `docs/CHANGELOG.md`
+### Conciliació i operativa bancària
+
+- importació de moviments
+- categorització i matching
+- multicomptes bancaris
+- remeses i devolucions
+- cobrament SEPA pain.008
+
+### Fiscalitat i informes
+
+- Model 182
+- Model 347
+- certificats de donació
+- exports per a gestoria i AEAT
+- control de dades fiscals mínimes
+
+### Contactes i estructura de l'entitat
+
+- donants
+- proveïdors
+- treballadors
+- permisos i membres
+
+### Documents i justificació econòmica
+
+- documents pendents
+- adjunts sobre moviments
+- liquidacions de despesa
+- projectes, partides i assignacions
+- export de justificació per al finançador
+
+### Suport i operació interna
+
+- manual i hub de guies
+- ajuda contextual i bot
+- eines de SuperAdmin
+- exportació i backup local
+
+## On mirar segons la necessitat
+
+| Si busques... | Document correcte |
+|---------------|-------------------|
+| què fa exactament el producte | `docs/SUMMA-SOCIAL-REFERENCIA-COMPLETA.md` |
+| com usar-lo com a usuari | `docs/manual-usuari-summa-social.md` |
+| dubtes freqüents i respostes curtes | `docs/FAQ_SUMMA_SOCIAL.md` |
+| estat i criteri de la documentació | `docs/DOCS-STATUS-2026-03-08.md` |
+| canvis recents resumits | `docs/CHANGELOG.md` |

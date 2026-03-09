@@ -1,0 +1,56 @@
+{
+  "id": "howto-movement-unassigned-alerts",
+  "type": "howto",
+  "domain": "transactions",
+  "risk": "safe",
+  "guardrail": "none",
+  "answerMode": "full",
+  "title": {
+    "ca": "Detectar anomalies o moviments sense assignar",
+    "es": "Detectar anomalías o movimientos sin asignar"
+  },
+  "intents": {
+    "ca": [
+      "com detecto anomalies o moviments sense assignar",
+      "com trobo moviments sense categoritzar",
+      "moviments sense contacte assignat",
+      "pendents de revisar als moviments"
+    ],
+    "es": [
+      "cómo detecto anomalías o movimientos sin asignar",
+      "cómo encuentro movimientos sin categorizar",
+      "movimientos sin contacto asignado",
+      "pendientes de revisar en movimientos"
+    ]
+  },
+  "guideId": null,
+  "answer": {
+    "ca": "Per trobar pendents:\n1. Revisa al Dashboard les alertes \"Moviments sense categoritzar\" i \"Moviments sense contacte assignat\".\n2. Clica l'alerta o ves a Moviments.\n3. Obre \"Filtres\".\n4. Aplica \"Sense categoritzar\" o \"Sense contacte\" segons el cas.\n5. Des de la taula, assigna categoria o contacte als moviments pendents.\n\nL'alerta de moviments sense contacte només compta els imports que superen el llindar configurat a l'organització.",
+    "es": "Para encontrar pendientes:\n1. Revisa en el Dashboard las alertas \"Movimientos sin categorizar\" y \"Movimientos sin contacto asignado\".\n2. Haz clic en la alerta o ve a Movimientos.\n3. Abre \"Filtros\".\n4. Aplica \"Sin categorizar\" o \"Sin contacto\" según el caso.\n5. Desde la tabla, asigna categoría o contacto a los movimientos pendientes.\n\nLa alerta de movimientos sin contacto solo cuenta los importes que superan el umbral configurado en la organización."
+  },
+  "uiPaths": [
+    "Dashboard",
+    "Moviments > Filtres"
+  ],
+  "needsSnapshot": false,
+  "keywords": [
+    "sense categoritzar",
+    "sense contacte",
+    "dashboard",
+    "pendents"
+  ],
+  "source_faq": [],
+  "source_manual": [
+    "5.3"
+  ],
+  "source_guides": [],
+  "related": [
+    "guide-movement-filters",
+    "howto-assign-bank-movement"
+  ],
+  "error_key": null,
+  "symptom": {
+    "ca": null,
+    "es": null
+  }
+}

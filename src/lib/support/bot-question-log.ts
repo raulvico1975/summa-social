@@ -80,6 +80,9 @@ export interface BotQuestionLogMeta {
   clarifyAbandonedCount?: number
   reformulatedAfterFallbackCount?: number
   reformulatedAfterClarifyCount?: number
+  answerCount?: number
+  clarifyCount?: number
+  fallbackCount?: number
 }
 
 export type BotQuestionCounterIncrements = Pick<
@@ -110,6 +113,27 @@ function buildCounterIncrementPayload(meta: BotQuestionLogMeta | BotQuestionCoun
   }
 
   return payload
+}
+
+function buildModeCounterIncrementPayload(
+  resultMode: 'card' | 'fallback',
+  cardIdOrFallbackId: string
+): Record<string, FieldValue> {
+  if (resultMode === 'card') {
+    return {
+      answerCount: FieldValue.increment(1),
+    }
+  }
+
+  if (cardIdOrFallbackId === 'clarify-disambiguation') {
+    return {
+      clarifyCount: FieldValue.increment(1),
+    }
+  }
+
+  return {
+    fallbackCount: FieldValue.increment(1),
+  }
 }
 
 // =============================================================================
@@ -167,6 +191,7 @@ export async function logBotQuestion(
       intent: meta?.intent ?? null,
       specificCaseDetected: meta?.specificCaseDetected ?? null,
       count: FieldValue.increment(1),
+      ...buildModeCounterIncrementPayload(resultMode, cardIdOrFallbackId),
       lastSeenAt: FieldValue.serverTimestamp(),
       createdAt: FieldValue.serverTimestamp(),
       ...buildCounterIncrementPayload(meta ?? {}),

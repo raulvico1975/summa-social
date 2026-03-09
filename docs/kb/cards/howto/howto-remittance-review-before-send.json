@@ -1,0 +1,54 @@
+{
+  "id": "howto-remittance-review-before-send",
+  "type": "howto",
+  "domain": "sepa",
+  "risk": "guarded",
+  "guardrail": "b1_sepa",
+  "answerMode": "full",
+  "title": {
+    "ca": "Revisar una remesa abans d'enviar-la",
+    "es": "Revisar una remesa antes de enviarla"
+  },
+  "intents": {
+    "ca": [
+      "com reviso una remesa abans d'enviar-la",
+      "què he de revisar abans de generar la remesa",
+      "revisió remesa sepa",
+      "abans d'enviar al banc"
+    ],
+    "es": [
+      "cómo reviso una remesa antes de enviarla",
+      "qué debo revisar antes de generar la remesa",
+      "revisión remesa sepa",
+      "antes de enviarla al banco"
+    ]
+  },
+  "guideId": null,
+  "answer": {
+    "ca": "Abans d'enviar la remesa al banc:\n1. Al wizard de Donants > Remeses de cobrament, revisa que el compte seleccionat tingui l'ICS configurat.\n2. Comprova la data de cobrament.\n3. Revisa quants socis s'inclouen i l'import total.\n4. Si veus socis amb el badge \"No toca encara\", confirma només si realment els vols forçar.\n5. Genera l'XML i puja'l manualment al banc.\n\nImportant: Summa només genera el fitxer; no l'envia automàticament.",
+    "es": "Antes de enviar la remesa al banco:\n1. En el wizard de Donantes > Remesas de cobro, revisa que la cuenta seleccionada tenga el ICS configurado.\n2. Comprueba la fecha de cobro.\n3. Revisa cuántos socios se incluyen y el importe total.\n4. Si ves socios con el badge \"No toca todavía\", confirma solo si realmente quieres forzarlos.\n5. Genera el XML y súbelo manualmente al banco.\n\nImportante: Summa solo genera el fichero; no lo envía automáticamente."
+  },
+  "uiPaths": [
+    "Donants > Remeses de cobrament"
+  ],
+  "needsSnapshot": false,
+  "keywords": [
+    "revisar remesa",
+    "no toca encara",
+    "import total",
+    "ics"
+  ],
+  "source_faq": [],
+  "source_manual": [
+    "6.a"
+  ],
+  "source_guides": [],
+  "related": [
+    "howto-remittance-create-sepa"
+  ],
+  "error_key": null,
+  "symptom": {
+    "ca": null,
+    "es": null
+  }
+}

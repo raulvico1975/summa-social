@@ -40,6 +40,7 @@ export interface PublicTranslations {
   };
   privacy: {
     title: string;
+    updatedAt: string;
     sections: {
       whoWeAre: {
         title: string;
@@ -145,7 +146,9 @@ export interface PublicTranslations {
         intro: string;
         emailLabel: string;
         responsibleLabel: string;
+        responsibleValue: string;
         holderLabel: string;
+        holderValue: string;
         dpoNote: string;
       };
     };
@@ -405,13 +408,14 @@ const ca: PublicTranslations = {
   },
   privacy: {
     title: 'Política de Privacitat',
+    updatedAt: 'Març 2026',
     sections: {
       whoWeAre: {
         title: '1. Qui som',
         intro:
-          "Summa Social és una aplicació de gestió financera per a entitats socials, desenvolupada i mantinguda per Raül Vico, que actua com a responsable del tractament de les dades dels usuaris de l'aplicació.",
+          "Summa Social és una aplicació de gestió financera per a entitats socials que actua com a responsable del tractament de les dades dels usuaris de l'aplicació.",
         responsible:
-          "Responsable del tractament (per a dades d'usuaris de l'aplicació): Summa Social / Raül Vico",
+          "Responsable del tractament (per a dades d'usuaris de l'aplicació): Summa Social",
         processor:
           "Encarregat del tractament (per a dades de les entitats clients): Summa Social actua per compte de cada entitat, que és la responsable de les dades dels seus donants, socis, proveïdors i treballadors.",
       },
@@ -579,7 +583,9 @@ const ca: PublicTranslations = {
         intro: 'Per a qualsevol qüestió relacionada amb la privacitat:',
         emailLabel: 'Email',
         responsibleLabel: 'Responsable intern',
+        responsibleValue: 'Summa Social',
         holderLabel: 'Titular del servei',
+        holderValue: 'Summa Social (Espanya)',
         dpoNote:
           "Delegat de Protecció de Dades (DPD/DPO): no aplicable (Summa Social no està obligada a designar DPD segons l'Art. 37 RGPD).",
       },
@@ -973,13 +979,14 @@ const es: PublicTranslations = {
   },
   privacy: {
     title: 'Política de Privacidad',
+    updatedAt: 'Marzo 2026',
     sections: {
       whoWeAre: {
         title: '1. Quiénes somos',
         intro:
-          'Summa Social es una aplicación de gestión financiera para entidades sociales, desarrollada y mantenida por Raül Vico, que actúa como responsable del tratamiento de los datos de los usuarios de la aplicación.',
+          'Summa Social es una aplicación de gestión financiera para entidades sociales que actúa como responsable del tratamiento de los datos de los usuarios de la aplicación.',
         responsible:
-          'Responsable del tratamiento (para datos de usuarios de la aplicación): Summa Social / Raül Vico',
+          'Responsable del tratamiento (para datos de usuarios de la aplicación): Summa Social',
         processor:
           'Encargado del tratamiento (para datos de las entidades clientes): Summa Social actúa por cuenta de cada entidad, que es la responsable de los datos de sus donantes, socios, proveedores y trabajadores.',
       },
@@ -1147,7 +1154,9 @@ const es: PublicTranslations = {
         intro: 'Para cualquier cuestión relacionada con la privacidad:',
         emailLabel: 'Email',
         responsibleLabel: 'Responsable interno',
+        responsibleValue: 'Summa Social',
         holderLabel: 'Titular del servicio',
+        holderValue: 'Summa Social (España)',
         dpoNote:
           'Delegado de Protección de Datos (DPD/DPO): no aplicable (Summa Social no está obligada a designar DPD según el Art. 37 RGPD).',
       },
@@ -1540,13 +1549,14 @@ const fr: PublicTranslations = {
   },
   privacy: {
     title: 'Politique de Confidentialité',
+    updatedAt: 'Mars 2026',
     sections: {
       whoWeAre: {
         title: '1. Qui sommes-nous',
         intro:
-          "Summa Social est une application de gestion financière pour les associations, développée et maintenue par Raül Vico, qui agit en tant que responsable du traitement des données des utilisateurs de l'application.",
+          "Summa Social est une application de gestion financière pour les associations qui agit en tant que responsable du traitement des données des utilisateurs de l'application.",
         responsible:
-          "Responsable du traitement (pour les données des utilisateurs de l'application) : Summa Social / Raül Vico",
+          "Responsable du traitement (pour les données des utilisateurs de l'application) : Summa Social",
         processor:
           "Sous-traitant (pour les données des entités clientes) : Summa Social agit pour le compte de chaque entité, qui est responsable des données de ses donateurs, adhérents, fournisseurs et employés.",
       },
@@ -1714,7 +1724,9 @@ const fr: PublicTranslations = {
         intro: 'Pour toute question relative à la confidentialité :',
         emailLabel: 'Email',
         responsibleLabel: 'Responsable interne',
+        responsibleValue: 'Summa Social',
         holderLabel: 'Titulaire du service',
+        holderValue: 'Summa Social (Espagne)',
         dpoNote:
           "Délégué à la Protection des Données (DPD/DPO) : non applicable (Summa Social n'est pas tenue de désigner un DPD selon l'Art. 37 RGPD).",
       },
@@ -2106,13 +2118,14 @@ const pt: PublicTranslations = {
   },
   privacy: {
     title: 'Política de Privacidade',
+    updatedAt: 'Março 2026',
     sections: {
       whoWeAre: {
         title: '1. Quem somos',
         intro:
-          'Summa Social é uma aplicação de gestão financeira para entidades sociais, desenvolvida e mantida por Raül Vico, que atua como responsável pelo tratamento dos dados dos utilizadores da aplicação.',
+          'Summa Social é uma aplicação de gestão financeira para entidades sociais que atua como responsável pelo tratamento dos dados dos utilizadores da aplicação.',
         responsible:
-          'Responsável pelo tratamento (para dados de utilizadores da aplicação): Summa Social / Raül Vico',
+          'Responsável pelo tratamento (para dados de utilizadores da aplicação): Summa Social',
         processor:
           'Subcontratante (para dados das entidades clientes): Summa Social atua por conta de cada entidade, que é a responsável pelos dados dos seus doadores, sócios, fornecedores e trabalhadores.',
       },
@@ -2280,7 +2293,9 @@ const pt: PublicTranslations = {
         intro: 'Para qualquer questão relacionada com a privacidade:',
         emailLabel: 'Email',
         responsibleLabel: 'Responsável interno',
+        responsibleValue: 'Summa Social',
         holderLabel: 'Titular do serviço',
+        holderValue: 'Summa Social (Espanha)',
         dpoNote:
           'Encarregado de Proteção de Dados (EPD/DPO): não aplicável (Summa Social não está obrigada a designar EPD segundo o Art. 37 RGPD).',
       },

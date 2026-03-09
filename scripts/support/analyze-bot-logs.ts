@@ -5,6 +5,7 @@ import { getAdminDb } from '../../src/lib/api/admin-sdk'
 
 type ConfidenceBand = 'high' | 'medium' | 'low'
 type IntentType = 'operational' | 'informational'
+type MetricStatus = 'ok' | 'insufficient_data'
 
 export type BotQuestionLogRecord = {
   normalizedQueryHash: string
@@ -25,6 +26,9 @@ export type BotQuestionLogRecord = {
   clarifyAbandonedCount: number
   reformulatedAfterFallbackCount: number
   reformulatedAfterClarifyCount: number
+  answerCount: number
+  clarifyCount: number
+  fallbackCount: number
   createdAt?: string | null
   lastSeenAt?: string | null
 }
@@ -35,12 +39,15 @@ export type ProblemMetric = {
   messageNormalized: string
   lang: string
   count: number
-  fallbackRate: number
-  notHelpfulRate: number
+  fallbackRate: number | null
+  fallbackRateStatus?: MetricStatus
+  fallbackRateBasis?: 'prospective_counters' | 'historical_not_reconstructible'
+  notHelpfulRate: number | null
+  notHelpfulRateStatus?: MetricStatus
   reformulationRate: number | null
-  reformulationRateStatus?: 'ok' | 'insufficient_data'
+  reformulationRateStatus?: MetricStatus
   clarifyAbandonmentRate: number | null
-  clarifyAbandonmentRateStatus?: 'ok' | 'insufficient_data'
+  clarifyAbandonmentRateStatus?: MetricStatus
   cardIdOrFallbackId: string | null
   bestCardId: string | null
   confidenceBand: ConfidenceBand | null
@@ -57,11 +64,11 @@ export type BotProblemsReport = {
   topNotHelpful: ProblemMetric[]
   topHighFrequency: ProblemMetric[]
   topReformulations: {
-    status: 'ok' | 'insufficient_data'
+    status: MetricStatus
     items: ProblemMetric[]
   }
   topClarifyAbandonment: {
-    status: 'ok' | 'insufficient_data'
+    status: MetricStatus
     items: ProblemMetric[]
   }
   recommendedCoverageCandidates: ProblemMetric[]
@@ -71,6 +78,16 @@ type BuildReportOptions = {
   generatedAt?: string
   orgId: string
   days: number
+}
+
+type AnalyzeBotLogsCliDeps = {
+  cwd?: string
+  loadRecords?: (orgId: string, days: number) => Promise<BotQuestionLogRecord[]>
+}
+
+export type AnalyzeBotLogsExecutionResult = {
+  report: BotProblemsReport
+  absoluteOutPath: string
 }
 
 function parseInteger(raw: string | undefined, fallback: number): number {
@@ -156,6 +173,9 @@ export function toBotQuestionLogRecord(
     clarifyAbandonedCount: Number(data.clarifyAbandonedCount ?? 0) || 0,
     reformulatedAfterFallbackCount: Number(data.reformulatedAfterFallbackCount ?? 0) || 0,
     reformulatedAfterClarifyCount: Number(data.reformulatedAfterClarifyCount ?? 0) || 0,
+    answerCount: Number(data.answerCount ?? 0) || 0,
+    clarifyCount: Number(data.clarifyCount ?? 0) || 0,
+    fallbackCount: Number(data.fallbackCount ?? 0) || 0,
     createdAt: toIsoDate(data.createdAt),
     lastSeenAt: toIsoDate(data.lastSeenAt),
   }
@@ -163,12 +183,15 @@ export function toBotQuestionLogRecord(
 
 function buildMetric(record: BotQuestionLogRecord): ProblemMetric {
   const helpfulTotal = record.helpfulYes + record.helpfulNo
+  const modeTotal = record.answerCount + record.clarifyCount + record.fallbackCount
   const reformulationCount = record.reformulatedAfterFallbackCount + record.reformulatedAfterClarifyCount
   const hasReformulationSignal = reformulationCount > 0
   const hasClarifySignal =
     record.clarifyShownCount > 0 ||
     record.clarifySelectedCount > 0 ||
     record.clarifyAbandonedCount > 0
+  const hasHelpfulSignal = helpfulTotal > 0
+  const hasProspectiveModeSignal = modeTotal > 0
 
   return {
     normalizedQueryHash: record.normalizedQueryHash,
@@ -176,8 +199,11 @@ function buildMetric(record: BotQuestionLogRecord): ProblemMetric {
     messageNormalized: record.messageNormalized,
     lang: record.lang,
     count: record.count,
-    fallbackRate: record.resultMode === 'fallback' ? 1 : 0,
-    notHelpfulRate: helpfulTotal > 0 ? record.helpfulNo / helpfulTotal : 0,
+    fallbackRate: hasProspectiveModeSignal ? record.fallbackCount / modeTotal : null,
+    fallbackRateStatus: hasProspectiveModeSignal ? 'ok' : 'insufficient_data',
+    fallbackRateBasis: hasProspectiveModeSignal ? 'prospective_counters' : 'historical_not_reconstructible',
+    notHelpfulRate: hasHelpfulSignal ? record.helpfulNo / helpfulTotal : null,
+    notHelpfulRateStatus: hasHelpfulSignal ? 'ok' : 'insufficient_data',
     reformulationRate: hasReformulationSignal && record.count > 0 ? reformulationCount / record.count : null,
     reformulationRateStatus: hasReformulationSignal ? 'ok' : 'insufficient_data',
     clarifyAbandonmentRate: hasClarifySignal && record.clarifyShownCount > 0
@@ -225,12 +251,12 @@ export function buildBotProblemsReport(
   const metrics = records.map(buildMetric)
 
   const topFallback = metrics
-    .filter(metric => metric.fallbackRate > 0)
+    .filter(metric => metric.fallbackRate != null && metric.fallbackRate > 0)
     .sort(compareByRateThenCount('fallbackRate'))
     .slice(0, 15)
 
   const topNotHelpful = metrics
-    .filter(metric => metric.notHelpfulRate > 0)
+    .filter(metric => metric.notHelpfulRate != null && metric.notHelpfulRate > 0)
     .sort(compareByRateThenCount('notHelpfulRate'))
     .slice(0, 10)
 
@@ -272,40 +298,66 @@ export function buildBotProblemsReport(
   }
 }
 
-async function loadBotQuestionLogRecords(orgId: string, days: number): Promise<BotQuestionLogRecord[]> {
-  const db = getAdminDb()
-  const cutoff = new Date()
-  cutoff.setDate(cutoff.getDate() - days)
-
-  const snapshot = await db
-    .collection(`organizations/${orgId}/supportBotQuestions`)
-    .where('lastSeenAt', '>=', cutoff)
-    .get()
-
-  return snapshot.docs.map(doc => toBotQuestionLogRecord(doc.id, doc.data() as Record<string, unknown>))
+function normalizeLoadError(orgId: string, error: unknown): Error {
+  const message = error instanceof Error ? error.message : String(error)
+  if (
+    /Firebase config incompleta|Missing FIREBASE_STORAGE_BUCKET|Could not load the default credentials|credential/i.test(message)
+  ) {
+    return new Error(`Cannot analyze support bot logs for org "${orgId}": missing Firebase Admin credentials or config (${message})`)
+  }
+  return new Error(`Cannot analyze support bot logs for org "${orgId}": ${message}`)
 }
 
-export async function runAnalyzeBotLogsCli(argv: string[]): Promise<BotProblemsReport> {
-  const { orgId, days, outPath } = parseArgs(argv)
-  const records = await loadBotQuestionLogRecords(orgId, days)
-  const report = buildBotProblemsReport(records, { orgId, days })
-  const absoluteOutPath = resolve(process.cwd(), outPath)
+async function loadBotQuestionLogRecords(orgId: string, days: number): Promise<BotQuestionLogRecord[]> {
+  try {
+    const db = getAdminDb()
+    const cutoff = new Date()
+    cutoff.setDate(cutoff.getDate() - days)
 
+    const snapshot = await db
+      .collection(`organizations/${orgId}/supportBotQuestions`)
+      .where('lastSeenAt', '>=', cutoff)
+      .get()
+
+    return snapshot.docs.map(doc => toBotQuestionLogRecord(doc.id, doc.data() as Record<string, unknown>))
+  } catch (error) {
+    throw normalizeLoadError(orgId, error)
+  }
+}
+
+export async function writeBotProblemsReport(report: BotProblemsReport, outPath: string, cwd = process.cwd()): Promise<string> {
+  const absoluteOutPath = resolve(cwd, outPath)
   await mkdir(dirname(absoluteOutPath), { recursive: true })
   await writeFile(absoluteOutPath, `${JSON.stringify(report, null, 2)}\n`, 'utf8')
+  return absoluteOutPath
+}
 
+export async function executeAnalyzeBotLogsCli(
+  argv: string[],
+  deps: AnalyzeBotLogsCliDeps = {}
+): Promise<AnalyzeBotLogsExecutionResult> {
+  const { orgId, days, outPath } = parseArgs(argv)
+  const records = await (deps.loadRecords ?? loadBotQuestionLogRecords)(orgId, days)
+  const report = buildBotProblemsReport(records, { orgId, days })
+  const absoluteOutPath = await writeBotProblemsReport(report, outPath, deps.cwd)
+
+  return { report, absoluteOutPath }
+}
+
+export async function runAnalyzeBotLogsCli(argv: string[], deps: AnalyzeBotLogsCliDeps = {}): Promise<BotProblemsReport> {
+  const { report } = await executeAnalyzeBotLogsCli(argv, deps)
   return report
 }
 
 const isMainModule = process.argv[1] != null && resolve(process.argv[1]) === fileURLToPath(import.meta.url)
 
 if (isMainModule) {
-  runAnalyzeBotLogsCli(process.argv.slice(2))
-    .then(report => {
+  executeAnalyzeBotLogsCli(process.argv.slice(2))
+    .then(({ report, absoluteOutPath }) => {
       console.log(
         JSON.stringify(
           {
-            out: `reports/bot-top-problems.json`,
+            out: absoluteOutPath,
             orgId: report.orgId,
             recommendedCoverageCandidates: report.recommendedCoverageCandidates.length,
           },

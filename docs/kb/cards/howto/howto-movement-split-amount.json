@@ -1,0 +1,52 @@
+{
+  "id": "howto-movement-split-amount",
+  "type": "howto",
+  "domain": "transactions",
+  "risk": "safe",
+  "guardrail": "none",
+  "answerMode": "full",
+  "title": {
+    "ca": "Dividir un moviment",
+    "es": "Dividir un movimiento"
+  },
+  "intents": {
+    "ca": [
+      "com divideixo un moviment",
+      "com desglosso un import",
+      "desglossar import d'un moviment",
+      "separar un moviment en línies"
+    ],
+    "es": [
+      "cómo divido un movimiento",
+      "cómo desgloso un importe",
+      "desglosar importe de un movimiento",
+      "separar un movimiento en líneas"
+    ]
+  },
+  "guideId": null,
+  "answer": {
+    "ca": "Per desglossar un moviment del banc:\n1. Ves a Moviments.\n2. Obre el menú d'opcions del moviment.\n3. Clica \"Desglossar import\".\n4. Reparteix l'import en línies i indica per a cada línia el \"Tipus\", la \"Categoria\" o el \"Contacte\" que correspongui.\n5. Clica \"Aplicar\".\n\nLa suma de les línies ha de quadrar amb l'import del banc.",
+    "es": "Para desglosar un movimiento del banco:\n1. Ve a Movimientos.\n2. Abre el menú de opciones del movimiento.\n3. Haz clic en \"Desglosar importe\".\n4. Reparte el importe en líneas e indica para cada línea el \"Tipo\", la \"Categoría\" o el \"Contacto\" que corresponda.\n5. Haz clic en \"Aplicar\".\n\nLa suma de las líneas debe cuadrar con el importe del banco."
+  },
+  "uiPaths": [
+    "Moviments > Menú d'opcions > Desglossar import"
+  ],
+  "needsSnapshot": false,
+  "keywords": [
+    "desglossar",
+    "dividir",
+    "import",
+    "moviment"
+  ],
+  "source_faq": [],
+  "source_manual": [],
+  "source_guides": [],
+  "related": [
+    "howto-assign-bank-movement"
+  ],
+  "error_key": null,
+  "symptom": {
+    "ca": null,
+    "es": null
+  }
+}

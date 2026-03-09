@@ -1,0 +1,56 @@
+{
+  "id": "howto-import-safe-duplicates",
+  "type": "howto",
+  "domain": "transactions",
+  "risk": "safe",
+  "guardrail": "none",
+  "answerMode": "full",
+  "title": {
+    "ca": "Revisar duplicats en importar un extracte",
+    "es": "Revisar duplicados al importar un extracto"
+  },
+  "intents": {
+    "ca": [
+      "duplicats extracte bancari",
+      "com detecto duplicats d'un extracte",
+      "he importat l'extracte dues vegades",
+      "moviments duplicats a la importació"
+    ],
+    "es": [
+      "duplicados extracto bancario",
+      "cómo detecto duplicados de un extracto",
+      "he importado el extracto dos veces",
+      "movimientos duplicados en la importación"
+    ]
+  },
+  "guideId": null,
+  "answer": {
+    "ca": "Quan importes un extracte:\n1. Revisa el \"Resum pre-importació\".\n2. Si Summa detecta moviments ja existents, veuràs el bloc \"Duplicats segurs\".\n3. Clica \"Veure quins moviments ja existien\".\n4. Si cal, obre \"Veure per què\" per entendre si el duplicat s'ha detectat per referència bancària, coincidència completa o línia repetida al fitxer.\n\nAquests moviments no s'importaran de nou.",
+    "es": "Cuando importas un extracto:\n1. Revisa el \"Resumen preimportación\".\n2. Si Summa detecta movimientos ya existentes, verás el bloque \"Duplicados seguros\".\n3. Haz clic en \"Ver qué movimientos ya existían\".\n4. Si hace falta, abre \"Ver por qué\" para entender si el duplicado se ha detectado por referencia bancaria, coincidencia completa o línea repetida en el fichero.\n\nEsos movimientos no se volverán a importar."
+  },
+  "uiPaths": [
+    "Moviments > Importar"
+  ],
+  "needsSnapshot": false,
+  "keywords": [
+    "duplicats",
+    "extracte",
+    "duplicados",
+    "resum pre-importació"
+  ],
+  "source_faq": [
+    "Q9"
+  ],
+  "source_manual": [
+    "11.2"
+  ],
+  "source_guides": [],
+  "related": [
+    "guide-import-movements"
+  ],
+  "error_key": null,
+  "symptom": {
+    "ca": null,
+    "es": null
+  }
+}

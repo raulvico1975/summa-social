@@ -65,7 +65,7 @@ export default async function PrivacyPage({ params }: PageProps) {
             {/* Títol */}
             <h1 className="text-3xl font-bold tracking-tight mb-2">{t.privacy.title}</h1>
             <p className="text-muted-foreground mb-8">
-              <strong>{t.common.lastUpdated}</strong>: Desembre 2025
+              <strong>{t.common.lastUpdated}</strong>: {t.privacy.updatedAt}
               <br />
               <strong>{t.common.privacyContact}</strong>:{' '}
               <a href={`mailto:${SUPPORT_EMAIL}`} className="text-primary hover:underline">
@@ -346,10 +346,10 @@ export default async function PrivacyPage({ params }: PageProps) {
                   </a>
                 </p>
                 <p>
-                  <strong>{p.contact.responsibleLabel}</strong>: Raül Vico
+                  <strong>{p.contact.responsibleLabel}</strong>: {p.contact.responsibleValue}
                 </p>
                 <p>
-                  <strong>{p.contact.holderLabel}</strong>: Raül Vico (Espanya)
+                  <strong>{p.contact.holderLabel}</strong>: {p.contact.holderValue}
                 </p>
                 <p className="text-muted-foreground pt-2">
                   <strong>{p.contact.dpoNote.split(':')[0]}</strong>:

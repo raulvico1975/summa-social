@@ -1,0 +1,56 @@
+{
+  "id": "howto-member-user-permissions",
+  "type": "howto",
+  "domain": "config",
+  "risk": "safe",
+  "guardrail": "none",
+  "answerMode": "full",
+  "title": {
+    "ca": "Canviar els permisos d'un usuari",
+    "es": "Cambiar los permisos de un usuario"
+  },
+  "intents": {
+    "ca": [
+      "com canvio els permisos d'un usuari",
+      "com personalitzo permisos d'un membre",
+      "permisos d'usuari",
+      "què pot veure un usuari"
+    ],
+    "es": [
+      "cómo cambio los permisos de un usuario",
+      "cómo personalizo permisos de un miembro",
+      "permisos de usuario",
+      "qué puede ver un usuario"
+    ]
+  },
+  "guideId": null,
+  "answer": {
+    "ca": "Per canviar permisos granulars:\n1. Ves a Configuració > Membres.\n2. Localitza el membre amb rol \"Usuari\".\n3. Obre el menú del membre i clica \"Permisos\".\n4. Ajusta els blocs \"Seccions\", \"Accions crítiques\" i \"Projectes\".\n5. Clica \"Desar permisos\".\n\nImportant: els permisos granulars només es poden editar per a membres amb rol \"Usuari\".",
+    "es": "Para cambiar permisos granulares:\n1. Ve a Configuración > Miembros.\n2. Localiza al miembro con rol \"Usuario\".\n3. Abre el menú del miembro y haz clic en \"Permisos\".\n4. Ajusta los bloques \"Secciones\", \"Acciones críticas\" y \"Proyectos\".\n5. Haz clic en \"Guardar permisos\".\n\nImportante: los permisos granulares solo se pueden editar para miembros con rol \"Usuario\"."
+  },
+  "uiPaths": [
+    "Configuració > Membres"
+  ],
+  "needsSnapshot": false,
+  "keywords": [
+    "permisos",
+    "usuari",
+    "membres",
+    "seccions",
+    "accions crítiques"
+  ],
+  "source_faq": [],
+  "source_manual": [
+    "2.1"
+  ],
+  "source_guides": [],
+  "related": [
+    "howto-member-invite",
+    "guide-access-security"
+  ],
+  "error_key": null,
+  "symptom": {
+    "ca": null,
+    "es": null
+  }
+}
