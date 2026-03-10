@@ -1,0 +1,114 @@
+# Minimum Coverage Commit Cleanup
+
+- originalCommit: `1a6f531`
+- reason: separar la iteració `support-kb-core-coverage` del commit contaminat creat per `npm run acabat`, mantenint només KB i golden set dins d'abast.
+
+## keptFiles
+
+- `docs/support/minimum-coverage-execution-log.md`
+- `docs/kb/_eval/expected.json`
+- `docs/kb/_eval/expected-es.json`
+- `docs/kb/cards/howto/howto-assign-bank-movement.json`
+- `docs/kb/cards/howto/howto-donor-edit.json`
+- `docs/kb/cards/howto/howto-donor-export.json`
+- `docs/kb/cards/howto/howto-donor-fiscal-review.json`
+- `docs/kb/cards/howto/howto-donor-history-summary.json`
+- `docs/kb/cards/howto/howto-donor-update-fee.json`
+- `docs/kb/cards/howto/howto-donor-update-iban.json`
+- `docs/kb/cards/howto/howto-import-safe-duplicates.json`
+- `docs/kb/cards/howto/howto-member-create.json`
+- `docs/kb/cards/howto/howto-member-invite.json`
+- `docs/kb/cards/howto/howto-member-user-permissions.json`
+- `docs/kb/cards/howto/howto-movement-split-amount.json`
+- `docs/kb/cards/howto/howto-movement-unassigned-alerts.json`
+- `docs/kb/cards/howto/howto-organization-fiscal-data.json`
+- `docs/kb/cards/howto/howto-remittance-create-sepa.json`
+- `docs/kb/cards/howto/howto-remittance-review-before-send.json`
+
+## excludedFiles
+
+- `README.md`
+- `docs/CATALEG-FUNCIONALITATS.md`
+- `docs/CHANGELOG.md`
+- `docs/DEMO-PAS-A-PAS.md`
+- `docs/DEPLOY-ROLLBACK.md`
+- `docs/DEV-SOLO-MANUAL.md`
+- `docs/DOCS-STATUS-2026-03-08.md`
+- `docs/OPENCLAW-MIRROR.md`
+- `docs/PERFORMANCE-BASELINE-v1.md`
+- `docs/PLANTILLA-DEPLOY-BLOQUEJAT.md`
+- `docs/README.md`
+- `docs/RELEASE-CHECKLIST.md`
+- `docs/REMESES-IN-LEGACY-I-ROBUSTESA.md`
+- `docs/_tmp/acabat-detect-test.md`
+- `docs/archive/README.md`
+- `docs/archive/_trash/docs-_tmp/acabat-detect-test.md`
+- `docs/archive/_trash/docs-kb-cards-manual.DS_Store`
+- `docs/archive/_trash/docs-kb-cards.DS_Store`
+- `docs/archive/_trash/docs-kb.DS_Store`
+- `docs/archive/_trash/docs-security.DS_Store`
+- `docs/archive/_trash/docs.DS_Store`
+- `docs/archive/changelog/CHANGELOG-pre-2026-03-08.md`
+- `docs/archive/performance/PERFORMANCE-BASELINE-v1.md`
+- `docs/contracts/Service-Agreement-Template.md`
+- `docs/design/README.md`
+- `docs/governance/Product-Governance-Charter.md`
+- `docs/guardrails/DEPLOY.md`
+- `docs/guardrails/FIRESTORE-WRITES.md`
+- `docs/guardrails/I18N.md`
+- `docs/guardrails/spec-to-code-enforcer.md`
+- `docs/i18n/README.md`
+- `docs/kb/README.md`
+- `docs/operations/DEMO-PAS-A-PAS.md`
+- `docs/operations/DEPLOY-ROLLBACK.md`
+- `docs/operations/OPENCLAW-MIRROR.md`
+- `docs/operations/PLANTILLA-DEPLOY-BLOQUEJAT.md`
+- `docs/operations/RELEASE-CHECKLIST.md`
+- `docs/security/AUDIT-2026-01-04.md`
+- `docs/security/PRIVACY_POLICY.md`
+- `docs/security/Subprocessors.md`
+- `docs/security/TOMs.md`
+- `docs/skills/DEPLOY.md`
+- `docs/skills/FIRESTORE-WRITES.md`
+- `docs/skills/I18N.md`
+- `docs/skills/spec-to-code-enforcer.md`
+- `docs/support/minimum-coverage-map.md`
+- `docs/trust/Data-Exit-Plan.md`
+- `public/brand/summa-logo-full-background-inter.png`
+- `public/brand/summa-logo-full-background-inter.webp`
+- `public/brand/summa-logo-full-background.png`
+- `public/brand/summa-logo-full-background.webp`
+- `public/brand/summa-logo-full-transparent-inter.png`
+- `public/brand/summa-logo-full-transparent-inter.webp`
+- `public/brand/summa-logo-full-transparent.png`
+- `public/brand/summa-logo-full-transparent.webp`
+- `public/visuals/landings/certificats-donacio/source/ilustra-certificats.png`
+- `public/visuals/web/web_certificats_182_ca.webp`
+- `public/visuals/web/web_concilia_bancaria_ca.webp`
+- `public/visuals/web/web_divideix_remeses_ca.webp`
+- `public/visuals/web/web_divideix_stripe_ca.webp`
+- `public/visuals/web/web_gestio_docs_ca.webp`
+- `public/visuals/web/web_seguiment_projectes_ca.webp`
+- `reports/bot-top-problems.json`
+- `scripts/support/analyze-bot-logs.ts`
+- `skills/summa-copy-optimizer/SKILL.md`
+- `skills/summa-landing-generator/SKILL.md`
+- `skills/summa-public-landings/SKILL.md`
+- `skills/summa-seo-internal-linking/SKILL.md`
+- `skills/summa-seo-keywords-expander/SKILL.md`
+- `skills/summa-seo-landing-orchestrator/SKILL.md`
+- `skills/summa-seo-schema/SKILL.md`
+- `src/app/[orgSlug]/dashboard/layout.tsx`
+- `src/app/[orgSlug]/quick-expense/layout.tsx`
+- `src/app/public/[lang]/page.tsx`
+- `src/components/public/PublicDirectContact.tsx`
+- `src/hooks/organization-provider.tsx`
+- `src/i18n/public.ts`
+- `src/lib/__tests__/support-bot-log-analysis.test.ts`
+- `src/lib/support/bot-question-log.ts`
+
+## reason
+
+- Els fitxers conservats són l'únic subconjunt del commit original que pertany estrictament a la iteració de cobertura mínima de suport.
+- Tot el que no és KB de suport o golden set ha quedat fora del commit net per evitar contaminació funcional, visual o documental aliena a aquesta iteració.
+- `docs/support/minimum-coverage-commit-cleanup.md` és un fitxer nou d'aquesta fase de neteja; no formava part de `1a6f531`, però és necessari per documentar la separació.
