@@ -659,10 +659,9 @@ El SuperAdmin **no és un rol d'organització**. Es gestiona globalment:
 
 ### Persistència de sessió
 
-- **Tipus**: `browserSessionPersistence`
-- La sessió caduca automàticament en tancar el navegador
+- **Tipus**: `browserLocalPersistence`
+- La sessió es manté entre pestanyes i finestres del mateix navegador fins a logout o expiració de credencials
 - **Sessió màxima**: 12 hores contínues (`auth_time`), després força re-login (`reason=max_session`)
-- **Limitació acceptada (fase actual)**: sense `BroadcastChannel`, el logout pot no propagar-se de forma instantània entre pestanyes
 - Implementat per seguretat
 
 ### Logout per inactivitat

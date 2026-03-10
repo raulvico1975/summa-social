@@ -84,8 +84,9 @@ function useOrganizationBySlug(orgSlug?: string) {
     // Si no hi ha usuari autenticat, redirigim a login preservant la ruta actual.
     // Mantenim el spinner i no reinicialitzem l'organització en cada canvi de pestanya.
     const nextParam = encodeURIComponent(nextPath);
-    router.replace(`/login?next=${nextParam}`);
-  }, [isUserLoading, nextPath, router, user]);
+    const loginPath = orgSlug ? `/${orgSlug}/login` : '/login';
+    router.replace(`${loginPath}?next=${nextParam}`);
+  }, [isUserLoading, nextPath, orgSlug, router, user]);
 
   React.useEffect(() => {
     if (isUserLoading || !user) {

@@ -10,7 +10,7 @@ import { Logo } from '@/components/logo';
 import { useFirebase } from '@/firebase';
 import { useTranslations } from '@/i18n';
 import { useToast } from '@/hooks/use-toast';
-import { signInWithEmailAndPassword, setPersistence, browserSessionPersistence, sendPasswordResetEmail } from 'firebase/auth';
+import { signInWithEmailAndPassword, setPersistence, browserLocalPersistence, sendPasswordResetEmail } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import { Loader2, Building2, AlertCircle, Clock } from 'lucide-react';
 import { isDemoEnv } from '@/lib/demo/isDemoOrg';
@@ -120,8 +120,8 @@ function OrgLoginContent() {
     setIsLoggingIn(true);
 
     try {
-      // Sessió de navegador: es tanca en tancar el navegador
-      await setPersistence(auth, browserSessionPersistence);
+      // Persistència local: comparteix autenticació entre pestanyes del mateix navegador.
+      await setPersistence(auth, browserLocalPersistence);
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const loggedInUser = userCredential.user;
 

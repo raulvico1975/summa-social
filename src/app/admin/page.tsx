@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useFirebase } from '@/firebase';
 import { doc, updateDoc } from 'firebase/firestore';
 import { useTranslations } from '@/i18n';
-import { browserSessionPersistence, sendPasswordResetEmail, setPersistence, signInWithEmailAndPassword, signOut } from 'firebase/auth';
+import { browserLocalPersistence, sendPasswordResetEmail, setPersistence, signInWithEmailAndPassword, signOut } from 'firebase/auth';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -277,8 +277,8 @@ function AdminPageContent() {
     setIsLoggingIn(true);
     setLoginError('');
     try {
-      // Sessió de navegador: es tanca en tancar el navegador
-      await setPersistence(auth, browserSessionPersistence);
+      // Persistència local: comparteix autenticació entre pestanyes del mateix navegador.
+      await setPersistence(auth, browserLocalPersistence);
       await signInWithEmailAndPassword(auth, loginEmail.trim(), loginPassword);
     } catch (error: unknown) {
       console.error('Login error:', error);
