@@ -292,7 +292,9 @@ export const TransactionRow = React.memo(function TransactionRow({
     !showStripeBadge &&
     tx.transactionType !== 'donation' &&
     tx.transactionType !== 'fee';
-
+    !showStripeBadge &&
+    tx.transactionType !== 'donation' &&
+    tx.transactionType !== 'fee';
   // Stable callbacks using useCallback to prevent child re-renders
   const handleSelectContact = React.useCallback((contactId: string | null) => {
     if (contactId) {
@@ -972,6 +974,7 @@ export const TransactionRow = React.memo(function TransactionRow({
                 {t.splitAmount}
               </DropdownMenuItem>
             )}
+            {tx.amount > 0 && !isReturn && !isReturnFee && !tx.isRemittance && !tx.isRemittanceItem && !showStripeBadge && !hasStripeChildren && (
             {tx.amount > 0 && !isReturn && !isReturnFee && !tx.isRemittance && !tx.isRemittanceItem && !showStripeBadge && !hasStripeChildren && (
               <DropdownMenuItem onClick={handleSplitRemittance}>
                 <GitMerge className="mr-2 h-4 w-4" />

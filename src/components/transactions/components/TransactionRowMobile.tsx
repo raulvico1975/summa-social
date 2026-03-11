@@ -144,6 +144,7 @@ export const TransactionRowMobile = React.memo(function TransactionRowMobile({
     !tx.parentTransactionId &&
     !hasStripeChildren &&
     !isStripeLike &&
+    !isStripeLike &&
     tx.transactionType !== 'donation' &&
     tx.transactionType !== 'fee';
   const canSplitIncomeRemittance =
@@ -154,6 +155,7 @@ export const TransactionRowMobile = React.memo(function TransactionRowMobile({
     !tx.isRemittanceItem &&
     !hasStripeChildren &&
     !isStripeLike;
+    !isStripeLike;
   const canSplitPaymentRemittance =
     tx.amount < 0 &&
     !isReturn &&
@@ -162,6 +164,10 @@ export const TransactionRowMobile = React.memo(function TransactionRowMobile({
     !tx.isRemittanceItem &&
     !hasStripeChildren &&
     !isFromStripe;
+  const canSplitStripeRemittance = React.useMemo(
+    () => canSplitStripeRemittanceCandidate(tx),
+    [tx]
+  );
   const canSplitStripeRemittance = React.useMemo(
     () => canSplitStripeRemittanceCandidate(tx),
     [tx]
