@@ -163,6 +163,7 @@ export function TransactionsTable({
   const [isLoadingMoreTransactions, setIsLoadingMoreTransactions] = React.useState(false);
   const [transactionsNextCursor, setTransactionsNextCursor] = React.useState<string | null>(null);
   const [hasMoreTransactions, setHasMoreTransactions] = React.useState(false);
+  const [autoLoadBlockedByError, setAutoLoadBlockedByError] = React.useState(false);
   // Memoitzar categoryTranslations per evitar re-renders innecessaris
   const categoryTranslations = React.useMemo(
     () => t.categories as Record<string, string>,
@@ -398,12 +399,18 @@ export function TransactionsTable({
         });
         setTransactionsNextCursor(payload.nextCursor ?? null);
         setHasMoreTransactions(Boolean(payload.nextCursor));
+        if (mode === 'reset') {
+          setAutoLoadBlockedByError(false);
+        }
       } catch (error) {
         console.error('[transactions-table] page load error:', error);
         if (mode === 'reset') {
           setAllTransactions([]);
           setTransactionsNextCursor(null);
           setHasMoreTransactions(false);
+          setAutoLoadBlockedByError(false);
+        } else {
+          setAutoLoadBlockedByError(true);
         }
         toast({
           variant: 'destructive',
@@ -424,6 +431,7 @@ export function TransactionsTable({
 
   const handleLoadMoreTransactions = React.useCallback(() => {
     if (!hasMoreTransactions || isLoadingMoreTransactions) return;
+    setAutoLoadBlockedByError(false);
     void loadTransactionsPage('append');
   }, [hasMoreTransactions, isLoadingMoreTransactions, loadTransactionsPage]);
 
@@ -1026,10 +1034,33 @@ export function TransactionsTable({
   const hasSecondaryFilter = tableFilter !== 'all' || searchQuery.trim() !== '' || contactIdFilter !== null || sourceFilter !== 'all' || bankAccountFilter !== '__all__';
   // hasActiveFilter inclou també el filtre de dates per a altres usos
   const hasActiveFilter = hasSecondaryFilter || dateFilter.type !== 'all';
+  const isResolvingSecondaryFilters = hasSecondaryFilter && hasMoreTransactions && !autoLoadBlockedByError;
+  const hasIncompleteSecondaryDataset = hasSecondaryFilter && (hasMoreTransactions || autoLoadBlockedByError);
+  const canRenderResolvedSecondaryResults = !hasIncompleteSecondaryDataset;
+  const visibleTransactions = canRenderResolvedSecondaryResults ? filteredTransactions : [];
+
+  React.useEffect(() => {
+    setAutoLoadBlockedByError(false);
+  }, [organizationId, periodQuery, showArchivedInLedger, tableFilter, searchQuery, contactIdFilter, sourceFilter, bankAccountFilter]);
+
+  React.useEffect(() => {
+    if (!hasSecondaryFilter) return;
+    if (!hasMoreTransactions) return;
+    if (autoLoadBlockedByError) return;
+    if (isLoadingTransactions || isLoadingMoreTransactions) return;
+    void loadTransactionsPage('append');
+  }, [
+    autoLoadBlockedByError,
+    hasMoreTransactions,
+    hasSecondaryFilter,
+    isLoadingMoreTransactions,
+    isLoadingTransactions,
+    loadTransactionsPage,
+  ]);
 
   const filteredSummary = React.useMemo(() => {
     // Mostrar resum sempre que hi hagi filtres secundaris O filtre de dates actiu
-    if (!hasActiveFilter || !transactions) return null;
+    if (!hasActiveFilter || !transactions || !canRenderResolvedSecondaryResults) return null;
 
     // Total del període = només apunts bancaris (ledger), excloent desglossaments interns
     const periodTotal = filterSplitChildTransactions(
@@ -1039,14 +1070,14 @@ export function TransactionsTable({
       allTransactionsById
     ).length;
 
-    const visible = filteredTransactions;
+    const visible = visibleTransactions;
     return {
       showing: visible.length,
       total: periodTotal,
       income: visible.filter(tx => tx.amount > 0).reduce((sum, tx) => sum + tx.amount, 0),
       expenses: visible.filter(tx => tx.amount < 0).reduce((sum, tx) => sum + tx.amount, 0),
     };
-  }, [filteredTransactions, transactions, hasActiveFilter, allTransactionsById, showArchivedInLedger]);
+  }, [visibleTransactions, transactions, hasActiveFilter, allTransactionsById, canRenderResolvedSecondaryResults, showArchivedInLedger]);
 
   const clearAllFilters = React.useCallback(() => {
     setTableFilter('all');
@@ -1100,8 +1131,8 @@ export function TransactionsTable({
 
   // Derivats per a la capçalera
   const selectableVisibleIds = React.useMemo(
-    () => filteredTransactions.filter((tx) => !isBulkSelectionBlocked(tx)).map((tx) => tx.id),
-    [filteredTransactions, isBulkSelectionBlocked]
+    () => visibleTransactions.filter((tx) => !isBulkSelectionBlocked(tx)).map((tx) => tx.id),
+    [visibleTransactions, isBulkSelectionBlocked]
   );
   const selectedCount = selectedIds.size;
   const allVisibleSelected = selectableVisibleIds.length > 0 && selectableVisibleIds.every(id => selectedIds.has(id));
@@ -1355,7 +1386,18 @@ export function TransactionsTable({
   // ═══════════════════════════════════════════════════════════════════════════
 
   const handleExportFilteredTransactions = async () => {
-    if (filteredTransactions.length === 0) {
+    if (!canRenderResolvedSecondaryResults) {
+      toast({
+        title: tr('movements.table.filtersResolvingTitle', 'Carregant més moviments'),
+        description: tr(
+          'movements.table.filtersResolvingDescription',
+          'La cerca i els filtres necessiten carregar totes les pàgines abans de mostrar o exportar un resultat final.'
+        ),
+      });
+      return;
+    }
+
+    if (visibleTransactions.length === 0) {
       toast({ title: t.movements.table.noTransactions });
       return;
     }
@@ -1407,7 +1449,7 @@ export function TransactionsTable({
       return_fee: t.movements.table.typeReturnFee ?? 'Comissió devolució',
     };
 
-    const excelData = filteredTransactions.map(tx => {
+    const excelData = visibleTransactions.map(tx => {
       const contact = tx.contactId ? contactMap[tx.contactId] : null;
       return {
         [exportCols.date]: formatDate(tx.date),
@@ -1451,7 +1493,7 @@ export function TransactionsTable({
 
     toast({
       title: t.movements.table.exportSuccess,
-      description: t.movements.table.exportedCount(filteredTransactions.length),
+      description: t.movements.table.exportedCount(visibleTransactions.length),
     });
   };
 
@@ -2065,6 +2107,51 @@ export function TransactionsTable({
         </div>
       )}
 
+      {hasSecondaryFilter && !canRenderResolvedSecondaryResults && (
+        <div className="mb-4 px-4 py-3 border rounded-lg bg-muted/40 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <div className="flex items-start gap-3 text-sm">
+            {isResolvingSecondaryFilters ? (
+              <Loader2 className="h-4 w-4 mt-0.5 shrink-0 animate-spin text-muted-foreground" />
+            ) : (
+              <XCircle className="h-4 w-4 mt-0.5 shrink-0 text-destructive" />
+            )}
+            <div className="space-y-1">
+              <p className="font-medium text-foreground">
+                {isResolvingSecondaryFilters
+                  ? tr('movements.table.filtersResolvingTitle', 'Carregant més moviments')
+                  : tr('movements.table.filtersResolvingErrorTitle', 'No s\'ha pogut completar la cerca')}
+              </p>
+              <p className="text-muted-foreground">
+                {isResolvingSecondaryFilters
+                  ? tr(
+                    'movements.table.filtersResolvingDescription',
+                    'La cerca i els filtres esperen a tenir totes les pàgines carregades abans de mostrar un resultat final.'
+                  )
+                  : tr(
+                    'movements.table.filtersResolvingErrorDescription',
+                    'Els filtres actius necessiten més pàgines de moviments. Reintenta la càrrega o neteja filtres per evitar resultats parcials.'
+                  )}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            {autoLoadBlockedByError && hasMoreTransactions && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleLoadMoreTransactions}
+                disabled={isLoadingMoreTransactions}
+              >
+                {isLoadingMoreTransactions ? t.common.loading : tr('common.retry', 'Reintenta')}
+              </Button>
+            )}
+            <Button variant="ghost" size="sm" onClick={clearAllFilters}>
+              {t.movements.table.clearFilters}
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* Barra de resum quan hi ha filtre actiu */}
       {filteredSummary && (
         <div className="mb-4 px-4 py-2 bg-muted/50 border rounded-lg flex flex-col gap-2 md:flex-row md:items-center md:justify-between md:gap-4">
@@ -2209,7 +2296,7 @@ export function TransactionsTable({
           )}
 
           {/* Llista de transaccions mòbil */}
-          {!isLoadingTransactions && filteredTransactions.map((tx) => (
+          {!isLoadingTransactions && visibleTransactions.map((tx) => (
             <TransactionRowMobile
               key={tx.id}
               transaction={tx}
@@ -2235,7 +2322,7 @@ export function TransactionsTable({
           ))}
 
           {/* Empty state mòbil */}
-          {!isLoadingTransactions && filteredTransactions.length === 0 && (
+          {!isLoadingTransactions && canRenderResolvedSecondaryResults && visibleTransactions.length === 0 && (
             <EmptyState
               icon={tableFilter === 'missing' ? FileX : tableFilter === 'returns' ? Undo : Search}
               title={
@@ -2310,7 +2397,7 @@ export function TransactionsTable({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredTransactions.map((tx) => (
+              {visibleTransactions.map((tx) => (
                 <TransactionRow
                   key={tx.id}
                   transaction={tx}
@@ -2383,7 +2470,7 @@ export function TransactionsTable({
                 ))
               )}
               {/* Empty state (only when not loading) */}
-              {!isLoadingTransactions && filteredTransactions.length === 0 && (
+              {!isLoadingTransactions && canRenderResolvedSecondaryResults && visibleTransactions.length === 0 && (
                   <TableRow>
                       <TableCell colSpan={(canBulkEdit ? 9 : 8) + (showProjectColumn ? 1 : 0)} className="p-0">
                         <EmptyState
@@ -2410,7 +2497,7 @@ export function TransactionsTable({
         </div>
       )}
 
-      {hasMoreTransactions && (
+      {hasMoreTransactions && !hasSecondaryFilter && (
         <div className="mt-4 flex justify-center">
           <Button
             variant="outline"
