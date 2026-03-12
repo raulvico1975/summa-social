@@ -2601,7 +2601,7 @@ export function TransactionsTable({
 
       {/* Return Assignment Dialog */}
       <Dialog open={isReturnDialogOpen} onOpenChange={(open) => !open && handleCloseReturnDialog()}>
-        <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-lg">
+        <DialogContent className="w-[calc(100vw-2rem)] max-h-[85vh] overflow-y-auto sm:max-w-lg">
           <DialogHeader className="min-w-0 pr-8">
             <DialogTitle className="flex items-center gap-2 text-red-600">
               <Undo2 className="h-5 w-5" />

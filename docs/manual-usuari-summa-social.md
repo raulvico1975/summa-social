@@ -1,7 +1,7 @@
 # SUMMA SOCIAL - Manual d'Usuari Complet
 
-**Versió**: 1.42
-**Última actualització**: 16 Febrer 2026
+**Versió**: 1.46
+**Última actualització**: 12 Març 2026
 
 ---
 
@@ -700,7 +700,7 @@ La bona notícia és que Summa Social fa gran part de la feina automàticament. 
 6. Si tens més d'un compte bancari, selecciona'l
 7. Clica **"Importar X moviments"**
 
-> ⚠️ **Molt important:** La **Data d'operació** és obligatòria. Si una fila no té aquesta data, aquell moviment no es processa.
+> ⚠️ **Molt important:** La **Data d'operació** és obligatòria. El fitxer ha de portar aquesta columna, o una data equivalent que el sistema pugui interpretar de manera fiable. Si falta o és invàlida, la importació s'atura i et diu quina fila has de revisar.
 >
 > Per què és tan important?
 > - Garanteix una conciliació bancària fiable
@@ -711,9 +711,12 @@ La bona notícia és que Summa Social fa gran part de la feina automàticament. 
 
 ### Sobre els duplicats
 
-El sistema **detecta automàticament** els moviments que ja existeixen. Per fer-ho amb màxima robustesa, té en compte el **compte**, el **saldo**, l'**import** i la **data d'operació**.
+El sistema **detecta automàticament** els moviments que ja existeixen. Per fer-ho amb màxima robustesa, té en compte el **compte bancari**, la **referència bancària oficial** si existeix, i, quan el fitxer porta prou informació, també el **saldo**, l'**import** i la **data d'operació**.
 
-Quan la data d'operació està ben informada, pots importar el mateix extracte diverses vegades amb molta seguretat. Si falta aquesta data, la detecció continua funcionant però és menys robusta i et pot tocar revisar algun cas manualment.
+En la pràctica això vol dir:
+- Els duplicats clars es descarten automàticament
+- Els casos dubtosos es presenten com a revisió abans d'importar
+- Quan la data d'operació està ben informada, pots reimportar el mateix extracte amb molta més seguretat
 
 ---
 
@@ -766,6 +769,10 @@ Obre un panell lateral amb tots els filtres disponibles:
 - Devolucions pendents
 
 Els filtres aplicats apareixen com a "pills" sota el header. Pots eliminar-los clicant la X.
+
+> 💡 **Important si tens molt historial:** quan combines cerca i filtres, Summa Social pot carregar més pàgines abans d'ensenyar-te el resultat final. Això és intencionat: evita que vegis resultats parcials i prenguis decisions sobre una llista incompleta.
+
+Si veus un missatge com **"Carregant més moviments"**, espera uns segons. Si apareix **"No s'ha pogut completar la cerca"**, fes clic a **"Reintenta"** o neteja filtres per tornar a un estat estable.
 
 ### El menú d'opcions (⋮)
 
@@ -1543,6 +1550,13 @@ Clica **"Importar donacions"**. Es creen:
 - N donacions (import brut)
 - 1 despesa de comissions (agregada)
 
+Abans d'escriure res, veuràs una **confirmació final** amb el resum del payout. Quan confirmes:
+- El moviment original del banc es **conserva com a moviment pare**
+- Queda **marcat com a payout Stripe ja processat**
+- Les donacions i la comissió queden vinculades a aquest pare i **no compten dues vegades** al llistat principal
+
+Si t'has equivocat, no intentis tornar-lo a dividir ni eliminar-lo: fes servir **"Desfer remesa"** i torna a processar-lo correctament.
+
 ---
 
 ## 8.3 Bones pràctiques
@@ -1552,6 +1566,7 @@ Clica **"Importar donacions"**. Es creen:
 | Processar cada payout amb el seu CSV | Crear donacions a mà |
 | Verificar que l'import quadra | Processar si no quadra |
 | Assegurar que els donants tenen email | Obrir el CSV amb Excel |
+| Si t'equivoques, desfer i tornar a processar | Intentar eliminar el payout pare o les línies filles |
 
 ---
 

@@ -1,7 +1,7 @@
 # SUMMA SOCIAL - Preguntes Freqüents (FAQ)
 
-**Versió**: 1.42
-**Última actualització**: 12 Febrer 2026
+**Versió**: 1.46
+**Última actualització**: 12 Març 2026
 
 ---
 
@@ -287,21 +287,22 @@ L'importador de Summa Social és bastant llest i tolerant. El que necessita per 
 
 ### 9. He importat l'extracte del banc dues vegades sense voler. Ara tinc tot duplicat?
 
-**Segurament no, respira tranquil/a!** Aquesta és una por molt comuna, però Summa Social té un sistema de detecció de duplicats que funciona força bé.
+**Segurament no, respira tranquil/a!** Aquesta és una por molt comuna, però Summa Social té un sistema de detecció de duplicats bastant conservador.
 
 Quan importes moviments, el sistema compara automàticament:
-- La data de cada moviment
+- El compte bancari
+- La referència bancària oficial, si el fitxer la porta
 - L'import
-- La descripció
+- I, quan és possible, el saldo i la data d'operació
 
-Si troba un moviment idèntic que ja existeix, simplement l'ignora i no el torna a crear.
+Si troba un duplicat clar, simplement l'ignora i no el torna a crear. Si detecta un cas que **podria** ser duplicat però no és 100% segur, te'l presenta perquè el revisis abans d'importar.
 
 **Per verificar-ho i quedar-te tranquil/a:**
 1. Ves a Moviments
 2. Filtra per les dates de l'extracte que has importat dues vegades
 3. Revisa si veus moviments repetits (mateix import, mateixa data, mateixa descripció)
 
-Si per alguna raó estranya sí que s'han duplicat (pot passar si el banc ha canviat lleugerament la descripció d'un dia per l'altre), pots eliminar els duplicats manualment. Però insisteixo: en la immensa majoria de casos, el sistema els detecta i no passa res.
+Si per alguna raó estranya sí que s'han duplicat (pot passar amb dades antigues o extractes poc consistents), pots netejar-los manualment. Però insisteixo: en la immensa majoria de casos, el sistema els detecta i no passa res.
 
 ---
 
@@ -316,9 +317,11 @@ El que necessites és un fitxer que compleixi uns requisits bàsics:
 - O Excel (.xlsx, .xls)
 
 **Columnes mínimes:**
-- Una columna amb la **data** del moviment
+- Una columna amb la **data d'operació** del moviment (o una data equivalent que el sistema pugui interpretar bé)
 - Una columna amb la **descripció** o concepte
 - Una columna amb l'**import**
+
+**Molt recomanable, si el teu banc la dona:** una columna amb el **saldo després del moviment**. No sempre és obligatòria, però ajuda molt a detectar duplicats amb més seguretat.
 
 **Si el format és molt estrany i no funciona a la primera:**
 1. Prova d'importar-lo igualment — a vegades sorprèn
@@ -826,6 +829,12 @@ Aquests moviments apareixeran marcats com a "Manual" a l'origen, per distingir-l
 4. A la secció de dates, selecciona el mes que vols veure
 5. Els moviments es filtraran automàticament
 
+Si tens molt d'historial o combines diversos filtres, és possible que vegis un avís tipus **"Carregant més moviments"**. No és cap error: l'app està carregant totes les pàgines necessàries abans d'ensenyar-te el resultat final, per evitar resultats parcials.
+
+Si en algun moment apareix **"No s'ha pogut completar la cerca"**, fes una d'aquestes dues coses:
+- Clica **"Reintenta"**
+- O neteja filtres i torna a aplicar-los
+
 **Altres filtres que tens disponibles i que et poden ser útils:**
 - Per categoria (només veure despeses de "Nòmines", per exemple)
 - Per contacte (només moviments d'un proveïdor concret)
@@ -998,13 +1007,19 @@ Amb qualsevol de les dues, podràs saber exactament quant heu pagat a aquell pro
 
 ### 41. Puc eliminar un moviment?
 
-**Sí, però ves amb compte:** l'eliminació és irreversible.
+**Sí, però no sempre.** I aquí hi ha la part important.
 
 **Com fer-ho:**
 1. Localitza el moviment
 2. Clica el menú ⋮ (tres punts) a la dreta de la fila
 3. Selecciona "Eliminar"
 4. Confirma quan et demani
+
+**Quan el sistema NO et deixarà eliminar-lo:**
+- Si és el moviment pare d'una remesa o d'un payout Stripe ja desglossat
+- Si és una línia filla creada a partir d'una remesa o d'un desglossament Stripe
+
+En aquests casos és normal que ho bloquegi: és un guardrail per evitar trencar la traçabilitat fiscal.
 
 **Quan té sentit eliminar un moviment:**
 - L'has creat manualment per error
@@ -1014,6 +1029,7 @@ Amb qualsevol de les dues, podràs saber exactament quant heu pagat a aquell pro
 **Quan NO hauries d'eliminar-lo:**
 - Si és un moviment real del banc, encara que no sàpigues què és
 - Si vols "amagar-lo" dels informes (millor categoritza'l correctament)
+- Si forma part d'una remesa o d'un desglossament Stripe (en aquest cas, fes servir **"Desfer remesa"**)
 
 ---
 
@@ -1602,9 +1618,11 @@ Però no et preocupis, el procés és més senzill del que sembla:
 
 7. **Comprova que quadra:** L'import net ha de coincidir amb l'ingrés del banc
 
-8. **Processa:** Es crearan les donacions individuals i una despesa agregada per les comissions de Stripe
+8. **Processa:** Primer veuràs una confirmació final. Quan la confirmis, es crearan les donacions individuals i una despesa agregada per les comissions de Stripe
 
 **I voilà!** Ja tens cada donació assignada al seu donant, llesta per al Model 182.
+
+**Detall important:** El moviment original del banc no desapareix. Es conserva com a **pare** del payout, queda marcat com a processat i serveix per mantenir la traçabilitat. Si un dia t'equivoques, el correcte és **desfer** el processament i tornar-lo a fer, no pas eliminar-lo.
 
 ---
 
@@ -1622,12 +1640,12 @@ Però no et preocupis, el procés és més senzill del que sembla:
 1. Ves a Donants
 2. Crea'l amb l'email que mostra Stripe
 3. Afegeix les altres dades que tinguis (nom, DNI per al Model 182...)
-4. Torna a processar el payout
+4. Si ja l'havies processat malament, fes **"Desfer remesa"** i torna'l a processar
 
 **Si és un donant existent amb email diferent:**
 1. Cerca el donant pel nom a Summa Social
 2. Edita'l i afegeix l'email de Stripe (o actualitza'l)
-3. Torna a processar el payout
+3. Si cal, fes **"Desfer remesa"** i torna'l a processar
 
 ---
 
