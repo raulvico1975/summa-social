@@ -8,6 +8,7 @@
 
 import { type Firestore } from 'firebase-admin/firestore';
 import { BATCH_SIZE } from './constants';
+import { filterActiveChildDocsForParent } from '@/lib/remittances/active-child-docs';
 
 // =============================================================================
 // TIPUS
@@ -106,7 +107,7 @@ export async function getActiveChildTransactionIds(
       .get();
 
     if (!byRemittanceId.empty) {
-      return byRemittanceId.docs.map((doc) => doc.id);
+      return filterActiveChildDocsForParent(byRemittanceId.docs, parentTxId).map((doc) => doc.id);
     }
   }
 

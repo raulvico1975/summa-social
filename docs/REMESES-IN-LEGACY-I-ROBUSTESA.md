@@ -51,6 +51,15 @@ archivedAt == null || archivedAt == undefined || archivedAt == ""
 
 Tota altra filla (amb `archivedAt` vàlid) es considera **arxivada** i s'exclou.
 
+### Relació canònica pare-filla
+
+- `parentTransactionId` és la relació canònica entre pare i filles.
+- `remittanceId` és el vincle amb el document de remesa, però **no** és criteri suficient per decidir si un document és una filla.
+- El pare s'ha d'excloure sempre dels recomptes i sumes encara que comparteixi `remittanceId`.
+- `isRemittanceItem === true` només és un fallback legacy quan falta `parentTransactionId`.
+
+**Conseqüència operativa:** checks, undo i consistència han de treballar sobre filles actives reals, no sobre tots els documents que comparteixen `remittanceId`.
+
 ### Model 182 i certificats
 
 Només compten les filles **actives**:

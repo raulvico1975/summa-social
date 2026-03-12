@@ -58,6 +58,60 @@ describe('getActiveChildTransactionIds', () => {
 
     assert.deepEqual(active, ['tx-1', 'tx-3']);
   });
+
+  it('excludes the parent from the remittanceId fallback query', async () => {
+    const docs = [
+      { id: 'parent-1', data: () => ({ archivedAt: null }) },
+      { id: 'child-1', data: () => ({ archivedAt: null, parentTransactionId: 'parent-1' }) },
+      { id: 'child-2', data: () => ({ archivedAt: null, parentTransactionId: 'parent-1' }) },
+    ];
+
+    const db = {
+      doc() {
+        throw new Error('doc lookup should not be called in fallback query test');
+      },
+      collection() {
+        return {
+          where(field: string) {
+            if (field !== 'remittanceId' && field !== 'archivedAt' && field !== 'parentTransactionId') {
+              throw new Error(`unexpected field ${field}`);
+            }
+
+            return {
+              where(innerField: string) {
+                if (field === 'remittanceId' && innerField === 'archivedAt') {
+                  return {
+                    async get() {
+                      return { empty: false, docs };
+                    },
+                  };
+                }
+
+                throw new Error(`unexpected chained field ${innerField}`);
+              },
+              async get() {
+                if (field === 'parentTransactionId') {
+                  return { docs: [] };
+                }
+
+                throw new Error(`unexpected get for field ${field}`);
+              },
+            };
+          },
+        };
+      },
+    };
+
+    const active = await getActiveChildTransactionIds(
+      db as any,
+      'org-1',
+      'parent-1',
+      'remit-1',
+      null,
+    );
+
+    assert.deepEqual(active, ['child-1', 'child-2']);
+  });
 });
 
 describe('softArchiveTransactionsByIds', () => {

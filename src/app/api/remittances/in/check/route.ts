@@ -20,6 +20,7 @@ import {
   verifyAdminMembership,
   type AdminAuthResult,
 } from '../../../../../lib/fiscal/remittances/admin-auth';
+import { filterActiveChildDocsForParent } from '../../../../../lib/remittances/active-child-docs';
 
 // =============================================================================
 // TIPUS
@@ -59,14 +60,6 @@ interface RemittanceCheckResponse {
 
 /** Tolerància per R-SUM-1 (2 cèntims) */
 const SUM_TOLERANCE_CENTS = 2;
-
-/**
- * Considerem "activa" una transacció si NO està arxivada.
- * Legacy-safe: cobreix null, undefined i cadena buida.
- */
-function isActiveChildTransaction(data: FirebaseFirestore.DocumentData | undefined): boolean {
-  return !data?.archivedAt;
-}
 
 // =============================================================================
 // GET HANDLER
@@ -166,7 +159,7 @@ export async function GET(request: NextRequest): Promise<NextResponse<Remittance
       const byRemittanceId = await txCollection
         .where('remittanceId', '==', remittanceId)
         .get();
-      activeChildren = byRemittanceId.docs.filter((doc) => isActiveChildTransaction(doc.data()));
+      activeChildren = filterActiveChildDocsForParent(byRemittanceId.docs, parentTxId);
     }
 
     // Fallback: buscar per parentTransactionId
@@ -174,7 +167,7 @@ export async function GET(request: NextRequest): Promise<NextResponse<Remittance
       const byParentTxId = await txCollection
         .where('parentTransactionId', '==', parentTxId)
         .get();
-      activeChildren = byParentTxId.docs.filter((doc) => isActiveChildTransaction(doc.data()));
+      activeChildren = filterActiveChildDocsForParent(byParentTxId.docs, parentTxId);
     }
 
     const activeCount = activeChildren.length;

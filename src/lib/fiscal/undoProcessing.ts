@@ -20,6 +20,7 @@ import {
   filterActiveRemittanceChildren,
   isActiveRemittanceChild,
 } from '../remittances/is-active-child';
+import { filterActiveChildDocsForParent } from '../remittances/active-child-docs';
 
 // =============================================================================
 // TIPUS
@@ -214,9 +215,7 @@ export async function countChildTransactions(
       where('remittanceId', '==', remittanceId)
     );
     const byRemittanceSnap = await getDocs(byRemittanceQuery);
-    remittanceDocIds = filterActiveRemittanceChildren(
-      byRemittanceSnap.docs.map((d) => ({ ...(d.data() as Transaction), id: d.id }))
-    ).map((d) => d.id);
+    remittanceDocIds = filterActiveChildDocsForParent(byRemittanceSnap.docs, parentTxId).map((d) => d.id);
   }
 
   count = resolveUndoChildCount(byParentCount, remittanceDocIds, parentTxId, remittanceId);
@@ -285,9 +284,9 @@ export async function executeUndo(
         where('remittanceId', '==', parentTx.remittanceId)
       );
       const byRemittanceSnap = await getDocs(byRemittanceQuery);
-      byRemittanceSnap.forEach(d => {
+      filterActiveChildDocsForParent(byRemittanceSnap.docs, parentTxId).forEach(d => {
         const childData = { id: d.id, ...d.data() } as Transaction;
-        if (d.id !== parentTxId && isActiveRemittanceChild(childData)) {
+        if (isActiveRemittanceChild(childData)) {
           children.push({ id: d.id, data: childData });
         }
       });
