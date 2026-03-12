@@ -294,17 +294,20 @@ export function ReturnImporter({
     r.matchType === 'grouped' || r.matchType === 'individual' || !r.matchedDonor
   );
 
+  const dialogContentClassName =
+    step === 'mapping'
+      ? 'w-[95vw] max-h-[90vh] overflow-x-hidden overflow-y-auto p-4 sm:max-w-4xl sm:p-6'
+      : step === 'preview'
+        ? 'w-[95vw] max-h-[90vh] overflow-x-hidden overflow-y-auto p-4 sm:max-w-5xl sm:p-6'
+        : 'w-[calc(100vw-2rem)] max-h-[90vh] overflow-y-auto sm:max-w-lg';
+
   // ═══════════════════════════════════════════════════════════════════════════
   // RENDERITZACIÓ
   // ═══════════════════════════════════════════════════════════════════════════
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className={
-        step === 'mapping' ? "sm:max-w-4xl max-h-[90vh]" :
-        step === 'preview' ? "sm:max-w-5xl max-h-[90vh]" :
-        "sm:max-w-lg"
-      }>
+      <DialogContent className={dialogContentClassName}>
 
         {/* ═══════════════════════════════════════════════════════════════════
             STEP 1: UPLOAD

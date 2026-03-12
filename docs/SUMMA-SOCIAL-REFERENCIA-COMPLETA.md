@@ -1,6 +1,6 @@
 # ═══════════════════════════════════════════════════════════════════════════════
 # SUMMA SOCIAL - REFERÈNCIA COMPLETA DEL PROJECTE
-# Última actualització: 7 Març 2026
+# Última actualització: 12 Març 2026
 # ═══════════════════════════════════════════════════════════════════════════════
 
 
@@ -875,9 +875,10 @@ La visibilitat de Moviments (ledger) té **ordre tancat de precedència** i s'im
 `isVisibleInMovementsLedger(tx, { showArchived }: { showArchived: boolean }): boolean`
 
 **Ordre obligatori:**
-1. Si `isRemittanceItem === true` → **ocult**
-2. Si `showArchived === false` i `archivedAt` no és buit → **ocult**
-3. Altrament → **visible** (incloent `isRemittance === true`, independentment de `source`)
+1. Si `parentTransactionId` existeix → **ocult**
+2. Si `isRemittanceItem === true` → **ocult**
+3. Si `showArchived === false` i `archivedAt` no és buit → **ocult**
+4. Altrament → **visible** (incloent pares de remesa i pares Stripe, independentment de `source`)
 
 **Contracte de govern tècnic:**
 - El helper ha de ser pur (input `tx + opts`, output `boolean`)
@@ -2948,7 +2949,7 @@ L'importador Stripe permet dividir les liquidacions (payouts) de Stripe en trans
 | **Creació automàtica donants** | NO |
 | **Gestió comissions** | Despesa agregada per payout |
 
-**Principi fonamental:** El moviment bancari original (payout) MAI es modifica.
+**Principi fonamental:** El moviment bancari original (payout) es **preserva com a pare**. No es reemplaça ni se n'elimina la traçabilitat; es marca com a processat per bloquejar re-split i eliminació accidental.
 
 ### 3.10.2 Flux d'ús
 
@@ -2971,13 +2972,15 @@ const canSplitStripeRemittance = (tx: Transaction): boolean => {
   const isIncome = tx.amount > 0;
   const isNotAlreadyDivided = tx.transactionType !== 'donation' && tx.transactionType !== 'fee';
   const isNotRemittance = !tx.isRemittance;
+  const hasStripeChildren = !!tx.stripeTransferId;
   
-  if (!isIncome || !isNotAlreadyDivided || !isNotRemittance) return false;
+  if (!isIncome || !isNotAlreadyDivided || !isNotRemittance || hasStripeChildren) return false;
   
-  // Transaccions noves (ja tenen source)
+  // Transaccions noves Stripe
   if (tx.source === 'stripe') return true;
   
-  // Fallback legacy (backward compatibility)
+  // Fallback legacy només si encara no hi ha source
+  if (tx.source) return false;
   const descUpper = tx.description?.toUpperCase() || '';
   return descUpper.includes('STRIPE') || descUpper.includes('TRANSFERENCIA DE STRIPE');
 };
@@ -3075,6 +3078,13 @@ const match = Math.abs(payoutGroup.net - bankTransaction.amount) <= tolerance;
   categoryId: bankFeesCategoryId         // Categoria 'bankFees'
 }
 ```
+
+**Estat del pare i guardrails operatius:**
+- El pare es conserva al ledger i es marca amb `stripeTransferId = selectedGroup.transferId`
+- Les filles (`parentTransactionId != null`) s'oculten del ledger principal i només compten on toca
+- Ni el pare ni les filles es poden eliminar mentre el desglossament existeixi
+- Per corregir errors s'ha d'usar el flux **undo/desfer**, no un segon split ni un delete manual
+- L'escriptura es fa en chunks de fins a **49 filles**; l'últim batch marca el pare. Si alguna part falla, hi ha rollback i validació post-commit
 
 **Cercabilitat (sufix automàtic):**
 
@@ -5732,6 +5742,7 @@ Les fites històriques i els desplegaments anteriors es documenten a `docs/CHANG
 | **1.33** | **30 Gen 2026** | **Health Check P0: panell d'integritat de dades al Dashboard (només admin). 5 blocs deterministes: A) categories legacy (docIds), B) dates formats mixtos/invàlids, C) coherència origen bancari (source↔bankAccountId), D) archivedAt en queries normals, E) signs per transactionType. UI amb details expandibles, badge recompte, taula exemples (max 5). Deduplicació global importació bancària (per rang dates), guardrails UX solapament extractes, camps bancaris readonly (description/amount) per moviments importats. Fitxer category-health.ts amb runHealthCheck().** |
 | **1.34** | **31 Gen 2026** | **Invariant A4 source↔bankAccountId: `bank`/`stripe` requereixen bankAccountId (P0 error si absent), `remittance` hereta del pare, `manual` no aplica. Health check actualitzat per detectar stripe sense bankAccountId. Camps (date/amount/description) bloquejats si bankAccountId present. Backfill dades legacy Flores (363 transaccions: 340 bank + 23 remittance).** |
 | **1.35** | **1 Feb 2026** | **Guardrails integritat Categories i Projectes Bàsics: prohibit delete físic (Firestore Rules), arxivat només via API amb reassignació obligatòria si count > 0, camps archivedAt/ByUid/FromAction protegits contra escriptura client. APIs `/api/categories/archive` i `/api/projects/archive` amb validació orgId derivat de membership. Health Check nou: blocs F (categories òrfenes) i G (projectes orfes). UI: icona Archive, ReassignModal, traduccions CA/ES/FR.** |
+| **1.46** | **11 Mar 2026** | **Moviments: cerca i filtres sense resultats parcials (carrega totes les pàgines necessàries abans de resoldre filtres secundaris, amb reintent si cal) i paginació estable. Stripe: es preserva el payout pare, es marca amb `stripeTransferId`, es bloqueja re-split/delete accidental, filles ocultes del ledger principal, confirmació final abans d'importar i escriptures chunkades ≤ 50 operacions amb rollback. Import bancari: `operationDate` reforçada com a contracte obligatori i separació explícita entre duplicats oficials (`DUPLICATE_SAFE`) i candidats heurístics revisables.** |
 | **1.44** | **17 Feb 2026** | **Importació bancària conservadora: nous camps `balanceAfter` i `operationDate` (sense backfill), regla de deduplicació forta per saldo (`bankAccountId + balanceAfter + amount + operationDate`) amb prioritat després de `bankRef`, i diagnòstic `duplicateReason="balance+amount+date"` en duplicats forts.** |
 | **1.43** | **14 Feb 2026** | **Hub de Guies/Bot: recuperació semàntica reforçada (més intents reals coberts), desambiguació 1/2 en consultes ambigües, fallback guiat i badges de navegació clicables. SuperAdmin `/admin`: redisseny "Torre de Control" en 5 blocs (Estat, Entitats, Coneixement/Bot, Comunicació, Configuració), resum executiu via `/api/admin/control-tower/summary` i fix de robustesa de timestamps.** |
 | **1.41** | **11 Feb 2026** | **Donants: persona de contacte per empreses (contactPersonName), 3 filtres dashboard (Tipus/Modalitat/Periodicitat) amb comptadors i lògica AND, quota amb sufix periodicitat. Accés operatiu unificat (require-operational-access.ts) amb superadmin bypass. Fix Firestore Rules `.get('archived', null)` per docs legacy. Fixes menors i18n i typecheck.** |
