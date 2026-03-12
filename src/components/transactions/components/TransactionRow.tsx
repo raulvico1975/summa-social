@@ -62,6 +62,10 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { RowDropTarget } from '@/components/files/row-drop-target';
 import type { DeleteTransactionBlockedReason } from '@/lib/transactions/can-delete-transaction';
 import { canShowUndoSplitAction } from '@/lib/splits/split-visibility';
+import {
+  canSplitStripeRemittance as canSplitStripeRemittanceCandidate,
+  isStripeLikeTransaction,
+} from '@/lib/transactions/stripe-detection';
 
 // =============================================================================
 // HELPERS
@@ -276,6 +280,7 @@ export const TransactionRow = React.memo(function TransactionRow({
   ]);
   // Detecta transaccions via Stripe (donations, fees)
   const isFromStripe = tx.source === 'stripe';
+  const showStripeBadge = isStripeLikeTransaction(tx);
   const hasStripeChildren = !!tx.stripeTransferId;
   const canSplitAmount =
     tx.amount > 0 &&
@@ -284,36 +289,9 @@ export const TransactionRow = React.memo(function TransactionRow({
     !tx.isSplit &&
     !tx.parentTransactionId &&
     !hasStripeChildren &&
-    tx.source !== 'stripe' &&
+    !showStripeBadge &&
     tx.transactionType !== 'donation' &&
     tx.transactionType !== 'fee';
-
-  // Detecta si pot dividir remesa Stripe (amb fallback conservador per legacy data)
-  const canSplitStripeRemittance = (transaction: Transaction): boolean => {
-    // Validacions comunes: ingrés positiu, no dividida, no remesa
-    const isIncome = transaction.amount > 0;
-    const isNotAlreadyDivided = transaction.transactionType !== 'donation' && transaction.transactionType !== 'fee';
-    const isNotRemittance = !transaction.isRemittance;
-    const hasStripeChildren = !!transaction.stripeTransferId;
-
-    if (!isIncome || !isNotAlreadyDivided || !isNotRemittance || hasStripeChildren) {
-      return false;
-    }
-
-    // Cas 1: Transaccions amb source='stripe' (noves)
-    if (transaction.source === 'stripe') {
-      return true;
-    }
-
-    // Cas 2: Fallback per transaccions legacy (només si NO té source)
-    if (transaction.source) return false;
-
-    const descUpper = transaction.description?.toUpperCase() || '';
-    const hasStripeInDescription =
-      descUpper.includes('STRIPE') || descUpper.includes('TRANSFERENCIA DE STRIPE');
-
-    return hasStripeInDescription;
-  };
 
   // Stable callbacks using useCallback to prevent child re-renders
   const handleSelectContact = React.useCallback((contactId: string | null) => {
@@ -660,7 +638,7 @@ export const TransactionRow = React.memo(function TransactionRow({
             <p className={`text-[13px] truncate max-w-[320px] ${isReturnedDonation ? 'text-gray-400' : ''}`} title={tx.description}>
               {tx.description}
             </p>
-            {isFromStripe && (
+            {showStripeBadge && (
               <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 bg-blue-50 text-blue-700 border-blue-200">
                 Stripe
               </Badge>
@@ -982,7 +960,7 @@ export const TransactionRow = React.memo(function TransactionRow({
                 {t.deleteDocument}
               </DropdownMenuItem>
             )}
-            {canSplitStripeRemittance(tx) && onSplitStripeRemittance && (
+            {canSplitStripeRemittanceCandidate(tx) && onSplitStripeRemittance && (
               <DropdownMenuItem onClick={handleSplitStripeRemittance}>
                 <GitMerge className="mr-2 h-4 w-4 text-purple-600" />
                 {t.splitStripeRemittance}
@@ -994,7 +972,7 @@ export const TransactionRow = React.memo(function TransactionRow({
                 {t.splitAmount}
               </DropdownMenuItem>
             )}
-            {tx.amount > 0 && !isReturn && !isReturnFee && !tx.isRemittance && !tx.isRemittanceItem && !isFromStripe && !hasStripeChildren && (
+            {tx.amount > 0 && !isReturn && !isReturnFee && !tx.isRemittance && !tx.isRemittanceItem && !showStripeBadge && !hasStripeChildren && (
               <DropdownMenuItem onClick={handleSplitRemittance}>
                 <GitMerge className="mr-2 h-4 w-4" />
                 {t.splitRemittance}

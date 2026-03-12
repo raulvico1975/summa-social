@@ -32,6 +32,10 @@ import type { Transaction, ContactType } from '@/lib/data';
 import { formatCurrencyEU, formatDateShort } from '@/lib/normalize';
 import type { DeleteTransactionBlockedReason } from '@/lib/transactions/can-delete-transaction';
 import { canShowUndoSplitAction } from '@/lib/splits/split-visibility';
+import {
+  canSplitStripeRemittance as canSplitStripeRemittanceCandidate,
+  isStripeLikeTransaction,
+} from '@/lib/transactions/stripe-detection';
 
 /**
  * Helper: middle ellipsis per a noms llargs
@@ -124,6 +128,7 @@ export const TransactionRowMobile = React.memo(function TransactionRowMobile({
   const hasBalanceAfter = typeof tx.balanceAfter === 'number' && Number.isFinite(tx.balanceAfter);
   const balanceText = hasBalanceAfter ? formatCurrencyEU(Math.abs(tx.balanceAfter!)) : '—';
   const isFromStripe = tx.source === 'stripe';
+  const isStripeLike = isStripeLikeTransaction(tx);
   const hasStripeChildren = !!tx.stripeTransferId;
   const canManageReturn =
     tx.amount < 0 &&
@@ -138,7 +143,7 @@ export const TransactionRowMobile = React.memo(function TransactionRowMobile({
     !tx.isSplit &&
     !tx.parentTransactionId &&
     !hasStripeChildren &&
-    !isFromStripe &&
+    !isStripeLike &&
     tx.transactionType !== 'donation' &&
     tx.transactionType !== 'fee';
   const canSplitIncomeRemittance =
@@ -148,7 +153,7 @@ export const TransactionRowMobile = React.memo(function TransactionRowMobile({
     !tx.isRemittance &&
     !tx.isRemittanceItem &&
     !hasStripeChildren &&
-    !isFromStripe;
+    !isStripeLike;
   const canSplitPaymentRemittance =
     tx.amount < 0 &&
     !isReturn &&
@@ -157,24 +162,10 @@ export const TransactionRowMobile = React.memo(function TransactionRowMobile({
     !tx.isRemittanceItem &&
     !hasStripeChildren &&
     !isFromStripe;
-  const canSplitStripeRemittance = React.useMemo(() => {
-    const isIncome = tx.amount > 0;
-    const isNotAlreadyDivided = tx.transactionType !== 'donation' && tx.transactionType !== 'fee';
-    const isNotRemittance = !tx.isRemittance;
-
-    if (!isIncome || !isNotAlreadyDivided || !isNotRemittance || hasStripeChildren) {
-      return false;
-    }
-
-    if (tx.source === 'stripe') {
-      return true;
-    }
-
-    if (tx.source) return false;
-
-    const descUpper = tx.description?.toUpperCase() || '';
-    return descUpper.includes('STRIPE') || descUpper.includes('TRANSFERENCIA DE STRIPE');
-  }, [hasStripeChildren, tx.amount, tx.description, tx.isRemittance, tx.source, tx.transactionType]);
+  const canSplitStripeRemittance = React.useMemo(
+    () => canSplitStripeRemittanceCandidate(tx),
+    [tx]
+  );
   const deleteBlockedMessage = React.useMemo(() => {
     if (deleteBlockedReason === 'parentRemittance') {
       return t.deleteBlockedParentRemittance;
