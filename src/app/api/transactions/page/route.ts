@@ -5,19 +5,143 @@ import type { Transaction } from '@/lib/data';
 import {
   decodeTransactionPageCursor,
   encodeTransactionPageCursor,
-  isArchivedTransaction,
+  hasServerSideTransactionFilters,
+  matchesTransactionPageFilters,
+  parseTransactionPageFilters,
   resolvePeriodRange,
+  type TransactionSearchContext,
 } from '@/lib/read-models/transactions';
+import { isVisibleInMovementsLedger } from '@/lib/transactions/remittance-visibility';
 
 const DEFAULT_LIMIT = 50;
 const MAX_LIMIT = 100;
 const SCAN_MULTIPLIER = 3;
 const MAX_SCAN_LOOPS = 5;
+const FILTERED_SCAN_MULTIPLIER = 5;
+const FILTERED_MAX_SCAN_LOOPS = 20;
 
 function parseLimit(value: string | null): number {
   const n = Number(value);
   if (!Number.isFinite(n) || n <= 0) return DEFAULT_LIMIT;
   return Math.min(Math.floor(n), MAX_LIMIT);
+}
+
+async function loadTransactionSearchContext(
+  db: FirebaseFirestore.Firestore,
+  orgId: string
+): Promise<TransactionSearchContext> {
+  const [contactsSnapshot, categoriesSnapshot, projectsSnapshot] = await Promise.all([
+    db.collection(`organizations/${orgId}/contacts`).get(),
+    db.collection(`organizations/${orgId}/categories`).get(),
+    db.collection(`organizations/${orgId}/projects`).get(),
+  ]);
+
+  const contactNamesById = contactsSnapshot.docs.reduce<Record<string, string>>((acc, doc) => {
+    const name = doc.get('name');
+    if (typeof name === 'string' && name.trim()) {
+      acc[doc.id] = name;
+    }
+    return acc;
+  }, {});
+
+  const categoryLabelsById = categoriesSnapshot.docs.reduce<Record<string, string>>((acc, doc) => {
+    const name = doc.get('name');
+    if (typeof name === 'string' && name.trim()) {
+      acc[doc.id] = name;
+    }
+    return acc;
+  }, {});
+
+  const projectNamesById = projectsSnapshot.docs.reduce<Record<string, string>>((acc, doc) => {
+    const name = doc.get('name');
+    if (typeof name === 'string' && name.trim()) {
+      acc[doc.id] = name;
+    }
+    return acc;
+  }, {});
+
+  return {
+    contactNamesById,
+    categoryLabelsById,
+    projectNamesById,
+  };
+}
+
+interface TransactionPageScanResult {
+  transactions: Transaction[];
+  nextCursor: string | null;
+  total: number;
+}
+
+async function scanFilteredTransactionsPage({
+  baseQuery,
+  limit,
+  includeTransactions,
+  showArchived,
+  pageFilters,
+  searchContext,
+  startAfterDoc,
+  scanLimit,
+  maxScanLoops,
+}: {
+  baseQuery: FirebaseFirestore.Query;
+  limit: number;
+  includeTransactions?: boolean;
+  showArchived: boolean;
+  pageFilters: ReturnType<typeof parseTransactionPageFilters>;
+  searchContext?: TransactionSearchContext;
+  startAfterDoc: FirebaseFirestore.QueryDocumentSnapshot | null;
+  scanLimit: number;
+  maxScanLoops: number;
+}): Promise<TransactionPageScanResult> {
+  const transactions: Transaction[] = [];
+  let nextCursor: string | null = null;
+  let matchedCount = 0;
+  let hasExtraMatch = false;
+  let scanCursor = startAfterDoc;
+
+  for (let loop = 0; loop < maxScanLoops; loop += 1) {
+    let pageQuery = baseQuery.limit(scanLimit);
+    if (scanCursor) {
+      pageQuery = pageQuery.startAfter(scanCursor);
+    }
+
+    const snapshot = await pageQuery.get();
+    if (snapshot.empty) {
+      break;
+    }
+
+    scanCursor = snapshot.docs[snapshot.docs.length - 1] ?? null;
+
+    for (const doc of snapshot.docs) {
+      const tx = { id: doc.id, ...doc.data() } as Transaction;
+      if (!isVisibleInMovementsLedger(tx, { showArchived })) continue;
+      if (!matchesTransactionPageFilters(tx, pageFilters, searchContext)) continue;
+
+      matchedCount += 1;
+
+      if (includeTransactions !== false && transactions.length < limit) {
+        transactions.push(tx);
+        nextCursor = encodeTransactionPageCursor({ id: doc.id });
+        continue;
+      }
+
+      if (includeTransactions !== false) {
+        hasExtraMatch = true;
+        break;
+      }
+    }
+
+    if (hasExtraMatch || snapshot.size < scanLimit) {
+      break;
+    }
+  }
+
+  return {
+    transactions,
+    nextCursor: hasExtraMatch ? nextCursor : null,
+    total: matchedCount,
+  };
 }
 
 export async function GET(request: NextRequest) {
@@ -42,6 +166,7 @@ export async function GET(request: NextRequest) {
   const limit = parseLimit(request.nextUrl.searchParams.get('limit'));
   const showArchived = request.nextUrl.searchParams.get('showArchived') === 'true';
   const cursor = decodeTransactionPageCursor(request.nextUrl.searchParams.get('cursor'));
+  const pageFilters = parseTransactionPageFilters(request.nextUrl.searchParams);
   if (request.nextUrl.searchParams.get('cursor') && !cursor) {
     return NextResponse.json({ success: false, code: 'INVALID_CURSOR' }, { status: 400 });
   }
@@ -58,6 +183,9 @@ export async function GET(request: NextRequest) {
   if (end) {
     baseQuery = baseQuery.where('date', '<=', end);
   }
+  if (pageFilters.contactId) {
+    baseQuery = baseQuery.where('contactId', '==', pageFilters.contactId);
+  }
 
   let startAfterDoc: FirebaseFirestore.QueryDocumentSnapshot | null = null;
   if (cursor) {
@@ -68,43 +196,45 @@ export async function GET(request: NextRequest) {
     startAfterDoc = cursorDoc as FirebaseFirestore.QueryDocumentSnapshot;
   }
 
-  const items: Transaction[] = [];
-  let scanCursor = startAfterDoc;
-  let nextCursor: string | null = null;
-  let exhausted = false;
-  const scanLimit = Math.min(limit * SCAN_MULTIPLIER, 250);
-
-  for (let loop = 0; loop < MAX_SCAN_LOOPS && items.length < limit; loop += 1) {
-    let pageQuery = baseQuery.limit(scanLimit);
-    if (scanCursor) {
-      pageQuery = pageQuery.startAfter(scanCursor);
-    }
-
-    const snapshot = await pageQuery.get();
-    if (snapshot.empty) {
-      exhausted = true;
-      break;
-    }
-
-    scanCursor = snapshot.docs[snapshot.docs.length - 1] ?? null;
-
-    for (const doc of snapshot.docs) {
-      const tx = { id: doc.id, ...doc.data() } as Transaction;
-      if (!showArchived && isArchivedTransaction(tx)) continue;
-      items.push(tx);
-      nextCursor = encodeTransactionPageCursor({ id: doc.id });
-      if (items.length >= limit) break;
-    }
-
-    if (snapshot.size < scanLimit) {
-      exhausted = true;
-      break;
-    }
-  }
+  const searchContext = pageFilters.search
+    ? await loadTransactionSearchContext(db, orgId)
+    : undefined;
+  const hasServerFilters = hasServerSideTransactionFilters(pageFilters);
+  const scanLimit = Math.min(
+    limit * (hasServerFilters ? FILTERED_SCAN_MULTIPLIER : SCAN_MULTIPLIER),
+    250
+  );
+  const maxScanLoops = hasServerFilters ? FILTERED_MAX_SCAN_LOOPS : MAX_SCAN_LOOPS;
+  const [{ transactions, nextCursor }, { total }] = await Promise.all([
+    scanFilteredTransactionsPage({
+      baseQuery,
+      limit,
+      includeTransactions: true,
+      showArchived,
+      pageFilters,
+      searchContext,
+      startAfterDoc,
+      scanLimit,
+      maxScanLoops,
+    }),
+    scanFilteredTransactionsPage({
+      baseQuery,
+      limit: 0,
+      includeTransactions: false,
+      showArchived,
+      pageFilters,
+      searchContext,
+      startAfterDoc: null,
+      scanLimit,
+      maxScanLoops: Math.max(maxScanLoops, 100),
+    }),
+  ]);
 
   return NextResponse.json({
     success: true,
-    items,
-    nextCursor: exhausted ? null : nextCursor,
+    transactions,
+    nextCursor,
+    total,
+    limit,
   });
 }

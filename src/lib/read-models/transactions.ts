@@ -1,4 +1,5 @@
 import type { Transaction } from '@/lib/data';
+import { formatCurrencyEU } from '@/lib/normalize';
 import { isVisibleInMovementsLedger } from '@/lib/transactions/remittance-visibility';
 
 type SearchParamsLike = {
@@ -22,10 +23,58 @@ export interface TransactionPageCursor {
   id: string;
 }
 
+export type TransactionMovementType = 'income' | 'expense';
+
+export interface TransactionPageFilters {
+  search: string;
+  movementType: TransactionMovementType | null;
+  contactId: string | null;
+  categoryId: string | null;
+  source: 'bank' | 'remittance' | 'manual' | 'stripe' | 'null' | null;
+  bankAccountId: string | null;
+}
+
+export interface TransactionSearchContext {
+  contactNamesById?: Record<string, string>;
+  categoryLabelsById?: Record<string, string>;
+  projectNamesById?: Record<string, string>;
+}
+
 function parseIntParam(value: string | null): number | null {
   if (!value) return null;
   const parsed = Number.parseInt(value, 10);
   return Number.isFinite(parsed) ? parsed : null;
+}
+
+function parseTrimmedParam(value: string | null): string | null {
+  const trimmed = value?.trim() ?? '';
+  return trimmed || null;
+}
+
+function parseMovementType(value: string | null): TransactionMovementType | null {
+  if (value === 'income' || value === 'expense') return value;
+  return null;
+}
+
+function parseSourceFilter(value: string | null): TransactionPageFilters['source'] {
+  if (
+    value === 'bank' ||
+    value === 'remittance' ||
+    value === 'manual' ||
+    value === 'stripe' ||
+    value === 'null'
+  ) {
+    return value;
+  }
+  return null;
+}
+
+function normalizeSearchTerm(value: string): string {
+  return value.trim().toLowerCase();
+}
+
+function normalizeSearchDigits(value: string): string {
+  return value.replace(/[^\d]/g, '');
 }
 
 function buildMonthDate(year: number, month: number, day: number): string {
@@ -92,8 +141,87 @@ export function resolvePeriodRange(params: SearchParamsLike): PeriodRange {
   return { start: null, end: null };
 }
 
+export function parseTransactionPageFilters(params: SearchParamsLike): TransactionPageFilters {
+  return {
+    search: parseTrimmedParam(params.get('search')) ?? '',
+    movementType: parseMovementType(params.get('movementType')),
+    contactId: parseTrimmedParam(params.get('contactId')),
+    categoryId: parseTrimmedParam(params.get('categoryId')),
+    source: parseSourceFilter(params.get('source')),
+    bankAccountId: parseTrimmedParam(params.get('bankAccountId')),
+  };
+}
+
+export function hasServerSideTransactionFilters(filters: TransactionPageFilters): boolean {
+  return Boolean(
+    filters.search ||
+    filters.movementType ||
+    filters.contactId ||
+    filters.categoryId ||
+    filters.source ||
+    filters.bankAccountId
+  );
+}
+
 export function isArchivedTransaction(tx: Pick<Transaction, 'archivedAt'>): boolean {
   return tx.archivedAt != null && tx.archivedAt !== '';
+}
+
+export function matchesTransactionPageFilters(
+  tx: Transaction,
+  filters: TransactionPageFilters,
+  context: TransactionSearchContext = {}
+): boolean {
+  if (filters.movementType === 'income' && tx.amount <= 0) return false;
+  if (filters.movementType === 'expense' && tx.amount >= 0) return false;
+  if (filters.contactId && tx.contactId !== filters.contactId) return false;
+  if (filters.categoryId && tx.category !== filters.categoryId) return false;
+
+  if (filters.source) {
+    if (filters.source === 'null') {
+      if (tx.source) return false;
+    } else if (tx.source !== filters.source) {
+      return false;
+    }
+  }
+
+  if (filters.bankAccountId && tx.bankAccountId !== filters.bankAccountId) {
+    return false;
+  }
+
+  if (!filters.search) return true;
+
+  const query = normalizeSearchTerm(filters.search);
+  if (!query) return true;
+
+  const normalizedDigits = normalizeSearchDigits(query);
+  const amountAsDigits = normalizeSearchDigits(String(Math.abs(tx.amount)));
+  const amountAsFormattedDigits = normalizeSearchDigits(formatCurrencyEU(tx.amount));
+  const contactName = tx.contactId ? context.contactNamesById?.[tx.contactId] ?? '' : '';
+  const projectName = tx.projectId ? context.projectNamesById?.[tx.projectId] ?? '' : '';
+  const categoryLabel = tx.category
+    ? context.categoryLabelsById?.[tx.category] ?? tx.category
+    : '';
+
+  const searchableFields = [
+    tx.description,
+    tx.note,
+    contactName,
+    projectName,
+    categoryLabel,
+    formatCurrencyEU(tx.amount),
+  ]
+    .filter(Boolean)
+    .map((value) => normalizeSearchTerm(String(value)));
+
+  if (searchableFields.some((value) => value.includes(query))) {
+    return true;
+  }
+
+  return Boolean(normalizedDigits) && (
+    amountAsDigits.includes(normalizedDigits) ||
+    amountAsFormattedDigits.includes(normalizedDigits)
+  );
 }
 
 export function isDashboardLedgerTransaction(
