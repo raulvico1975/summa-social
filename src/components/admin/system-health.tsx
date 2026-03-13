@@ -4,8 +4,9 @@
 'use client';
 
 import * as React from 'react';
+import { useTranslations, type Language, type TrFunction } from '@/i18n';
 import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, orderBy, doc, getDoc, getDocs, limit, setDoc } from 'firebase/firestore';
+import { collection, query, orderBy, doc, getDoc, getDocs, limit } from 'firebase/firestore';
 import { getStorage, ref, getDownloadURL, uploadBytes, deleteObject } from 'firebase/storage';
 import {
   getOpenIncidents,
@@ -28,7 +29,6 @@ import {
   buildResolution,
   IMPACT_LABELS,
   ACTION_LABELS,
-  type RecommendedAction,
 } from '@/lib/admin/incident-recommendations';
 import type { Organization } from '@/lib/data';
 import { Input } from '@/components/ui/input';
@@ -74,7 +74,6 @@ import {
   Loader2,
   Eye,
   Check,
-  RotateCcw,
   HelpCircle,
   MonitorX,
   Lock,
@@ -87,8 +86,6 @@ import {
   Copy,
   Play,
   Database,
-  Globe,
-  HardDrive,
   ExternalLink,
   Mail,
 } from 'lucide-react';
@@ -271,11 +268,395 @@ const INITIAL_CHECKS: HealthCheck[] = [
 
 const SEMAPHORE_STORAGE_KEY = 'systemHealthSemaphore_selectedOrg';
 
+type NightlyHealthCode =
+  | 'A'
+  | 'B'
+  | 'C'
+  | 'D'
+  | 'E'
+  | 'F'
+  | 'G'
+  | 'H'
+  | 'I'
+  | 'J'
+  | 'K'
+  | 'R1'
+  | 'R2'
+  | 'R3';
+
+type NightlyPresentationSeverity = 'high' | 'medium' | 'low';
+
+interface NightlyCheckPresentation {
+  title: string;
+  whatHappens: string;
+  impact: string;
+  firstStep: string;
+  ctaLabel: string;
+  targetPath?: string;
+  severity: NightlyPresentationSeverity;
+}
+
+interface NightlyHealthItem {
+  code: NightlyHealthCode;
+  delta: number | null;
+  samples: string[];
+  presentation: NightlyCheckPresentation;
+}
+
+interface NightlyHealthGroup {
+  incident: SystemIncident;
+  items: NightlyHealthItem[];
+}
+
+interface NightlyCheckPresentationConfig {
+  titleKey: string;
+  titleFallback: string;
+  whatHappensKey: string;
+  whatHappensFallback: string;
+  impactKey: string;
+  impactFallback: string;
+  firstStepKey: string;
+  firstStepFallback: string;
+  ctaLabelKey: string;
+  ctaLabelFallback: string;
+  targetPath?: string;
+  severity: NightlyPresentationSeverity;
+}
+
+const NIGHTLY_CHECK_PRESENTATION_CONFIG: Record<NightlyHealthCode, NightlyCheckPresentationConfig> = {
+  A: {
+    titleKey: 'admin.health.nightly.codes.A.title',
+    titleFallback: 'Categories legacy',
+    whatHappensKey: 'admin.health.nightly.codes.A.whatHappens',
+    whatHappensFallback: 'Hi ha moviments que encara apunten a categories antigues o nominals, no al registre canònic actual.',
+    impactKey: 'admin.health.nightly.codes.A.impact',
+    impactFallback: 'Pot desquadrar informes i revisions posteriors si no es reclassifica.',
+    firstStepKey: 'admin.health.nightly.codes.A.firstStep',
+    firstStepFallback: 'Obre moviments i revisa els exemples per substituir la categoria antiga per la vigent.',
+    ctaLabelKey: 'admin.health.nightly.codes.A.ctaLabel',
+    ctaLabelFallback: 'Revisar moviments',
+    targetPath: '/dashboard/movimientos',
+    severity: 'medium',
+  },
+  B: {
+    titleKey: 'admin.health.nightly.codes.B.title',
+    titleFallback: 'Dates de moviments',
+    whatHappensKey: 'admin.health.nightly.codes.B.whatHappens',
+    whatHappensFallback: 'S’han detectat dates mal formatades o barrejades en formats diferents.',
+    impactKey: 'admin.health.nightly.codes.B.impact',
+    impactFallback: 'Pot afectar ordenació, períodes fiscals, conciliació i coherència d’informes.',
+    firstStepKey: 'admin.health.nightly.codes.B.firstStep',
+    firstStepFallback: 'Obre moviments i revisa els exemples per normalitzar la data a format correcte.',
+    ctaLabelKey: 'admin.health.nightly.codes.B.ctaLabel',
+    ctaLabelFallback: 'Revisar moviments',
+    targetPath: '/dashboard/movimientos',
+    severity: 'high',
+  },
+  C: {
+    titleKey: 'admin.health.nightly.codes.C.title',
+    titleFallback: 'Compte bancari incoherent',
+    whatHappensKey: 'admin.health.nightly.codes.C.whatHappens',
+    whatHappensFallback: 'Hi ha moviments on la font i el compte bancari no encaixen.',
+    impactKey: 'admin.health.nightly.codes.C.impact',
+    impactFallback: 'Pot fer fallar conciliacions i seguiment d’origen dels moviments.',
+    firstStepKey: 'admin.health.nightly.codes.C.firstStep',
+    firstStepFallback: 'Obre moviments i comprova si la font o el compte assignat són correctes.',
+    ctaLabelKey: 'admin.health.nightly.codes.C.ctaLabel',
+    ctaLabelFallback: 'Revisar moviments',
+    targetPath: '/dashboard/movimientos',
+    severity: 'high',
+  },
+  D: {
+    titleKey: 'admin.health.nightly.codes.D.title',
+    titleFallback: 'Arxivats dins l’operativa',
+    whatHappensKey: 'admin.health.nightly.codes.D.whatHappens',
+    whatHappensFallback: 'S’han colat moviments arxivats dins del dataset operatiu.',
+    impactKey: 'admin.health.nightly.codes.D.impact',
+    impactFallback: 'Afegeix soroll i pot alterar comptadors o llistats de treball.',
+    firstStepKey: 'admin.health.nightly.codes.D.firstStep',
+    firstStepFallback: 'Obre moviments i valida si aquests casos s’han d’excloure o restaurar.',
+    ctaLabelKey: 'admin.health.nightly.codes.D.ctaLabel',
+    ctaLabelFallback: 'Revisar moviments',
+    targetPath: '/dashboard/movimientos',
+    severity: 'low',
+  },
+  E: {
+    titleKey: 'admin.health.nightly.codes.E.title',
+    titleFallback: 'Signe incoherent',
+    whatHappensKey: 'admin.health.nightly.codes.E.whatHappens',
+    whatHappensFallback: 'Hi ha imports amb signe incompatible amb el tipus de moviment.',
+    impactKey: 'admin.health.nightly.codes.E.impact',
+    impactFallback: 'Pot alterar totals, balanç i exportacions.',
+    firstStepKey: 'admin.health.nightly.codes.E.firstStep',
+    firstStepFallback: 'Obre moviments i corregeix el tipus o l’import dels exemples afectats.',
+    ctaLabelKey: 'admin.health.nightly.codes.E.ctaLabel',
+    ctaLabelFallback: 'Revisar moviments',
+    targetPath: '/dashboard/movimientos',
+    severity: 'high',
+  },
+  F: {
+    titleKey: 'admin.health.nightly.codes.F.title',
+    titleFallback: 'Categories inexistents',
+    whatHappensKey: 'admin.health.nightly.codes.F.whatHappens',
+    whatHappensFallback: 'Hi ha moviments que apunten a categories que ja no existeixen a l’organització.',
+    impactKey: 'admin.health.nightly.codes.F.impact',
+    impactFallback: 'Pot deixar moviments fora de classificació útil i afectar informes.',
+    firstStepKey: 'admin.health.nightly.codes.F.firstStep',
+    firstStepFallback: 'Revisa categories de l’organització i després corregeix els moviments afectats.',
+    ctaLabelKey: 'admin.health.nightly.codes.F.ctaLabel',
+    ctaLabelFallback: 'Anar a configuració',
+    targetPath: '/dashboard/configuracion',
+    severity: 'high',
+  },
+  G: {
+    titleKey: 'admin.health.nightly.codes.G.title',
+    titleFallback: 'Projectes inexistents',
+    whatHappensKey: 'admin.health.nightly.codes.G.whatHappens',
+    whatHappensFallback: 'Hi ha moviments o imputacions que apunten a projectes que no existeixen.',
+    impactKey: 'admin.health.nightly.codes.G.impact',
+    impactFallback: 'Pot trencar seguiment de projecte i repartiment de despesa.',
+    firstStepKey: 'admin.health.nightly.codes.G.firstStep',
+    firstStepFallback: 'Revisa els projectes vigents i corregeix la referència dels exemples afectats.',
+    ctaLabelKey: 'admin.health.nightly.codes.G.ctaLabel',
+    ctaLabelFallback: 'Revisar projectes',
+    targetPath: '/dashboard/projectes',
+    severity: 'high',
+  },
+  H: {
+    titleKey: 'admin.health.nightly.codes.H.title',
+    titleFallback: 'Comptes bancaris inexistents',
+    whatHappensKey: 'admin.health.nightly.codes.H.whatHappens',
+    whatHappensFallback: 'Alguns moviments apunten a comptes bancaris que no existeixen o ja no són vàlids.',
+    impactKey: 'admin.health.nightly.codes.H.impact',
+    impactFallback: 'Pot distorsionar conciliació i rastreig d’origen del moviment.',
+    firstStepKey: 'admin.health.nightly.codes.H.firstStep',
+    firstStepFallback: 'Comença pels exemples afectats i valida quin compte hauria de constar.',
+    ctaLabelKey: 'admin.health.nightly.codes.H.ctaLabel',
+    ctaLabelFallback: 'Veure exemples',
+    severity: 'medium',
+  },
+  I: {
+    titleKey: 'admin.health.nightly.codes.I.title',
+    titleFallback: 'Contactes inexistents',
+    whatHappensKey: 'admin.health.nightly.codes.I.whatHappens',
+    whatHappensFallback: 'Hi ha moviments que conserven una referència a un contacte que ja no existeix.',
+    impactKey: 'admin.health.nightly.codes.I.impact',
+    impactFallback: 'Pot afectar relació amb donants, proveïdors o persones vinculades al moviment.',
+    firstStepKey: 'admin.health.nightly.codes.I.firstStep',
+    firstStepFallback: 'Revisa els exemples i decideix si cal reassignar contacte o netejar la referència.',
+    ctaLabelKey: 'admin.health.nightly.codes.I.ctaLabel',
+    ctaLabelFallback: 'Veure exemples',
+    severity: 'medium',
+  },
+  J: {
+    titleKey: 'admin.health.nightly.codes.J.title',
+    titleFallback: 'Tiquets sense liquidació',
+    whatHappensKey: 'admin.health.nightly.codes.J.whatHappens',
+    whatHappensFallback: 'S’han detectat tiquets que apunten a una liquidació inexistent.',
+    impactKey: 'admin.health.nightly.codes.J.impact',
+    impactFallback: 'Pot deixar justificacions trencades o informes incomplets.',
+    firstStepKey: 'admin.health.nightly.codes.J.firstStep',
+    firstStepFallback: 'Obre liquidacions i verifica si cal recrear la relació o reubicar el tiquet.',
+    ctaLabelKey: 'admin.health.nightly.codes.J.ctaLabel',
+    ctaLabelFallback: 'Obrir liquidacions',
+    targetPath: '/dashboard/movimientos/liquidacions',
+    severity: 'medium',
+  },
+  K: {
+    titleKey: 'admin.health.nightly.codes.K.title',
+    titleFallback: 'Remeses filles sense pare',
+    whatHappensKey: 'admin.health.nightly.codes.K.whatHappens',
+    whatHappensFallback: 'Hi ha línies de remesa que ja no tenen moviment pare vàlid.',
+    impactKey: 'admin.health.nightly.codes.K.impact',
+    impactFallback: 'Pot trencar totals, seguiment de cobraments i coherència de remeses.',
+    firstStepKey: 'admin.health.nightly.codes.K.firstStep',
+    firstStepFallback: 'Obre remeses de cobrament i revisa si falta recuperar el pare o netejar les filles.',
+    ctaLabelKey: 'admin.health.nightly.codes.K.ctaLabel',
+    ctaLabelFallback: 'Obrir remeses',
+    targetPath: '/dashboard/donants/remeses-cobrament',
+    severity: 'high',
+  },
+  R1: {
+    titleKey: 'admin.health.nightly.codes.R1.title',
+    titleFallback: 'Paritat del dashboard',
+    whatHappensKey: 'admin.health.nightly.codes.R1.whatHappens',
+    whatHappensFallback: 'Els totals agregats no quadren amb el desglossament intern.',
+    impactKey: 'admin.health.nightly.codes.R1.impact',
+    impactFallback: 'Pot fer que el resum global no coincideixi amb el detall.',
+    firstStepKey: 'admin.health.nightly.codes.R1.firstStep',
+    firstStepFallback: 'Revisa els exemples afectats per veure quin bloc està desquadrant el total.',
+    ctaLabelKey: 'admin.health.nightly.codes.R1.ctaLabel',
+    ctaLabelFallback: 'Veure exemples',
+    severity: 'high',
+  },
+  R2: {
+    titleKey: 'admin.health.nightly.codes.R2.title',
+    titleFallback: 'Feed de despeses de projectes',
+    whatHappensKey: 'admin.health.nightly.codes.R2.whatHappens',
+    whatHappensFallback: 'Hi ha despeses que no coincideixen amb l’elegibilitat o l’export esperat del mòdul de projectes.',
+    impactKey: 'admin.health.nightly.codes.R2.impact',
+    impactFallback: 'Pot deixar despeses fora del flux o mostrar-ne de més dins projectes.',
+    firstStepKey: 'admin.health.nightly.codes.R2.firstStep',
+    firstStepFallback: 'Obre despeses de projectes i revisa els exemples per validar elegibilitat i origen.',
+    ctaLabelKey: 'admin.health.nightly.codes.R2.ctaLabel',
+    ctaLabelFallback: 'Obrir despeses',
+    targetPath: '/dashboard/project-module/expenses',
+    severity: 'high',
+  },
+  R3: {
+    titleKey: 'admin.health.nightly.codes.R3.title',
+    titleFallback: 'FX i imputacions',
+    whatHappensKey: 'admin.health.nightly.codes.R3.whatHappens',
+    whatHappensFallback: 'Hi ha incoherències entre tipus de canvi, imports imputats o repartiments entre projectes.',
+    impactKey: 'admin.health.nightly.codes.R3.impact',
+    impactFallback: 'Pot desquadrar imports en EUR i justificar malament despeses internacionals.',
+    firstStepKey: 'admin.health.nightly.codes.R3.firstStep',
+    firstStepFallback: 'Obre despeses de projectes i comprova les imputacions i tipus de canvi dels exemples.',
+    ctaLabelKey: 'admin.health.nightly.codes.R3.ctaLabel',
+    ctaLabelFallback: 'Obrir despeses',
+    targetPath: '/dashboard/project-module/expenses',
+    severity: 'high',
+  },
+};
+
+const NIGHTLY_SEVERITY_STYLES: Record<NightlyPresentationSeverity, string> = {
+  high: 'border-red-200 bg-red-50 text-red-800',
+  medium: 'border-amber-200 bg-amber-50 text-amber-800',
+  low: 'border-slate-200 bg-slate-50 text-slate-700',
+};
+
+function isNightlyHealthCode(value: unknown): value is NightlyHealthCode {
+  return typeof value === 'string' && value in NIGHTLY_CHECK_PRESENTATION_CONFIG;
+}
+
+function isNightlyHealthIncident(incident: SystemIncident): boolean {
+  return incident.type === 'INVARIANT_BROKEN' && incident.route === '/health-check/nightly';
+}
+
+function interpolateMessage(template: string, values: Record<string, string | number>): string {
+  return Object.entries(values).reduce(
+    (message, [key, value]) => message.replaceAll(`{${key}}`, String(value)),
+    template
+  );
+}
+
+function localeForLanguage(language: Language): string {
+  if (language === 'es') return 'es-ES';
+  if (language === 'fr') return 'fr-FR';
+  if (language === 'pt') return 'pt-PT';
+  return 'ca-ES';
+}
+
+function buildNightlyCheckPresentation(tr: TrFunction): Record<NightlyHealthCode, NightlyCheckPresentation> {
+  return Object.fromEntries(
+    Object.entries(NIGHTLY_CHECK_PRESENTATION_CONFIG).map(([code, config]) => [
+      code,
+      {
+        title: tr(config.titleKey, config.titleFallback),
+        whatHappens: tr(config.whatHappensKey, config.whatHappensFallback),
+        impact: tr(config.impactKey, config.impactFallback),
+        firstStep: tr(config.firstStepKey, config.firstStepFallback),
+        ctaLabel: tr(config.ctaLabelKey, config.ctaLabelFallback),
+        targetPath: config.targetPath,
+        severity: config.severity,
+      },
+    ])
+  ) as Record<NightlyHealthCode, NightlyCheckPresentation>;
+}
+
+function getNightlyIncidentItems(
+  incident: SystemIncident,
+  presentationMap: Record<NightlyHealthCode, NightlyCheckPresentation>
+): NightlyHealthItem[] {
+  const meta = incident.lastSeenMeta && typeof incident.lastSeenMeta === 'object'
+    ? incident.lastSeenMeta as Record<string, unknown>
+    : {};
+
+  const sampleIdsByCode = meta.sampleIds && typeof meta.sampleIds === 'object'
+    ? meta.sampleIds as Record<string, unknown>
+    : {};
+
+  const deltasByCode = meta.deltas && typeof meta.deltas === 'object'
+    ? meta.deltas as Record<string, unknown>
+    : {};
+
+  const orderedCodes = new Set<NightlyHealthCode>();
+
+  if (Array.isArray(meta.deltasList)) {
+    for (const item of meta.deltasList) {
+      const code = (item as { id?: unknown }).id;
+      if (isNightlyHealthCode(code)) {
+        orderedCodes.add(code);
+      }
+    }
+  }
+
+  if (Array.isArray(meta.worsenedCriticalChecks)) {
+    for (const code of meta.worsenedCriticalChecks) {
+      if (isNightlyHealthCode(code)) {
+        orderedCodes.add(code);
+      }
+    }
+  }
+
+  for (const key of Object.keys(sampleIdsByCode)) {
+    if (isNightlyHealthCode(key)) {
+      orderedCodes.add(key);
+    }
+  }
+
+  for (const key of Object.keys(deltasByCode)) {
+    if (isNightlyHealthCode(key)) {
+      orderedCodes.add(key);
+    }
+  }
+
+  const severityWeight: Record<NightlyPresentationSeverity, number> = {
+    high: 0,
+    medium: 1,
+    low: 2,
+  };
+
+  return Array.from(orderedCodes)
+    .map((code) => {
+      const rawDelta = deltasByCode[code];
+      const rawSamples = sampleIdsByCode[code];
+
+        return {
+          code,
+          delta: typeof rawDelta === 'number' && Number.isFinite(rawDelta) ? rawDelta : null,
+          samples: Array.isArray(rawSamples)
+            ? rawSamples.filter((value): value is string => typeof value === 'string').slice(0, 10)
+            : [],
+          presentation: presentationMap[code],
+        };
+      })
+    .sort((a, b) => {
+      const severityDiff = severityWeight[a.presentation.severity] - severityWeight[b.presentation.severity];
+      if (severityDiff !== 0) return severityDiff;
+      return a.code.localeCompare(b.code);
+    });
+}
+
+function buildNightlyTargetHref(orgSlug: string | undefined, targetPath: string | undefined): string | null {
+  if (!orgSlug || !targetPath) return null;
+  return `/${orgSlug}${targetPath}`;
+}
+
+function buildNightlySampleHref(orgSlug: string | undefined, code: NightlyHealthCode, sampleId: string): string | null {
+  if (!orgSlug) return null;
+  if (code === 'R2' || code === 'R3') {
+    return `/${orgSlug}/dashboard/project-module/expenses/${encodeURIComponent(sampleId)}`;
+  }
+  return null;
+}
+
 // ═══════════════════════════════════════════════════════════════════════════
 // COMPONENT PRINCIPAL
 // ═══════════════════════════════════════════════════════════════════════════
 
 export function SystemHealth() {
+  const { tr, language } = useTranslations();
   const { firestore, user } = useFirebase();
   const { toast } = useToast();
   const isMobile = useIsMobile();
@@ -290,6 +671,8 @@ export function SystemHealth() {
   const [isLoading, setIsLoading] = React.useState(true);
   const [dialogOpen, setDialogOpen] = React.useState(false);
   const [selectedIncident, setSelectedIncident] = React.useState<SystemIncident | null>(null);
+  const [selectedNightlyGroup, setSelectedNightlyGroup] = React.useState<NightlyHealthGroup | null>(null);
+  const [selectedNightlyItem, setSelectedNightlyItem] = React.useState<NightlyHealthItem | null>(null);
   const [isProcessing, setIsProcessing] = React.useState(false);
 
   // Modal de resolució d'incidents
@@ -349,6 +732,40 @@ export function SystemHealth() {
   React.useEffect(() => {
     loadIncidents();
   }, [loadIncidents]);
+
+  const uiLocale = React.useMemo(() => localeForLanguage(language), [language]);
+
+  const nightlyCheckPresentation = React.useMemo(
+    () => buildNightlyCheckPresentation(tr),
+    [tr]
+  );
+
+  const realIncidents = React.useMemo(
+    () => incidents.filter((incident) => !isNightlyHealthIncident(incident)),
+    [incidents]
+  );
+
+  const nightlyHealthGroups = React.useMemo(
+    () =>
+      incidents
+        .filter(isNightlyHealthIncident)
+        .map((incident) => ({
+          incident,
+          items: getNightlyIncidentItems(incident, nightlyCheckPresentation),
+        }))
+        .filter((group) => group.items.length > 0),
+    [incidents, nightlyCheckPresentation]
+  );
+
+  const openRealIncidentCount = React.useMemo(
+    () => realIncidents.filter((incident) => incident.status === 'OPEN').length,
+    [realIncidents]
+  );
+
+  const nightlyCheckCount = React.useMemo(
+    () => nightlyHealthGroups.reduce((sum, group) => sum + group.items.length, 0),
+    [nightlyHealthGroups]
+  );
 
   // Determinar estat de cada sentinella
   const getSentinelStatus = (sentinel: Sentinel): 'ok' | 'warning' | 'critical' => {
@@ -509,8 +926,6 @@ export function SystemHealth() {
       });
     }
   };
-
-  const totalOpenIncidents = incidents.filter((i) => i.status === 'OPEN').length;
 
   // ─────────────────────────────────────────────────────────────────────────
   // SEMÀFOR DE PRODUCCIÓ - Executar checks
@@ -778,25 +1193,6 @@ export function SystemHealth() {
             </div>
           ) : (
             <>
-              {/* Resum */}
-              {totalOpenIncidents > 0 && (
-                <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-lg">
-                  <AlertTriangle className="h-5 w-5 text-red-600" />
-                  <span className="text-sm text-red-800 font-medium">
-                    {totalOpenIncidents} incident{totalOpenIncidents > 1 ? 's' : ''} obert{totalOpenIncidents > 1 ? 's' : ''}
-                  </span>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="ml-auto"
-                    onClick={() => setDialogOpen(true)}
-                  >
-                    <Eye className="h-4 w-4 mr-1" />
-                    Veure
-                  </Button>
-                </div>
-              )}
-
               {/* Grid de sentinelles */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                 {SENTINELS.map((sentinel) => {
@@ -836,6 +1232,242 @@ export function SystemHealth() {
                     </TooltipProvider>
                   );
                 })}
+              </div>
+
+              <div className="pt-4 mt-4 border-t space-y-6">
+                <section className="space-y-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <h4 className="text-sm font-medium">{tr('admin.health.realIncidents.sectionTitle', 'Incidents reals')}</h4>
+                      <p className="text-xs text-muted-foreground">
+                        {tr(
+                          'admin.health.realIncidents.sectionDescription',
+                          "Errors d'ús real del sistema: crashes, permisos, imports o exports. Mantenen el flux actual d'ACK i Resolt."
+                        )}
+                      </p>
+                    </div>
+                    {realIncidents.length > 0 && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setDialogOpen(true)}
+                      >
+                        <Eye className="h-4 w-4 mr-1" />
+                        {tr('admin.health.realIncidents.viewDetail', 'Veure detall')}
+                      </Button>
+                    )}
+                  </div>
+
+                  {realIncidents.length === 0 ? (
+                    <div className="rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">
+                      {tr('admin.health.realIncidents.empty', 'No hi ha incidents reals oberts ara mateix.')}
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+                        {interpolateMessage(
+                          tr(
+                            'admin.health.realIncidents.summary',
+                            '{open} incidents reals oberts i {ack} en ACK.'
+                          ),
+                          {
+                            open: openRealIncidentCount,
+                            ack: realIncidents.length - openRealIncidentCount,
+                          }
+                        )}
+                      </div>
+                      {realIncidents.slice(0, 3).map((incident) => (
+                        <div key={incident.id} className="rounded-lg border px-4 py-3">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="space-y-1">
+                              <p className="text-sm font-medium">{incident.message}</p>
+                              <p className="text-xs text-muted-foreground">
+                                {incident.route || tr('admin.health.realIncidents.noRoute', 'Sense ruta')}{incident.orgSlug ? ` · ${incident.orgSlug}` : ''}
+                              </p>
+                            </div>
+                            <Badge variant={incident.status === 'ACK' ? 'secondary' : 'destructive'}>
+                              {incident.status}
+                            </Badge>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </section>
+
+                <section className="space-y-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <h4 className="text-sm font-medium">{tr('admin.health.dataHealth.sectionTitle', 'Salut de dades')}</h4>
+                      <p className="text-xs text-muted-foreground">
+                        {tr(
+                          'admin.health.dataHealth.sectionDescription',
+                          "Resultats del control nocturn. Són checks operatius sobre dades i coherència, no crashes d'usuari."
+                        )}
+                      </p>
+                    </div>
+                    <Badge variant="outline">
+                      {interpolateMessage(
+                        tr('admin.health.dataHealth.countBadge', '{count} checks'),
+                        { count: nightlyCheckCount }
+                      )}
+                    </Badge>
+                  </div>
+
+                  {nightlyHealthGroups.length === 0 ? (
+                    <div className="rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">
+                      {tr(
+                        'admin.health.dataHealth.empty',
+                        'El darrer control nocturn no ha deixat checks operatius oberts.'
+                      )}
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {nightlyHealthGroups.map((group) => (
+                        <div key={group.incident.id} className="rounded-xl border bg-card p-4 space-y-4">
+                          <div className="flex items-start justify-between gap-3">
+                            <div>
+                              <h5 className="text-sm font-medium">
+                                {group.incident.orgSlug || group.incident.orgId || tr('admin.health.dataHealth.orgWithoutSlug', 'Organització sense slug')}
+                              </h5>
+                              <p className="text-xs text-muted-foreground">
+                                {interpolateMessage(
+                                  tr(
+                                    'admin.health.dataHealth.detectedAt',
+                                    'Detectat al darrer control nocturn · {date}'
+                                  ),
+                                  {
+                                    date: group.incident.lastSeenAt?.toDate?.()?.toLocaleString(uiLocale, {
+                                      day: '2-digit',
+                                      month: '2-digit',
+                                      hour: '2-digit',
+                                      minute: '2-digit',
+                                    }) || tr('admin.health.dataHealth.noDate', 'sense data'),
+                                  }
+                                )}
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                {tr('admin.health.dataHealth.pendingReview', 'Pendent de revisió')} · {tr('admin.health.dataHealth.autoCloseHint', 'Es tancarà quan deixi de reaparèixer')}
+                              </p>
+                            </div>
+                            <Badge variant="secondary">
+                              {interpolateMessage(
+                                tr('admin.health.dataHealth.countBadge', '{count} checks'),
+                                { count: group.items.length }
+                              )}
+                            </Badge>
+                          </div>
+
+                          <div className="space-y-3">
+                            {group.items.map((item) => {
+                              const targetHref = buildNightlyTargetHref(group.incident.orgSlug, item.presentation.targetPath);
+                              return (
+                                <div key={`${group.incident.id}-${item.code}`} className="rounded-lg border p-3 space-y-3">
+                                  <div className="flex items-start justify-between gap-3">
+                                    <div className="space-y-1">
+                                      <div className="flex items-center gap-2 flex-wrap">
+                                        <span className="text-xs font-mono text-muted-foreground">{item.code}</span>
+                                        <span className="text-sm font-medium">{item.presentation.title}</span>
+                                        <span className={`rounded-full border px-2 py-0.5 text-[11px] ${NIGHTLY_SEVERITY_STYLES[item.presentation.severity]}`}>
+                                          {item.presentation.severity === 'high'
+                                            ? tr('admin.health.dataHealth.severity.high', 'alt')
+                                            : item.presentation.severity === 'medium'
+                                            ? tr('admin.health.dataHealth.severity.medium', 'mitja')
+                                            : tr('admin.health.dataHealth.severity.low', 'baixa')}
+                                        </span>
+                                        {item.delta !== null && (
+                                          <span className="text-xs text-muted-foreground">
+                                            {interpolateMessage(
+                                              tr('admin.health.dataHealth.deltaVsPrevious', '+{delta} vs nit anterior'),
+                                              { delta: item.delta }
+                                            )}
+                                          </span>
+                                        )}
+                                      </div>
+                                      <p className="text-sm text-foreground">{item.presentation.whatHappens}</p>
+                                    </div>
+                                  </div>
+
+                                  <div className="grid gap-3 md:grid-cols-2">
+                                    <div className="rounded-lg bg-muted/50 p-3">
+                                      <p className="text-[11px] uppercase tracking-wide text-muted-foreground">{tr('admin.health.dataHealth.impactLabel', 'Impacte')}</p>
+                                      <p className="mt-1 text-sm">{item.presentation.impact}</p>
+                                    </div>
+                                    <div className="rounded-lg bg-muted/50 p-3">
+                                      <p className="text-[11px] uppercase tracking-wide text-muted-foreground">{tr('admin.health.dataHealth.firstStepLabel', 'Primer pas')}</p>
+                                      <p className="mt-1 text-sm">{item.presentation.firstStep}</p>
+                                    </div>
+                                  </div>
+
+                                  <div className="space-y-2">
+                                    <p className="text-[11px] uppercase tracking-wide text-muted-foreground">{tr('admin.health.dataHealth.examplesLabel', 'Exemples detectats')}</p>
+                                    {item.samples.length > 0 ? (
+                                      <div className="flex flex-wrap gap-2">
+                                        {item.samples.slice(0, 3).map((sampleId) => {
+                                          const sampleHref = buildNightlySampleHref(group.incident.orgSlug, item.code, sampleId);
+                                          if (sampleHref) {
+                                            return (
+                                              <Button
+                                                key={sampleId}
+                                                variant="outline"
+                                                size="sm"
+                                                className="h-7 px-2 font-mono text-xs"
+                                                onClick={() => window.open(sampleHref, '_blank')}
+                                              >
+                                                {sampleId}
+                                              </Button>
+                                            );
+                                          }
+                                          return (
+                                            <span key={sampleId} className="rounded-md border bg-muted px-2 py-1 font-mono text-xs">
+                                              {sampleId}
+                                            </span>
+                                          );
+                                        })}
+                                      </div>
+                                    ) : (
+                                      <p className="text-sm text-muted-foreground">
+                                        {tr(
+                                          'admin.health.dataHealth.noSamples',
+                                          'Sense sampleIds automàtics en aquest check. Cal diagnòstic manual.'
+                                        )}
+                                      </p>
+                                    )}
+                                  </div>
+
+                                  <div className="flex flex-wrap gap-2">
+                                    {targetHref ? (
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => window.open(targetHref, '_blank')}
+                                      >
+                                        <ExternalLink className="h-4 w-4 mr-2" />
+                                        {item.presentation.ctaLabel}
+                                      </Button>
+                                    ) : (
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => {
+                                          setSelectedNightlyGroup(group);
+                                          setSelectedNightlyItem(item);
+                                        }}
+                                      >
+                                        <Eye className="h-4 w-4 mr-2" />
+                                        {item.presentation.ctaLabel}
+                                      </Button>
+                                    )}
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </section>
               </div>
 
               {/* ═══════════════════════════════════════════════════════════════════ */}
@@ -1014,7 +1646,7 @@ export function SystemHealth() {
                                     onClick={(e) => {
                                       e.stopPropagation();
                                       // Navegar a la pantalla real de documents pendents
-                                      window.open(`/${selectedOrg.slug}/dashboard/pending-documents`, '_blank');
+                                      window.open(`/${selectedOrg.slug}/dashboard/movimientos/pendents`, '_blank');
                                     }}
                                   >
                                     <ExternalLink className="h-3 w-3 mr-1" />
@@ -1048,22 +1680,25 @@ export function SystemHealth() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <AlertTriangle className="h-5 w-5 text-red-600" />
-              Incidents del sistema
+              {tr('admin.health.realIncidents.sectionTitle', 'Incidents reals')}
             </DialogTitle>
             <DialogDescription>
-              Incidències detectades automàticament. Revisa i actua segons les indicacions.
+              {tr(
+                'admin.health.realIncidents.dialogDescription',
+                "Incidències d'ús real del sistema. Manté el flux actual d'ACK i tancament només per aquests casos."
+              )}
             </DialogDescription>
           </DialogHeader>
 
-          {incidents.length === 0 ? (
+          {realIncidents.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
               <CheckCircle className="h-12 w-12 mx-auto mb-2 text-green-600" />
-              <p>Tot correcte! No hi ha incidents oberts.</p>
+              <p>{tr('admin.health.realIncidents.dialogEmpty', 'Tot correcte! No hi ha incidents reals oberts.')}</p>
             </div>
           ) : isMobile ? (
             /* Vista de cards per pantalles estretes */
             <div className="space-y-3">
-              {incidents.map((incident) => {
+              {realIncidents.map((incident) => {
                 const currentImpact = incident.impact || getDefaultImpact(incident);
                 const impactConfig = IMPACT_LABELS[currentImpact];
                 const action = getRecommendedAction(incident);
@@ -1230,7 +1865,7 @@ export function SystemHealth() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {incidents.map((incident) => (
+                {realIncidents.map((incident) => (
                   <TableRow
                     key={incident.id}
                     className={incident.status === 'ACK' ? 'opacity-60' : ''}
@@ -1488,6 +2123,87 @@ export function SystemHealth() {
                     </div>
                   )}
                 </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={!!selectedNightlyGroup && !!selectedNightlyItem}
+        onOpenChange={() => {
+          setSelectedNightlyGroup(null);
+          setSelectedNightlyItem(null);
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Database className="h-5 w-5" />
+              {tr('admin.health.dataHealth.diagnosisTitle', 'Diagnòstic de salut de dades')}
+            </DialogTitle>
+            <DialogDescription>
+              {tr(
+                'admin.health.dataHealth.diagnosisDescription',
+                "Resultat derivat del control nocturn. No canvia l'estat de l'incident; només ajuda a revisar-lo."
+              )}
+            </DialogDescription>
+          </DialogHeader>
+
+          {selectedNightlyGroup && selectedNightlyItem && (
+            <div className="space-y-4">
+              <div className="rounded-lg border p-3 space-y-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="font-mono text-xs text-muted-foreground">{selectedNightlyItem.code}</span>
+                  <span className="text-sm font-medium">{selectedNightlyItem.presentation.title}</span>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  {selectedNightlyGroup.incident.orgSlug || selectedNightlyGroup.incident.orgId || tr('admin.health.dataHealth.orgWithoutSlug', 'Organització sense slug')}
+                </p>
+                <p className="text-sm">{selectedNightlyItem.presentation.firstStep}</p>
+              </div>
+
+              <div className="space-y-2">
+                <h4 className="text-sm font-medium">{tr('admin.health.dataHealth.availableExamples', 'Exemples disponibles')}</h4>
+                {selectedNightlyItem.samples.length > 0 ? (
+                  <div className="space-y-2">
+                    {selectedNightlyItem.samples.map((sampleId) => {
+                      const sampleHref = buildNightlySampleHref(
+                        selectedNightlyGroup.incident.orgSlug,
+                        selectedNightlyItem.code,
+                        sampleId
+                      );
+
+                      if (sampleHref) {
+                        return (
+                          <Button
+                            key={sampleId}
+                            variant="outline"
+                            size="sm"
+                            className="w-full justify-start font-mono"
+                            onClick={() => window.open(sampleHref, '_blank')}
+                          >
+                            <ExternalLink className="h-4 w-4 mr-2" />
+                            {sampleId}
+                          </Button>
+                        );
+                      }
+
+                      return (
+                        <div key={sampleId} className="rounded-md border bg-muted px-3 py-2 font-mono text-sm">
+                          {sampleId}
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    {tr(
+                      'admin.health.dataHealth.noSamplesDetailed',
+                      'Aquest check no ha guardat sampleIds automàtics. Cal revisar el cas manualment des de la ruta operativa indicada.'
+                    )}
+                  </p>
+                )}
               </div>
             </div>
           )}
