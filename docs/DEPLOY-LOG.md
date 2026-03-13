@@ -4,6 +4,17 @@ Registre cronologic de desplegaments a produccio.
 
 ## Notes operatives sense deploy
 
+### 2026-03-13 — Admin health clarity
+
+- Branca preparada per merge complet: `codex/admin-health-clarity-20260313`
+- Snapshot nightly fix: validat
+- Separacio incidents / salut de dades: validada
+- i18n: validat
+- QA visual: validada
+- QA ACK/RESOLVED en viu: pendent post-merge
+- Sense deploy
+- Seguent pas operatiu: test manual curt a `/admin` amb incident real o sintetic per verificar `OPEN`, transicio a `ACK`, transicio a `RESOLVED` i absencia d'impacte sobre la seccio de Salut de dades.
+
 ### 2026-03-12 — Remeses OUT de devolucions
 
 - Branca preparada per merge complet: `codex/returns-undo-global-repair`
