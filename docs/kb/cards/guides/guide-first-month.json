@@ -31,7 +31,7 @@
   "needsSnapshot": false,
   "keywords": ["primer", "mes", "pla", "arrencar", "organitzar", "temps"],
   "source_faq": ["Q2", "Q3"],
-  "source_manual": ["1.5"],
+  "source_manual": ["1.4", "5.1"],
   "source_guides": ["firstMonth"],
   "related": ["guide-first-day", "guide-initial-load", "guide-monthly-flow"],
   "error_key": null,

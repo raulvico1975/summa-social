@@ -31,7 +31,7 @@
   "needsSnapshot": false,
   "keywords": ["viatge", "liquidació", "tiquets", "quilometratge", "despeses", "reemborsament"],
   "source_faq": ["Q84½"],
-  "source_manual": ["6c", "10.8"],
+  "source_manual": ["6c"],
   "source_guides": ["travelReceipts"],
   "related": ["guide-projects", "guide-attach-document"],
   "error_key": null,

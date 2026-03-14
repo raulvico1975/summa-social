@@ -130,11 +130,11 @@ function resolveRiskPolicy(domain: KBCard['domain']): {
 
 function inferUiPaths(domain: KBCard['domain']): string[] {
   if (domain === 'fiscal') return ['Informes']
-  if (domain === 'sepa' || domain === 'remittances') return ['Moviments > Remeses']
+  if (domain === 'sepa' || domain === 'remittances') return ['Moviments > Remeses', 'Manual > Remeses']
   if (domain === 'superadmin') return ['Admin > SuperAdmin']
   if (domain === 'documents') return ['Moviments > Documents']
   if (domain === 'projects') return ['Projectes']
-  return ['Dashboard > ? (Hub de Guies)']
+  return ['Header > ? (Ajuda contextual)', 'Manual > Resolució de problemes']
 }
 
 function buildTitle(question: string): string {

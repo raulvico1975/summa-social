@@ -2027,6 +2027,7 @@
   "help.ui.noResults": "Aucun résultat pour \"{query}\".",
   "help.ui.noSteps": "Aucune étape n'est encore définie pour cet écran.",
   "help.ui.searchPlaceholder": "Rechercher dans l'aide…",
+  "help.ui.commonProblems": "Problèmes fréquents",
   "help.ui.steps": "Étapes",
   "help.ui.suggest": "Suggérer une amélioration",
   "help.ui.tips": "Conseils",

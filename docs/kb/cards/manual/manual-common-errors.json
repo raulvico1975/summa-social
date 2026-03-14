@@ -23,12 +23,12 @@
   },
   "guideId": null,
   "answer": {
-    "ca": "Quan et surt un error i no és clar:\n1. Fes captura del missatge.\n2. Apunta què estaves fent.\n3. Torna-ho a provar per descartar un error puntual.\n4. Si es repeteix, comparteix el text exacte de l'error al suport.\n\nAmb el text literal, la resolució és molt més ràpida.",
-    "es": "Cuando te sale un error y no está claro:\n1. Haz captura del mensaje.\n2. Anota qué estabas haciendo.\n3. Vuelve a intentarlo para descartar un error puntual.\n4. Si se repite, comparte el texto exacto del error con soporte.\n\nCon el texto literal, la resolución es mucho más rápida."
+    "ca": "Quan et surt un error i no és clar:\n1. Fes captura del missatge.\n2. Apunta què estaves fent.\n3. Torna-ho a provar per descartar un error puntual.\n4. Si es repeteix, enganxa el text exacte de l'error al bot o revisa la secció de problemes del manual.\n\nAmb el text literal, és molt més fàcil portar-te al flux correcte.",
+    "es": "Cuando te sale un error y no está claro:\n1. Haz captura del mensaje.\n2. Anota qué estabas haciendo.\n3. Vuelve a intentarlo para descartar un error puntual.\n4. Si se repite, pega el texto exacto del error al bot o revisa la sección de problemas del manual.\n\nCon el texto literal, es mucho más fácil llevarte al flujo correcto."
   },
   "uiPaths": [
-    "Resolució de problemes",
-    "Hub de Guies"
+    "Manual > Resolució de problemes",
+    "Header > ? (Ajuda contextual)"
   ],
   "needsSnapshot": false,
   "keywords": [

@@ -1,5 +1,6 @@
 import type { EngineCard, IntentType } from './types'
 import type { KbLang } from '../bot-retrieval'
+import { CONTEXT_HELP_UI_PATHS, DEFAULT_MANUAL_UI_PATHS } from '@/help/help-manual-links'
 
 const OPERATIONAL_HINT_RE =
   /\b(com|como|on|donde|dónde|pujo|pujar|subir|imputo|imputar|dividir|enviar|configurar|crear|editar|esborrar|eliminar|generar|adjuntar|vincular|processar|procesar|pas\s*a\s*paso|pas\s*a\s*pas)\b/i
@@ -18,11 +19,10 @@ const OFFICIAL_UI_PATH_PREFIXES = [
   'Informes',
   'Proyectos',
   'Projectes',
+  'Manual',
   'Configuración',
   'Configuració',
   'Header',
-  'Hub de Guías',
-  'Hub de Guies',
   'Liquidaciones',
   'Liquidacions',
   'Página de login',
@@ -31,8 +31,8 @@ const OFFICIAL_UI_PATH_PREFIXES = [
 ] as const
 
 export const SAFE_FALLBACK_PATHS: Record<KbLang, string[]> = {
-  ca: ['Dashboard > ? (Hub de Guies)', 'Dashboard > Manual'],
-  es: ['Dashboard > ? (Hub de Guías)', 'Dashboard > Manual'],
+  ca: [CONTEXT_HELP_UI_PATHS.ca, DEFAULT_MANUAL_UI_PATHS.ca],
+  es: [CONTEXT_HELP_UI_PATHS.es, DEFAULT_MANUAL_UI_PATHS.es],
 }
 
 export function isOperationalIntent(message: string): boolean {

@@ -11,8 +11,9 @@ El manual de usuario completo está disponible actualmente en catalán. Estamos 
 
 Mientras tanto, puedes:
 - Usar el traductor de tu navegador para traducir la versión en catalán
-- Consultar la ayuda contextual (botón ? en cada pantalla), que sí está disponible en español
-- Contactar con soporte en ajuda@summasocial.app
+- Consultar la ayuda contextual (`?` en cada pantalla), que sí está disponible en español
+- Usar el bot de ayuda para dudas operativas cortas
+- Abrir el manual cuando necesites el flujo completo
 
 ---
 
@@ -30,6 +31,36 @@ Mientras tanto, puedes:
 10. **Proyectos y Justificación de Subvenciones**: Módulo de proyectos
 11. **Resolución de Problemas**: FAQ y soluciones comunes
 12. **Glosario**: Definiciones de términos
+
+---
+
+## Ayuda dentro de Summa
+
+Los tres puntos de ayuda reales son:
+
+1. **Ayuda contextual (`?`)** para la pantalla donde estás.
+2. **Manual** para procesos largos o sensibles.
+3. **Bot** para dudas operativas cortas y para llevarte al destino correcto.
+
+---
+
+## Remesas SEPA de cobro [id:6a-remeses-sepa-de-cobrament]
+
+1. Ve a **Donantes > Remesas de cobro**
+2. Comprueba que la cuenta tenga configurado el ICS
+3. Revisa la fecha y los socios incluidos
+4. Genera el XML `pain.008`
+5. Súbelo al banco fuera de Summa
+
+---
+
+## Liquidaciones de gastos de viaje [id:6c-liquidacions-de-despeses-de-viatge]
+
+1. Ve a **Movimientos > Liquidaciones**
+2. Crea o abre una liquidación
+3. Sube tickets y completa, si hace falta, el kilometraje
+4. Revisa pendientes antes de generar el PDF
+5. Genera el PDF final solo cuando todo cuadre
 
 ---
 

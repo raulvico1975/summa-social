@@ -14,7 +14,7 @@ Versió: 1.0
 
 ### 1.1 Card trobada amb `guideId`
 
-El bot renderitza el contingut de la guia del Hub de Guies:
+El bot renderitza el contingut procedimental existent de la capa d'ajuda:
 - **Títol** (guides.{guideId}.title)
 - **Introducció** (guides.{guideId}.intro o whatIs)
 - **Passos** (lookFirst / steps / doNext, segons existeixin)
@@ -35,7 +35,7 @@ El bot aplica el fallback corresponent:
 3. Si no → fallback genèric (`fallback-no-answer`).
 
 En tots els casos, el fallback redirigeix l'usuari a:
-- **Hub de Guies** (icona ? a dalt a la dreta) — cercador per paraules clau.
+- **Ajuda contextual** (icona ? a dalt a la dreta) — passos de la pantalla actual.
 - **Manual** (/dashboard/manual) — documentació completa.
 - Suggeriment de provar amb paraules clau o el text d'error exacte.
 

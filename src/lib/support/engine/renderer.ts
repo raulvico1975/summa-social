@@ -51,13 +51,13 @@ function withWarmOpening(answer: string, lang: KbLang): string {
 function buildNoCardFallbackAnswer(lang: KbLang, intentType: IntentType): string {
   if (intentType === 'operational') {
     return lang === 'es'
-      ? 'Entiendo lo que quieres hacer, pero ahora mismo no tengo una guía con pasos verificados para este caso. Si quieres, te ayudo a concretar entre 2 opciones para darte la ruta correcta.'
-      : 'Entenc què vols fer, però ara mateix no tinc una guia amb passos verificats per a aquest cas. Si vols, t’ajudo a concretar entre 2 opcions per donar-te la ruta correcta.'
+      ? 'Entiendo lo que quieres hacer, pero ahora mismo no tengo una respuesta operativa verificada para este caso. Te llevo a la pantalla o al manual más útil para continuar sin improvisar.'
+      : 'Entenc què vols fer, però ara mateix no tinc una resposta operativa verificada per a aquest cas. Et porto a la pantalla o al manual més útil per continuar sense improvisar.'
   }
 
   return lang === 'es'
-    ? 'Ahora mismo no he encontrado información exacta para esta consulta. Puedes abrir el Hub de Guías y buscar por palabra clave.'
-    : 'Ara mateix no he trobat informació exacta per a aquesta consulta. Pots obrir el Hub de Guies i buscar per paraula clau.'
+    ? 'Ahora mismo no he encontrado información exacta para esta consulta. Abre la ayuda contextual o el manual para seguir con el destino correcto.'
+    : 'Ara mateix no he trobat informació exacta per a aquesta consulta. Obre l’ajuda contextual o el manual per seguir amb el destí correcte.'
 }
 
 function buildFallbackAnswerFromCard(card: KBCard, lang: KbLang): string {
@@ -72,8 +72,8 @@ function buildRawAnswer(card: KBCard, kbLang: KbLang): string {
 
   if (card.id.startsWith('guide-')) {
     return kbLang === 'es'
-      ? 'No he encontrado una guía válida para esta consulta. Consulta el Hub de Guías (icono ? arriba a la derecha).'
-      : 'No he trobat una guia vàlida per a aquesta consulta. Consulta el Hub de Guies (icona ? a dalt a la dreta).'
+      ? 'No he encontrado un contenido operativo válido para esta consulta. Revisa la ayuda contextual o el manual.'
+      : 'No he trobat un contingut operatiu vàlid per a aquesta consulta. Revisa l’ajuda contextual o el manual.'
   }
 
   return card.answer?.[kbLang] ?? card.answer?.ca ?? card.answer?.es ?? ''
@@ -184,8 +184,8 @@ export function buildEmergencyFallback(lang: KbLang, cardId = 'emergency-fallbac
     mode: 'fallback' as const,
     cardId,
     answer: lang === 'es'
-      ? 'Entiendo tu duda. Ahora mismo no he encontrado información exacta. Puedes abrir el Hub de Guías para encontrar la guía más cercana.'
-      : 'Entenc el teu dubte. Ara mateix no he trobat informació exacta. Pots obrir el Hub de Guies per trobar la guia més propera.',
+      ? 'Entiendo tu duda. Ahora mismo no he encontrado información exacta. Abre la ayuda contextual o el manual para continuar con un destino seguro.'
+      : 'Entenc el teu dubte. Ara mateix no he trobat informació exacta. Obre l’ajuda contextual o el manual per continuar amb un destí segur.',
     guideId: null,
     uiPaths: SAFE_FALLBACK_PATHS[lang],
   }

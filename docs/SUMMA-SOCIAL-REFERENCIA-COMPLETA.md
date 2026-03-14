@@ -3724,15 +3724,14 @@ El botó càmera a la safata de despeses (`/dashboard/project-module/expenses`) 
 </Link>
 ```
 
-### 3.11.15 Sistema d'Ajuda: panell contextual + manual + hub de guies + bot
+### 3.11.15 Sistema d'Ajuda: panell contextual + manual + bot
 
-El sistema d'ajuda actual no és una sola peça: són quatre capes connectades entre si.
+El sistema d'ajuda actual és una sola experiència repartida en tres punts d'entrada visibles.
 
 | Capa | URL / entrada | Funció real |
 |------|---------------|-------------|
 | **Ajuda contextual (`HelpSheet`)** | Icona `?` a qualsevol pantalla del dashboard | Ajuda específica de la pantalla actual (`help.*`), amb passos, tips, seccions extra i enllaç al manual |
 | **Manual de referència** | `/{orgSlug}/dashboard/manual` | Manual llarg en Markdown per entendre el producte de punta a punta |
-| **Hub de Guies** | `/{orgSlug}/dashboard/guides` | Catàleg navegable de guies procedimentals i cercador natural |
 | **Bot d'ajuda** | FAB blau amb icona bot a layout dashboard | Resol preguntes lliures sobre la KB i retorna resposta + ruta dins Summa |
 
 #### 3.11.15.1 Ajuda contextual per pantalla (`HelpSheet`)
@@ -3769,80 +3768,16 @@ Manual renderitzat des de fitxers Markdown públics.
 - `src/lib/help/manual-toc.ts`
 - `public/docs/manual-usuari-summa-social.{ca,es,fr}.md`
 
-#### 3.11.15.3 Hub de Guies procedimentals
+#### 3.11.15.3 Compatibilitat legacy de `/dashboard/guides`
 
-Centre d'ajuda navegable amb guies pas-a-pas per a les operacions més freqüents de Summa Social.
+La ruta `/{orgSlug}/dashboard/guides` ja **no és un hub visible de producte**. Es manté només per compatibilitat de links antics i redirigeix a una entrada real d'ajuda.
 
-**Ubicació:** `/{orgSlug}/dashboard/guides`
+El coneixement procedimental continua existint, però es consumeix des de:
 
-**Característiques:**
-- Guies procedimentals amb format `whatIs` + `steps[]` + `avoid[]`
-- Traduccions CA/ES/FR/PT amb fallback a català
-- CTAs directes a pantalla + enllaç al manual
-- Indicadors visuals: `lookFirst`, `doNext`, `avoid`, `costlyError`
-- Validador i18n automatitzat (`npm run i18n:validate-guides`)
-- Resultats d'ajuda ràpida sense suport humà, pensats per ser cercats amb llenguatge natural
-
-**Guies disponibles:**
-
-| ID | Títol | Contingut |
-|----|-------|-----------|
-| `firstDay` | Primer dia | Checklist d'inici ràpid |
-| `firstMonth` | Primer mes | Guia d'operativa mensual |
-| `monthClose` | Tancament mensual | Procediment de tancament |
-| `movements` | Gestió de moviments | Operativa bàsica |
-| `importMovements` | Importar extracte | Pas a pas importació |
-| `bulkCategory` | Categorització massiva | Selecció múltiple |
-| `changePeriod` | Canviar de període | Filtre per data |
-| `selectBankAccount` | Seleccionar compte | Multicompte bancari |
-| `attachDocument` | Adjuntar document | Drag & drop |
-| `returns` | Devolucions | Gestió de retorns |
-| `remittances` | Remeses d'ingressos | Divisió de remeses |
-| `splitRemittance` | Dividir remesa | Split manual |
-| `stripeDonations` | Donacions Stripe | Importador Stripe |
-| `travelReceipts` | Tiquets de viatge | Captura ràpida |
-| `travelExpenseReport` | Liquidació de despeses | Flux de liquidació |
-| `mileageTravel` | Quilometratge de viatge | Registre de km |
-| `donors` | Gestió de donants | CRUD donants |
-| `reports` | Informes fiscals | 182, 347, certificats |
-| `projects` | Mòdul projectes | Justificació econòmica |
-| `monthlyFlow` | Flux mensual | Operativa recurrent |
-| `yearEndFiscal` | Tancament fiscal | Fi d'any |
-| `accessSecurity` | Accés i seguretat | Multi-usuari |
-| `initialLoad` | Càrrega inicial | Primera configuració |
-
-**Format de traduccions (claus i18n):**
-
-```
-guides.{guideId}.title        — Títol de la guia
-guides.{guideId}.intro        — Introducció (opcional si whatIs)
-guides.{guideId}.whatIs       — Descripció breu
-guides.{guideId}.steps.0-N    — Passos ordenats
-guides.{guideId}.avoid.0-N    — Errors a evitar
-guides.{guideId}.lookFirst.0-N — Què mirar primer
-guides.{guideId}.doNext.0-N   — Passos següents
-guides.{guideId}.costlyError  — Error crític a destacar
-guides.cta.{guideId}          — Text del botó CTA
-```
-
-**Fitxers principals:**
-
-| Fitxer | Funció |
-|--------|--------|
-| `src/app/[orgSlug]/dashboard/guides/page.tsx` | Hub central amb llista de guies |
-| `src/i18n/locales/{ca,es,fr,pt}.json` | Traduccions (claus `guides.*`) |
-| `scripts/i18n/validate-guides-translations.ts` | Validador de completitud |
-
-**Validador i18n:**
-
-```bash
-npm run i18n:validate-guides
-```
-
-Comprova:
-- Claus page-level obligatòries (`guides.pageTitle`, `guides.viewManual`...)
-- CTA per cada guia (`guides.cta.{guideId}`)
-- Títol i intro/whatIs per cada guia
+- `HelpSheet` contextual
+- `Manual`
+- `Bot` sobre KB cards
+- Namespace intern `guides.*` i `docs/kb/cards/guides/*` com a capa editorial/compatibilitat, no com a destinació visible per a usuari final
 - Arrays amb índexos consecutius (sense gaps)
 - Claus extra que no existeixen al base (CA)
 
@@ -5757,7 +5692,7 @@ Les fites històriques i els desplegaments anteriors es documenten a `docs/CHANG
 | **1.20** | **Des 2025** | **Panell Admin: reset contrasenya + secció diagnòstic (Firebase Console, Cloud Logging, DEV-SOLO-MANUAL.md). Dashboard: neteja blocs Celebracions/Alertes, millora taula categories (exclou comissions), bloc projectes condicional. Nou document docs/DEV-SOLO-MANUAL.md per manteniment.** |
 | **1.21** | **Des 2025** | **i18n pàgina pública (ca/es), SEO tags amb canonical + hreflang, mòdul documents pendents hardened (permisos, guardrails, UI responsive)** |
 | **1.22** | **29 Des 2025** | **Entrada ràpida de despeses: ruta canònica `/{orgSlug}/quick-expense` fora de `/dashboard` (sense sidebar/header), shortcut global `/quick`, redirect 307 per compatibilitat amb enllaços existents, arquitectura neta sense hacks de layout** |
-| **1.23** | **30 Des 2025** | **System Health Sentinelles (S1–S8): detecció automàtica d'errors amb deduplicació, alertes email per incidents CRITICAL, filtres anti-soroll. Hub de Guies: guies procedimentals amb traduccions CA/ES/FR/PT (changePeriod, selectBankAccount, monthClose), validador i18n.** |
+| **1.23** | **30 Des 2025** | **System Health Sentinelles (S1–S8): detecció automàtica d'errors amb deduplicació, alertes email per incidents CRITICAL, filtres anti-soroll. Capa editorial `guides.*`: guies procedimentals amb traduccions CA/ES/FR/PT (changePeriod, selectBankAccount, monthClose), validador i18n.** |
 | **1.24** | **31 Des 2025** | **Routing hardening: simplificació `/quick` (delega a `/redirect-to-org`), middleware amb PROTECTED_ROUTES per evitar loops, preservació de `?next` params.** |
 | **1.25** | **31 Des 2025** | **i18n rutes públiques complet (CA/ES/FR/PT): estructura `[lang]` per login, privacy i contact. Detecció automàtica idioma via Accept-Language. SEO amb canonical + hreflang per 4 idiomes. Redirect stubs per compatibilitat URLs antigues. Nou fitxer `src/i18n/public.ts` amb traduccions separades de l'app privada.** |
 | **1.26** | **31 Des 2025** | **Resolució col·lisió `[lang]` vs `[orgSlug]`: arquitectura `public/[lang]` amb middleware rewrite (URL pública intacta). HOME i Funcionalitats multiidioma. x-default hreflang. Slugs reservats (ca/es/fr/pt/public). Rutes canòniques: `/{lang}/funcionalitats`, `/{lang}/privacy`, `/{lang}/contact`. Aliases naturals: FR (`fonctionnalites`, `confidentialite`), ES (`funcionalidades`, `privacidad`, `contacto`), PT (`funcionalidades`, `privacidade`, `contacto`).** |
@@ -5772,7 +5707,7 @@ Les fites històriques i els desplegaments anteriors es documenten a `docs/CHANG
 | **1.35** | **1 Feb 2026** | **Guardrails integritat Categories i Projectes Bàsics: prohibit delete físic (Firestore Rules), arxivat només via API amb reassignació obligatòria si count > 0, camps archivedAt/ByUid/FromAction protegits contra escriptura client. APIs `/api/categories/archive` i `/api/projects/archive` amb validació orgId derivat de membership. Health Check nou: blocs F (categories òrfenes) i G (projectes orfes). UI: icona Archive, ReassignModal, traduccions CA/ES/FR.** |
 | **1.46** | **11 Mar 2026** | **Moviments: cerca i filtres sense resultats parcials (carrega totes les pàgines necessàries abans de resoldre filtres secundaris, amb reintent si cal) i paginació estable. Stripe: es preserva el payout pare, es marca amb `stripeTransferId`, es bloqueja re-split/delete accidental, filles ocultes del ledger principal, confirmació final abans d'importar i escriptures chunkades ≤ 50 operacions amb rollback. Import bancari: `operationDate` reforçada com a contracte obligatori i separació explícita entre duplicats oficials (`DUPLICATE_SAFE`) i candidats heurístics revisables.** |
 | **1.44** | **17 Feb 2026** | **Importació bancària conservadora: nous camps `balanceAfter` i `operationDate` (sense backfill), regla de deduplicació forta per saldo (`bankAccountId + balanceAfter + amount + operationDate`) amb prioritat després de `bankRef`, i diagnòstic `duplicateReason="balance+amount+date"` en duplicats forts.** |
-| **1.43** | **14 Feb 2026** | **Hub de Guies/Bot: recuperació semàntica reforçada (més intents reals coberts), desambiguació 1/2 en consultes ambigües, fallback guiat i badges de navegació clicables. SuperAdmin `/admin`: redisseny "Torre de Control" en 5 blocs (Estat, Entitats, Coneixement/Bot, Comunicació, Configuració), resum executiu via `/api/admin/control-tower/summary` i fix de robustesa de timestamps.** |
+| **1.43** | **14 Feb 2026** | **Capa editorial `guides.*` + Bot: recuperació semàntica reforçada (més intents reals coberts), desambiguació 1/2 en consultes ambigües, fallback guiat i badges de navegació clicables. SuperAdmin `/admin`: redisseny "Torre de Control" en 5 blocs (Estat, Entitats, Coneixement/Bot, Comunicació, Configuració), resum executiu via `/api/admin/control-tower/summary` i fix de robustesa de timestamps.** |
 | **1.41** | **11 Feb 2026** | **Donants: persona de contacte per empreses (contactPersonName), 3 filtres dashboard (Tipus/Modalitat/Periodicitat) amb comptadors i lògica AND, quota amb sufix periodicitat. Accés operatiu unificat (require-operational-access.ts) amb superadmin bypass. Fix Firestore Rules `.get('archived', null)` per docs legacy. Fixes menors i18n i typecheck.** |
 | **1.40** | **10 Feb 2026** | **Admin SDK compartit centralitzat (admin-sdk.ts, -500 línies). Registre/invitacions via Admin API. Pre-selecció SEPA pain.008 per periodicitat natural. Dinàmica donants redissenyada (5 blocs, PF/PJ). Health Check K/L. Gate i18n pre-commit. SafeSelect guard. Neteja console.logs.** |
 | **1.39** | **9 Feb 2026** | **Delete guardrails complets: budget lines bloquejades si linkades, expense links bloquejats si amb assignacions, FX transfers amb AlertDialog. Danger zone: findLinkedTxIds per remeses i bulk delete. i18n blockedByProjectLinks.** |

@@ -16,10 +16,10 @@
     },
     "guideId": null,
     "answer": {
-      "ca": "No tinc informació exacta sobre això.\n\nPots fer el següent:\n1. Consulta el Hub de Guies dins l'app (icona ? a dalt a la dreta). Té un cercador per paraules clau.\n2. Consulta el Manual (/dashboard/manual) per documentació completa.\n3. Prova a reformular la pregunta amb paraules clau o el text d'error exacte.",
-      "es": "No tengo información exacta sobre esto.\n\nPuedes hacer lo siguiente:\n1. Consulta el Hub de Guías dentro de la app (icono ? arriba a la derecha). Tiene un buscador por palabras clave.\n2. Consulta el Manual (/dashboard/manual) para documentación completa.\n3. Prueba a reformular la pregunta con palabras clave o el texto de error exacto."
+      "ca": "No tinc informació prou fiable sobre això.\n\nQuè fer ara:\n1. Obre l'ajuda contextual (`?`) de la pantalla on estàs treballant.\n2. Obre el Manual si necessites el procediment complet.\n3. Si em tornes a escriure el pas exacte o el missatge literal d'error, t'ho podré orientar millor.",
+      "es": "No tengo información lo bastante fiable sobre esto.\n\nQué hacer ahora:\n1. Abre la ayuda contextual (`?`) de la pantalla en la que estás trabajando.\n2. Abre el Manual si necesitas el procedimiento completo.\n3. Si me escribes de nuevo el paso exacto o el mensaje literal de error, podré orientarte mejor."
     },
-    "uiPaths": ["Dashboard > ? (Hub de Guies)", "Dashboard > Manual"],
+    "uiPaths": ["Header > ? (Ajuda contextual)", "Manual > Resolució de problemes"],
     "needsSnapshot": false,
     "keywords": ["no trobo", "no sé", "ajuda", "help"],
     "source_faq": [],
@@ -46,10 +46,10 @@
     },
     "guideId": null,
     "answer": {
-      "ca": "Aquesta consulta afecta dades fiscals i no puc donar instruccions concretes sense estar segur de la resposta.\n\nEl que puc dir-te:\n1. Ves a Informes i verifica que tot estigui marcat amb 🟢 (dades completes).\n2. Si hi ha avisos 🟡 o errors 🔴, resol-los primer seguint les indicacions de la pantalla.\n3. Per dubtes sobre interpretació fiscal, consulta amb el teu assessor.\n4. Consulta el Hub de Guies (icona ?) o el Manual (/dashboard/manual) per instruccions detallades.",
-      "es": "Esta consulta afecta datos fiscales y no puedo dar instrucciones concretas sin estar seguro de la respuesta.\n\nLo que puedo decirte:\n1. Ve a Informes y verifica que todo esté marcado con 🟢 (datos completos).\n2. Si hay avisos 🟡 o errores 🔴, resuélvelos primero siguiendo las indicaciones de la pantalla.\n3. Para dudas sobre interpretación fiscal, consulta con tu asesor.\n4. Consulta el Hub de Guías (icono ?) o el Manual (/dashboard/manual) para instrucciones detalladas."
+      "ca": "Aquesta consulta toca fiscalitat i no et donaré passos concrets sense una resposta verificada.\n\nQuè fer ara:\n1. Ves a Informes i revisa si hi ha avisos o errors.\n2. Resol primer el que la pantalla et marca com a incomplet.\n3. Obre el manual fiscal corresponent abans de continuar.",
+      "es": "Esta consulta toca fiscalidad y no voy a darte pasos concretos sin una respuesta verificada.\n\nQué hacer ahora:\n1. Ve a Informes y revisa si hay avisos o errores.\n2. Resuelve primero lo que la pantalla marca como incompleto.\n3. Abre el manual fiscal correspondiente antes de continuar."
     },
-    "uiPaths": ["Informes"],
+    "uiPaths": ["Informes", "Manual > Informes"],
     "needsSnapshot": false,
     "keywords": ["fiscal", "model", "182", "347", "certificat", "hisenda", "AEAT"],
     "source_faq": [],
@@ -76,10 +76,10 @@
     },
     "guideId": null,
     "answer": {
-      "ca": "Aquesta consulta afecta fitxers bancaris (SEPA) i no puc donar instruccions sense estar 100% segur de la resposta.\n\nAbans de fer res:\n1. NO generis cap fitxer SEPA fins que tinguis clar el procés.\n2. Verifica a la pantalla de remeses que les dades siguin correctes (IBAN, imports, estat).\n3. Consulta el Hub de Guies (icona ?) per la guia de remeses SEPA.\n4. Consulta el Manual (/dashboard/manual) per documentació completa.",
-      "es": "Esta consulta afecta archivos bancarios (SEPA) y no puedo dar instrucciones sin estar 100% seguro de la respuesta.\n\nAntes de hacer nada:\n1. NO generes ningún archivo SEPA hasta que tengas claro el proceso.\n2. Verifica en la pantalla de remesas que los datos sean correctos (IBAN, importes, estado).\n3. Consulta el Hub de Guías (icono ?) para la guía de remesas SEPA.\n4. Consulta el Manual (/dashboard/manual) para documentación completa."
+      "ca": "Aquesta consulta afecta fitxers bancaris SEPA i no et donaré passos sense una resposta verificada.\n\nQuè fer ara:\n1. No generis cap fitxer fins que tinguis clar el flux correcte.\n2. Revisa imports, IBAN i estat a Moviments.\n3. Obre el manual de remeses abans de continuar.",
+      "es": "Esta consulta afecta archivos bancarios SEPA y no voy a darte pasos sin una respuesta verificada.\n\nQué hacer ahora:\n1. No generes ningún archivo hasta tener claro el flujo correcto.\n2. Revisa importes, IBAN y estado en Movimientos.\n3. Abre el manual de remesas antes de continuar."
     },
-    "uiPaths": ["Moviments > Remeses"],
+    "uiPaths": ["Moviments > Remeses", "Manual > Remeses"],
     "needsSnapshot": false,
     "keywords": ["sepa", "pain", "pain008", "pain001", "domiciliació", "XML", "banc"],
     "source_faq": [],
@@ -106,10 +106,10 @@
     },
     "guideId": null,
     "answer": {
-      "ca": "Aquesta consulta afecta remeses i no puc donar instruccions concretes sense estar segur de la resposta.\n\nEl que puc dir-te:\n1. Verifica l'estat de les remeses a la pantalla de Moviments (imports, socis, estat).\n2. Si necessites desfer una remesa, assegura't de seguir l'ordre correcte: primer desfer, després corregir, després reprocessar.\n3. Consulta el Hub de Guies (icona ?) per la guia de remeses.\n4. Consulta el Manual (/dashboard/manual) per documentació completa.",
-      "es": "Esta consulta afecta remesas y no puedo dar instrucciones concretas sin estar seguro de la respuesta.\n\nLo que puedo decirte:\n1. Verifica el estado de las remesas en la pantalla de Movimientos (importes, socios, estado).\n2. Si necesitas deshacer una remesa, asegúrate de seguir el orden correcto: primero deshacer, después corregir, después reprocesar.\n3. Consulta el Hub de Guías (icono ?) para la guía de remesas.\n4. Consulta el Manual (/dashboard/manual) para documentación completa."
+      "ca": "Aquesta consulta afecta remeses i prefereixo no improvisar.\n\nQuè fer ara:\n1. Revisa l'estat de la remesa a Moviments.\n2. Si l'objectiu és desfer o reprocessar, confirma primer en quin punt del flux ets.\n3. Obre el manual de remeses i segueix l'ordre correcte abans de tocar res.",
+      "es": "Esta consulta afecta remesas y prefiero no improvisar.\n\nQué hacer ahora:\n1. Revisa el estado de la remesa en Movimientos.\n2. Si el objetivo es deshacer o reprocesar, confirma primero en qué punto del flujo estás.\n3. Abre el manual de remesas y sigue el orden correcto antes de tocar nada."
     },
-    "uiPaths": ["Moviments > Remeses"],
+    "uiPaths": ["Moviments > Remeses", "Manual > Remeses"],
     "needsSnapshot": false,
     "keywords": ["remesa", "quotes", "dividir", "processar", "desfer"],
     "source_faq": [],
@@ -136,10 +136,10 @@
     },
     "guideId": null,
     "answer": {
-      "ca": "Aquesta consulta implica accions potencialment irreversibles i no puc donar instruccions sense estar completament segur.\n\nImportant:\n1. Aquestes accions avançades poden ser destructives.\n2. No executis cap canvi irreversible sense verificar-lo abans.\n3. Consulta el Hub de Guies (icona ?) per instruccions específiques.\n4. Consulta el Manual (/dashboard/manual) per documentació completa.",
-      "es": "Esta consulta implica acciones potencialmente irreversibles y no puedo dar instrucciones sin estar completamente seguro.\n\nImportante:\n1. Estas acciones avanzadas pueden ser destructivas.\n2. No ejecutes ningún cambio irreversible sin verificarlo antes.\n3. Consulta el Hub de Guías (icono ?) para instrucciones específicas.\n4. Consulta el Manual (/dashboard/manual) para documentación completa."
+      "ca": "Això pot ser irreversible i no et donaré passos si no hi ha una resposta verificada.\n\nQuè fer ara:\n1. Atura't abans d'executar el canvi.\n2. Revisa la pantalla exacta on ho vols fer.\n3. Obre el manual o el procediment intern corresponent abans de continuar.",
+      "es": "Esto puede ser irreversible y no voy a darte pasos si no hay una respuesta verificada.\n\nQué hacer ahora:\n1. Detente antes de ejecutar el cambio.\n2. Revisa la pantalla exacta donde lo quieres hacer.\n3. Abre el manual o el procedimiento interno correspondiente antes de continuar."
     },
-    "uiPaths": ["Configuració > Accions avançades (SuperAdmin Summa)"],
+    "uiPaths": ["Configuració > Accions avançades (SuperAdmin Summa)", "Manual > Resolució de problemes"],
     "needsSnapshot": false,
     "keywords": ["esborrar", "eliminar", "perill", "irreversible", "superadmin"],
     "source_faq": [],

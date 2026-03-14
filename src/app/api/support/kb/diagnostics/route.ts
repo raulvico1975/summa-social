@@ -17,6 +17,8 @@ type ApiResponse =
       storageExists: boolean
       version: number
       storageVersion: number | null
+      kbSource: 'storage' | 'filesystem'
+      versionMismatch: boolean
       aiReformatEnabled: boolean
       reformatTimeoutMs: number | null
     }
@@ -63,6 +65,8 @@ export async function GET(request: NextRequest): Promise<NextResponse<ApiRespons
     const snap = await db.doc('system/supportKb').get()
     const version = snap.exists ? (snap.data()?.version ?? 0) : 0
     const storageVersion = snap.exists ? (snap.data()?.storageVersion ?? null) : null
+    const versionMismatch = storageVersion !== null && storageVersion !== version
+    const kbSource: 'storage' | 'filesystem' = storageExists && !versionMismatch ? 'storage' : 'filesystem'
     const aiReformatEnabled = snap.exists ? (snap.data()?.aiReformatEnabled !== false) : true
     const rawTimeout = snap.data()?.reformatTimeoutMs
     const reformatTimeoutMs = Number.isFinite(Number(rawTimeout)) ? Number(rawTimeout) : null
@@ -72,6 +76,8 @@ export async function GET(request: NextRequest): Promise<NextResponse<ApiRespons
       storageExists,
       version,
       storageVersion,
+      kbSource,
+      versionMismatch,
       aiReformatEnabled,
       reformatTimeoutMs,
     })

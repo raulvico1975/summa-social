@@ -33,7 +33,7 @@
   "needsSnapshot": false,
   "keywords": ["primer", "dia", "començar", "inici", "onboarding", "nou"],
   "source_faq": ["Q1", "Q2"],
-  "source_manual": ["1.1", "1.5"],
+  "source_manual": ["1.1", "1.4"],
   "source_guides": ["firstDay"],
   "related": ["guide-first-month", "guide-initial-load"],
   "error_key": null,
