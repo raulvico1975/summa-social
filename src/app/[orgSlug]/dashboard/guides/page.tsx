@@ -8,5 +8,5 @@ type GuidesPageProps = {
 
 export default async function GuidesPage({ params }: GuidesPageProps) {
   const { orgSlug } = await params;
-  redirect(`/${orgSlug}/dashboard`);
+  redirect(`/${orgSlug}/dashboard?help=1`);
 }

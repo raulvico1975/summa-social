@@ -1,28 +1,78 @@
 /**
- * Mapping de rutes d'ajuda a ancoratges del manual.
- * Els IDs han de coincidir amb els generats per slugifyHeading().
+ * Mapping de rutes d'ajuda a ancoratges del manual públic real.
+ * Els IDs han de coincidir amb els headings/IDs de public/docs/manual-usuari-summa-social.ca.md.
  */
+
+export const CONTEXT_HELP_UI_PATHS = {
+  ca: 'Header > ? (Ajuda contextual)',
+  es: 'Header > ? (Ayuda contextual)',
+} as const;
+
+export const DEFAULT_MANUAL_UI_PATHS = {
+  ca: 'Manual > Resolució de problemes',
+  es: 'Manual > Resolución de problemas',
+} as const;
+
+type RouteAnchorEntry = {
+  routePrefix: string;
+  anchor: string;
+};
+
+type ManualHintEntry = {
+  anchor: string;
+  patterns: string[];
+};
+
+export const ROUTE_MANUAL_ANCHORS: RouteAnchorEntry[] = [
+  { routePrefix: '/dashboard/movimientos/liquidacions', anchor: '6-divisor-de-remeses' },
+  { routePrefix: '/dashboard/movimientos/pendents', anchor: '6b-documents-pendents' },
+  { routePrefix: '/dashboard/movimientos', anchor: '5-gestio-de-moviments' },
+  { routePrefix: '/dashboard/donants/remeses-cobrament', anchor: '6-divisor-de-remeses' },
+  { routePrefix: '/dashboard/donants', anchor: '3-gestio-de-donants' },
+  { routePrefix: '/dashboard/proveidors', anchor: '4-gestio-de-proveidors-i-treballadors' },
+  { routePrefix: '/dashboard/treballadors', anchor: '4-gestio-de-proveidors-i-treballadors' },
+  { routePrefix: '/dashboard/informes', anchor: '9-informes-fiscals' },
+  { routePrefix: '/dashboard/configuracion', anchor: '2-configuracio-inicial' },
+  { routePrefix: '/dashboard/project-module/projects', anchor: '6-gestio-de-projectes' },
+  { routePrefix: '/dashboard/project-module/expenses', anchor: '6-assignacio-de-despeses' },
+  { routePrefix: '/dashboard/project-module', anchor: '10-projectes' },
+  { routePrefix: '/dashboard/projectes', anchor: '10-projectes' },
+  { routePrefix: '/dashboard', anchor: '14-entendre-el-dashboard' },
+];
+
+export const MANUAL_HINT_ANCHORS: ManualHintEntry[] = [
+  { anchor: '11-resolucio-de-problemes', patterns: ['resolucio de problemes', 'resolucion de problemas', 'manual > problemes', 'manual > problemas'] },
+  { anchor: '5-gestio-de-moviments', patterns: ['manual > moviments', 'manual > movimientos'] },
+  { anchor: '6-divisor-de-remeses', patterns: ['manual > remeses', 'manual > remesas'] },
+  { anchor: '7-gestio-de-devolucions', patterns: ['manual > devolucions', 'manual > devoluciones'] },
+  { anchor: '8-donacions-via-stripe', patterns: ['manual > stripe', 'manual > donacions stripe', 'manual > donaciones stripe'] },
+  { anchor: '9-informes-fiscals', patterns: ['manual > informes', 'manual > fiscal'] },
+  { anchor: '10-projectes', patterns: ['manual > projectes', 'manual > proyectos'] },
+  { anchor: '2-configuracio-inicial', patterns: ['manual > configuracio', 'manual > configuración', 'manual > configuracion'] },
+  { anchor: '3-gestio-de-donants', patterns: ['manual > donants', 'manual > donantes'] },
+  { anchor: '4-gestio-de-proveidors-i-treballadors', patterns: ['manual > proveidors', 'manual > proveedores', 'manual > treballadors', 'manual > trabajadores'] },
+  { anchor: '14-entendre-el-dashboard', patterns: ['manual > dashboard'] },
+  { anchor: '6b-documents-pendents', patterns: ['manual > documents pendents', 'manual > documentos pendientes'] },
+];
+
 export function getManualAnchorForRoute(routeKey: string): string | null {
-  switch (routeKey) {
-    case '/dashboard/movimientos':
-      return '5-gestio-de-moviments';
-    case '/dashboard/donants':
-      return '3-gestio-de-donants';
-    case '/dashboard/informes':
-      return '9-informes-fiscals';
-    case '/dashboard/configuracion':
-      return '2-configuracio-inicial';
-    case '/dashboard/proveidors':
-      return '4-gestio-de-proveidors-i-treballadors';
-    case '/dashboard/treballadors':
-      return '4-gestio-de-proveidors-i-treballadors';
-    case '/dashboard/projectes':
-      return '10-projectes-i-justificacio-de-subvencions';
-    case '/dashboard/project-module/expenses':
-      return '10-projectes-i-justificacio-de-subvencions';
-    case '/dashboard/project-module/projects':
-      return '10-projectes-i-justificacio-de-subvencions';
-    default:
-      return null;
-  }
+  const match = ROUTE_MANUAL_ANCHORS.find((entry) => routeKey === entry.routePrefix || routeKey.startsWith(`${entry.routePrefix}/`));
+  return match?.anchor ?? null;
+}
+
+export function resolveManualAnchorFromHint(rawHint: string): string | null {
+  const normalized = rawHint
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  if (!normalized) return null;
+
+  const match = MANUAL_HINT_ANCHORS.find((entry) =>
+    entry.patterns.some((pattern) => normalized.includes(pattern))
+  );
+
+  return match?.anchor ?? null;
 }

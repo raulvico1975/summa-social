@@ -11,6 +11,7 @@ import { getStorage } from 'firebase-admin/storage'
 import type { KBCard } from './load-kb'
 import { loadAllCards } from './load-kb'
 import { runKbQualityGate } from './kb-quality-gate'
+import { CONTEXT_HELP_UI_PATHS } from '@/help/help-manual-links'
 
 type CachedKB = {
   version: number
@@ -31,7 +32,7 @@ function buildEmergencyFallbackCards(): KBCard[] {
     title: { ca: 'Fallback d’emergència', es: 'Fallback de emergencia' },
     intents: { ca: ['fallback'], es: ['fallback'] },
     guideId: null,
-    uiPaths: ['Dashboard > ? (Hub de Guies)'],
+    uiPaths: [CONTEXT_HELP_UI_PATHS.ca, 'Manual > Resolució de problemes'],
     needsSnapshot: false,
     keywords: [],
     related: [],
@@ -44,8 +45,8 @@ function buildEmergencyFallbackCards(): KBCard[] {
       ...base,
       id: 'fallback-no-answer',
       answer: {
-        ca: 'No he trobat informació exacta. Consulta el Hub de Guies (icona ?).',
-        es: 'No he encontrado información exacta. Consulta el Hub de Guías (icono ?).',
+        ca: 'No he trobat informació exacta. Obre l’ajuda contextual de la pantalla o el manual abans de continuar.',
+        es: 'No he encontrado información exacta. Abre la ayuda contextual de la pantalla o el manual antes de continuar.',
       },
     },
     {
@@ -56,8 +57,8 @@ function buildEmergencyFallbackCards(): KBCard[] {
       guardrail: 'b1_fiscal',
       answerMode: 'limited',
       answer: {
-        ca: 'Consulta fiscal detectada. Revisa Informes i la guia corresponent abans de continuar.',
-        es: 'Consulta fiscal detectada. Revisa Informes y la guía correspondiente antes de continuar.',
+        ca: 'Consulta fiscal detectada. Revisa Informes i el manual fiscal corresponent abans de continuar.',
+        es: 'Consulta fiscal detectada. Revisa Informes y el manual fiscal correspondiente antes de continuar.',
       },
     },
     {
@@ -68,8 +69,8 @@ function buildEmergencyFallbackCards(): KBCard[] {
       guardrail: 'b1_sepa',
       answerMode: 'limited',
       answer: {
-        ca: 'Consulta SEPA detectada. Revisa la guia de remeses abans de generar cap fitxer.',
-        es: 'Consulta SEPA detectada. Revisa la guía de remesas antes de generar ningún fichero.',
+        ca: 'Consulta SEPA detectada. Revisa Moviments i el manual abans de generar cap fitxer.',
+        es: 'Consulta SEPA detectada. Revisa Movimientos y el manual antes de generar ningún fichero.',
       },
     },
     {
@@ -80,8 +81,8 @@ function buildEmergencyFallbackCards(): KBCard[] {
       guardrail: 'b1_remittances',
       answerMode: 'limited',
       answer: {
-        ca: 'Consulta de remeses detectada. Revisa l’estat i la guia de remeses.',
-        es: 'Consulta de remesas detectada. Revisa el estado y la guía de remesas.',
+        ca: 'Consulta de remeses detectada. Revisa l’estat a Moviments i el manual abans de tocar res.',
+        es: 'Consulta de remesas detectada. Revisa el estado en Movimientos y el manual antes de tocar nada.',
       },
     },
     {
@@ -92,8 +93,8 @@ function buildEmergencyFallbackCards(): KBCard[] {
       guardrail: 'b1_danger',
       answerMode: 'limited',
       answer: {
-        ca: 'Acció sensible detectada. No facis canvis irreversibles sense revisar la guia.',
-        es: 'Acción sensible detectada. No hagas cambios irreversibles sin revisar la guía.',
+        ca: 'Acció sensible detectada. No facis canvis irreversibles sense revisar el manual i la pantalla correcta.',
+        es: 'Acción sensible detectada. No hagas cambios irreversibles sin revisar el manual y la pantalla correcta.',
       },
     },
   ]

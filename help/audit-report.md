@@ -1,64 +1,54 @@
-# Audit capa Help (guies + bot)
+# Audit capa Help
 
-- Data: 2026-03-03T08:51:24.835Z
-- Guies detectades UI: 41
-- Topics operatius: 5
-- Guies sense topic: 36
-- Topics sense guia UI: 0
+- Data: 2026-03-14T05:56:56.103Z
+- Anchors auditats (rutes): 14
+- Anchors auditats (hints bot/manual): 12
+- Cards amb referències legacy a guides/hub: 0
 
-## Cobertura guies
+## Manual públic per idioma
 
-| Guide ID | Ruta UI | Topic operatiu | Estat |
-|---|---|---|---|
-| firstDay | /dashboard/configuracion | - | missing-topic |
-| firstMonth | /dashboard/movimientos | - | missing-topic |
-| monthClose | /dashboard/movimientos | - | missing-topic |
-| movements | /dashboard/movimientos | - | missing-topic |
-| importMovements | /dashboard/movimientos | movement-import-bank | covered |
-| bulkCategory | /dashboard/movimientos | - | missing-topic |
-| changePeriod | /dashboard/movimientos | - | missing-topic |
-| selectBankAccount | /dashboard/movimientos | - | missing-topic |
-| attachDocument | /dashboard/movimientos | - | missing-topic |
-| returns | /dashboard/movimientos | - | missing-topic |
-| remittances | /dashboard/movimientos | - | missing-topic |
-| splitRemittance | /dashboard/movimientos | split-remittance | covered |
-| stripeDonations | /dashboard/movimientos | stripe-import | covered |
-| travelReceipts | /dashboard/project-module/expenses/capture | - | missing-topic |
-| travelExpenseReport | /dashboard/movimientos/liquidacions | - | missing-topic |
-| mileageTravel | /dashboard/movimientos/liquidacions | - | missing-topic |
-| donors | /dashboard/donants | donor-create | covered |
-| reports | /dashboard/informes | - | missing-topic |
-| projects | /dashboard/project-module/expenses | project-open | covered |
-| monthlyFlow | /dashboard/movimientos | - | missing-topic |
-| yearEndFiscal | /dashboard/informes | - | missing-topic |
-| accessSecurity | /dashboard | - | missing-topic |
-| initialLoad | /dashboard/movimientos | - | missing-topic |
-| changeLanguage | /dashboard/configuracion | - | missing-topic |
-| importDonors | /dashboard/donants | - | missing-topic |
-| generateDonorCertificate | /dashboard/donants | - | missing-topic |
-| model182HasErrors | /dashboard/donants | - | missing-topic |
-| model182 | /dashboard/informes | - | missing-topic |
-| model347 | /dashboard/informes | - | missing-topic |
-| certificatesBatch | /dashboard/informes | - | missing-topic |
-| donorSetInactive | /dashboard/donants | - | missing-topic |
-| donorReactivate | /dashboard/donants | - | missing-topic |
-| editMovement | /dashboard/movimientos | - | missing-topic |
-| movementFilters | /dashboard/movimientos | - | missing-topic |
-| bulkAICategorize | /dashboard/movimientos | - | missing-topic |
-| remittanceViewDetail | /dashboard/movimientos | - | missing-topic |
-| resetPassword | /login | - | missing-topic |
-| updateExistingDonors | /dashboard/donants | - | missing-topic |
-| remittanceLowMembers | /dashboard/movimientos | - | missing-topic |
-| saveRemittanceMapping | /dashboard/movimientos | - | missing-topic |
-| toggleRemittanceItems | /dashboard/movimientos | - | missing-topic |
+| Idioma | Entrades TOC | Mida (bytes) | Observació |
+|---|---:|---:|---|
+| ca | 181 | 43053 | Base principal |
+| es | 6 | 2342 | Manual resumit: runtime ha de fer fallback a CA |
+| fr | 6 | 2393 | Manual resumit: runtime ha de fer fallback a CA |
 
-## Divergencia Storage
+## Rutes HelpSheet -> Manual
 
-- No s ha pogut llegir Storage.
+| Prefix de ruta | Anchor manual | Existeix a manual CA |
+|---|---|---|
+| /dashboard/movimientos/liquidacions | 6-divisor-de-remeses | SI |
+| /dashboard/movimientos/pendents | 6b-documents-pendents | SI |
+| /dashboard/movimientos | 5-gestio-de-moviments | SI |
+| /dashboard/donants/remeses-cobrament | 6-divisor-de-remeses | SI |
+| /dashboard/donants | 3-gestio-de-donants | SI |
+| /dashboard/proveidors | 4-gestio-de-proveidors-i-treballadors | SI |
+| /dashboard/treballadors | 4-gestio-de-proveidors-i-treballadors | SI |
+| /dashboard/informes | 9-informes-fiscals | SI |
+| /dashboard/configuracion | 2-configuracio-inicial | SI |
+| /dashboard/project-module/projects | 6-gestio-de-projectes | SI |
+| /dashboard/project-module/expenses | 6-assignacio-de-despeses | SI |
+| /dashboard/project-module | 10-projectes | SI |
+| /dashboard/projectes | 10-projectes | SI |
+| /dashboard | 14-entendre-el-dashboard | SI |
 
-| Lang | Error |
-|---|---|
-| ca | Missing FIREBASE_STORAGE_BUCKET or NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET |
-| es | Missing FIREBASE_STORAGE_BUCKET or NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET |
-| fr | Missing FIREBASE_STORAGE_BUCKET or NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET |
-| pt | Missing FIREBASE_STORAGE_BUCKET or NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET |
+## Hints de navegació del bot -> Manual
+
+| Anchor manual | Existeix a manual CA | Patrons |
+|---|---|---|
+| 11-resolucio-de-problemes | SI | resolucio de problemes | resolucion de problemas | manual > problemes | manual > problemas |
+| 5-gestio-de-moviments | SI | manual > moviments | manual > movimientos |
+| 6-divisor-de-remeses | SI | manual > remeses | manual > remesas |
+| 7-gestio-de-devolucions | SI | manual > devolucions | manual > devoluciones |
+| 8-donacions-via-stripe | SI | manual > stripe | manual > donacions stripe | manual > donaciones stripe |
+| 9-informes-fiscals | SI | manual > informes | manual > fiscal |
+| 10-projectes | SI | manual > projectes | manual > proyectos |
+| 2-configuracio-inicial | SI | manual > configuracio | manual > configuración | manual > configuracion |
+| 3-gestio-de-donants | SI | manual > donants | manual > donantes |
+| 4-gestio-de-proveidors-i-treballadors | SI | manual > proveidors | manual > proveedores | manual > treballadors | manual > trabajadores |
+| 14-entendre-el-dashboard | SI | manual > dashboard |
+| 6b-documents-pendents | SI | manual > documents pendents | manual > documentos pendientes |
+
+## Referències legacy a guides/hub dins la KB
+
+- Cap.

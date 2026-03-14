@@ -1374,6 +1374,22 @@ Trobar respostes ràpides als problemes més comuns. Si et trobes encallat, mira
 
 ---
 
+## 11.0 Com buscar ajuda dins Summa
+
+Tens tres punts d'ajuda reals dins l'app:
+
+- **Ajuda contextual (`?`)**: per entendre la pantalla on estàs.
+- **Manual**: per repassar el procés complet.
+- **Bot**: per dubtes operatius curts i per arribar ràpid al destí correcte.
+
+Quan dubtis:
+
+1. Si ets dins d'una pantalla concreta, obre `?`.
+2. Si el procés és llarg o sensible, obre el Manual.
+3. Si no saps on anar, pregunta-ho al bot i segueix el destí recomanat.
+
+---
+
 ## 11.1 Problemes d'accés
 
 | Problema | Solució |

@@ -2066,6 +2066,7 @@
   "help.ui.noResults": "No s'han trobat resultats per \"{query}\".",
   "help.ui.noSteps": "Encara no hi ha passos definits per aquesta pantalla.",
   "help.ui.searchPlaceholder": "Cerca dins l'ajuda…",
+  "help.ui.commonProblems": "Problemes habituals",
   "help.ui.steps": "Passos",
   "help.ui.suggest": "Suggerir una millora",
   "help.ui.tips": "Consells",

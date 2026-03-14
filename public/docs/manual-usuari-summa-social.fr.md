@@ -11,8 +11,9 @@ Le manuel d'utilisateur complet est actuellement disponible en catalan. Nous tra
 
 En attendant, vous pouvez:
 - Utiliser le traducteur de votre navigateur pour traduire la version en catalan
-- Consulter l'aide contextuelle (bouton ? sur chaque ecran), qui est disponible en francais
-- Contacter le support a ajuda@summasocial.app
+- Consulter l'aide contextuelle (`?` sur chaque ecran), disponible en francais
+- Utiliser le bot d'aide pour les doutes operationnels courts
+- Ouvrir le manuel quand vous avez besoin du flux complet
 
 ---
 
@@ -30,6 +31,16 @@ En attendant, vous pouvez:
 10. **Projets et Justification de Subventions**: Module projets
 11. **Resolution de Problemes**: FAQ et solutions communes
 12. **Glossaire**: Definitions des termes
+
+---
+
+## Aide dans Summa
+
+Les trois points d'aide reels sont:
+
+1. **Aide contextuelle (`?`)** pour l'ecran ou vous etes.
+2. **Manuel** pour les processus longs ou sensibles.
+3. **Bot** pour les questions operationnelles courtes et pour vous envoyer au bon endroit.
 
 ---
 

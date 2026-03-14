@@ -27,6 +27,10 @@ type CandidateItem = {
   lastSeen: string;
   suggestedDomain: string;
   suggestedKeywords: string[];
+  fallbackCount: number;
+  helpfulNo: number;
+  helpfulYes: number;
+  coveragePressure: number;
 };
 
 type KbCardRow = {
@@ -434,7 +438,7 @@ export function KbLearningManager() {
                         >
                           <p className="text-sm font-medium">{item.question}</p>
                           <p className="text-xs text-muted-foreground mt-1">
-                            Repeticions: {item.count} · Tema detectat: {item.suggestedDomain}
+                            Pressió: {item.coveragePressure} · Fallbacks: {item.fallbackCount} · Feedback negatiu: {item.helpfulNo} · Repeticions: {item.count} · Tema detectat: {item.suggestedDomain}
                           </p>
                         </button>
                       ))

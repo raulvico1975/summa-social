@@ -178,8 +178,8 @@ export function detectSmallTalkResponse(message: string, lang: KbLang): SmallTal
     return {
       cardId: 'smalltalk-about',
       answer: lang === 'es'
-        ? 'Soy el asistente de Summa Social. Te ayudo a resolver dudas de uso de la app y a encontrar el procedimiento correcto dentro de las guías.'
-        : 'Soc l’assistent de Summa Social. T’ajudo a resoldre dubtes d’ús de l’app i a trobar el procediment correcte dins de les guies.',
+        ? 'Soy el asistente de Summa Social. Te ayudo a resolver dudas de uso de la app y a llevarte al procedimiento o manual correcto.'
+        : 'Soc l’assistent de Summa Social. T’ajudo a resoldre dubtes d’ús de l’app i a portar-te al procediment o manual correcte.',
     }
   }
 
@@ -675,6 +675,24 @@ export function retrieveCard(message: string, lang: KbLang, cards: KBCard[]): Re
       decisionReason: specificCaseDetected
         ? 'specific_case_penalty_but_high_confidence'
         : 'high_confidence_match',
+      }
+  }
+
+  if (
+    best &&
+    confidence === MEDIUM_CONFIDENCE &&
+    bestScore >= DIRECT_MATCH_THRESHOLD &&
+    hasMinimumEvidenceForDirectMatch(tokens, best.card, lang) &&
+    (!second || secondScore < CLARIFY_MIN_SCORE || bestScore - secondScore > CLARIFY_MAX_GAP)
+  ) {
+    return {
+      card: best.card,
+      mode: 'card',
+      ...baseMeta,
+      bestCardId: best.card.id,
+      decisionReason: specificCaseDetected
+        ? 'specific_case_medium_confidence_card'
+        : 'medium_confidence_card',
     }
   }
 

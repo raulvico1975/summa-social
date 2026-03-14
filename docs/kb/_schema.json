@@ -65,7 +65,7 @@
     "guideId": {
       "type": "string | null",
       "required": false,
-      "description": "Si la fitxa referencia una guia existent del Hub de Guies. Quan existeix, el bot renderitza el contingut de la guia (no cal answer)."
+      "description": "Si la fitxa referencia contingut procedimental existent de la capa d'ajuda. Quan existeix, el bot renderitza aquest contingut (no cal answer)."
     },
     "answer": {
       "type": "object | null",

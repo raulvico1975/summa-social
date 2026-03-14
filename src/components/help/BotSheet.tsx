@@ -17,6 +17,7 @@ import { useFirebase } from '@/firebase';
 import { trackUX } from '@/lib/ux/trackUX';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
+import { resolveManualAnchorFromHint } from '@/help/help-manual-links';
 
 // -------------------------------------------------------------------
 // Types
@@ -62,13 +63,21 @@ function getDashboardBasePath(pathname: string): string {
   return '/dashboard'
 }
 
+function buildHelpHref(pathname: string): string {
+  const clean = (pathname ?? '').split('?')[0]?.split('#')[0] ?? ''
+  return clean ? `${clean}?help=1` : '/dashboard?help=1'
+}
+
 function resolveUiPathHref(rawPath: string, pathname: string): string | null {
   const path = normalizePathText(rawPath)
   const base = getDashboardBasePath(pathname)
+  const manualAnchor = resolveManualAnchorFromHint(path)
 
   if (!path) return null
+  if (manualAnchor) return `${base}/manual#${manualAnchor}`
   if (path.includes('manual')) return `${base}/manual`
-  if (path.includes('hub de guies') || path.includes('hub de guias') || path.includes('guies') || path.includes('guias') || path.includes('guides')) return `${base}/guides`
+  if (path.includes('ajuda contextual') || path.includes('ayuda contextual')) return buildHelpHref(pathname)
+  if (path.includes('hub de guies') || path.includes('hub de guias') || path.includes('guies') || path.includes('guias') || path.includes('guides')) return buildHelpHref(pathname)
   if (path.includes('moviments') || path.includes('movimientos')) return `${base}/movimientos`
   if (path.includes('donants') || path.includes('donantes')) return `${base}/donants`
   if (path.includes('informes')) return `${base}/informes`

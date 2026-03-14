@@ -33,7 +33,7 @@
   "needsSnapshot": false,
   "keywords": ["càrrega", "inicial", "migrar", "importar", "tot", "dades", "entitat", "configuracio"],
   "source_faq": ["Q8", "Q14"],
-  "source_manual": ["1.5", "2.1"],
+  "source_manual": ["1.4", "2.1", "5.1"],
   "source_guides": ["initialLoad"],
   "related": ["guide-first-day", "guide-import-movements", "guide-donors"],
   "error_key": null,

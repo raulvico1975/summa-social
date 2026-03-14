@@ -43,7 +43,7 @@
   "needsSnapshot": false,
   "keywords": ["seguretat", "accessos", "contrasenya", "rols", "permisos", "equip", "login", "invitacio", "sessio", "viewer", "lectura"],
   "source_faq": ["Q93", "Q94", "Q95"],
-  "source_manual": ["1.1", "2.6"],
+  "source_manual": ["1.1", "2.1"],
   "source_guides": ["accessSecurity"],
   "related": ["guide-reset-password"],
   "error_key": null,

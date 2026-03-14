@@ -56,7 +56,7 @@ export const MANUAL_HREFS: Record<string, string> = {
   treballadors: '/dashboard/manual#4-gestio-de-proveidors-i-treballadors',
   informes: '/dashboard/manual#9-informes-fiscals',
   configuracion: '/dashboard/manual#2-configuracio-inicial',
-  projectes: '/dashboard/manual#10-projectes-i-justificacio-de-subvencions',
+  projectes: '/dashboard/manual#10-projectes',
   project_expenses: '/dashboard/manual#6-assignacio-de-despeses',
   project_projects: '/dashboard/manual#6-gestio-de-projectes',
 };
@@ -250,6 +250,7 @@ export function HelpSheet() {
     linkCopiedDesc: tr('help.ui.linkCopiedDesc'),
     steps: tr('help.ui.steps'),
     tips: tr('help.ui.tips'),
+    commonProblems: tr('help.ui.commonProblems', language === 'es' ? 'Problemas habituales' : 'Problemes habituals'),
     tooltipHelp: tr('help.ui.tooltipHelp'),
   };
 
@@ -377,7 +378,7 @@ export function HelpSheet() {
     }
   };
 
-  const filteredSteps = filterByQuery(steps, query);
+  const filteredSteps = filterByQuery(steps, query).slice(0, 7);
   const filteredTips = filterByQuery(tips, query);
 
   const hasQuery = query.trim().length > 0;
@@ -501,11 +502,12 @@ export function HelpSheet() {
                     const section = extra[sectionKey];
                     if (!section) return null;
                     const icon = EXTRA_SECTION_ICONS[sectionKey];
+                    const heading = sectionKey === 'pitfalls' ? ui.commonProblems : section.title;
                     return (
                       <div key={sectionKey} className="space-y-2">
                         <h4 className="text-sm font-medium flex items-center gap-2">
                           {icon}
-                          {section.title}
+                          {heading}
                         </h4>
                         <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground ml-6">
                           {section.items.map((item, idx) => (
