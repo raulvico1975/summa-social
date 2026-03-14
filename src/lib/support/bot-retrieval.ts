@@ -530,6 +530,15 @@ function hasToken(tokens: Set<string>, ...candidates: string[]): boolean {
 function detectDirectIntentMatch(tokens: string[]): DirectIntentMatch | null {
   const set = new Set(tokens)
 
+  // "Com actualitzo les dades d'un donant?" / "Editar fitxa donant"
+  if (
+    hasToken(set, 'soci', 'donant', 'socio', 'donante') &&
+    hasToken(set, 'actualitzar', 'actualitzo', 'actualizar', 'editar', 'edito', 'edit', 'update', 'canviar', 'cambiar', 'modificar', 'modifico') &&
+    !hasToken(set, 'quota', 'cuota', 'periodicitat', 'periodicidad', 'iban', 'historial', 'pagat', 'pagar', 'alta', 'baja', 'baixa', 'inactiu', 'inactivo')
+  ) {
+    return { cardId: 'howto-donor-update-details', minScore: 680 }
+  }
+
   // "Com desfer una remesa?" / "Puc reprocessar una remesa?"
   if (
     hasToken(set, 'desfer', 'deshacer', 'reprocessar', 'reprocesar', 'undo') &&

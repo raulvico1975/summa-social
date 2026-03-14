@@ -119,6 +119,26 @@ test('retrieveCard resolves changing a member fee without confusing it with hist
   assert.equal(result.mode, 'card')
 })
 
+test('retrieveCard resolves generic donor details update question', () => {
+  const result = retrieveCard("com actualitzo les dades d'un donant", 'ca', cards)
+  assert.equal(result.card.id, 'howto-donor-update-details')
+  assert.equal(result.mode, 'card')
+})
+
+test('retrieveCard resolves donor edit variants without clarify', () => {
+  const questions = [
+    'com editar un donant',
+    'com canviar el correu d un soci',
+    'editar fitxa donant',
+  ]
+
+  for (const question of questions) {
+    const result = retrieveCard(question, 'ca', cards)
+    assert.equal(result.card.id, 'howto-donor-update-details')
+    assert.equal(result.mode, 'card')
+  }
+})
+
 test('retrieveCard resolves creating a SEPA collection remittance', () => {
   const result = retrieveCard('com generar una remesa sepa', 'ca', cards)
   assert.equal(result.card.id, 'howto-remittance-create-sepa')

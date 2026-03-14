@@ -1,0 +1,64 @@
+{
+  "id": "howto-donor-update-details",
+  "type": "howto",
+  "domain": "donors",
+  "risk": "safe",
+  "guardrail": "none",
+  "answerMode": "full",
+  "title": {
+    "ca": "Actualitzar les dades d'un donant",
+    "es": "Actualizar los datos de un donante"
+  },
+  "intents": {
+    "ca": [
+      "actualitzar dades donant",
+      "actualitzar dades soci",
+      "editar dades donant",
+      "canviar email donant",
+      "canviar dades d un soci",
+      "modificar fitxa donant"
+    ],
+    "es": [
+      "actualizar datos donante",
+      "actualizar datos socio",
+      "editar datos donante",
+      "cambiar email donante",
+      "cambiar datos de un socio",
+      "modificar ficha donante"
+    ]
+  },
+  "guideId": null,
+  "answer": {
+    "ca": "Per actualitzar les dades d'un donant:\n1. Ves a Donants.\n2. Cerca el donant.\n3. Obre la seva fitxa.\n4. Prem \"Editar\".\n5. Actualitza les dades.\n6. Desa els canvis.\n\nSi no pots editar dades, revisa els permisos d'usuari.\nSi el donant no apareix, comprova els filtres o l'estat del donant.",
+    "es": "Para actualizar los datos de un donante:\n1. Ve a Donantes.\n2. Busca al donante.\n3. Abre su ficha.\n4. Pulsa \"Editar\".\n5. Actualiza los datos.\n6. Guarda los cambios.\n\nSi no puedes editar datos, revisa los permisos de usuario.\nSi el donante no aparece, comprueba los filtros o el estado del donante."
+  },
+  "uiPaths": [
+    "/dashboard/donants"
+  ],
+  "needsSnapshot": false,
+  "keywords": [
+    "actualitzar dades",
+    "editar donant",
+    "fitxa donant",
+    "email donant",
+    "update donor details",
+    "edit donor"
+  ],
+  "source_faq": [],
+  "source_manual": [
+    "3.5",
+    "3.6"
+  ],
+  "source_guides": [],
+  "related": [
+    "howto-donor-edit",
+    "howto-donor-update-iban",
+    "howto-donor-update-fee",
+    "howto-member-user-permissions"
+  ],
+  "error_key": null,
+  "symptom": {
+    "ca": null,
+    "es": null
+  }
+}
