@@ -47,3 +47,12 @@ Registre curt d'incidències de deploy bloquejat o incomplet.
 - Estat final: `resolt`, `desplegat`, `verificat en produccio`
 - Estat de seguiment intern: `tancat`
 - Criteri de reobertura: nomes si apareix un cas funcional nou diferent o una regressio detectada en produccio
+
+## 2026-03-14 — Bot d'ajuda amb KB publicada bona pero runtime stale
+
+- Incidencia original: `support-kb/kb.json` publicada desalineada respecte del repo/runtime; el bot seguia responent amb fallback antic i sense cards noves.
+- Resolucio operativa inicial: republicacio de la KB publicada a Storage fins a deixar `version == storageVersion == 10`.
+- Incidencia secundaria demostrada: el runtime del bot mantenia una cache stale a `load-kb-runtime.ts` quan la KB publicada canviava dins la mateixa versio, i `policy.ts` filtrava `uiPaths` tipus `/dashboard/donants`, deixant la card bona sense desti navegable.
+- Símptomes visibles: `fallback-no-answer` en consultes basiques de moviments/remeses i resolucio incorrecta o sense desti navegable en el cas de donants.
+- Resolucio final de codi: `592364c` (`fix(support-bot): invalida cache de KB publicada`).
+- Validacio esperada: nou deploy verificat amb smoke real del bot a produccio, sense text residual de `Hub de Guies` i amb respostes operatives per importacio banc, desfer remesa i actualitzacio de dades d'un donant.
