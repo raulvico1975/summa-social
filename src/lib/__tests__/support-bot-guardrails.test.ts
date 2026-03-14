@@ -176,3 +176,64 @@ test('orchestrator blocks medium-confidence operational answers in sensitive dom
   assert.equal(result.meta.confidenceBand, 'medium')
   assert.equal(result.meta.decisionReason, 'sensitive_domain_guardrail')
 })
+
+test('orchestrator returns guided navigation for medium-confidence operational non-sensitive queries', async () => {
+  const localCards: KBCard[] = [
+    {
+      id: 'kb-config-logo-medium',
+      type: 'howto',
+      domain: 'config',
+      risk: 'safe',
+      guardrail: 'none',
+      answerMode: 'full',
+      title: { ca: 'Canviar logo', es: 'Cambiar logo' },
+      intents: { ca: ['com canvio el logo'], es: ['como cambio el logo'] },
+      guideId: null,
+      answer: {
+        ca: '1. Ves a Configuració.\n2. Puja el logo.',
+        es: '1. Ve a Configuración.\n2. Sube el logo.',
+      },
+      uiPaths: ['Configuració'],
+      needsSnapshot: false,
+      keywords: ['logo', 'configuracio'],
+      related: [],
+      error_key: null,
+      symptom: { ca: null, es: null },
+    },
+    {
+      id: 'kb-config-language-medium',
+      type: 'howto',
+      domain: 'config',
+      risk: 'safe',
+      guardrail: 'none',
+      answerMode: 'full',
+      title: { ca: 'Canviar idioma', es: 'Cambiar idioma' },
+      intents: { ca: ['com canvio l idioma'], es: ['como cambio el idioma'] },
+      guideId: null,
+      answer: {
+        ca: '1. Ves a Configuració.\n2. Tria idioma.',
+        es: '1. Ve a Configuración.\n2. Elige idioma.',
+      },
+      uiPaths: ['Configuració'],
+      needsSnapshot: false,
+      keywords: ['idioma', 'configuracio'],
+      related: [],
+      error_key: null,
+      symptom: { ca: null, es: null },
+    },
+  ]
+
+  const result = await orchestrator({
+    message: 'com canvio coses de configuracio',
+    kbLang: 'ca',
+    cards: localCards,
+    clarifyOptionIds: [],
+    assistantTone: 'neutral',
+    allowAiIntent: false,
+    allowAiReformat: false,
+  })
+
+  assert.equal(result.response.mode, 'card')
+  assert.equal(result.meta.decisionReason, 'operational_medium_navigation')
+  assert.equal(result.response.uiPaths[0], 'Configuració')
+})

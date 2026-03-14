@@ -11,6 +11,8 @@ export function KbRuntimeDiagnostics() {
   const [isMounted, setIsMounted] = React.useState(false);
   const [version, setVersion] = React.useState<number | null>(null);
   const [storageVersion, setStorageVersion] = React.useState<number | null>(null);
+  const [kbSource, setKbSource] = React.useState<'storage' | 'filesystem'>('filesystem');
+  const [versionMismatch, setVersionMismatch] = React.useState(false);
   const [updatedAt, setUpdatedAt] = React.useState<string | null>(null);
   const [updatedBy, setUpdatedBy] = React.useState<string | null>(null);
   const [storageExists, setStorageExists] = React.useState<boolean | null>(null);
@@ -62,6 +64,8 @@ export function KbRuntimeDiagnostics() {
           setVersion(diagnostics.version ?? 0);
           setStorageVersion(diagnostics.storageVersion ?? null);
           setStorageExists(diagnostics.storageExists ?? false);
+          setKbSource(diagnostics.kbSource === 'storage' ? 'storage' : 'filesystem');
+          setVersionMismatch(diagnostics.versionMismatch === true);
           setAiReformatEnabled(diagnostics.aiReformatEnabled !== false);
           setReformatTimeoutMs(diagnostics.reformatTimeoutMs ?? null);
         }
@@ -169,6 +173,14 @@ export function KbRuntimeDiagnostics() {
               {storageExists === true ? (
                 <p className="text-xs text-muted-foreground mt-1">
                   Versió publicada a Storage: {storageVersion ?? 'no definida'} · Runtime: v{version ?? 0}
+                </p>
+              ) : null}
+              <p className="text-xs text-muted-foreground mt-1">
+                Font efectiva runtime: <strong>{kbSource === 'storage' ? 'Storage publicada' : 'Filesystem base'}</strong>
+              </p>
+              {versionMismatch ? (
+                <p className="text-xs text-amber-700 mt-1">
+                  Hi ha mismatch entre `version` i `storageVersion`: el runtime no ha de confiar en la còpia publicada.
                 </p>
               ) : null}
             </div>

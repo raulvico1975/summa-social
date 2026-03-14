@@ -889,11 +889,11 @@ El Mode Rescat elimina tota seguretat d'accés a `/admin`. Només usar-lo tempor
 
 ---
 
-## 13. Hub de Guies (v1.27)
+## 13. Ajuda dins producte
 
 ### Què és
 
-Centre d'autoajuda per usuaris a `/dashboard/guides`. Permet trobar guies procedimentals sense contactar suport.
+L'ajuda visible per a usuaris finals es reparteix entre `HelpSheet`, `Manual` i `Bot`. La ruta `/dashboard/guides` queda només com a compatibilitat de links antics.
 
 ### Cercador natural
 
@@ -912,21 +912,15 @@ El cercador usa **scoring determinista** (sense IA):
 
 | Fitxer | Funció |
 |--------|--------|
-| `src/app/[orgSlug]/dashboard/guides/page.tsx` | Pàgina principal amb cercador |
-| `src/i18n/locales/*.json` | Claus `guides.search.*` (stopwords, synonyms, suggestions) |
-| `scripts/i18n/validate-guides-translations.ts` | Validador de claus de cerca |
+| `src/components/help/HelpSheet.tsx` | Ajuda contextual per pantalla |
+| `src/app/[orgSlug]/dashboard/manual/page.tsx` | Manual runtime |
+| `src/components/help/BotSheet.tsx` | Bot amb destins útils |
 
-### Afegir sinònims nous
+### Criteri operatiu
 
-1. Edita `src/i18n/locales/ca.json` (i es/fr/pt):
-```json
-"guides.search.syn.nou_terme.0": "variant1",
-"guides.search.syn.nou_terme.1": "variant2"
-```
-
-2. Afegeix el canònic al validador (`SEARCH_SYNONYM_CANONICALS`)
-
-3. Executa `npm run i18n:validate-guides`
+1. Si el dubte és de la pantalla actual, prioritzar `?`.
+2. Si és un procés llarg o sensible, prioritzar manual.
+3. Si l'usuari no sap on anar, prioritzar bot amb destí concret.
 
 ---
 

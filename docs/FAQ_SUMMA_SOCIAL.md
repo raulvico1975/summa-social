@@ -197,27 +197,18 @@ Summa Social guarda automàticament molts canvis mentre treballes. Si estaves ed
 
 ### 7½. Tinc un dubte i no trobo la resposta a cap lloc. On puc buscar ajuda dins l'app?
 
-**Hi ha un Hub de Guies integrat** directament a l'aplicació! El trobaràs clicant la icona d'interrogant (?) que veuràs a la cantonada superior dreta de qualsevol pantalla.
+**Tens tres punts d'ajuda reals dins l'app:**
 
-**Què hi trobaràs:**
-- **Guies pas a pas** per a les funcionalitats principals
-- **Respostes a preguntes freqüents** sobre cada tema
-- **Un cercador que entén com parles** (sense tecnicismes)
-- **Etiquetes clicables** per anar directament a la pantalla que et recomana
-- **Ajuda per aclarir dubtes ambigus** (si cal, et farà triar entre opció 1 o 2)
+- **Ajuda contextual (`?`)** a la pantalla on estàs treballant
+- **Manual** per processos llargs o sensibles
+- **Bot** per dubtes operatius curts i per portar-te al lloc correcte
 
-**El cercador és molt llest:**
-No cal que sàpigues els termes tècnics. Pots buscar coses com:
-- "no veig els meus moviments" → Et portarà a les guies d'importació
-- "182" → Et mostrarà les guies fiscals
-- "stripe comissions" → Et portarà a les guies de donacions online
-- "vull canviar el logo de l'entitat" → Et portarà a la part correcta del manual/configuració
-- "com puc saber les quotes que un soci ha pagat?" → Et portarà a la guia de detall del donant
+**Com aprofitar-los millor:**
+- Si el dubte és d'una pantalla concreta, comença per `?`
+- Si necessites entendre tot el procés, obre el manual
+- Si no saps on anar o com formular-ho, pregunta-ho al bot amb paraules naturals o enganxa el text exacte de l'error
 
-**Com funciona el cercador:**
-Escriu el que busques amb les teves paraules. El sistema reconeix sinònims i expressions comunes, així que no et preocupis per encertar el terme exacte. Si tens un error concret, copia el text literal i normalment et respondrà millor.
-
-**Un consell:** Abans de contactar amb suport, fes una ullada al Hub de Guies. Moltes vegades la resposta ja hi és, i et pot estalviar temps d'espera.
+**Un consell:** Abans de buscar ajuda fora de l'app, prova primer aquests tres punts. La majoria de dubtes recurrents s'han de poder resoldre des d'aquí.
 
 ---
 

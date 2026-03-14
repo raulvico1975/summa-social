@@ -2255,33 +2255,29 @@ Trobar respostes ràpides als problemes més comuns. Si et trobes encallat, mira
 
 ---
 
-## 11.0 El Hub de Guies: el teu primer recurs
+## 11.0 Com buscar ajuda dins Summa
 
-Abans de buscar ajuda externa, prova el **Hub de Guies** integrat a l'aplicació. El trobaràs clicant la icona **?** (interrogant) que apareix a la cantonada superior dreta de qualsevol pantalla.
+Abans de sortir de l'app, a Summa tens **tres punts d'ajuda reals**:
 
-### Què hi trobaràs
+- **Ajuda contextual (`?`)**: per entendre la pantalla on estàs ara mateix.
+- **Manual**: per repassar un procés complet o entendre un tema de punta a punta.
+- **Bot**: per dubtes operatius curts, especialment si no saps per on començar.
 
-- **Guies pas a pas** per a les funcionalitats principals
-- **Respostes a preguntes freqüents** sobre cada tema
-- **Un cercador que entén llenguatge natural** (com ho diries a una companya)
-- **Enllaços directes clicables** per anar a la pantalla correcta sense perdre temps
-- **Ajuda per aclarir dubtes ambigus** (si cal, et demana triar opció 1 o 2)
+### Quin punt d'ajuda t'interessa segons el cas
 
-### Com usar el cercador
+| Si et passa això | Fes servir |
+|------------------|------------|
+| "Sóc dins d'una pantalla i no sé quin és el següent pas" | `?` de la pantalla |
+| "Vull entendre tot el flux abans de tocar res" | Manual |
+| "Tinc un dubte concret i vull que em porti al lloc correcte" | Bot |
 
-No cal que sàpigues els termes tècnics. Pots buscar coses com:
+### Com treure'n partit
 
-| El que escrius | El que troba |
-|----------------|--------------|
-| "vull canviar el logo de l'entitat" | Explicació de com fer-ho des de configuració |
-| "com puc saber les quotes que un soci ha pagat?" | Guia del detall de donants i historial |
-| "com pujo una factura o rebut o nòmina?" | Guia per adjuntar documents i ruta directa |
-| "m'apareix un missatge d'error que no entenc" | Resolució de problemes + passos de comprovació |
-| "remesa no quadra" | Guies de divisió i revisió de remeses |
+- Al **Bot**, escriu el dubte amb paraules naturals o enganxa el missatge literal d'error.
+- A l'**ajuda contextual**, llegeix els passos curts de la pantalla i obre el Manual si necessites més context.
+- Al **Manual**, ves directament a la secció del flux que estàs treballant.
 
-El sistema reconeix sinònims i expressions comunes, així que no et preocupis per encertar el terme exacte. Si tens un error a pantalla, copiar el text exacte sol donar-te una resposta més precisa.
-
-> 💡 **Consell:** Abans de contactar amb suport, fes una ullada al Hub de Guies. Moltes vegades la resposta ja hi és, i et pot estalviar temps d'espera.
+> 💡 **Consell:** Si el dubte és de la pantalla on ja ets, comença per `?`. Si és un procés llarg o sensible, obre el Manual.
 
 ---
 

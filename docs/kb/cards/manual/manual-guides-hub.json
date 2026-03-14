@@ -6,38 +6,42 @@
   "guardrail": "none",
   "answerMode": "full",
   "title": {
-    "ca": "On trobar el Hub de Guies i com aprofitar-lo",
-    "es": "Dónde encontrar el Hub de Guías y cómo aprovecharlo"
+    "ca": "On trobar l'ajuda dins Summa i com aprofitar-la",
+    "es": "Dónde encontrar la ayuda dentro de Summa y cómo aprovecharla"
   },
   "intents": {
     "ca": [
       "on trobo les guies d ajuda dins l app",
       "on trobo les guies d'ajuda dins l'app",
-      "com obro el hub de guies",
+      "com obro l ajuda de summa",
+      "com obro l assistent",
       "no trobo ajuda dins summa"
     ],
     "es": [
       "donde encuentro las guias de ayuda dentro de la app",
       "dónde encuentro las guías de ayuda dentro de la app",
-      "como abro el hub de guias",
+      "como abro la ayuda de summa",
+      "como abro el asistente",
       "no encuentro ayuda dentro de summa"
     ]
   },
   "guideId": null,
   "answer": {
-    "ca": "El Hub de Guies és el primer lloc on buscar ajuda dins Summa.\n\nCom obrir-lo:\n1. Clica la icona ? del header.\n2. Escriu el dubte amb paraules naturals.\n3. Obre la guia recomanada o segueix els enllaços clicables de ruta.\n\nSi la pregunta és ambigua, el bot et pot demanar triar entre 2 opcions per portar-te al flux correcte.",
-    "es": "El Hub de Guías es el primer lugar donde buscar ayuda dentro de Summa.\n\nCómo abrirlo:\n1. Haz clic en el icono ? del header.\n2. Escribe la duda con palabras naturales.\n3. Abre la guía recomendada o sigue los enlaces clicables de ruta.\n\nSi la pregunta es ambigua, el bot puede pedirte elegir entre 2 opciones para llevarte al flujo correcto."
+    "ca": "Dins Summa tens tres punts d'ajuda reals: ajuda contextual (`?`), manual i bot.\n\nQuè fer ara:\n1. Si ets dins d'una pantalla concreta, obre `?` per veure els passos d'aquella pantalla.\n2. Si necessites context llarg o repassar un procés complet, obre el Manual.\n3. Si tens un dubte operatiu curt, pregunta-ho al bot i segueix el destí recomanat.\n\nSi la pregunta és ambigua, el bot et pot demanar triar entre 2 opcions abans de donar-te la ruta correcta.",
+    "es": "Dentro de Summa tienes tres puntos de ayuda reales: ayuda contextual (`?`), manual y bot.\n\nQué hacer ahora:\n1. Si estás dentro de una pantalla concreta, abre `?` para ver los pasos de esa pantalla.\n2. Si necesitas contexto largo o repasar un proceso completo, abre el Manual.\n3. Si tienes una duda operativa corta, pregúntaselo al bot y sigue el destino recomendado.\n\nSi la pregunta es ambigua, el bot puede pedirte elegir entre 2 opciones antes de darte la ruta correcta."
   },
   "uiPaths": [
-    "Header > ? > Hub de Guies"
+    "Header > ? (Ajuda contextual)",
+    "Manual > Resolució de problemes"
   ],
   "needsSnapshot": false,
   "keywords": [
-    "hub",
-    "guies",
+    "ajuda",
+    "manual",
+    "bot",
     "ajuda",
     "icona ?",
-    "cercador"
+    "assistent"
   ],
   "source_faq": [
     "Q7½"

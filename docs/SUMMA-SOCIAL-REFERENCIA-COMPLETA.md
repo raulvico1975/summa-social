@@ -3724,15 +3724,14 @@ El botó càmera a la safata de despeses (`/dashboard/project-module/expenses`) 
 </Link>
 ```
 
-### 3.11.15 Sistema d'Ajuda: panell contextual + manual + hub de guies + bot
+### 3.11.15 Sistema d'Ajuda: panell contextual + manual + bot
 
-El sistema d'ajuda actual no és una sola peça: són quatre capes connectades entre si.
+El sistema d'ajuda actual és una sola experiència repartida en tres punts d'entrada visibles.
 
 | Capa | URL / entrada | Funció real |
 |------|---------------|-------------|
 | **Ajuda contextual (`HelpSheet`)** | Icona `?` a qualsevol pantalla del dashboard | Ajuda específica de la pantalla actual (`help.*`), amb passos, tips, seccions extra i enllaç al manual |
 | **Manual de referència** | `/{orgSlug}/dashboard/manual` | Manual llarg en Markdown per entendre el producte de punta a punta |
-| **Hub de Guies** | `/{orgSlug}/dashboard/guides` | Catàleg navegable de guies procedimentals i cercador natural |
 | **Bot d'ajuda** | FAB blau amb icona bot a layout dashboard | Resol preguntes lliures sobre la KB i retorna resposta + ruta dins Summa |
 
 #### 3.11.15.1 Ajuda contextual per pantalla (`HelpSheet`)
@@ -3769,80 +3768,15 @@ Manual renderitzat des de fitxers Markdown públics.
 - `src/lib/help/manual-toc.ts`
 - `public/docs/manual-usuari-summa-social.{ca,es,fr}.md`
 
-#### 3.11.15.3 Hub de Guies procedimentals
+#### 3.11.15.3 Compatibilitat legacy de `/dashboard/guides`
 
-Centre d'ajuda navegable amb guies pas-a-pas per a les operacions més freqüents de Summa Social.
+La ruta `/{orgSlug}/dashboard/guides` ja **no és un hub visible de producte**. Es manté només per compatibilitat de links antics i redirigeix a una entrada real d'ajuda.
 
-**Ubicació:** `/{orgSlug}/dashboard/guides`
+El coneixement procedimental continua existint, però es consumeix des de:
 
-**Característiques:**
-- Guies procedimentals amb format `whatIs` + `steps[]` + `avoid[]`
-- Traduccions CA/ES/FR/PT amb fallback a català
-- CTAs directes a pantalla + enllaç al manual
-- Indicadors visuals: `lookFirst`, `doNext`, `avoid`, `costlyError`
-- Validador i18n automatitzat (`npm run i18n:validate-guides`)
-- Resultats d'ajuda ràpida sense suport humà, pensats per ser cercats amb llenguatge natural
-
-**Guies disponibles:**
-
-| ID | Títol | Contingut |
-|----|-------|-----------|
-| `firstDay` | Primer dia | Checklist d'inici ràpid |
-| `firstMonth` | Primer mes | Guia d'operativa mensual |
-| `monthClose` | Tancament mensual | Procediment de tancament |
-| `movements` | Gestió de moviments | Operativa bàsica |
-| `importMovements` | Importar extracte | Pas a pas importació |
-| `bulkCategory` | Categorització massiva | Selecció múltiple |
-| `changePeriod` | Canviar de període | Filtre per data |
-| `selectBankAccount` | Seleccionar compte | Multicompte bancari |
-| `attachDocument` | Adjuntar document | Drag & drop |
-| `returns` | Devolucions | Gestió de retorns |
-| `remittances` | Remeses d'ingressos | Divisió de remeses |
-| `splitRemittance` | Dividir remesa | Split manual |
-| `stripeDonations` | Donacions Stripe | Importador Stripe |
-| `travelReceipts` | Tiquets de viatge | Captura ràpida |
-| `travelExpenseReport` | Liquidació de despeses | Flux de liquidació |
-| `mileageTravel` | Quilometratge de viatge | Registre de km |
-| `donors` | Gestió de donants | CRUD donants |
-| `reports` | Informes fiscals | 182, 347, certificats |
-| `projects` | Mòdul projectes | Justificació econòmica |
-| `monthlyFlow` | Flux mensual | Operativa recurrent |
-| `yearEndFiscal` | Tancament fiscal | Fi d'any |
-| `accessSecurity` | Accés i seguretat | Multi-usuari |
-| `initialLoad` | Càrrega inicial | Primera configuració |
-
-**Format de traduccions (claus i18n):**
-
-```
-guides.{guideId}.title        — Títol de la guia
-guides.{guideId}.intro        — Introducció (opcional si whatIs)
-guides.{guideId}.whatIs       — Descripció breu
-guides.{guideId}.steps.0-N    — Passos ordenats
-guides.{guideId}.avoid.0-N    — Errors a evitar
-guides.{guideId}.lookFirst.0-N — Què mirar primer
-guides.{guideId}.doNext.0-N   — Passos següents
-guides.{guideId}.costlyError  — Error crític a destacar
-guides.cta.{guideId}          — Text del botó CTA
-```
-
-**Fitxers principals:**
-
-| Fitxer | Funció |
-|--------|--------|
-| `src/app/[orgSlug]/dashboard/guides/page.tsx` | Hub central amb llista de guies |
-| `src/i18n/locales/{ca,es,fr,pt}.json` | Traduccions (claus `guides.*`) |
-| `scripts/i18n/validate-guides-translations.ts` | Validador de completitud |
-
-**Validador i18n:**
-
-```bash
-npm run i18n:validate-guides
-```
-
-Comprova:
-- Claus page-level obligatòries (`guides.pageTitle`, `guides.viewManual`...)
-- CTA per cada guia (`guides.cta.{guideId}`)
-- Títol i intro/whatIs per cada guia
+- `HelpSheet` contextual
+- `Manual`
+- `Bot` sobre KB cards
 - Arrays amb índexos consecutius (sense gaps)
 - Claus extra que no existeixen al base (CA)
 

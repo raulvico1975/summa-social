@@ -35,27 +35,40 @@ const UI_STRINGS = {
   },
 } as const;
 
+function shouldFallbackToCatalan(locale: 'ca' | 'es' | 'fr', text: string): boolean {
+  if (locale === 'ca') return false;
+  const toc = extractToc(text);
+  if (toc.length < 8) return true;
+  return !toc.some((entry) => entry.id === '11-resolucio-de-problemes');
+}
+
 /**
  * Fetch manual with locale fallback to CA.
- * Tries locale-specific file first, falls back to .ca.md if 404.
+ * Falls back not only on 404 but also on placeholder manuals without enough anchors.
  */
-async function fetchManualWithFallback(locale: 'ca' | 'es' | 'fr'): Promise<string> {
+async function fetchManualWithFallback(locale: 'ca' | 'es' | 'fr'): Promise<{ text: string; sourceLocale: 'ca' | 'es' | 'fr' }> {
   const basePath = '/docs/manual-usuari-summa-social';
   const localePath = `${basePath}.${locale}.md`;
   const fallbackPath = `${basePath}.ca.md`;
 
-  // Try locale-specific file first
-  const res = await fetch(localePath);
-  if (res.ok) {
-    return res.text();
+  if (locale !== 'ca') {
+    const res = await fetch(localePath);
+    if (res.ok) {
+      const text = await res.text();
+      if (!shouldFallbackToCatalan(locale, text)) {
+        return { text, sourceLocale: locale };
+      }
+    }
   }
 
-  // Fallback to CA
   const fallbackRes = await fetch(fallbackPath);
   if (!fallbackRes.ok) {
     throw new Error('No s\'ha pogut carregar el manual');
   }
-  return fallbackRes.text();
+  return {
+    text: await fallbackRes.text(),
+    sourceLocale: 'ca',
+  };
 }
 
 export default function ManualPage() {
@@ -65,6 +78,7 @@ export default function ManualPage() {
   const [loading, setLoading] = React.useState(true);
   const [toc, setToc] = React.useState<TocEntry[]>([]);
   const [parsedContent, setParsedContent] = React.useState<RenderedLine[]>([]);
+  const [sourceLocale, setSourceLocale] = React.useState<'ca' | 'es' | 'fr'>('ca');
 
   // pt fa fallback a ca (UI_STRINGS i manual només tenen ca/es/fr)
   const contentLang = language === 'pt' ? 'ca' : language;
@@ -72,8 +86,9 @@ export default function ManualPage() {
 
   React.useEffect(() => {
     fetchManualWithFallback(contentLang)
-      .then((text) => {
+      .then(({ text, sourceLocale }) => {
         setContent(text);
+        setSourceLocale(sourceLocale);
         setToc(extractToc(text));
         setParsedContent(parseMarkdownWithIds(text));
         setLoading(false);
@@ -85,7 +100,7 @@ export default function ManualPage() {
   }, [contentLang]);
 
   const handleOpenInNewTab = () => {
-    window.open(`/docs/manual-usuari-summa-social.${contentLang}.md`, '_blank');
+    window.open(`/docs/manual-usuari-summa-social.${sourceLocale}.md`, '_blank');
   };
 
   // Padding segons nivell del TOC

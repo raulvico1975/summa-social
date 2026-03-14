@@ -13,6 +13,10 @@ type ApiResponse =
         lastSeen: string
         suggestedDomain: string
         suggestedKeywords: string[]
+        fallbackCount: number
+        helpfulNo: number
+        helpfulYes: number
+        coveragePressure: number
       }>
     }
   | { ok: false; error: string }
@@ -53,10 +57,9 @@ export async function GET(request: NextRequest): Promise<NextResponse<ApiRespons
 
     const snap = await db
       .collection(`organizations/${orgId}/supportBotQuestions`)
-      .where('resultMode', '==', 'fallback')
       .where('lastSeenAt', '>=', cutoff)
       .orderBy('lastSeenAt', 'desc')
-      .limit(limit)
+      .limit(limit * 4)
       .get()
 
     const items = snap.docs
@@ -67,6 +70,11 @@ export async function GET(request: NextRequest): Promise<NextResponse<ApiRespons
           ? (item.lastSeenAt as { toDate: () => Date }).toDate()
           : null
 
+        const fallbackCount = Number(item.fallbackCount ?? 0)
+        const helpfulNo = Number(item.helpfulNo ?? 0)
+        const helpfulYes = Number(item.helpfulYes ?? 0)
+        const coveragePressure = fallbackCount * 4 + helpfulNo * 3 + Number(item.count ?? 0)
+
         return {
           question,
           lang: String(item.lang ?? 'ca'),
@@ -74,9 +82,15 @@ export async function GET(request: NextRequest): Promise<NextResponse<ApiRespons
           lastSeen: lastSeenDate ? lastSeenDate.toISOString() : '',
           suggestedDomain: inferQuestionDomain(question),
           suggestedKeywords: suggestKeywordsFromMessage(question, 6),
+          fallbackCount,
+          helpfulNo,
+          helpfulYes,
+          coveragePressure,
         }
       })
-      .sort((a, b) => b.count - a.count)
+      .filter(item => item.fallbackCount > 0 || item.helpfulNo > 0)
+      .sort((a, b) => b.coveragePressure - a.coveragePressure || b.count - a.count)
+      .slice(0, limit)
 
     return NextResponse.json({ ok: true, items })
   } catch (error) {

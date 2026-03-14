@@ -26,6 +26,13 @@ function buildSpecificCaseFallbackAnswer(lang: KbLang): string {
     : 'Això sembla un cas concret de les teves dades.\n\nEt puc orientar amb el procediment general des de la guia correcta, però no diagnosticar aquest cas concret des d’aquí.\n\nSi continua sense quadrar després de revisar el procediment general, caldrà revisar el cas concret.'
 }
 
+function buildGuidedNavigationAnswer(card: KBCard, lang: KbLang): string {
+  const title = card.title?.[lang] ?? card.title?.ca ?? card.title?.es ?? card.id
+  return lang === 'es'
+    ? `Creo que la mejor ruta para esto es "${title}".\n\nQué hacer ahora:\n1. Abre el destino recomendado.\n2. Sigue ese flujo exacto antes de tocar nada más.\n\nSi no era esto, dime el paso exacto o el mensaje de error y lo afinamos.`
+    : `Crec que la millor ruta per a això és "${title}".\n\nQuè fer ara:\n1. Obre el destí recomanat.\n2. Segueix aquest flux exacte abans de tocar res més.\n\nSi no era això, digues-me el pas exacte o el missatge d’error i ho afinarem.`
+}
+
 export async function orchestrator(input: {
   message: string
   kbLang: KbLang
@@ -199,6 +206,37 @@ export async function orchestrator(input: {
   const sensitiveQuery = isSensitiveDomain(retrievalResult?.questionDomain, message)
 
   if (intentType === 'operational' && confidenceBand !== 'high') {
+    if (!sensitiveQuery && confidenceBand === 'medium' && selectedCard.type !== 'fallback') {
+      const guidedUiPaths = normalizeUiPathsAgainstCatalog(selectedCard.uiPaths)
+      return {
+        response: {
+          ok: true,
+          mode: 'card',
+          cardId: selectedCard.id,
+          answer: buildGuidedNavigationAnswer(selectedCard, kbLang),
+          guideId: selectedCard.guideId ?? null,
+          uiPaths: guidedUiPaths.length > 0 ? guidedUiPaths.slice(0, 1) : SAFE_FALLBACK_PATHS[kbLang].slice(0, 1),
+        },
+        meta: {
+          intentType,
+          retrievalConfidence: retrievalResult?.confidence,
+          confidenceBand,
+          bestCardId: retrievalResult?.bestCardId,
+          bestScore: retrievalResult?.bestScore,
+          secondCardId: retrievalResult?.secondCardId,
+          secondScore: retrievalResult?.secondScore,
+          decisionReason: 'operational_medium_navigation',
+          specificCaseDetected: retrievalResult?.specificCaseDetected ?? false,
+          questionDomain: retrievalResult?.questionDomain,
+          selectedCardId: selectedCard.id,
+          usedClarification: false,
+          trustedOperationalCard: false,
+        },
+        selectedCard: null,
+        kbLang,
+      }
+    }
+
     const options = pickTopDisambiguationOptions(cards, retrievalResult)
     if (confidenceBand === 'medium' && options.length >= 2) {
       const clarifyUiPaths = normalizeUiPathsAgainstCatalog(
