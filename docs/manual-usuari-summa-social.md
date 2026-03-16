@@ -1527,6 +1527,8 @@ Menú **⋮** → **"Dividir remesa Stripe"**
 
 Arrossega el fitxer. El sistema agrupa per payout.
 
+> Nota: si el CSV inclou pagaments que Stripe encara no ha liquidat al banc, aquests moviments poden venir sense `Transfer`. Summa Social els ignorarà fins que apareguin en un payout posterior.
+
 ### Pas 5: Selecciona el payout correcte
 
 Busca el que coincideix amb l'import del banc.

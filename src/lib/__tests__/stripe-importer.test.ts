@@ -160,7 +160,40 @@ describe('groupStripeRowsByTransfer', () => {
     assert.strictEqual(groupXyz.net, 195);
   });
 
-  it('should throw error if row has empty transfer', () => {
+  it('should ignore rows without transfer and group the rest', () => {
+    const rows: StripeRow[] = [
+      {
+        id: 'ch_1',
+        createdDate: '2024-01-15',
+        amount: 100,
+        fee: 3,
+        customerEmail: 'test@example.com',
+        status: 'succeeded',
+        transfer: '',
+        description: null,
+      },
+      {
+        id: 'ch_2',
+        createdDate: '2024-01-15',
+        amount: 50,
+        fee: 2,
+        customerEmail: 'test2@example.com',
+        status: 'succeeded',
+        transfer: 'po_abc',
+        description: null,
+      },
+    ];
+
+    const groups = groupStripeRowsByTransfer(rows);
+
+    assert.strictEqual(groups.length, 1);
+    assert.strictEqual(groups[0].transferId, 'po_abc');
+    assert.strictEqual(groups[0].gross, 50);
+    assert.strictEqual(groups[0].fees, 2);
+    assert.strictEqual(groups[0].net, 48);
+  });
+
+  it('should throw error if no row has transfer', () => {
     const rows: StripeRow[] = [
       {
         id: 'ch_1',
@@ -176,7 +209,7 @@ describe('groupStripeRowsByTransfer', () => {
 
     assert.throws(() => {
       groupStripeRowsByTransfer(rows);
-    }, /ERR_NO_TRANSFER_VALUES/);
+    }, /ERR_NO_PAYOUT_ROWS/);
   });
 });
 

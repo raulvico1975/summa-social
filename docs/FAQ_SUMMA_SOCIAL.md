@@ -1605,6 +1605,8 @@ Però no et preocupis, el procés és més senzill del que sembla:
 
 5. **Selecciona el payout correcte:** El sistema agrupa les donacions per payout. Escull el que coincideix amb l'import del teu extracte bancari
 
+**Nota pràctica:** Si el CSV inclou pagaments encara no liquidats per Stripe, poden venir sense payout (`Transfer`). Summa Social els ignorarà i només et deixarà treballar amb els que ja formen part d'una transferència real al banc.
+
 6. **Revisa el matching:** El sistema identificarà donants per email. Verifica que estiguin ben assignats
 
 7. **Comprova que quadra:** L'import net ha de coincidir amb l'ingrés del banc
@@ -1654,6 +1656,8 @@ Però no et preocupis, el procés és més senzill del que sembla:
 **⚠️ MOLT IMPORTANT:** No obris el CSV amb Excel abans de pujar-lo a Summa Social!
 
 Per què? Excel a vegades "ajuda" canviant el format de dates o números, i això pot fer que la importació falli. Simplement descarrega el CSV i puja'l directament tal qual.
+
+Si el CSV encara no conté cap payout perquè Stripe no ha generat la transferència al banc, Summa Social t'ho indicarà i hauràs de tornar-lo a exportar més tard.
 
 ---
 

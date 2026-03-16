@@ -24,7 +24,7 @@ Les entitats que reben donacions via Stripe obtenen un ingrés agregat al compte
 
 **Matching de donants:** Únicament per email (`donor.email === stripeRow.customerEmail`, case-insensitive). Sense fuzzy matching. Sense creació automàtica de donants.
 
-**Agrupació:** Per camp `Transfer` (po_xxx). Cada payout bancari = un grup.
+**Agrupació:** Per camp `Transfer` (po_xxx). Cada payout bancari = un grup. Les files sense `Transfer` s'ignoren perquè encara no formen part d'un payout.
 
 **Verificació:** L'import net calculat (brut − comissions) ha de quadrar amb el moviment bancari pare amb tolerància ±0,02 € (arrodoniments bancaris). Si no quadra, operació bloquejada.
 
@@ -36,6 +36,7 @@ Les entitats que reben donacions via Stripe obtenen un ingrés agregat al compte
 | Matching donant | Email únic, sense ambigüitat |
 | Comissions | 1 sola transacció despesa agregada per payout |
 | Reemborsos | Exclosos (`Amount Refunded > 0`), amb avís |
+| Files sense payout | Ignorades, amb avís no bloquejant |
 | Parser CSV | Propi, sense llibreries externes |
 | Source | `source: 'stripe'` + `parentTransactionId` del moviment bancari |
 
@@ -60,6 +61,8 @@ Punt d'entrada: `transactions-table.tsx` → menú ⋮ si la descripció del mov
 |-----|--------------|
 | Email sense match | Fila queda "Pendent", es pot assignar manualment o crear donant ràpid |
 | Import no quadra | Error bloquejant, no es permet processar |
+| Files sense `Transfer` | S'ignoren fins que Stripe les inclogui en un payout |
+| CSV sense cap `Transfer` | Error bloquejant `ERR_NO_PAYOUT_ROWS` |
 | `Amount Refunded > 0` | Exclosa + avís amb import exclòs |
 | CSV no obert amb Excel | Avís explícit a la UI (Excel corromp els decimals europeus) |
 

@@ -126,6 +126,7 @@ export function StripeImporter({
   const [isSaving, setIsSaving] = React.useState(false);
   const [parsedRows, setParsedRows] = React.useState<StripeRow[]>([]);
   const [warnings, setWarnings] = React.useState<Warning[]>([]);
+  const [ignoredRowsCount, setIgnoredRowsCount] = React.useState(0);
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
   const [matchingGroups, setMatchingGroups] = React.useState<StripePayoutGroup[]>([]);
   const [selectedGroup, setSelectedGroup] = React.useState<StripePayoutGroup | null>(null);
@@ -156,6 +157,7 @@ export function StripeImporter({
     if (!open) {
       setParsedRows([]);
       setWarnings([]);
+      setIgnoredRowsCount(0);
       setErrorMessage(null);
       setMatchingGroups([]);
       setSelectedGroup(null);
@@ -254,6 +256,7 @@ export function StripeImporter({
     setErrorMessage(null);
     setParsedRows([]);
     setWarnings([]);
+    setIgnoredRowsCount(0);
     setMatchingGroups([]);
     setSelectedGroup(null);
     setDonorMatches({});
@@ -261,8 +264,14 @@ export function StripeImporter({
     try {
       const text = await file.text();
       const result = parseStripeCsv(text);
-      setParsedRows(result.rows);
+      const rowsWithTransfer = result.rows.filter(
+        (row) => row.transfer && row.transfer.trim().length > 0
+      );
+      const ignoredRows = result.rows.length - rowsWithTransfer.length;
+
+      setParsedRows(rowsWithTransfer);
       setWarnings(result.warnings);
+      setIgnoredRowsCount(ignoredRows);
 
       // Validar que hi ha files vàlides
       if (result.rows.length === 0) {
@@ -270,8 +279,14 @@ export function StripeImporter({
         return;
       }
 
+      // Validar que queda almenys un payout real
+      if (rowsWithTransfer.length === 0) {
+        setErrorMessage(t.importers.stripeImporter.errors.noPayoutRows);
+        return;
+      }
+
       // Agrupar per Transfer i buscar matches
-      const groups = groupStripeRowsByTransfer(result.rows);
+      const groups = groupStripeRowsByTransfer(rowsWithTransfer);
       const matches = findAllMatchingPayoutGroups(groups, bankTransaction.amount);
       setMatchingGroups(matches);
 
@@ -1006,6 +1021,16 @@ export function StripeImporter({
                   </button>
                 ))}
               </div>
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {ignoredRowsCount > 0 && (
+          <Alert>
+            <AlertTriangle className="h-4 w-4" />
+            <AlertTitle>{t.importers.stripeImporter.warnings.ignoredNoTransferTitle}</AlertTitle>
+            <AlertDescription>
+              {t.importers.stripeImporter.warnings.ignoredNoTransferDescription(ignoredRowsCount)}
             </AlertDescription>
           </Alert>
         )}

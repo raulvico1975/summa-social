@@ -952,6 +952,7 @@ export const fr = {
       errors: {
         processingFile: "Erreur lors du traitement du fichier",
         noValidRows: "Le CSV ne contient pas de dons valides (succeeded et non remboursés).",
+        noPayoutRows: "Cet export Stripe ne contient encore aucun payout. Réexportez-le plus tard lorsque Stripe aura généré le virement bancaire.",
         noMatch: (amount: string) => `Aucun payout trouvé correspondant au montant ${amount}`,
         noBankFeesCategory: "Catégorie de frais bancaires non trouvée pour cette organisation.",
         tooManyRows: (count: number) => `Le payout contient ${count} dons. Maximum autorisé : 449.`,
@@ -981,6 +982,9 @@ export const fr = {
         refundedExcluded: "Dons remboursés exclus",
         refundedDescription: (count: number, amount: string) =>
           `${count} don(s) remboursé(s) ont été exclus. Montant exclu : ${amount}`,
+        ignoredNoTransferTitle: "Paiements encore sans payout",
+        ignoredNoTransferDescription: (count: number) =>
+          `${count} paiement(s) ont été ignoré(s) car ils ne font pas encore partie d'un payout Stripe.`,
       },
 
       matching: {

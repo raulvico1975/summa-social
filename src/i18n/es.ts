@@ -951,6 +951,7 @@ export const es = {
       errors: {
         processingFile: "Error al procesar el archivo",
         noValidRows: "El CSV no contiene donaciones válidas (succeeded y no reembolsadas).",
+        noPayoutRows: "Este export de Stripe todavía no contiene ningún payout. Vuelve a exportarlo más tarde cuando Stripe haya generado la transferencia al banco.",
         noMatch: (amount: string) => `No se ha encontrado ningún payout que coincida con el importe ${amount}`,
         noBankFeesCategory: "No se ha encontrado la categoría de gastos bancarios en esta organización.",
         tooManyRows: (count: number) => `El payout tiene ${count} donaciones. Máximo permitido: 449.`,
@@ -980,6 +981,9 @@ export const es = {
         refundedExcluded: "Donaciones reembolsadas excluidas",
         refundedDescription: (count: number, amount: string) =>
           `Se han excluido ${count} donaciones reembolsadas. Importe excluido: ${amount}`,
+        ignoredNoTransferTitle: "Pagos todavía sin payout",
+        ignoredNoTransferDescription: (count: number) =>
+          `Se han ignorado ${count} pagos que todavía no forman parte de un payout de Stripe.`,
       },
 
       matching: {

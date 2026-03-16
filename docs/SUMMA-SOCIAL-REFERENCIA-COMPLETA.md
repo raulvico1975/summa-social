@@ -3024,7 +3024,7 @@ const canSplitStripeRemittance = (tx: Transaction): boolean => {
 | `Fee` | Comissió Stripe | ✅ |
 | `Customer Email` | Matching amb donant | ✅ |
 | `Status` | Filtrar només `succeeded` | ✅ |
-| `Transfer` | Agrupació per payout (`po_xxx`) | ✅ |
+| `Transfer` | Agrupació per payout (`po_xxx`) | ⚠️ Només obligatori per files que ja formen part d'un payout |
 | `Amount Refunded` | Detectar reemborsos | ✅ |
 | `Description` | Concepte (opcional) | ❌ |
 
@@ -3034,10 +3034,20 @@ const canSplitStripeRemittance = (tx: Transaction): boolean => {
 |----------|-------|
 | `Status !== 'succeeded'` | Excloure silenciosament |
 | `Amount Refunded > 0` | Excloure + mostrar avís |
+| `Transfer` buit o nul | Ignorar la fila + mostrar avís no bloquejant |
 
 ### 3.10.6 Agrupació per payout
 
-Les donacions s'agrupen pel camp `Transfer` (po_xxx):
+El CSV de Stripe pot contenir files sense camp `Transfer`.
+
+Aquestes files representen pagaments encara no inclosos en cap payout i s'ignoren durant la importació.
+
+Només les files amb `Transfer` participen en:
+- agrupació per payout
+- càlcul del net payout
+- conciliació amb el moviment bancari
+
+Si, després del filtratge, no queda cap fila amb `Transfer`, l'operació falla amb `ERR_NO_PAYOUT_ROWS`.
 
 ```typescript
 interface PayoutGroup {
@@ -3182,10 +3192,12 @@ function ensureStripeInDescription(desc: string | null, email: string): string {
 | Codi | Condició | Missatge |
 |------|----------|----------|
 | `ERR_NO_COLUMNS` | Falten columnes | "El CSV no té les columnes necessàries: {columnes}" |
+| `ERR_NO_PAYOUT_ROWS` | No queda cap fila amb payout | "Aquest export de Stripe encara no conté cap payout. Torna a exportar-lo més tard quan Stripe hagi generat la transferència al banc." |
 | `ERR_NO_MATCH` | Cap payout quadra | "No s'ha trobat cap payout que coincideixi amb {amount} €" |
 | `ERR_AMOUNT_MISMATCH` | Import no quadra | "L'import no quadra. Esperats {expected} €, calculats {actual} €" |
 | `ERR_NO_BANK_FEES_CATEGORY` | Falta categoria | "No s'ha trobat la categoria de despeses bancàries" |
 | `WARN_REFUNDED` | Hi ha reemborsos | "S'han exclòs {count} donacions reemborsades ({amount} €)" |
+| `WARN_NO_TRANSFER_IGNORED` | Hi ha pagaments encara sense payout | "S'han ignorat {count} pagaments que encara no formen part d'un payout de Stripe." |
 | `WARN_NO_DONOR` | Sense match | "{count} donacions pendents d'assignar donant" |
 
 ### 3.10.14 Límits del sistema
@@ -5056,7 +5068,7 @@ El backup manual des de la UI crida la mateixa lògica via `/api/integrations/ba
 |--------|------------|------|
 | CSV | .csv | Stripe Dashboard → Pagos → Exportar |
 
-**Columnes requerides:** id, Created date (UTC), Amount, Fee, Customer Email, Status, Transfer, Amount Refunded
+**Columnes requerides per al fitxer:** id, Created date (UTC), Amount, Fee, Customer Email, Status, Amount Refunded. El camp `Transfer` és obligatori només per a les files que ja formen part d'un payout; les files sense `Transfer` s'ignoren.
 
 **Veure secció 3.10 per detalls complets.**
 

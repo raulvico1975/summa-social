@@ -328,21 +328,22 @@ export function parseStripeCsv(text: string): ParseResult {
  * Agrupa les files per camp Transfer (po_xxx)
  * Cada grup representa un payout de Stripe al banc
  *
- * @throws Error si alguna fila té Transfer buit (ERR_NO_TRANSFER_VALUES)
+ * Ignora files sense Transfer perquè encara no formen part d'un payout.
+ *
+ * @throws Error si no queda cap fila amb Transfer (ERR_NO_PAYOUT_ROWS)
  */
 export function groupStripeRowsByTransfer(rows: StripeRow[]): StripePayoutGroup[] {
-  // Validar que totes les files tenen Transfer
-  const rowsWithoutTransfer = rows.filter(r => !r.transfer || r.transfer.trim() === '');
-  if (rowsWithoutTransfer.length > 0) {
+  const rowsWithTransfer = rows.filter(r => r.transfer && r.transfer.trim() !== '');
+  if (rowsWithTransfer.length === 0) {
     throw new Error(
-      `ERR_NO_TRANSFER_VALUES: El CSV no conté el camp Transfer (payout) a ${rowsWithoutTransfer.length} files. ` +
-      `Exporta des de Stripe: Pagos → Exportar → Columnes predeterminades (CSV).`
+      "ERR_NO_PAYOUT_ROWS: Aquest export de Stripe encara no conté cap payout. " +
+      "Torna a exportar-lo més tard quan Stripe hagi generat la transferència al banc."
     );
   }
 
   const groupMap = new Map<string, StripeRow[]>();
 
-  for (const row of rows) {
+  for (const row of rowsWithTransfer) {
     const transferId = row.transfer;
     const existing = groupMap.get(transferId) || [];
     existing.push(row);

@@ -10,6 +10,10 @@ Aquest fitxer ja no pretén duplicar el document mestre.
 
 ## Resum dels canvis recents
 
+### 2026-03-16
+
+- importador Stripe: CSV mixt permès; les files sense `Transfer` s'ignoren fins que existeixi payout i el document mestre queda alineat amb el codi
+
 ### 2026-03-12
 
 - invariant documental de remeses IN: `parentTransactionId` canònic, `remittanceId` només metadada, checks sobre filles actives reals
