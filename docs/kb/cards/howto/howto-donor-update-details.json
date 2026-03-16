@@ -6,15 +6,14 @@
   "guardrail": "none",
   "answerMode": "full",
   "title": {
-    "ca": "Actualitzar les dades d'un donant",
-    "es": "Actualizar los datos de un donante"
+    "ca": "Editar dades d'un donant",
+    "es": "Editar datos de un donante"
   },
   "intents": {
     "ca": [
       "actualitzar dades donant",
       "actualitzar dades soci",
       "editar dades donant",
-      "canviar email donant",
       "canviar dades d un soci",
       "modificar fitxa donant"
     ],
@@ -22,31 +21,29 @@
       "actualizar datos donante",
       "actualizar datos socio",
       "editar datos donante",
-      "cambiar email donante",
       "cambiar datos de un socio",
       "modificar ficha donante"
     ]
   },
   "guideId": null,
   "answer": {
-    "ca": "Per actualitzar les dades d'un donant:\n1. Ves a Donants.\n2. Cerca el donant.\n3. Obre la seva fitxa.\n4. Prem \"Editar\".\n5. Actualitza les dades.\n6. Desa els canvis.\n\nSi no pots editar dades, revisa els permisos d'usuari.\nSi el donant no apareix, comprova els filtres o l'estat del donant.",
-    "es": "Para actualizar los datos de un donante:\n1. Ve a Donantes.\n2. Busca al donante.\n3. Abre su ficha.\n4. Pulsa \"Editar\".\n5. Actualiza los datos.\n6. Guarda los cambios.\n\nSi no puedes editar datos, revisa los permisos de usuario.\nSi el donante no aparece, comprueba los filtros o el estado del donante."
+    "ca": "Per editar dades d'un donant:\n1. Ves a Donants i obre la fitxa del donant.\n2. Clica Editar.\n3. Actualitza només les dades que hagin canviat (nom, DNI/CIF, codi postal, contacte o IBAN).\n4. Desa i comprova que la fitxa lateral ja mostra els canvis.\n\nComprovació final: el mateix registre queda actualitzat i no has creat cap duplicat.",
+    "es": "Para editar datos de un donante:\n1. Ve a Donantes y abre la ficha del donante.\n2. Haz clic en Editar.\n3. Actualiza solo los datos que hayan cambiado (nombre, DNI/CIF, código postal, contacto o IBAN).\n4. Guarda y comprueba que la ficha lateral ya muestra los cambios.\n\nComprobación final: el mismo registro queda actualizado y no has creado ningún duplicado."
   },
   "uiPaths": [
-    "/dashboard/donants"
+    "Donants > Fitxa del donant > Editar"
   ],
   "needsSnapshot": false,
   "keywords": [
+    "editar dades donant",
     "actualitzar dades",
-    "editar donant",
     "fitxa donant",
-    "email donant",
-    "update donor details",
+    "dni",
+    "iban",
     "edit donor"
   ],
   "source_faq": [],
   "source_manual": [
-    "3.5",
     "3.6"
   ],
   "source_guides": [],
