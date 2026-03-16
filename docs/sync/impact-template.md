@@ -21,5 +21,5 @@
 - Si `manual_updated: yes`, el PR ha de tocar `docs/manual-usuari-summa-social.md`.
 - Si `faq_updated: yes`, el PR ha de tocar `docs/FAQ_SUMMA_SOCIAL.md`.
 - Si el canvi funcional no canvia contingut visible, justifica-ho clarament.
-- Les claus `guides.*` son capa operativa de Help: no es poden editar manualment a Storage.
-- Qualsevol canvi de `guides.*` ha de sortir del flux `help/topics -> help:build-guides-adapter -> i18n`.
+- `guides.*`, `src/help/*` i `help/topics/*` queden congelats com a compatibilitat legacy si el contracte `docs/help/HELP-EDITORIAL-SINGLE-CONTRACT.md` continua vigent.
+- Si el canvi afecta l'ajuda visible actual, documenta el toc a la font activa corresponent: `help.*` als JSON, manual runtime o KB cards.
