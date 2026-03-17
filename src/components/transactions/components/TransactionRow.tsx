@@ -120,6 +120,8 @@ interface TransactionRowProps {
   onSplitRemittance: (tx: Transaction) => void;
   onSplitAmount: (tx: Transaction) => void;
   onSplitStripeRemittance?: (tx: Transaction) => void;
+  hasStripeImputation?: boolean;
+  onUndoStripeImputation?: (tx: Transaction) => void;
   onOpenSplitDetail?: (txId: string) => void;
   onUndoSplit?: (txId: string) => void;
   onViewRemittanceDetail: (txId: string, parentTx?: Transaction) => void;
@@ -169,6 +171,7 @@ interface TransactionRowProps {
     splitRemittance: string;
     splitPaymentRemittance?: string;
     splitStripeRemittance: string;
+    undoStripeImputation?: string;
     delete: string;
     deleteBlocked: string;
     deleteBlockedParentRemittance: string;
@@ -227,6 +230,8 @@ export const TransactionRow = React.memo(function TransactionRow({
   onSplitRemittance,
   onSplitAmount,
   onSplitStripeRemittance,
+  hasStripeImputation,
+  onUndoStripeImputation,
   onOpenSplitDetail,
   onUndoSplit,
   onViewRemittanceDetail,
@@ -963,10 +968,17 @@ export const TransactionRow = React.memo(function TransactionRow({
               </DropdownMenuItem>
             )}
             {canSplitStripeRemittanceCandidate(tx) && onSplitStripeRemittance && (
-              <DropdownMenuItem onClick={handleSplitStripeRemittance}>
-                <GitMerge className="mr-2 h-4 w-4 text-purple-600" />
-                {t.splitStripeRemittance}
-              </DropdownMenuItem>
+              hasStripeImputation && onUndoStripeImputation ? (
+                <DropdownMenuItem onClick={() => onUndoStripeImputation(tx)}>
+                  <Undo2 className="mr-2 h-4 w-4 text-orange-600" />
+                  {t.undoStripeImputation || 'Desfer imputació Stripe'}
+                </DropdownMenuItem>
+              ) : (
+                <DropdownMenuItem onClick={handleSplitStripeRemittance}>
+                  <GitMerge className="mr-2 h-4 w-4 text-purple-600" />
+                  {t.splitStripeRemittance || 'Imputar Stripe'}
+                </DropdownMenuItem>
+              )
             )}
             {canSplitAmount && (
               <DropdownMenuItem onClick={handleSplitAmount}>

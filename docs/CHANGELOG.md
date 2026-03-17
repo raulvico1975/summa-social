@@ -10,6 +10,13 @@ Aquest fitxer ja no pretén duplicar el document mestre.
 
 ## Resum dels canvis recents
 
+### 2026-03-17
+
+- Stripe deixa de dividir remeses: nou flux d'imputació sobre abonament bancari amb persistència a `donations`, anti-duplicació per `stripePaymentId` i undo per `parentTransactionId`
+- fitxa del donant: les donacions Stripe imputades es llegeixen des de `donations` sense contaminar el ledger visual ni duplicar la lectura legacy
+- fiscalitat: informes, certificats i Model 182 incorporen `donations` com a font fiscal nova, exclouen `stripe_adjustment` i eviten doble còmput amb `transactions`
+- infra requerida: nou índex compost de `contacts` per `type ASC` + `name ASC`
+
 ### 2026-03-16
 
 - importador Stripe: CSV mixt permès; les files sense `Transfer` s'ignoren fins que existeixi payout i el document mestre queda alineat amb el codi
