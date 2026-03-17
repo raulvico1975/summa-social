@@ -6,6 +6,7 @@ import { useCurrentOrganization } from '@/hooks/organization-provider';
 import Link from 'next/link';
 import { collection, query, where, orderBy, limit, onSnapshot } from 'firebase/firestore';
 import type { Transaction, Donor, Organization } from '@/lib/data';
+import type { Donation } from '@/lib/types/donations';
 import { formatCurrencyEU } from '@/lib/normalize';
 import { useTranslations } from '@/i18n';
 import { useToast } from '@/hooks/use-toast';
@@ -19,6 +20,10 @@ import {
   isDrawerDonationCandidate,
   type DonorSummaryResult,
 } from '@/lib/fiscal/calculateDonorSummary';
+import {
+  filterStripeDonationsForDrawer,
+  isStripeDonationForDrawer,
+} from '@/lib/donor-detail/stripe-donations-for-drawer';
 
 // UI Components
 import {
@@ -138,6 +143,9 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
   const [transactions, setTransactions] = React.useState<Transaction[] | null>(null);
   const [isLoading, setIsLoading] = React.useState(true);
   const [permissionError, setPermissionError] = React.useState(false);
+  const [stripeDonations, setStripeDonations] = React.useState<Donation[] | null>(null);
+  const [isLoadingStripeDonations, setIsLoadingStripeDonations] = React.useState(true);
+  const [stripePermissionError, setStripePermissionError] = React.useState(false);
 
   React.useEffect(() => {
     if (!organizationId || !donor || !open) {
@@ -183,6 +191,43 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
     return () => unsubscribe();
   }, [firestore, organizationId, donor?.id, open]);
 
+  React.useEffect(() => {
+    if (!organizationId || !donor || !open) {
+      setIsLoadingStripeDonations(false);
+      return;
+    }
+
+    setIsLoadingStripeDonations(true);
+    setStripePermissionError(false);
+
+    const donationsRef = collection(firestore, 'organizations', organizationId, 'donations');
+    const donationsQuery = query(
+      donationsRef,
+      where('contactId', '==', donor.id),
+      limit(1000)
+    );
+
+    const unsubscribe = onSnapshot(
+      donationsQuery,
+      (snapshot) => {
+        const donorStripeDonations = snapshot.docs
+          .map((doc) => ({ id: doc.id, ...(doc.data() as Donation) }))
+          .filter(isStripeDonationForDrawer);
+        setStripeDonations(donorStripeDonations);
+        setIsLoadingStripeDonations(false);
+        setStripePermissionError(false);
+      },
+      (error) => {
+        console.warn('Donor Stripe donations not available:', error.message);
+        setIsLoadingStripeDonations(false);
+        setStripePermissionError(true);
+        setStripeDonations([]);
+      }
+    );
+
+    return () => unsubscribe();
+  }, [firestore, organizationId, donor?.id, open]);
+
   // Anys disponibles (dels quals hi ha transaccions)
   const availableYears = React.useMemo(() => {
     if (!transactions) return [String(currentYear)];
@@ -191,10 +236,14 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
       const year = tx.date.substring(0, 4);
       years.add(year);
     });
+    (stripeDonations ?? []).forEach((donation) => {
+      const year = donation.date.substring(0, 4);
+      years.add(year);
+    });
     // Afegir any actual si no hi és
     years.add(String(currentYear));
     return Array.from(years).sort((a, b) => Number(b) - Number(a));
-  }, [transactions, currentYear]);
+  }, [transactions, stripeDonations, currentYear]);
 
   // Calcular resum fiscal (font única de veritat)
   const summary = React.useMemo<DonorSummaryResult>(() => {
@@ -215,11 +264,13 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
 
   // Per defecte: historial obert si <= 5 donacions
   React.useEffect(() => {
-    if (transactions && transactions.length > 0) {
-      const donationsCount = transactions.filter(isDrawerDonationCandidate).length;
-      setIsHistoryOpen(donationsCount <= 5);
+    if (transactions || stripeDonations) {
+      const donationsCount =
+        (transactions?.filter(isDrawerDonationCandidate).length ?? 0) +
+        (stripeDonations?.length ?? 0);
+      setIsHistoryOpen(donationsCount > 0 && donationsCount <= 5);
     }
-  }, [transactions]);
+  }, [transactions, stripeDonations]);
 
   // Filtrar transaccions per any i estat
   const effectiveReturnIdSet = React.useMemo(() => new Set(summary.effectiveReturnIds), [summary.effectiveReturnIds]);
@@ -241,6 +292,14 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
       return isDrawerDonationCandidate(tx) || isEffectiveReturn;
     });
   }, [transactions, selectedYear, filterStatus, effectiveReturnIdSet]);
+
+  const filteredStripeDonations = React.useMemo(() => {
+    return filterStripeDonationsForDrawer({
+      donations: stripeDonations ?? [],
+      selectedYear,
+      filterStatus,
+    });
+  }, [filterStatus, selectedYear, stripeDonations]);
 
   // Paginació
   const totalPages = Math.ceil(filteredTransactions.length / itemsPerPage);
@@ -1348,7 +1407,7 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
         </SheetHeader>
 
         {/* Missatge d'error de permisos */}
-        {permissionError && (
+        {(permissionError || stripePermissionError) && (
           <div className="my-4 p-3 rounded-lg bg-amber-50 border border-amber-200 flex items-center gap-2 text-amber-800">
             <AlertTriangle className="h-4 w-4 flex-shrink-0" />
             <p className="text-sm">{t.donorDetail.permissionError || "No s'ha pogut carregar l'historial de donacions."}</p>
@@ -1603,149 +1662,192 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
               </div>
 
               {/* Taula */}
-              {isLoading ? (
+              {isLoading || isLoadingStripeDonations ? (
                 <div className="flex items-center justify-center py-8">
                   <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
                 </div>
-              ) : filteredTransactions.length === 0 ? (
+              ) : filteredTransactions.length === 0 && filteredStripeDonations.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
                   {t.donorDetail.noDonationsInPeriod}
                 </div>
               ) : (
                 <TooltipProvider>
-                  <div className="rounded-md border">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>{t.donorDetail.date}</TableHead>
-                          <TableHead>{t.donorDetail.concept}</TableHead>
-                          <TableHead className="text-right">{t.donorDetail.amount}</TableHead>
-                          <TableHead className="text-center">{t.donorDetail.status}</TableHead>
-                          <TableHead className="text-right">{t.donorDetail.actions}</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {paginatedTransactions.map((tx, index) => {
-                          const isReturn = tx.transactionType === 'return';
-                          const isReturned = tx.donationStatus === 'returned';
-
-                          return (
-                            <TableRow key={tx.id || `tx-${index}`} className={isReturn ? 'bg-orange-50/50' : ''}>
-                              <TableCell className="text-sm">
-                                {formatDate(tx.date)}
-                              </TableCell>
-                              <TableCell className="max-w-[150px] truncate text-sm">
-                                {tx.note || tx.description}
-                              </TableCell>
-                              <TableCell className={`text-right font-mono ${isReturn ? 'text-orange-600' : 'text-green-600'}`}>
-                                {isReturn && <Undo2 className="inline h-3 w-3 mr-1" />}
-                                {formatCurrencyEU(tx.amount)}
-                              </TableCell>
-                              <TableCell className="text-center">
-                                {isReturn ? (
-                                  <Badge variant="outline" className="text-orange-600 border-orange-300">
-                                    {t.donorDetail.returnBadge}
-                                  </Badge>
-                                ) : isReturned ? (
-                                  <Badge variant="outline" className="text-red-600 border-red-300">
-                                    {t.donorDetail.returnedBadge}
-                                  </Badge>
-                                ) : (
-                                  <Badge variant="outline" className="text-green-600 border-green-300">
-                                    <CheckCircle2 className="h-3 w-3 mr-1" />
-                                    OK
-                                  </Badge>
-                                )}
-                              </TableCell>
-                              <TableCell className="text-right">
-                                {!isReturn && !isReturned && (
-                                  <div className="flex justify-end gap-1">
-                                    {/* Descarregar certificat individual */}
-                                    {donor.taxId ? (
-                                      <Tooltip>
-                                        <TooltipTrigger asChild>
-                                          <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            onClick={() => generateCertificate(tx)}
-                                            disabled={isGeneratingPdf}
-                                          >
-                                            {isGeneratingPdf ? (
-                                              <Loader2 className="h-4 w-4 animate-spin" />
-                                            ) : (
-                                              <Download className="h-4 w-4" />
-                                            )}
-                                          </Button>
-                                        </TooltipTrigger>
-                                        <TooltipContent>
-                                          {t.donorDetail.certificate.downloadPdf}
-                                        </TooltipContent>
-                                      </Tooltip>
-                                    ) : (
-                                      <Tooltip>
-                                        <TooltipTrigger asChild>
-                                          <span>
-                                            <Button
-                                              variant="ghost"
-                                              size="icon"
-                                              disabled
-                                            >
-                                              <Download className="h-4 w-4 text-muted-foreground" />
-                                            </Button>
-                                          </span>
-                                        </TooltipTrigger>
-                                        <TooltipContent>
-                                          {t.donorDetail.certificate.needsTaxId}
-                                        </TooltipContent>
-                                      </Tooltip>
-                                    )}
-                                    {/* Enviar certificat individual per email */}
-                                    {donor.taxId && donor.email ? (
-                                      <Tooltip>
-                                        <TooltipTrigger asChild>
-                                          <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            onClick={() => sendCertificateByEmail(tx)}
-                                            disabled={isSendingEmail}
-                                          >
-                                            {isSendingEmail ? (
-                                              <Loader2 className="h-4 w-4 animate-spin" />
-                                            ) : (
-                                              <Mail className="h-4 w-4" />
-                                            )}
-                                          </Button>
-                                        </TooltipTrigger>
-                                        <TooltipContent>
-                                          {t.certificates.email.sendOne}
-                                        </TooltipContent>
-                                      </Tooltip>
-                                    ) : donor.taxId ? (
-                                      <Tooltip>
-                                        <TooltipTrigger asChild>
-                                          <span>
-                                            <Button
-                                              variant="ghost"
-                                              size="icon"
-                                              disabled
-                                            >
-                                              <Mail className="h-4 w-4 text-muted-foreground" />
-                                            </Button>
-                                          </span>
-                                        </TooltipTrigger>
-                                        <TooltipContent>
-                                          {t.certificates.email.errorNoEmail}
-                                        </TooltipContent>
-                                      </Tooltip>
-                                    ) : null}
-                                  </div>
-                                )}
-                              </TableCell>
+                  <div className="space-y-4">
+                    {filteredStripeDonations.length > 0 && (
+                      <div className="rounded-md border">
+                        <div className="border-b bg-muted/30 px-4 py-3">
+                          <p className="text-sm font-medium">Donacions Stripe imputades</p>
+                          <p className="text-xs text-muted-foreground">
+                            Registrades fora de Moviments i vinculades a aquest donant.
+                          </p>
+                        </div>
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>{t.donorDetail.date}</TableHead>
+                              <TableHead>{t.donorDetail.concept}</TableHead>
+                              <TableHead className="text-right">{t.donorDetail.amount}</TableHead>
+                              <TableHead className="text-center">{t.donorDetail.status}</TableHead>
                             </TableRow>
-                          );
-                        })}
-                      </TableBody>
-                    </Table>
+                          </TableHeader>
+                          <TableBody>
+                            {filteredStripeDonations.map((donation) => (
+                              <TableRow key={donation.id}>
+                                <TableCell className="text-sm">
+                                  {formatDate(donation.date)}
+                                </TableCell>
+                                <TableCell className="max-w-[150px] truncate text-sm">
+                                  {donation.description || donation.customerEmail || donation.stripePaymentId || 'Donació Stripe'}
+                                </TableCell>
+                                <TableCell className="text-right font-mono text-green-600">
+                                  {formatCurrencyEU(donation.amountGross)}
+                                </TableCell>
+                                <TableCell className="text-center">
+                                  <Badge variant="outline" className="text-blue-600 border-blue-300">
+                                    Stripe
+                                  </Badge>
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    )}
+
+                    {filteredTransactions.length > 0 && (
+                      <div className="rounded-md border">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>{t.donorDetail.date}</TableHead>
+                              <TableHead>{t.donorDetail.concept}</TableHead>
+                              <TableHead className="text-right">{t.donorDetail.amount}</TableHead>
+                              <TableHead className="text-center">{t.donorDetail.status}</TableHead>
+                              <TableHead className="text-right">{t.donorDetail.actions}</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {paginatedTransactions.map((tx, index) => {
+                              const isReturn = tx.transactionType === 'return';
+                              const isReturned = tx.donationStatus === 'returned';
+
+                              return (
+                                <TableRow key={tx.id || `tx-${index}`} className={isReturn ? 'bg-orange-50/50' : ''}>
+                                  <TableCell className="text-sm">
+                                    {formatDate(tx.date)}
+                                  </TableCell>
+                                  <TableCell className="max-w-[150px] truncate text-sm">
+                                    {tx.note || tx.description}
+                                  </TableCell>
+                                  <TableCell className={`text-right font-mono ${isReturn ? 'text-orange-600' : 'text-green-600'}`}>
+                                    {isReturn && <Undo2 className="inline h-3 w-3 mr-1" />}
+                                    {formatCurrencyEU(tx.amount)}
+                                  </TableCell>
+                                  <TableCell className="text-center">
+                                    {isReturn ? (
+                                      <Badge variant="outline" className="text-orange-600 border-orange-300">
+                                        {t.donorDetail.returnBadge}
+                                      </Badge>
+                                    ) : isReturned ? (
+                                      <Badge variant="outline" className="text-red-600 border-red-300">
+                                        {t.donorDetail.returnedBadge}
+                                      </Badge>
+                                    ) : (
+                                      <Badge variant="outline" className="text-green-600 border-green-300">
+                                        <CheckCircle2 className="h-3 w-3 mr-1" />
+                                        OK
+                                      </Badge>
+                                    )}
+                                  </TableCell>
+                                  <TableCell className="text-right">
+                                    {!isReturn && !isReturned && (
+                                      <div className="flex justify-end gap-1">
+                                        {donor.taxId ? (
+                                          <Tooltip>
+                                            <TooltipTrigger asChild>
+                                              <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                onClick={() => generateCertificate(tx)}
+                                                disabled={isGeneratingPdf}
+                                              >
+                                                {isGeneratingPdf ? (
+                                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                                ) : (
+                                                  <Download className="h-4 w-4" />
+                                                )}
+                                              </Button>
+                                            </TooltipTrigger>
+                                            <TooltipContent>
+                                              {t.donorDetail.certificate.downloadPdf}
+                                            </TooltipContent>
+                                          </Tooltip>
+                                        ) : (
+                                          <Tooltip>
+                                            <TooltipTrigger asChild>
+                                              <span>
+                                                <Button
+                                                  variant="ghost"
+                                                  size="icon"
+                                                  disabled
+                                                >
+                                                  <Download className="h-4 w-4 text-muted-foreground" />
+                                                </Button>
+                                              </span>
+                                            </TooltipTrigger>
+                                            <TooltipContent>
+                                              {t.donorDetail.certificate.needsTaxId}
+                                            </TooltipContent>
+                                          </Tooltip>
+                                        )}
+                                        {donor.taxId && donor.email ? (
+                                          <Tooltip>
+                                            <TooltipTrigger asChild>
+                                              <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                onClick={() => sendCertificateByEmail(tx)}
+                                                disabled={isSendingEmail}
+                                              >
+                                                {isSendingEmail ? (
+                                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                                ) : (
+                                                  <Mail className="h-4 w-4" />
+                                                )}
+                                              </Button>
+                                            </TooltipTrigger>
+                                            <TooltipContent>
+                                              {t.certificates.email.sendOne}
+                                            </TooltipContent>
+                                          </Tooltip>
+                                        ) : donor.taxId ? (
+                                          <Tooltip>
+                                            <TooltipTrigger asChild>
+                                              <span>
+                                                <Button
+                                                  variant="ghost"
+                                                  size="icon"
+                                                  disabled
+                                                >
+                                                  <Mail className="h-4 w-4 text-muted-foreground" />
+                                                </Button>
+                                              </span>
+                                            </TooltipTrigger>
+                                            <TooltipContent>
+                                              {t.certificates.email.errorNoEmail}
+                                            </TooltipContent>
+                                          </Tooltip>
+                                        ) : null}
+                                      </div>
+                                    )}
+                                  </TableCell>
+                                </TableRow>
+                              );
+                            })}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    )}
                   </div>
 
                   {/* Paginació */}

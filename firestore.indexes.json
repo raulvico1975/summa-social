@@ -108,6 +108,20 @@
       ]
     },
     {
+      "collectionGroup": "contacts",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "type",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "name",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
       "collectionGroup": "pendingDocuments",
       "queryScope": "COLLECTION",
       "fields": [
