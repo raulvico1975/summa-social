@@ -80,6 +80,8 @@ import {
 import { cn } from '@/lib/utils';
 import { MOBILE_ACTIONS_BAR, MOBILE_CTA_PRIMARY, MOBILE_CTA_TRUNCATE } from '@/lib/ui/mobile-actions';
 import { isFiscalDonationCandidate } from '@/lib/fiscal/is-fiscal-donation-candidate';
+import type { Donation } from '@/lib/types/donations';
+import { mergeTransactionsWithStripeDonations } from '@/lib/fiscal/stripe-donations-fiscal-source';
 
 let jsPdfModulePromise: Promise<typeof import('jspdf')> | null = null;
 
@@ -338,9 +340,19 @@ export function DonationCertificateGenerator() {
       );
       const transactionsSnapshot = await getDocs(transactionsQuery);
       const allTransactions: Transaction[] = transactionsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Transaction));
+
+      const donationsRef = collection(firestore, 'organizations', organizationId, 'donations');
+      const donationsQuery = query(
+        donationsRef,
+        where('date', '>=', yearStart),
+        where('date', '<=', yearEnd)
+      );
+      const donationsSnapshot = await getDocs(donationsQuery);
+      const stripeDonations: Donation[] = donationsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Donation));
+      const fiscalTransactions = mergeTransactionsWithStripeDonations(allTransactions, stripeDonations);
       
       // Criteri fiscal únic: només transactionType='donation' (helper unificat)
-      const yearDonations = allTransactions.filter(tx => {
+      const yearDonations = fiscalTransactions.filter(tx => {
         const txDate = tx.date.substring(0, 10);
         return tx.amount > 0 &&
                isFiscalDonationCandidate(tx) &&

@@ -15,6 +15,7 @@ interface DonorSearchComboboxProps {
   onSelect: (donorId: string | null) => void;
   placeholder?: string;
   className?: string;
+  badgesByDonorId?: Record<string, string>;
 }
 
 export function DonorSearchCombobox({
@@ -23,6 +24,7 @@ export function DonorSearchCombobox({
   onSelect,
   placeholder,
   className,
+  badgesByDonorId = {},
 }: DonorSearchComboboxProps) {
   const { t } = useTranslations();
   const [open, setOpen] = React.useState(false);
@@ -80,12 +82,17 @@ export function DonorSearchCombobox({
         className="w-full min-w-0 justify-between overflow-hidden"
       >
         {selectedDonor ? (
-          <span className="flex min-w-0 flex-1 items-center gap-2">
-            <Heart className="h-4 w-4 text-red-500 shrink-0" />
-            <span className="truncate">{selectedDonor.name}</span>
-            {selectedDonor.taxId && (
-              <span className="truncate text-muted-foreground text-xs">({selectedDonor.taxId})</span>
-            )}
+            <span className="flex min-w-0 flex-1 items-center gap-2">
+              <Heart className="h-4 w-4 text-red-500 shrink-0" />
+              <span className="truncate">{selectedDonor.name}</span>
+              {badgesByDonorId[selectedDonor.id] && (
+                <span className="shrink-0 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-amber-700">
+                  {badgesByDonorId[selectedDonor.id]}
+                </span>
+              )}
+              {selectedDonor.taxId && (
+                <span className="truncate text-muted-foreground text-xs">({selectedDonor.taxId})</span>
+              )}
           </span>
         ) : (
           <span className="text-muted-foreground flex min-w-0 flex-1 items-center gap-2">
@@ -149,7 +156,14 @@ export function DonorSearchCombobox({
                       />
                       <Heart className="h-3 w-3 text-red-500 shrink-0" />
                       <div className="flex flex-col min-w-0 flex-1 text-left">
-                        <span className="truncate">{donor.name}</span>
+                        <span className="flex items-center gap-2 truncate">
+                          <span className="truncate">{donor.name}</span>
+                          {badgesByDonorId[donor.id] && (
+                            <span className="shrink-0 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-amber-700">
+                              {badgesByDonorId[donor.id]}
+                            </span>
+                          )}
+                        </span>
                         {donor.taxId && (
                           <span className="text-xs text-muted-foreground">{donor.taxId}</span>
                         )}

@@ -73,6 +73,20 @@ ch_124,2024-01-15 11:00:00,"10,00","0,40","9,60",paid,po_abc,another@example.com
     assert.strictEqual(result.rows[1].fee, 0.4);
   });
 
+  it('should parse semicolon-separated CSV without ERR_NO_COLUMNS', () => {
+    const csvContent = `id;Created date (UTC);Amount;Fee;Net;Status;Transfer;Customer Email;Amount Refunded
+ch_123;2024-01-15 10:30:00;12,00;0,43;11,57;Paid;po_abc;donor@example.com;0
+ch_124;2024-01-15 11:00:00;10,00;0,40;9,60;paid;po_abc;another@example.com;0`;
+
+    const result = parseStripeCsv(csvContent);
+
+    assert.strictEqual(result.rows.length, 2);
+    assert.strictEqual(result.rows[0].amount, 12);
+    assert.strictEqual(result.rows[0].fee, 0.43);
+    assert.strictEqual(result.rows[0].transfer, 'po_abc');
+    assert.strictEqual(result.warnings.length, 0);
+  });
+
   it('should exclude refunded payments and add warning', () => {
     const csvContent = `id,Created date (UTC),Amount,Fee,Net,Status,Transfer,Customer Email,Amount Refunded
 ch_123,2024-01-15 10:30:00,100.00,3.20,96.80,succeeded,po_abc,donor@example.com,0
