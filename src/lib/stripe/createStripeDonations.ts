@@ -1,88 +1,109 @@
-import type { Donation } from '@/lib/types/donations';
+import type { Donation, DonationImputationOrigin } from '@/lib/types/donations';
 
 export const ERR_STRIPE_DUPLICATE_PAYMENT = 'ERR_STRIPE_DUPLICATE_PAYMENT';
+export const ERR_STRIPE_CONTACT_REQUIRED = 'ERR_STRIPE_CONTACT_REQUIRED';
 
 export interface StripePaymentInput {
-  stripePaymentId: string;
+  stripePaymentId?: string | null;
   amount: number;
-  fee: number;
+  fee?: number | null;
   contactId: string | null;
   date: string;
   customerEmail?: string | null;
   description?: string | null;
+  imputationOrigin?: DonationImputationOrigin;
 }
 
-export interface CreateStripeDonationsInput {
+interface CreateStripeDonationsInput {
   parentTransactionId: string;
   payments: StripePaymentInput[];
-  bankAmount?: number | null;
+  bankAmount?: number;
   adjustmentDate?: string;
-  findDonationByStripePaymentId: (stripePaymentId: string) => Promise<Donation | null>;
+  findDonationByStripePaymentId?: (
+    stripePaymentId: string
+  ) => Promise<Donation | Record<string, unknown> | null>;
 }
 
-export interface CreateStripeDonationsResult {
+function roundCurrency(value: number): number {
+  return Math.round(value * 100) / 100;
+}
+
+export async function createStripeDonations(input: CreateStripeDonationsInput): Promise<{
   donations: Donation[];
   adjustment: Donation | null;
-}
-
-export async function createStripeDonations({
-  parentTransactionId,
-  payments,
-  bankAmount = null,
-  adjustmentDate,
-  findDonationByStripePaymentId,
-}: CreateStripeDonationsInput): Promise<CreateStripeDonationsResult> {
+}> {
   const seenStripePaymentIds = new Set<string>();
   const donations: Donation[] = [];
 
-  for (const payment of payments) {
-    const stripePaymentId = payment.stripePaymentId.trim();
-    if (!stripePaymentId) {
-      throw new Error('ERR_STRIPE_PAYMENT_ID_REQUIRED');
-    }
+  let grossTotal = 0;
+  let feeTotal = 0;
+
+  for (const payment of input.payments) {
     if (!payment.contactId) {
-      throw new Error('ERR_STRIPE_CONTACT_REQUIRED');
-    }
-    if (seenStripePaymentIds.has(stripePaymentId)) {
-      throw new Error(ERR_STRIPE_DUPLICATE_PAYMENT);
+      throw new Error(ERR_STRIPE_CONTACT_REQUIRED);
     }
 
-    const exists = await findDonationByStripePaymentId(stripePaymentId);
-    if (exists) {
-      throw new Error(ERR_STRIPE_DUPLICATE_PAYMENT);
+    const amountGross = roundCurrency(payment.amount);
+    if (!(amountGross > 0)) {
+      continue;
     }
 
-    seenStripePaymentIds.add(stripePaymentId);
+    const feeAmount = roundCurrency(payment.fee ?? 0);
+    const stripePaymentId = payment.stripePaymentId?.trim() || null;
+    if (stripePaymentId) {
+      if (seenStripePaymentIds.has(stripePaymentId)) {
+        throw new Error(ERR_STRIPE_DUPLICATE_PAYMENT);
+      }
+      seenStripePaymentIds.add(stripePaymentId);
+
+      const existingDonation = await input.findDonationByStripePaymentId?.(stripePaymentId);
+      const archivedAt =
+        existingDonation && typeof existingDonation === 'object'
+          ? (existingDonation.archivedAt as string | null | undefined)
+          : null;
+      if (existingDonation && !archivedAt) {
+        throw new Error(ERR_STRIPE_DUPLICATE_PAYMENT);
+      }
+    }
+
     donations.push({
       date: payment.date,
-      contactId: payment.contactId,
-      amountGross: payment.amount,
-      source: 'stripe',
-      stripePaymentId,
-      parentTransactionId,
       type: 'donation',
-      description: payment.description ?? `Donacio Stripe - ${payment.customerEmail ?? stripePaymentId}`,
+      source: 'stripe',
+      contactId: payment.contactId,
+      amountGross,
+      feeAmount,
+      parentTransactionId: input.parentTransactionId,
+      stripePaymentId,
       customerEmail: payment.customerEmail ?? null,
+      description: payment.description ?? null,
+      imputationOrigin: payment.imputationOrigin ?? 'csv',
       archivedAt: null,
     });
+
+    grossTotal += amountGross;
+    feeTotal += feeAmount;
   }
 
-  const expectedNet = payments.reduce((sum, payment) => sum + (payment.amount - payment.fee), 0);
-  const diff = bankAmount == null ? 0 : Number((bankAmount - expectedNet).toFixed(2));
-  const adjustment =
-    bankAmount != null && Math.abs(diff) > 0
-      ? {
-          date: adjustmentDate ?? donations[0]?.date ?? new Date().toISOString().slice(0, 10),
-          contactId: null,
-          amount: diff,
-          source: 'stripe' as const,
-          parentTransactionId,
-          type: 'stripe_adjustment' as const,
-          description: 'Ajust Stripe',
-          archivedAt: null,
-        }
-      : null;
+  const bankAmount = input.bankAmount ?? roundCurrency(grossTotal - feeTotal);
+  const netTotal = roundCurrency(grossTotal - feeTotal);
+  const difference = roundCurrency(bankAmount - netTotal);
+  const adjustment = Math.abs(difference) > 0.009
+    ? {
+        date: input.adjustmentDate ?? input.payments[0]?.date ?? new Date().toISOString().slice(0, 10),
+        type: 'stripe_adjustment',
+        source: 'stripe',
+        contactId: null,
+        amount: difference,
+        parentTransactionId: input.parentTransactionId,
+        description: 'Ajust Stripe',
+        imputationOrigin: 'system',
+        archivedAt: null,
+      }
+    : null;
 
-  return { donations, adjustment };
+  return {
+    donations,
+    adjustment,
+  };
 }
-

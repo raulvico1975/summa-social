@@ -987,7 +987,6 @@ export const TransactionRow = React.memo(function TransactionRow({
               </DropdownMenuItem>
             )}
             {tx.amount > 0 && !isReturn && !isReturnFee && !tx.isRemittance && !tx.isRemittanceItem && !showStripeBadge && !hasStripeChildren && (
-            {tx.amount > 0 && !isReturn && !isReturnFee && !tx.isRemittance && !tx.isRemittanceItem && !showStripeBadge && !hasStripeChildren && (
               <DropdownMenuItem onClick={handleSplitRemittance}>
                 <GitMerge className="mr-2 h-4 w-4" />
                 {t.splitRemittance}

@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
+import { useFirebase } from '@/firebase';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
 import Link from 'next/link';
 import { collection, query, where, orderBy, limit, onSnapshot } from 'firebase/firestore';
@@ -20,10 +20,7 @@ import {
   isDrawerDonationCandidate,
   type DonorSummaryResult,
 } from '@/lib/fiscal/calculateDonorSummary';
-import {
-  filterStripeDonationsForDrawer,
-  isStripeDonationForDrawer,
-} from '@/lib/donor-detail/stripe-donations-for-drawer';
+import { mergeUnifiedFiscalDonations } from '@/lib/fiscal/getUnifiedFiscalDonations';
 
 // UI Components
 import {
@@ -109,6 +106,8 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
   const { organizationId, organization, orgSlug } = useCurrentOrganization();
   const { t, language } = useTranslations();
   const { toast } = useToast();
+  const stripeIndividualCertificateBlockedMessage =
+    "Certificat individual no disponible per donacions Stripe fins que quedi alineat amb la font fiscal unificada.";
 
   const currentYear = new Date().getFullYear();
   const [selectedYear, setSelectedYear] = React.useState<string>(String(currentYear));
@@ -139,13 +138,15 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
     };
   };
 
+  const isStripeIndividualCertificateBlocked = React.useCallback((tx: Transaction): boolean => {
+    return tx.source === 'stripe' || !!tx.stripePaymentId;
+  }, []);
+
   // Transaccions del donant - usar onSnapshot per gestionar errors de permisos
   const [transactions, setTransactions] = React.useState<Transaction[] | null>(null);
+  const [stripeDonations, setStripeDonations] = React.useState<Donation[] | null>(null);
   const [isLoading, setIsLoading] = React.useState(true);
   const [permissionError, setPermissionError] = React.useState(false);
-  const [stripeDonations, setStripeDonations] = React.useState<Donation[] | null>(null);
-  const [isLoadingStripeDonations, setIsLoadingStripeDonations] = React.useState(true);
-  const [stripePermissionError, setStripePermissionError] = React.useState(false);
 
   React.useEffect(() => {
     if (!organizationId || !donor || !open) {
@@ -162,23 +163,24 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
     // HOTFIX: Treure where('archivedAt','==',null) de query perquè moltes tx legacy
     // no tenen el camp archivedAt. Filtrem client-side amb tolerància (!tx.archivedAt).
     const txRef = collection(firestore, 'organizations', organizationId, 'transactions');
+    const donationsRef = collection(firestore, 'organizations', organizationId, 'donations');
     const txQuery = query(
       txRef,
       where('contactId', '==', donor.id),
       orderBy('date', 'desc'),
       limit(1000)
     );
+    const donationsQuery = query(
+      donationsRef,
+      where('contactId', '==', donor.id),
+      limit(1000)
+    );
 
-    const unsubscribe = onSnapshot(
+    const unsubscribeTransactions = onSnapshot(
       txQuery,
       (snapshot) => {
-        // HOTFIX: Filtre client-side tolerant (inclou null, undefined, "")
-        const donorTxs = snapshot.docs
-          .map(doc => ({ id: doc.id, ...doc.data() } as Transaction))
-          .filter(tx => !tx.archivedAt);
+        const donorTxs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Transaction));
         setTransactions(donorTxs);
-        setIsLoading(false);
-        setPermissionError(false);
       },
       (error) => {
         console.warn('Donor transactions not available:', error.message);
@@ -188,97 +190,80 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
       }
     );
 
-    return () => unsubscribe();
-  }, [firestore, organizationId, donor?.id, open]);
-
-  React.useEffect(() => {
-    if (!organizationId || !donor || !open) {
-      setIsLoadingStripeDonations(false);
-      return;
-    }
-
-    setIsLoadingStripeDonations(true);
-    setStripePermissionError(false);
-
-    const donationsRef = collection(firestore, 'organizations', organizationId, 'donations');
-    const donationsQuery = query(
-      donationsRef,
-      where('contactId', '==', donor.id),
-      limit(1000)
-    );
-
-    const unsubscribe = onSnapshot(
+    const unsubscribeDonations = onSnapshot(
       donationsQuery,
       (snapshot) => {
-        const donorStripeDonations = snapshot.docs
-          .map((doc) => ({ id: doc.id, ...(doc.data() as Donation) }))
-          .filter(isStripeDonationForDrawer);
-        setStripeDonations(donorStripeDonations);
-        setIsLoadingStripeDonations(false);
-        setStripePermissionError(false);
+        const donorDonations = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Donation));
+        setStripeDonations(donorDonations);
+        setIsLoading(false);
+        setPermissionError(false);
       },
       (error) => {
         console.warn('Donor Stripe donations not available:', error.message);
-        setIsLoadingStripeDonations(false);
-        setStripePermissionError(true);
+        setIsLoading(false);
+        setPermissionError(true);
         setStripeDonations([]);
       }
     );
 
-    return () => unsubscribe();
+    return () => {
+      unsubscribeTransactions();
+      unsubscribeDonations();
+    };
   }, [firestore, organizationId, donor?.id, open]);
+
+  const fiscalTransactions = React.useMemo(() => {
+    return mergeUnifiedFiscalDonations({
+      transactions: transactions ?? [],
+      donations: stripeDonations ?? [],
+    });
+  }, [stripeDonations, transactions]);
 
   // Anys disponibles (dels quals hi ha transaccions)
   const availableYears = React.useMemo(() => {
-    if (!transactions) return [String(currentYear)];
+    if (fiscalTransactions.length === 0) return [String(currentYear)];
     const years = new Set<string>();
-    transactions.forEach(tx => {
+    fiscalTransactions.forEach(tx => {
       const year = tx.date.substring(0, 4);
-      years.add(year);
-    });
-    (stripeDonations ?? []).forEach((donation) => {
-      const year = donation.date.substring(0, 4);
       years.add(year);
     });
     // Afegir any actual si no hi és
     years.add(String(currentYear));
     return Array.from(years).sort((a, b) => Number(b) - Number(a));
-  }, [transactions, stripeDonations, currentYear]);
+  }, [fiscalTransactions, currentYear]);
 
   // Calcular resum fiscal (font única de veritat)
   const summary = React.useMemo<DonorSummaryResult>(() => {
     if (!donor) {
       return createEmptyDonorSummary({
-        transactions: transactions ?? [],
+        transactions: fiscalTransactions,
         donorId: '',
         year: selectedYearNumber,
       });
     }
 
     return calculateDonorSummary({
-      transactions: transactions ?? [],
+      transactions: fiscalTransactions,
       donorId: donor.id,
       year: selectedYearNumber,
     });
-  }, [transactions, selectedYearNumber, donor]);
+  }, [fiscalTransactions, selectedYearNumber, donor]);
 
   // Per defecte: historial obert si <= 5 donacions
   React.useEffect(() => {
-    if (transactions || stripeDonations) {
-      const donationsCount =
-        (transactions?.filter(isDrawerDonationCandidate).length ?? 0) +
-        (stripeDonations?.length ?? 0);
-      setIsHistoryOpen(donationsCount > 0 && donationsCount <= 5);
+    if (fiscalTransactions.length > 0) {
+      const donationsCount = fiscalTransactions.filter(isDrawerDonationCandidate).length;
+      setIsHistoryOpen(donationsCount <= 5);
     }
-  }, [transactions, stripeDonations]);
+  }, [fiscalTransactions]);
 
   // Filtrar transaccions per any i estat
   const effectiveReturnIdSet = React.useMemo(() => new Set(summary.effectiveReturnIds), [summary.effectiveReturnIds]);
 
   const filteredTransactions = React.useMemo(() => {
-    if (!transactions) return [];
+    if (fiscalTransactions.length === 0) return [];
 
-    return transactions.filter(tx => {
+    return fiscalTransactions.filter(tx => {
       // Filtrar per any
       if (!tx.date.startsWith(selectedYear)) return false;
       const txKey = getDonorSummaryTransactionKey(tx);
@@ -291,15 +276,7 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
       // 'all': mostrar donacions vàlides i devolucions
       return isDrawerDonationCandidate(tx) || isEffectiveReturn;
     });
-  }, [transactions, selectedYear, filterStatus, effectiveReturnIdSet]);
-
-  const filteredStripeDonations = React.useMemo(() => {
-    return filterStripeDonationsForDrawer({
-      donations: stripeDonations ?? [],
-      selectedYear,
-      filterStatus,
-    });
-  }, [filterStatus, selectedYear, stripeDonations]);
+  }, [effectiveReturnIdSet, fiscalTransactions, filterStatus, selectedYear]);
 
   // Paginació
   const totalPages = Math.ceil(filteredTransactions.length / itemsPerPage);
@@ -364,6 +341,14 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
   // Generar certificat individual
   const generateCertificate = async (tx: Transaction) => {
     if (!donor || !organization) return;
+    if (isStripeIndividualCertificateBlocked(tx)) {
+      toast({
+        variant: 'destructive',
+        title: t.common.error,
+        description: stripeIndividualCertificateBlockedMessage,
+      });
+      return;
+    }
 
     setIsGeneratingPdf(true);
     try {
@@ -566,7 +551,7 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
   };
 
   const resolveAnnualCertificateScope = (year: string) => {
-    if (!donor || !transactions) return null;
+    if (!donor) return null;
 
     const parsedYear = Number.parseInt(year, 10);
     if (!Number.isFinite(parsedYear)) {
@@ -588,7 +573,7 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
     }
 
     const expectedFingerprint = buildDonorSummaryDatasetFingerprint({
-      transactions,
+      transactions: fiscalTransactions,
       donorId: donor.id,
       year: parsedYear,
     });
@@ -893,6 +878,14 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
   // Enviar certificat individual per email
   const sendCertificateByEmail = async (tx: Transaction) => {
     if (!donor || !organization) return;
+    if (isStripeIndividualCertificateBlocked(tx)) {
+      toast({
+        variant: 'destructive',
+        title: t.common.error,
+        description: stripeIndividualCertificateBlockedMessage,
+      });
+      return;
+    }
 
     if (!donor.email) {
       toast({
@@ -1407,7 +1400,7 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
         </SheetHeader>
 
         {/* Missatge d'error de permisos */}
-        {(permissionError || stripePermissionError) && (
+        {permissionError && (
           <div className="my-4 p-3 rounded-lg bg-amber-50 border border-amber-200 flex items-center gap-2 text-amber-800">
             <AlertTriangle className="h-4 w-4 flex-shrink-0" />
             <p className="text-sm">{t.donorDetail.permissionError || "No s'ha pogut carregar l'historial de donacions."}</p>
@@ -1662,192 +1655,154 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
               </div>
 
               {/* Taula */}
-              {isLoading || isLoadingStripeDonations ? (
+              {isLoading ? (
                 <div className="flex items-center justify-center py-8">
                   <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
                 </div>
-              ) : filteredTransactions.length === 0 && filteredStripeDonations.length === 0 ? (
+              ) : filteredTransactions.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
                   {t.donorDetail.noDonationsInPeriod}
                 </div>
               ) : (
                 <TooltipProvider>
-                  <div className="space-y-4">
-                    {filteredStripeDonations.length > 0 && (
-                      <div className="rounded-md border">
-                        <div className="border-b bg-muted/30 px-4 py-3">
-                          <p className="text-sm font-medium">Donacions Stripe imputades</p>
-                          <p className="text-xs text-muted-foreground">
-                            Registrades fora de Moviments i vinculades a aquest donant.
-                          </p>
-                        </div>
-                        <Table>
-                          <TableHeader>
-                            <TableRow>
-                              <TableHead>{t.donorDetail.date}</TableHead>
-                              <TableHead>{t.donorDetail.concept}</TableHead>
-                              <TableHead className="text-right">{t.donorDetail.amount}</TableHead>
-                              <TableHead className="text-center">{t.donorDetail.status}</TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {filteredStripeDonations.map((donation) => (
-                              <TableRow key={donation.id}>
-                                <TableCell className="text-sm">
-                                  {formatDate(donation.date)}
-                                </TableCell>
-                                <TableCell className="max-w-[150px] truncate text-sm">
-                                  {donation.description || donation.customerEmail || donation.stripePaymentId || 'Donació Stripe'}
-                                </TableCell>
-                                <TableCell className="text-right font-mono text-green-600">
-                                  {formatCurrencyEU(donation.amountGross)}
-                                </TableCell>
-                                <TableCell className="text-center">
-                                  <Badge variant="outline" className="text-blue-600 border-blue-300">
-                                    Stripe
+                  <div className="rounded-md border">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>{t.donorDetail.date}</TableHead>
+                          <TableHead>{t.donorDetail.concept}</TableHead>
+                          <TableHead className="text-right">{t.donorDetail.amount}</TableHead>
+                          <TableHead className="text-center">{t.donorDetail.status}</TableHead>
+                          <TableHead className="text-right">{t.donorDetail.actions}</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {paginatedTransactions.map((tx, index) => {
+                          const isReturn = tx.transactionType === 'return';
+                          const isReturned = tx.donationStatus === 'returned';
+                          const isStripeCertificateBlocked = isStripeIndividualCertificateBlocked(tx);
+
+                          return (
+                            <TableRow key={tx.id || `tx-${index}`} className={isReturn ? 'bg-orange-50/50' : ''}>
+                              <TableCell className="text-sm">
+                                {formatDate(tx.date)}
+                              </TableCell>
+                              <TableCell className="max-w-[150px] truncate text-sm">
+                                {tx.note || tx.description}
+                              </TableCell>
+                              <TableCell className={`text-right font-mono ${isReturn ? 'text-orange-600' : 'text-green-600'}`}>
+                                {isReturn && <Undo2 className="inline h-3 w-3 mr-1" />}
+                                {formatCurrencyEU(tx.amount)}
+                              </TableCell>
+                              <TableCell className="text-center">
+                                {isReturn ? (
+                                  <Badge variant="outline" className="text-orange-600 border-orange-300">
+                                    {t.donorDetail.returnBadge}
                                   </Badge>
-                                </TableCell>
-                              </TableRow>
-                            ))}
-                          </TableBody>
-                        </Table>
-                      </div>
-                    )}
-
-                    {filteredTransactions.length > 0 && (
-                      <div className="rounded-md border">
-                        <Table>
-                          <TableHeader>
-                            <TableRow>
-                              <TableHead>{t.donorDetail.date}</TableHead>
-                              <TableHead>{t.donorDetail.concept}</TableHead>
-                              <TableHead className="text-right">{t.donorDetail.amount}</TableHead>
-                              <TableHead className="text-center">{t.donorDetail.status}</TableHead>
-                              <TableHead className="text-right">{t.donorDetail.actions}</TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {paginatedTransactions.map((tx, index) => {
-                              const isReturn = tx.transactionType === 'return';
-                              const isReturned = tx.donationStatus === 'returned';
-
-                              return (
-                                <TableRow key={tx.id || `tx-${index}`} className={isReturn ? 'bg-orange-50/50' : ''}>
-                                  <TableCell className="text-sm">
-                                    {formatDate(tx.date)}
-                                  </TableCell>
-                                  <TableCell className="max-w-[150px] truncate text-sm">
-                                    {tx.note || tx.description}
-                                  </TableCell>
-                                  <TableCell className={`text-right font-mono ${isReturn ? 'text-orange-600' : 'text-green-600'}`}>
-                                    {isReturn && <Undo2 className="inline h-3 w-3 mr-1" />}
-                                    {formatCurrencyEU(tx.amount)}
-                                  </TableCell>
-                                  <TableCell className="text-center">
-                                    {isReturn ? (
-                                      <Badge variant="outline" className="text-orange-600 border-orange-300">
-                                        {t.donorDetail.returnBadge}
-                                      </Badge>
-                                    ) : isReturned ? (
-                                      <Badge variant="outline" className="text-red-600 border-red-300">
-                                        {t.donorDetail.returnedBadge}
-                                      </Badge>
+                                ) : isReturned ? (
+                                  <Badge variant="outline" className="text-red-600 border-red-300">
+                                    {t.donorDetail.returnedBadge}
+                                  </Badge>
+                                ) : (
+                                  <Badge variant="outline" className="text-green-600 border-green-300">
+                                    <CheckCircle2 className="h-3 w-3 mr-1" />
+                                    OK
+                                  </Badge>
+                                )}
+                              </TableCell>
+                              <TableCell className="text-right">
+                                {!isReturn && !isReturned && (
+                                  <div className="flex justify-end gap-1">
+                                    {/* Descarregar certificat individual */}
+                                    {donor.taxId && !isStripeCertificateBlocked ? (
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            onClick={() => generateCertificate(tx)}
+                                            disabled={isGeneratingPdf}
+                                          >
+                                            {isGeneratingPdf ? (
+                                              <Loader2 className="h-4 w-4 animate-spin" />
+                                            ) : (
+                                              <Download className="h-4 w-4" />
+                                            )}
+                                          </Button>
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                          {t.donorDetail.certificate.downloadPdf}
+                                        </TooltipContent>
+                                      </Tooltip>
                                     ) : (
-                                      <Badge variant="outline" className="text-green-600 border-green-300">
-                                        <CheckCircle2 className="h-3 w-3 mr-1" />
-                                        OK
-                                      </Badge>
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <span>
+                                            <Button
+                                              variant="ghost"
+                                              size="icon"
+                                              disabled
+                                            >
+                                              <Download className="h-4 w-4 text-muted-foreground" />
+                                            </Button>
+                                          </span>
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                          {isStripeCertificateBlocked
+                                            ? stripeIndividualCertificateBlockedMessage
+                                            : t.donorDetail.certificate.needsTaxId}
+                                        </TooltipContent>
+                                      </Tooltip>
                                     )}
-                                  </TableCell>
-                                  <TableCell className="text-right">
-                                    {!isReturn && !isReturned && (
-                                      <div className="flex justify-end gap-1">
-                                        {donor.taxId ? (
-                                          <Tooltip>
-                                            <TooltipTrigger asChild>
-                                              <Button
-                                                variant="ghost"
-                                                size="icon"
-                                                onClick={() => generateCertificate(tx)}
-                                                disabled={isGeneratingPdf}
-                                              >
-                                                {isGeneratingPdf ? (
-                                                  <Loader2 className="h-4 w-4 animate-spin" />
-                                                ) : (
-                                                  <Download className="h-4 w-4" />
-                                                )}
-                                              </Button>
-                                            </TooltipTrigger>
-                                            <TooltipContent>
-                                              {t.donorDetail.certificate.downloadPdf}
-                                            </TooltipContent>
-                                          </Tooltip>
-                                        ) : (
-                                          <Tooltip>
-                                            <TooltipTrigger asChild>
-                                              <span>
-                                                <Button
-                                                  variant="ghost"
-                                                  size="icon"
-                                                  disabled
-                                                >
-                                                  <Download className="h-4 w-4 text-muted-foreground" />
-                                                </Button>
-                                              </span>
-                                            </TooltipTrigger>
-                                            <TooltipContent>
-                                              {t.donorDetail.certificate.needsTaxId}
-                                            </TooltipContent>
-                                          </Tooltip>
-                                        )}
-                                        {donor.taxId && donor.email ? (
-                                          <Tooltip>
-                                            <TooltipTrigger asChild>
-                                              <Button
-                                                variant="ghost"
-                                                size="icon"
-                                                onClick={() => sendCertificateByEmail(tx)}
-                                                disabled={isSendingEmail}
-                                              >
-                                                {isSendingEmail ? (
-                                                  <Loader2 className="h-4 w-4 animate-spin" />
-                                                ) : (
-                                                  <Mail className="h-4 w-4" />
-                                                )}
-                                              </Button>
-                                            </TooltipTrigger>
-                                            <TooltipContent>
-                                              {t.certificates.email.sendOne}
-                                            </TooltipContent>
-                                          </Tooltip>
-                                        ) : donor.taxId ? (
-                                          <Tooltip>
-                                            <TooltipTrigger asChild>
-                                              <span>
-                                                <Button
-                                                  variant="ghost"
-                                                  size="icon"
-                                                  disabled
-                                                >
-                                                  <Mail className="h-4 w-4 text-muted-foreground" />
-                                                </Button>
-                                              </span>
-                                            </TooltipTrigger>
-                                            <TooltipContent>
-                                              {t.certificates.email.errorNoEmail}
-                                            </TooltipContent>
-                                          </Tooltip>
-                                        ) : null}
-                                      </div>
-                                    )}
-                                  </TableCell>
-                                </TableRow>
-                              );
-                            })}
-                          </TableBody>
-                        </Table>
-                      </div>
-                    )}
+                                    {/* Enviar certificat individual per email */}
+                                    {donor.taxId && donor.email && !isStripeCertificateBlocked ? (
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            onClick={() => sendCertificateByEmail(tx)}
+                                            disabled={isSendingEmail}
+                                          >
+                                            {isSendingEmail ? (
+                                              <Loader2 className="h-4 w-4 animate-spin" />
+                                            ) : (
+                                              <Mail className="h-4 w-4" />
+                                            )}
+                                          </Button>
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                          {t.certificates.email.sendOne}
+                                        </TooltipContent>
+                                      </Tooltip>
+                                    ) : donor.taxId ? (
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <span>
+                                            <Button
+                                              variant="ghost"
+                                              size="icon"
+                                              disabled
+                                            >
+                                              <Mail className="h-4 w-4 text-muted-foreground" />
+                                            </Button>
+                                          </span>
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                          {isStripeCertificateBlocked
+                                            ? stripeIndividualCertificateBlockedMessage
+                                            : t.certificates.email.errorNoEmail}
+                                        </TooltipContent>
+                                      </Tooltip>
+                                    ) : null}
+                                  </div>
+                                )}
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
                   </div>
 
                   {/* Paginació */}
