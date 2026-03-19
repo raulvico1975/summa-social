@@ -57,9 +57,6 @@ interface TransactionRowMobileProps {
   onSplitRemittance?: (tx: Transaction) => void;
   onSplitAmount?: (tx: Transaction) => void;
   onSplitStripeRemittance?: (tx: Transaction) => void;
-  hasStripeImputation?: boolean;
-  stripeImputationSummary?: { donationCount: number; adjustmentCount: number } | null;
-  onUndoStripeImputation?: (tx: Transaction) => void;
   onOpenSplitDetail?: (txId: string) => void;
   onUndoSplit?: (txId: string) => void;
   onUndoRemittance?: (tx: Transaction) => void;
@@ -84,7 +81,6 @@ interface TransactionRowMobileProps {
     splitRemittance?: string;
     splitPaymentRemittance?: string;
     splitStripeRemittance?: string;
-    undoStripeImputation?: string;
     deleteBlocked: string;
     deleteBlockedParentRemittance: string;
     deleteBlockedChildRemittance: string;
@@ -110,9 +106,6 @@ export const TransactionRowMobile = React.memo(function TransactionRowMobile({
   onSplitRemittance,
   onSplitAmount,
   onSplitStripeRemittance,
-  hasStripeImputation,
-  stripeImputationSummary,
-  onUndoStripeImputation,
   onOpenSplitDetail,
   onUndoSplit,
   onUndoRemittance,
@@ -362,7 +355,7 @@ export const TransactionRowMobile = React.memo(function TransactionRowMobile({
       </div>
 
       {/* Middle: Badges (type + remittance) */}
-      {(isReturn || isReturnFee || isReturnedDonation || tx.isRemittance || hasStripeImputation || canShowUndoSplitAction(tx)) && (
+      {(isReturn || isReturnFee || isReturnedDonation || tx.isRemittance || canShowUndoSplitAction(tx)) && (
         <div className="mt-2 flex flex-wrap gap-1">
           {isReturn && (
             <Badge variant="destructive" className="gap-0.5 text-xs py-0 px-1.5">
@@ -389,12 +382,6 @@ export const TransactionRowMobile = React.memo(function TransactionRowMobile({
             >
               <Eye className="h-3 w-3" />
               {tx.remittanceResolvedCount ?? tx.remittanceItemCount}/{tx.remittanceItemCount} {t.remittanceQuotes}
-            </Badge>
-          )}
-          {hasStripeImputation && (
-            <Badge variant="outline" className="gap-0.5 text-xs py-0 px-1.5 border-sky-300 text-sky-700 bg-sky-50">
-              <Eye className="h-3 w-3" />
-              Stripe {stripeImputationSummary?.donationCount ?? 0}
             </Badge>
           )}
           {canShowUndoSplitAction(tx) && onOpenSplitDetail && (
@@ -462,18 +449,11 @@ export const TransactionRowMobile = React.memo(function TransactionRowMobile({
               </DropdownMenuItem>
             )}
             <DropdownMenuSeparator />
-            {((canSplitStripeRemittance && onSplitStripeRemittance) || (hasStripeImputation && onUndoStripeImputation)) && (
-              hasStripeImputation && onUndoStripeImputation ? (
-                <DropdownMenuItem onClick={() => onUndoStripeImputation(tx)}>
-                  <Undo2 className="h-4 w-4 mr-2 text-orange-600" />
-                  {t.undoStripeImputation || 'Desfer imputació Stripe'}
-                </DropdownMenuItem>
-              ) : (
-                <DropdownMenuItem onClick={handleSplitStripeRemittance}>
-                  <GitMerge className="h-4 w-4 mr-2 text-purple-600" />
-                  {t.splitStripeRemittance || 'Imputar Stripe'}
-                </DropdownMenuItem>
-              )
+            {canSplitStripeRemittance && onSplitStripeRemittance && (
+              <DropdownMenuItem onClick={handleSplitStripeRemittance}>
+                <GitMerge className="h-4 w-4 mr-2 text-purple-600" />
+                {'Imputar Stripe'}
+              </DropdownMenuItem>
             )}
             {canSplitAmount && onSplitAmount && (
               <DropdownMenuItem onClick={handleSplitAmount}>
@@ -499,10 +479,10 @@ export const TransactionRowMobile = React.memo(function TransactionRowMobile({
                 {t.undoSplit || 'Desfer desglossament'}
               </DropdownMenuItem>
             )}
-            {(tx.isRemittance || (hasStripeChildren && !hasStripeImputation)) && onUndoRemittance && (
+            {(tx.isRemittance || hasStripeChildren) && onUndoRemittance && (
               <DropdownMenuItem onClick={handleUndoRemittance} className="text-orange-600">
                 <Undo2 className="h-4 w-4 mr-2" />
-                {t.undoRemittance || 'Desfer remesa'}
+                {hasStripeChildren ? 'Desfer imputacio Stripe' : (t.undoRemittance || 'Desfer remesa')}
               </DropdownMenuItem>
             )}
             {deleteBlockedMessage ? (

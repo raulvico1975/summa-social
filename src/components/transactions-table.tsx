@@ -114,8 +114,6 @@ import { filterSplitChildTransactions } from '@/lib/splits/split-visibility';
 import { undoSplit } from '@/lib/splits/undoSplit';
 import { handleTransactionDelete, isFiscallyRelevantTransaction } from '@/lib/fiscal/softDeleteTransaction';
 import { isS9PendingFiscalTransaction } from '@/lib/fiscal/sentinels/s9-fiscal-coherence';
-import type { Donation } from '@/lib/types/donations';
-import { undoStripeImputation } from '@/lib/stripe/undoStripeImputation';
 import {
   applyTransactionPatch,
   buildCategoryInlineUpdate,
@@ -146,11 +144,6 @@ const ReturnImporter = dynamic(
   () => import('@/components/return-importer').then((mod) => mod.ReturnImporter),
   { ssr: false },
 );
-
-type StripeImputationSummary = {
-  donationCount: number;
-  adjustmentCount: number;
-};
 
 export function TransactionsTable({
   initialDateFilter = null,
@@ -651,43 +644,6 @@ export function TransactionsTable({
       (tx) => tx.parentTransactionId === splitDetailParentTxId && !tx.archivedAt
     );
   }, [pagedTransactions, splitDetailParentTxId]);
-
-  const stripeDonationsQuery = useMemoFirebase(
-    () => organizationId
-      ? query(collection(firestore, 'organizations', organizationId, 'donations'), where('source', '==', 'stripe'))
-      : null,
-    [firestore, organizationId]
-  );
-  const { data: stripeDonations } = useCollection<Donation>(stripeDonationsQuery);
-  const stripeImputationParentIds = React.useMemo(() => {
-    return new Set(
-      (stripeDonations ?? [])
-        .filter((donation) => !donation.archivedAt)
-        .map((donation) => donation.parentTransactionId)
-    );
-  }, [stripeDonations]);
-  const stripeImputationSummaryByParentId = React.useMemo(() => {
-    const summary = new Map<string, StripeImputationSummary>();
-
-    for (const donation of stripeDonations ?? []) {
-      if (donation.archivedAt) continue;
-
-      const current = summary.get(donation.parentTransactionId) ?? {
-        donationCount: 0,
-        adjustmentCount: 0,
-      };
-
-      if (donation.type === 'stripe_adjustment') {
-        current.adjustmentCount += 1;
-      } else {
-        current.donationCount += 1;
-      }
-
-      summary.set(donation.parentTransactionId, current);
-    }
-
-    return summary;
-  }, [stripeDonations]);
 
   // Mapa de comptes bancaris per ID (per export)
   const bankAccountMap = React.useMemo(() =>
@@ -2110,31 +2066,6 @@ export function TransactionsTable({
     setStripeTransactionToSplit(null);
   };
 
-  const handleUndoStripeImputation = React.useCallback(async (transaction: Transaction) => {
-    if (!organizationId) return;
-    const confirmed = window.confirm('Desfer imputació Stripe? Les donacions Stripe vinculades a aquest moviment s\'eliminaran.');
-    if (!confirmed) return;
-
-    try {
-      const result = await undoStripeImputation({
-        firestore,
-        organizationId,
-        parentTransactionId: transaction.id,
-      });
-      toast({
-        title: 'Imputació Stripe desfeta',
-        description: `S'han eliminat ${result.deletedCount} registres Stripe vinculats al moviment.`,
-      });
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Error desconegut';
-      toast({
-        variant: 'destructive',
-        title: 'Error desfent imputació Stripe',
-        description: message,
-      });
-    }
-  }, [firestore, organizationId, toast]);
-
   // SEPA Reconcile handler
   const handleReconcileSepa = (tx: Transaction) => {
     const remittance = detectedSepaRemittances.get(tx.id);
@@ -2197,8 +2128,7 @@ export function TransactionsTable({
     splitAmount: tr('movements.split.action'),
     splitRemittance: t.movements.table.splitRemittance,
     splitPaymentRemittance: t.movements.table.splitPaymentRemittance,
-    splitStripeRemittance: 'Imputar Stripe',
-    undoStripeImputation: 'Desfer imputació Stripe',
+    splitStripeRemittance: t.movements.table.splitStripeRemittance,
     delete: t.movements.table.delete,
     deleteBlocked: tr('movements.split.deleteBlocked'),
     deleteBlockedParentRemittance: tr('movements.delete.blocked.parentRemittance'),
@@ -2571,9 +2501,6 @@ export function TransactionsTable({
               onSplitRemittance={handleSplitRemittance}
               onSplitAmount={handleSplitAmount}
               onSplitStripeRemittance={handleSplitStripeRemittance}
-              hasStripeImputation={stripeImputationParentIds.has(tx.id)}
-              stripeImputationSummary={stripeImputationSummaryByParentId.get(tx.id) ?? null}
-              onUndoStripeImputation={handleUndoStripeImputation}
               onOpenSplitDetail={handleOpenSplitDetail}
               onUndoSplit={handleUndoSplit}
               onUndoRemittance={handleUndoRemittance}
@@ -2698,9 +2625,6 @@ export function TransactionsTable({
                   onSplitAmount={handleSplitAmount}
                   onSplitRemittance={handleSplitRemittance}
                   onSplitStripeRemittance={handleSplitStripeRemittance}
-                  hasStripeImputation={stripeImputationParentIds.has(tx.id)}
-                  stripeImputationSummary={stripeImputationSummaryByParentId.get(tx.id) ?? null}
-                  onUndoStripeImputation={handleUndoStripeImputation}
                   onOpenSplitDetail={handleOpenSplitDetail}
                   onUndoSplit={handleUndoSplit}
                   onViewRemittanceDetail={handleViewRemittanceDetail}

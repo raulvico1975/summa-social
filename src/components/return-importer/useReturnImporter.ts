@@ -11,6 +11,11 @@ import { assertFiscalTxCanBeSaved } from '@/lib/fiscal/assertFiscalInvariant';
 import { acquireProcessLock, releaseProcessLock, getLockFailureMessage } from '@/lib/fiscal/processLocks';
 import { isActiveRemittanceChild } from '@/lib/remittances/is-active-child';
 import {
+  findReturnColumnByHeader,
+  normalizeReturnHeader,
+  parseReturnCsvBuffer,
+} from '@/lib/returns/import-csv';
+import {
   buildExistingReturnRemittanceState,
   deriveReturnRemittanceStatus,
   determineReturnRemittanceReprocessMode,
@@ -132,6 +137,7 @@ const COLUMN_MAPPINGS = {
   ],
   reason: [
     'motivo devolución', 'motivo devolucion', 'motivo rechazo', 'motivo',
+    'motiu devolució', 'motiu devolucio', 'motiu',
     'razón', 'razon', 'reason', 'causa', 'descripción', 'descripcion'
   ]
 } as const;
@@ -244,9 +250,9 @@ const extractGlobalDateFromHeaders = (rows: string[][]): Date | null => {
     if (!row) continue;
 
     for (let j = 0; j < row.length; j++) {
-      const cell = (row[j] || '').toString().toLowerCase().trim();
+      const cell = normalizeReturnHeader((row[j] || '').toString());
 
-      if (datePatterns.some(pattern => cell.includes(pattern))) {
+      if (datePatterns.some(pattern => cell.includes(normalizeReturnHeader(pattern)))) {
         // La data pot estar a cel·les adjacents
         const candidates = [
           row[j + 1],
@@ -302,14 +308,8 @@ const detectStartRow = (rows: string[][]): number => {
 };
 
 const detectColumnByHeader = (headers: string[], fieldType: ColumnType): number => {
-  const normalizedHeaders = headers.map(h => (h || '').toString().toLowerCase().trim());
   const patterns = COLUMN_MAPPINGS[fieldType];
-
-  for (const pattern of patterns) {
-    const index = normalizedHeaders.findIndex(h => h.includes(pattern));
-    if (index !== -1) return index;
-  }
-  return -1;
+  return findReturnColumnByHeader(headers, patterns);
 };
 
 const detectColumns = (rows: string[][], startRow: number): ColumnMapping => {
@@ -540,10 +540,8 @@ export function useReturnImporter(options: UseReturnImporterOptions = {}) {
 
           allParsedRows.push(...filteredRows);
         } else {
-          const text = await file.text();
-          const delimiter = text.includes(';') ? ';' : ',';
-          const lines = text.split('\n').filter(line => line.trim());
-          const rows = lines.map(line => line.split(delimiter).map(cell => cell.trim()));
+          const data = await file.arrayBuffer();
+          const { rows } = parseReturnCsvBuffer(data);
           allParsedRows.push(...rows);
         }
       }

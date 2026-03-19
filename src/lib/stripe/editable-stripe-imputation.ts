@@ -1,148 +1,118 @@
 import type { Donor } from '@/lib/data';
 import type { StripePayoutGroup } from '@/components/stripe-importer/useStripeImporter';
 
-export type EditableStripeImputationLine = {
+export interface EditableStripeImputationLine {
   localId: string;
-  contactId: string | null;
+  stripePaymentId: string | null;
   amountGross: number | null;
+  feeAmount: number | null;
+  contactId: string | null;
+  date: string | null;
+  customerEmail: string | null;
+  description: string | null;
   imputationOrigin: 'csv' | 'manual';
-  stripePaymentId?: string;
-  feeAmount?: number | null;
-  customerEmail?: string | null;
-  description?: string | null;
-  date?: string | null;
-};
+}
 
-export type EditableStripeImputationSummary = {
-  totalImputed: number;
-  difference: number;
-  hasInvalidLines: boolean;
-  duplicateStripePaymentIds: string[];
-};
+export interface StripeDonorUsageStats {
+  [donorId: string]: {
+    count: number;
+    lastDate: string | null;
+  };
+}
 
-export type StripeDonorUsageStats = Record<string, {
-  count: number;
-  lastDate: string | null;
-}>;
+export function calculateEditableStripeImputationSummary(input: {
+  lines: EditableStripeImputationLine[];
+  bankAmount: number;
+}) {
+  const totalImputed = input.lines.reduce((sum, line) => sum + (line.amountGross ?? 0), 0);
+  const duplicateStripePaymentIds = Array.from(
+    input.lines
+      .reduce((acc, line) => {
+        if (!line.stripePaymentId) return acc;
+        acc.set(line.stripePaymentId, (acc.get(line.stripePaymentId) ?? 0) + 1);
+        return acc;
+      }, new Map<string, number>())
+      .entries()
+  )
+    .filter(([, count]) => count > 1)
+    .map(([stripePaymentId]) => stripePaymentId);
+
+  return {
+    totalImputed,
+    difference: totalImputed - input.bankAmount,
+    hasInvalidLines: input.lines.some((line) => !line.contactId || !(line.amountGross && line.amountGross > 0)),
+    duplicateStripePaymentIds,
+  };
+}
 
 export function createManualEditableStripeImputationLine(localId: string): EditableStripeImputationLine {
   return {
     localId,
-    contactId: null,
+    stripePaymentId: null,
     amountGross: null,
+    feeAmount: null,
+    contactId: null,
+    date: null,
+    customerEmail: null,
+    description: null,
     imputationOrigin: 'manual',
   };
 }
 
-export function buildEditableStripeImputationLinesFromGroup({
-  group,
-  donorByEmail,
-  createLocalId,
-}: {
-  group: StripePayoutGroup;
-  donorByEmail: Map<string, string>;
-  createLocalId: () => string;
-}): EditableStripeImputationLine[] {
-  return group.rows.map((row) => ({
-    localId: createLocalId(),
-    contactId: donorByEmail.get(row.customerEmail.toLowerCase().trim()) ?? null,
-    amountGross: row.amount,
-    imputationOrigin: 'csv',
-    stripePaymentId: row.id,
-    feeAmount: row.fee,
-    customerEmail: row.customerEmail,
-    description: row.description,
-    date: row.createdDate,
-  }));
-}
-
-export function resetEditableStripeImputationLinesFromCsv({
-  matchingGroups,
-  selectedTransferId,
-  donorByEmail,
-  createLocalId,
-}: {
-  matchingGroups: StripePayoutGroup[];
-  selectedTransferId: string | null;
-  donorByEmail: Map<string, string>;
-  createLocalId: () => string;
-}): EditableStripeImputationLine[] {
-  if (!selectedTransferId) return [];
-  const group = matchingGroups.find((item) => item.transferId === selectedTransferId);
-  if (!group) return [];
-  return buildEditableStripeImputationLinesFromGroup({
-    group,
-    donorByEmail,
-    createLocalId,
-  });
-}
-
-export function resolveInitialSelectedTransferId(matchingGroups: StripePayoutGroup[]): string | null {
-  return matchingGroups.length === 1 ? matchingGroups[0].transferId : null;
+export function resolveInitialSelectedTransferId(groups: StripePayoutGroup[]): string | null {
+  if (groups.length === 0) return null;
+  return groups[0]?.transferId ?? null;
 }
 
 export function shouldPromptCsvReplacement(lines: EditableStripeImputationLine[]): boolean {
   return lines.length > 0;
 }
 
-export function calculateEditableStripeImputationSummary({
-  lines,
-  bankAmount,
-}: {
-  lines: EditableStripeImputationLine[];
-  bankAmount: number;
-}): EditableStripeImputationSummary {
-  const totalImputed = Number(
-    lines.reduce((sum, line) => sum + (line.amountGross ?? 0), 0).toFixed(2)
-  );
-  const difference = Number((bankAmount - totalImputed).toFixed(2));
-  const hasInvalidLines = lines.some((line) => {
-    const amountGross = line.amountGross;
-    return !line.contactId || amountGross == null || !Number.isFinite(amountGross) || amountGross <= 0;
-  });
+export function resetEditableStripeImputationLinesFromCsv(input: {
+  matchingGroups: StripePayoutGroup[];
+  selectedTransferId: string | null;
+  donorByEmail: Map<string, string>;
+  createLocalId: () => string;
+}): EditableStripeImputationLine[] {
+  const selectedGroup = input.matchingGroups.find((group) => group.transferId === input.selectedTransferId)
+    ?? input.matchingGroups[0]
+    ?? null;
 
-  const seen = new Set<string>();
-  const duplicateStripePaymentIds = new Set<string>();
-  for (const line of lines) {
-    const stripePaymentId = line.stripePaymentId?.trim();
-    if (!stripePaymentId) continue;
-    if (seen.has(stripePaymentId)) {
-      duplicateStripePaymentIds.add(stripePaymentId);
-      continue;
-    }
-    seen.add(stripePaymentId);
+  if (!selectedGroup) {
+    return [];
   }
 
-  return {
-    totalImputed,
-    difference,
-    hasInvalidLines,
-    duplicateStripePaymentIds: [...duplicateStripePaymentIds],
-  };
+  return selectedGroup.rows.map((row) => ({
+    localId: input.createLocalId(),
+    stripePaymentId: row.id,
+    amountGross: row.amount,
+    feeAmount: row.fee,
+    contactId: row.customerEmail ? input.donorByEmail.get(row.customerEmail.toLowerCase().trim()) ?? null : null,
+    date: row.createdDate,
+    customerEmail: row.customerEmail,
+    description: row.description ?? null,
+    imputationOrigin: 'csv',
+  }));
 }
 
 export function sortDonorsForStripeImputation(
   donors: Donor[],
-  stripeUsageByDonorId: StripeDonorUsageStats = {}
+  usageById: StripeDonorUsageStats
 ): Donor[] {
-  return [...donors].sort((a, b) => {
-    const usageA = stripeUsageByDonorId[a.id] ?? { count: 0, lastDate: null };
-    const usageB = stripeUsageByDonorId[b.id] ?? { count: 0, lastDate: null };
+  return [...donors].sort((left, right) => {
+    const leftUsage = usageById[left.id]?.count ?? 0;
+    const rightUsage = usageById[right.id]?.count ?? 0;
 
-    const hasRecentA = usageA.lastDate ? 1 : 0;
-    const hasRecentB = usageB.lastDate ? 1 : 0;
-    if (hasRecentA !== hasRecentB) {
-      return hasRecentB - hasRecentA;
+    if (leftUsage !== rightUsage) {
+      return rightUsage - leftUsage;
     }
 
-    if (usageA.lastDate && usageB.lastDate && usageA.lastDate !== usageB.lastDate) {
-      return usageB.lastDate.localeCompare(usageA.lastDate);
+    const leftDate = usageById[left.id]?.lastDate ?? '';
+    const rightDate = usageById[right.id]?.lastDate ?? '';
+    if (leftDate !== rightDate) {
+      return rightDate.localeCompare(leftDate);
     }
 
-    if (usageA.count !== usageB.count) {
-      return usageB.count - usageA.count;
-    }
-
-    return a.name.localeCompare(b.name, 'ca', { sensitivity: 'base' });
+    return left.name.localeCompare(right.name);
   });
 }

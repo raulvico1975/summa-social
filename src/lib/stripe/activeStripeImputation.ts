@@ -1,51 +1,25 @@
 import { collection, getDocs, query, where, type Firestore } from 'firebase/firestore';
 
+import type { Donation } from '@/lib/types/donations';
+
 export const ERR_STRIPE_PARENT_ALREADY_IMPUTED = 'ERR_STRIPE_PARENT_ALREADY_IMPUTED';
 
-type StripeActiveImputationDeps = {
-  hasActiveStripeImputationByParentTransactionId: (args: {
-    firestore: Firestore;
-    organizationId: string;
-    parentTransactionId: string;
-  }) => Promise<boolean>;
-};
-
-export async function hasActiveStripeImputationByParentTransactionId({
-  firestore,
-  organizationId,
-  parentTransactionId,
-}: {
+export async function assertNoActiveStripeImputationByParentTransactionId(input: {
   firestore: Firestore;
   organizationId: string;
   parentTransactionId: string;
-}): Promise<boolean> {
-  const donationsRef = collection(firestore, 'organizations', organizationId, 'donations');
+}): Promise<void> {
+  const donationsRef = collection(input.firestore, 'organizations', input.organizationId, 'donations');
   const snapshot = await getDocs(
-    query(donationsRef, where('parentTransactionId', '==', parentTransactionId))
+    query(donationsRef, where('parentTransactionId', '==', input.parentTransactionId))
   );
 
-  return snapshot.docs.some((docSnap) => {
-    const data = docSnap.data() as { archivedAt?: string | null };
-    return !data.archivedAt;
+  const hasActiveImputation = snapshot.docs.some((docSnap) => {
+    const donation = docSnap.data() as Donation;
+    return !donation.archivedAt;
   });
-}
 
-export async function assertNoActiveStripeImputationByParentTransactionId({
-  firestore,
-  organizationId,
-  parentTransactionId,
-  deps,
-}: {
-  firestore: Firestore;
-  organizationId: string;
-  parentTransactionId: string;
-  deps?: Partial<StripeActiveImputationDeps>;
-}): Promise<void> {
-  const hasActiveImputation =
-    deps?.hasActiveStripeImputationByParentTransactionId
-    ?? hasActiveStripeImputationByParentTransactionId;
-
-  if (await hasActiveImputation({ firestore, organizationId, parentTransactionId })) {
+  if (hasActiveImputation) {
     throw new Error(ERR_STRIPE_PARENT_ALREADY_IMPUTED);
   }
 }

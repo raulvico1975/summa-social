@@ -120,9 +120,6 @@ interface TransactionRowProps {
   onSplitRemittance: (tx: Transaction) => void;
   onSplitAmount: (tx: Transaction) => void;
   onSplitStripeRemittance?: (tx: Transaction) => void;
-  hasStripeImputation?: boolean;
-  stripeImputationSummary?: { donationCount: number; adjustmentCount: number } | null;
-  onUndoStripeImputation?: (tx: Transaction) => void;
   onOpenSplitDetail?: (txId: string) => void;
   onUndoSplit?: (txId: string) => void;
   onViewRemittanceDetail: (txId: string, parentTx?: Transaction) => void;
@@ -172,7 +169,6 @@ interface TransactionRowProps {
     splitRemittance: string;
     splitPaymentRemittance?: string;
     splitStripeRemittance: string;
-    undoStripeImputation?: string;
     delete: string;
     deleteBlocked: string;
     deleteBlockedParentRemittance: string;
@@ -231,9 +227,6 @@ export const TransactionRow = React.memo(function TransactionRow({
   onSplitRemittance,
   onSplitAmount,
   onSplitStripeRemittance,
-  hasStripeImputation,
-  stripeImputationSummary,
-  onUndoStripeImputation,
   onOpenSplitDetail,
   onUndoSplit,
   onViewRemittanceDetail,
@@ -640,27 +633,6 @@ export const TransactionRow = React.memo(function TransactionRow({
                 </TooltipContent>
               </Tooltip>
             )}
-            {hasStripeImputation && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Badge
-                    variant="outline"
-                    className="gap-0.5 text-xs py-0 px-1.5 border-sky-300 text-sky-700 bg-sky-50"
-                  >
-                    <CheckCircle2 className="h-3 w-3 text-sky-600" />
-                    <span className="font-medium">Stripe</span>
-                    <span className="text-sky-700/80">
-                      {stripeImputationSummary?.donationCount ?? 0}
-                    </span>
-                  </Badge>
-                </TooltipTrigger>
-                <TooltipContent>
-                  {stripeImputationSummary?.adjustmentCount
-                    ? `${stripeImputationSummary?.donationCount ?? 0} donacions i ${stripeImputationSummary.adjustmentCount} ajust vinculats`
-                    : `${stripeImputationSummary?.donationCount ?? 0} donacions Stripe vinculades`}
-                </TooltipContent>
-              </Tooltip>
-            )}
           </div>
           <div className="flex items-center gap-2">
             <p className={`text-[13px] truncate max-w-[320px] ${isReturnedDonation ? 'text-gray-400' : ''}`} title={tx.description}>
@@ -988,18 +960,11 @@ export const TransactionRow = React.memo(function TransactionRow({
                 {t.deleteDocument}
               </DropdownMenuItem>
             )}
-            {((canSplitStripeRemittanceCandidate(tx) && onSplitStripeRemittance) || (hasStripeImputation && onUndoStripeImputation)) && (
-              hasStripeImputation && onUndoStripeImputation ? (
-                <DropdownMenuItem onClick={() => onUndoStripeImputation(tx)}>
-                  <Undo2 className="mr-2 h-4 w-4 text-orange-600" />
-                  {t.undoStripeImputation || 'Desfer imputació Stripe'}
-                </DropdownMenuItem>
-              ) : (
-                <DropdownMenuItem onClick={handleSplitStripeRemittance}>
-                  <GitMerge className="mr-2 h-4 w-4 text-purple-600" />
-                  {t.splitStripeRemittance || 'Imputar Stripe'}
-                </DropdownMenuItem>
-              )
+            {canSplitStripeRemittanceCandidate(tx) && onSplitStripeRemittance && (
+              <DropdownMenuItem onClick={handleSplitStripeRemittance}>
+                <GitMerge className="mr-2 h-4 w-4 text-purple-600" />
+                {'Imputar Stripe'}
+              </DropdownMenuItem>
             )}
             {canSplitAmount && (
               <DropdownMenuItem onClick={handleSplitAmount}>
@@ -1026,10 +991,10 @@ export const TransactionRow = React.memo(function TransactionRow({
                 {t.reconcileSepa || 'Desagregar i conciliar'}
               </DropdownMenuItem>
             )}
-            {(tx.isRemittance || (hasStripeChildren && !hasStripeImputation)) && onUndoRemittance && (
+            {(tx.isRemittance || hasStripeChildren) && onUndoRemittance && (
               <DropdownMenuItem onClick={handleUndoRemittance} className="text-orange-600">
                 <Undo2 className="mr-2 h-4 w-4" />
-                {t.undoRemittance || 'Desfer remesa'}
+                {hasStripeChildren ? 'Desfer imputacio Stripe' : (t.undoRemittance || 'Desfer remesa')}
               </DropdownMenuItem>
             )}
             {canShowUndoSplitAction(tx) && onUndoSplit && (

@@ -316,6 +316,7 @@ Hi ha remeses de devolucions legacy on el pare té `isRemittance=true` però no 
 | Data | Executor | VF-1 | VF-2 | VF-3 | VF-4 | VF-5 | VF-6 | VF-7 | VF-8 | VF-9 | VF-10 | VF-11 | VF-12 | VF-13 | VF-14 | VF-15 | Notes |
 |------|----------|------|------|------|------|------|------|------|------|------|-------|-------|-------|-------|-------|-------|-------|
 | 2026-03-02 | Codex | - | - | PASS | PASS | - | - | - | - | - | - | - | - | - | - | - | Hotfix devolucions febrer 2026 validat: net donant i Model 182 alineats (returns + donationStatus=returned), tests fiscals ampliats, `scripts/verify-local.sh` i `scripts/verify-ci.sh` OK. |
+| 2026-03-19 | Codex | - | - | - | - | - | - | - | - | - | - | - | - | - | - | - | Integracio `main -> prod` per Stripe fiscal/UI sense canvis funcionals nous. En aquesta sessio s'han executat `scripts/verify-local.sh`, `scripts/verify-ci.sh`, `npm run typecheck` i `npm test` a `deploy/main-to-prod-stripe-20260319`. No s'han marcat PASS manuals del checklist fiscal perque no s'han executat proves manuals VF. |
 | YYYY-MM-DD | Nom | - | - | - | - | - | - | - | - | - | - | - | - | - | - | - | |
 
 ---
@@ -329,4 +330,4 @@ Hi ha remeses de devolucions legacy on el pare té `isRemittance=true` però no 
 
 ---
 
-*Última actualització: 2026-02-28*
+*Última actualització: 2026-03-19*
