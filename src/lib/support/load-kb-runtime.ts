@@ -1,67 +1,20 @@
 /**
- * Runtime KB Loader with versioned cache
+ * Runtime KB Loader
  *
- * Loads KB cards from filesystem (base) + Storage (override).
- * Cache invalidation based on version from Firestore.
+ * Loads the support bot KB deterministically from repository files only.
  *
  * @see src/lib/support/load-kb.ts — Filesystem loader
  */
 
-import { getStorage } from 'firebase-admin/storage'
 import type { KBCard } from './load-kb'
 import { loadAllCards } from './load-kb'
-import { runKbQualityGate } from './kb-quality-gate'
 import { CONTEXT_HELP_UI_PATHS } from '@/help/help-manual-links'
 
 type CachedKB = {
-  signature: string
   cards: KBCard[]
 }
 
 let cached: CachedKB | null = null
-
-export function serializeKbCacheBustValue(value: unknown): string | null {
-  if (value == null) return null
-  if (typeof value === 'string') {
-    const trimmed = value.trim()
-    return trimmed || null
-  }
-  if (typeof value === 'number' && Number.isFinite(value)) return String(value)
-  if (value instanceof Date) return value.toISOString()
-
-  if (typeof value === 'object') {
-    const maybeTimestamp = value as {
-      toMillis?: () => number
-      seconds?: number
-      nanoseconds?: number
-    }
-
-    if (typeof maybeTimestamp.toMillis === 'function') {
-      return String(maybeTimestamp.toMillis())
-    }
-
-    if (typeof maybeTimestamp.seconds === 'number') {
-      return `${maybeTimestamp.seconds}:${maybeTimestamp.nanoseconds ?? 0}`
-    }
-  }
-
-  return String(value)
-}
-
-export function buildKbRuntimeCacheSignature(input: {
-  version: number
-  storageVersion: number | null
-  deletedCardIds?: string[]
-  publishedAtKey?: string | null
-}): string {
-  const deletedSignature = (input.deletedCardIds ?? []).slice().sort().join('|')
-  return [
-    String(input.version),
-    String(input.storageVersion ?? 'null'),
-    deletedSignature,
-    input.publishedAtKey ?? 'no-published-at',
-  ].join('::')
-}
 
 function buildEmergencyFallbackCards(): KBCard[] {
   const base = {
@@ -142,122 +95,22 @@ function buildEmergencyFallbackCards(): KBCard[] {
 }
 
 /**
- * Load KB cards with filesystem + Storage merge.
- * Cache per version: only reload if version changes.
- *
- * @param version - Current KB version from Firestore (system/supportKb.version)
- * @param storageVersion - Published storage version (must match version to use Storage)
- * @returns Merged KB cards (Storage published overrides filesystem by ID)
+ * Load KB cards from repository files only.
+ * Cache stays in module memory for the lifetime of the process.
  */
-export async function loadKbCards(
-  version: number,
-  storageVersion: number | null = null,
-  deletedCardIds: string[] = [],
-  publishedAtKey: string | null = null
-): Promise<KBCard[]> {
-  const signature = buildKbRuntimeCacheSignature({
-    version,
-    storageVersion,
-    deletedCardIds,
-    publishedAtKey,
-  })
-  // Cache hit: return if version hasn't changed
-  if (cached && cached.signature === signature) {
+export async function loadKbCards(): Promise<KBCard[]> {
+  if (cached) {
     return cached.cards
   }
 
-  // 1. Filesystem (base)
-  const fsCards = await loadAllCards()
-
-  // 2. Storage (override)
-  const shouldUseStoragePublished = storageVersion === version
-  const storageCards = shouldUseStoragePublished ? await loadKbFromStorage() : null
-
-  // 3. Merge: Storage overrides filesystem by ID
-  const merged = mergeKbCards(fsCards, storageCards ?? [])
-  const deletedSet = new Set(deletedCardIds)
-  const filtered = merged.filter(card => !deletedSet.has(card.id))
-
-  // Runtime safety net:
-  // if published KB is corrupt, keep serving a safe dataset instead of crashing/derailing answers.
-  if (shouldUseStoragePublished && storageCards) {
-    const mergedGate = runKbQualityGate(filtered)
-    if (!mergedGate.ok) {
-      console.error('[load-kb-runtime] Published KB failed quality gate, using fallback dataset', {
-        errors: mergedGate.errors.slice(0, 5),
-        cards: filtered.length,
-      })
-
-      const fsFiltered = fsCards.filter(card => !deletedSet.has(card.id))
-      const fsGate = fsFiltered.length > 0 ? runKbQualityGate(fsFiltered) : null
-      if (fsGate?.ok) {
-        cached = { signature, cards: fsFiltered }
-        return fsFiltered
-      }
-
-      const storageFiltered = (storageCards ?? []).filter(card => !deletedSet.has(card.id))
-      const storageGate = storageFiltered.length > 0 ? runKbQualityGate(storageFiltered) : null
-      if (storageGate?.ok) {
-        cached = { signature, cards: storageFiltered }
-        return storageFiltered
-      }
-
-      const emergencyCards = buildEmergencyFallbackCards()
-      cached = { signature, cards: emergencyCards }
-      return emergencyCards
-    }
+  const cards = loadAllCards()
+  if (cards.length === 0) {
+    console.error('[load-kb-runtime] Repository KB is empty, using emergency fallback dataset')
+    const emergencyCards = buildEmergencyFallbackCards()
+    cached = { cards: emergencyCards }
+    return emergencyCards
   }
 
-  // 4. Cache per version
-  cached = { signature, cards: filtered }
-  return filtered
-}
-
-/**
- * Load cards from Storage (support-kb/kb.json).
- * Returns null if file doesn't exist or error occurs.
- */
-async function loadKbFromStorage(): Promise<KBCard[] | null> {
-  const bucketName =
-    process.env.FIREBASE_STORAGE_BUCKET ||
-    process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
-
-  if (!bucketName) {
-    console.warn('[load-kb-runtime] No storage bucket configured')
-    return null
-  }
-
-  try {
-    const bucket = getStorage().bucket(bucketName)
-    const file = bucket.file('support-kb/kb.json')
-
-    const [exists] = await file.exists()
-    if (!exists) return null
-
-    const [data] = await file.download()
-    return JSON.parse(data.toString('utf-8')) as KBCard[]
-  } catch (error) {
-    console.warn('[load-kb-runtime] Error loading from Storage:', error)
-    return null
-  }
-}
-
-/**
- * Merge cards: Storage overrides filesystem by ID.
- * Order: filesystem first, then Storage (override).
- */
-function mergeKbCards(fs: KBCard[], storage: KBCard[]): KBCard[] {
-  const map = new Map<string, KBCard>()
-
-  // Base: cards from filesystem
-  for (const card of fs) {
-    map.set(card.id, card)
-  }
-
-  // Override: cards from Storage
-  for (const card of storage) {
-    map.set(card.id, card)
-  }
-
-  return Array.from(map.values())
+  cached = { cards }
+  return cards
 }

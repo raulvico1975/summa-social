@@ -6,13 +6,12 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { getStorage } from 'firebase-admin/storage'
 import { ai } from '@/ai/genkit'
 import { z } from 'genkit'
 import { verifyIdToken, getAdminDb, validateUserMembership, isSuperAdmin } from '@/lib/api/admin-sdk'
 import { requireOperationalAccess } from '@/lib/api/require-operational-access'
 import { loadGuideContent, type KBCard } from '@/lib/support/load-kb'
-import { loadKbCards, serializeKbCacheBustValue } from '@/lib/support/load-kb-runtime'
+import { loadKbCards } from '@/lib/support/load-kb-runtime'
 import { incrementBotQuestionCounters, logBotQuestion, normalizeForHash } from '@/lib/support/bot-question-log'
 import { debugRetrieveCard, detectSmallTalkResponse, retrieveCard, type KbLang, type RetrievalResult, type RetrievalTraceDiscard } from '@/lib/support/bot-retrieval'
 import { orchestrator } from '@/lib/support/engine/orchestrator'
@@ -109,9 +108,7 @@ type BotDebugTrace = {
   kbLang: KbLang
   userRole: string | null
   superAdmin: boolean
-  kbSource: 'storage' | 'filesystem'
-  version: number
-  storageVersion: number | null
+  kbSource: 'filesystem'
   cardsLoaded: number
   cardsAfterCritical: number
   cardsAfterSupportAccess: number
@@ -414,55 +411,10 @@ function shouldTraceBotRequest(
   return body.debugTrace === true
 }
 
-async function resolveTraceKbSource(version: number, storageVersion: number | null): Promise<'storage' | 'filesystem'> {
-  const bucketName =
-    process.env.FIREBASE_STORAGE_BUCKET ||
-    process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
-
-  if (!bucketName) return 'filesystem'
-  if (storageVersion !== version) return 'filesystem'
-
-  try {
-    const bucket = getStorage().bucket(bucketName)
-    const file = bucket.file('support-kb/kb.json')
-    const [exists] = await file.exists()
-    return exists ? 'storage' : 'filesystem'
-  } catch {
-    return 'filesystem'
-  }
-}
-
-async function loadPublishedStorageCardsDirect(version: number, storageVersion: number | null): Promise<KBCard[]> {
-  if (storageVersion !== version) return []
-
-  const bucketName =
-    process.env.FIREBASE_STORAGE_BUCKET ||
-    process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
-
-  if (!bucketName) return []
-
-  try {
-    const bucket = getStorage().bucket(bucketName)
-    const file = bucket.file('support-kb/kb.json')
-    const [exists] = await file.exists()
-    if (!exists) return []
-    const [data] = await file.download()
-    const parsed = JSON.parse(data.toString('utf-8'))
-    return Array.isArray(parsed) ? (parsed as KBCard[]) : []
-  } catch (error) {
-    console.error('[bot] direct storage KB rescue failed:', error)
-    return []
-  }
-}
-
 function getCardRawAnswer(card: KBCard | null | undefined, kbLang: KbLang): string {
   if (!card) return ''
   if (card.guideId) return loadGuideContent(card.guideId, kbLang)
   return card.answer?.[kbLang] ?? card.answer?.ca ?? card.answer?.es ?? ''
-}
-
-function hasOperationalKbCoverage(cards: KBCard[]): boolean {
-  return cards.some(card => card.type !== 'fallback')
 }
 
 function isBestCardMismatch(
@@ -643,17 +595,9 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
     }
 
     const supportSnap = await db.doc('system/supportKb').get()
-    const version = supportSnap.exists ? (supportSnap.data()?.version ?? 0) : 0
-    const storageVersion = supportSnap.exists ? (supportSnap.data()?.storageVersion ?? null) : null
-    const deletedCardIds = supportSnap.exists && Array.isArray(supportSnap.data()?.deletedCardIds)
-      ? (supportSnap.data()?.deletedCardIds as string[]).filter(item => typeof item === 'string')
-      : []
     const supportData = supportSnap.data() ?? {}
     const aiReformatEnabled = supportSnap.exists ? (supportData.aiReformatEnabled !== false) : true
     const assistantTone: AssistantTone = normalizeAssistantTone(supportData.assistantTone)
-    const publishedAtKey = serializeKbCacheBustValue(
-      supportData.publishedAt ?? supportData.updatedAt ?? supportData.storageUpdatedAt ?? null
-    )
 
     const intentTimeoutMs = clampTimeout(
       supportData.intentTimeoutMs,
@@ -671,21 +615,9 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
 
     let cards: KBCard[] = []
     try {
-      cards = await loadKbCards(version, storageVersion, deletedCardIds, publishedAtKey)
+      cards = await loadKbCards()
     } catch (cardsError) {
       console.error('[bot] loadKbCards error:', cardsError)
-    }
-
-    if (!hasOperationalKbCoverage(cards)) {
-      const rescuedCards = await loadPublishedStorageCardsDirect(version, storageVersion)
-      if (hasOperationalKbCoverage(rescuedCards)) {
-        console.warn('[bot] runtime KB recovered directly from published storage', {
-          version,
-          storageVersion,
-          rescuedCards: rescuedCards.length,
-        })
-        cards = rescuedCards
-      }
     }
 
     const criticalCards = ensureCriticalCardsPresent(cards)
@@ -767,7 +699,6 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
 
     let responsePayload: ApiResponse | (ApiResponse & { debugTrace?: BotDebugTrace }) = result.response
     if (traceEnabled) {
-      const kbSource = await resolveTraceKbSource(version, storageVersion)
       const retrieval = debugRetrieveCard(message, kbLang, retrievableCards)
       const selectedCard = retrievableCards.find(card => card.id === result.response.cardId) ?? null
       const selectedUiPathsRaw = selectedCard?.uiPaths ?? []
@@ -789,9 +720,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
           kbLang,
           userRole: membership.role,
           superAdmin: superAdminUser,
-          kbSource,
-          version,
-          storageVersion,
+          kbSource: 'filesystem',
           cardsLoaded: cards.length,
           cardsAfterCritical: criticalCards.length,
           cardsAfterSupportAccess: retrievableCards.length,

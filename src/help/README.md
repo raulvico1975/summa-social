@@ -11,6 +11,7 @@ Fonts de veritat actives:
 - `src/i18n/locales/*.json` per `help.*` (`HelpSheet`)
 - `public/docs/manual-usuari-summa-social.{ca,es,fr}.md` per al manual runtime
 - `docs/kb/cards/**/*.json` + `docs/kb/_fallbacks.json` per al bot
+- `docs/generated/*` no entra al runtime del bot
 
 ## Com tractar aquest directori
 
