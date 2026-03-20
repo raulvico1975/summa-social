@@ -48,6 +48,7 @@ Resultat esperat:
 - prepara rollback i registra el resultat a `docs/DEPLOY-LOG.md`
 - fa el merge `main -> prod`, push i post-check automàtic
 - si els logs de deploy creen commits nous a `main`, els sincronitza també a `origin/main`
+- si el SHA remot triga a reflectir `prod` però la resta de comprovacions passen, el resultat final es normalitza a `OK`
 
 Resultat esperat:
 - `prod` actualitzada

@@ -174,6 +174,7 @@ Si ja hi ha una tasca activa d'aquella àrea, el sistema bloqueja l'inici (`BLOC
 12. **Check post-producció automàtic de 3 minuts** (login, flux principal, informe/export)
 13. Registre a `docs/DEPLOY-LOG.md` + incidències a `docs/DEPLOY-INCIDENTS.md` si hi ha bloqueig
 14. Sincronització final de `main` amb `origin/main` si els logs han creat commits nous
+15. Si només falla la propagació immediata del SHA remot però la resta de comprovacions passen, el resultat final es considera `OK`
 
 ### Autorització
 

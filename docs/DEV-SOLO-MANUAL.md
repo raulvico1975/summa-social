@@ -241,6 +241,7 @@ Si no vols reservar àrea, usa `npm run inicia` / `npm run implementa` sense arg
 9. Fa post-check automàtic (SHA remot + smoke amb URL auto-resolta)
 10. Registra el deploy a `docs/DEPLOY-LOG.md` (inclou avís guiat si n'hi ha)
 11. Sincronitza `main` amb `origin/main` si el mateix deploy ha creat commits nous de registre
+12. Si el remot triga a reflectir `prod` però smoke + contingut + check de 3 minuts + oracle passen, tanca el resultat final com a `OK`
 
 Per defecte, si no es defineixen URLs de comprovació, el sistema intenta deduir-les automàticament a partir de `DEPLOY_BASE_URL` o de la URL publicada detectada a `firebase.json`.
 

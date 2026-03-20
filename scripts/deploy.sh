@@ -34,6 +34,11 @@ DEPLOY_SUCCESS=0
 DEPLOY_CONTENT_SHA=""
 DEPLOY_PROD_BEFORE_SHA=""
 MAIN_REMOTE_SYNC_STATUS="NO CAL"
+POSTDEPLOY_REMOTE_SHA_STATUS="NO CAL"
+POSTDEPLOY_SMOKE_STATUS="NO CAL"
+POSTDEPLOY_PUBLIC_CONTENT_STATUS="NO CAL"
+POSTDEPLOY_3MIN_STATUS="NO CAL"
+POSTDEPLOY_ORACLE_STATUS="NO CAL"
 POSTDEPLOY_URLS_READY=false
 RESOLVED_DEPLOY_BASE_URL=""
 RESOLVED_SMOKE_PUBLIC_URL=""
@@ -963,9 +968,11 @@ post_deploy_check() {
   echo "  Verificant publicacio remota..."
   remote_sha=$(git ls-remote origin prod | awk '{print substr($1,1,7)}')
   if [ "$remote_sha" != "$prod_sha" ]; then
+    POSTDEPLOY_REMOTE_SHA_STATUS="PENDENT"
     DEPLOY_RESULT="PENDENT"
     echo "  SHA remot no confirmat encara. Estat: PENDENT."
   else
+    POSTDEPLOY_REMOTE_SHA_STATUS="OK"
     echo "  SHA remot confirmat: $prod_sha"
   fi
   echo ""
@@ -976,15 +983,24 @@ post_deploy_check() {
     echo "  Executant smoke checks automatitzats..."
     echo "    URL publica: $RESOLVED_SMOKE_PUBLIC_URL"
     echo "    URL accés:   $RESOLVED_SMOKE_DASHBOARD_URL"
+    local smoke_ok=true
     if ! curl -fsS --max-time 20 "$RESOLVED_SMOKE_PUBLIC_URL" >/dev/null; then
+      smoke_ok=false
       DEPLOY_RESULT="PENDENT"
       echo "  Smoke públic no confirmat. Estat: PENDENT."
     fi
     if ! curl -fsS --max-time 20 "$RESOLVED_SMOKE_DASHBOARD_URL" >/dev/null; then
+      smoke_ok=false
       DEPLOY_RESULT="PENDENT"
       echo "  Smoke dashboard no confirmat. Estat: PENDENT."
     fi
+    if [ "$smoke_ok" = true ]; then
+      POSTDEPLOY_SMOKE_STATUS="OK"
+    else
+      POSTDEPLOY_SMOKE_STATUS="PENDENT"
+    fi
   else
+    POSTDEPLOY_SMOKE_STATUS="PENDENT"
     DEPLOY_RESULT="PENDENT"
     echo "  Smoke automàtic no disponible: no s'han pogut deduir URLs de comprovació."
     echo "  Pots definir DEPLOY_BASE_URL o DEPLOY_SMOKE_PUBLIC_URL/DEPLOY_SMOKE_DASHBOARD_URL."
@@ -1015,14 +1031,19 @@ post_deploy_check() {
     fi
 
     if [ "$public_ok" = false ]; then
+      POSTDEPLOY_PUBLIC_CONTENT_STATUS="PENDENT"
       DEPLOY_RESULT="PENDENT"
       echo "  Validació de contingut pendent: alguna ruta pública encara no serveix el text esperat."
+    else
+      POSTDEPLOY_PUBLIC_CONTENT_STATUS="OK"
     fi
     echo ""
+  else
+    POSTDEPLOY_PUBLIC_CONTENT_STATUS="NO CAL"
   fi
 
   if [ "$DEPLOY_RESULT" = "PENDENT" ]; then
-    echo "  Post-deploy no confirmat. El log es registrara com a PENDENT."
+    echo "  Post-deploy provisionalment pendent. Continuo amb comprovacions addicionals."
   else
     echo "  Post-deploy confirmat."
   fi
@@ -1042,6 +1063,7 @@ post_production_3min_check() {
   report_url="$RESOLVED_CHECK_REPORT_URL"
 
   if [ -z "$login_url" ] || [ -z "$core_url" ] || [ -z "$report_url" ]; then
+    POSTDEPLOY_3MIN_STATUS="PENDENT"
     DEPLOY_RESULT="PENDENT"
     echo "  Check de 3 minuts no complet: no s'han pogut deduir URLs de comprovació."
     echo "  Pots definir DEPLOY_BASE_URL o DEPLOY_CHECK_LOGIN_URL / DEPLOY_CHECK_CORE_URL / DEPLOY_CHECK_REPORT_URL."
@@ -1070,10 +1092,12 @@ post_production_3min_check() {
   if ! wait_for_url "Informes/export" "$report_url"; then ok_all=false; fi
 
   if [ "$ok_all" = false ]; then
+    POSTDEPLOY_3MIN_STATUS="PENDENT"
     DEPLOY_RESULT="PENDENT"
     echo ""
     echo "  Cal revisio curta: alguna comprovacio post-produccio no s'ha confirmat."
   else
+    POSTDEPLOY_3MIN_STATUS="OK"
     echo ""
     echo "  Check post-produccio completat correctament."
   fi
@@ -1086,6 +1110,7 @@ run_fiscal_oracle_postdeploy_monitor() {
   echo ""
 
   if ! node --import tsx "$SCRIPT_DIR/fiscal/run-oracle.ts" --stage=postdeploy; then
+    POSTDEPLOY_ORACLE_STATUS="PENDENT"
     DEPLOY_RESULT="PENDENT"
     DEPLOY_BLOCK_REASON="FISCAL_ORACLE_FAIL (postdeploy)"
     echo "  FISCAL_ORACLE_FAIL detectat en monitor postdeploy."
@@ -1095,7 +1120,47 @@ run_fiscal_oracle_postdeploy_monitor() {
     return
   fi
 
+  POSTDEPLOY_ORACLE_STATUS="OK"
   echo "  Oracle fiscal postdeploy OK."
+  echo ""
+}
+
+reconcile_postdeploy_result() {
+  CURRENT_PHASE="Reconciliar resultat postdeploy"
+  echo "[8d/9] Reconciliant resultat final del deploy..."
+  echo ""
+
+  local runtime_checks_ok=true
+
+  if [ "$POSTDEPLOY_SMOKE_STATUS" != "OK" ]; then
+    runtime_checks_ok=false
+  fi
+
+  if [ "$POSTDEPLOY_PUBLIC_CONTENT_STATUS" = "PENDENT" ]; then
+    runtime_checks_ok=false
+  fi
+
+  if [ "$POSTDEPLOY_3MIN_STATUS" != "OK" ]; then
+    runtime_checks_ok=false
+  fi
+
+  if [ "$POSTDEPLOY_ORACLE_STATUS" != "OK" ]; then
+    runtime_checks_ok=false
+  fi
+
+  if [ "$POSTDEPLOY_REMOTE_SHA_STATUS" = "PENDENT" ] && [ "$runtime_checks_ok" = true ]; then
+    DEPLOY_RESULT="OK"
+    echo "  SHA remot ha anat tard, pero la publicacio ha quedat confirmada per smoke, contingut, check de 3 minuts i oracle."
+    echo "  Resultat final normalitzat a OK."
+    echo ""
+    return
+  fi
+
+  if [ "$DEPLOY_RESULT" = "PENDENT" ]; then
+    echo "  Resultat final mantingut a PENDENT: falta confirmacio en alguna comprovacio real."
+  else
+    echo "  Resultat final confirmat: OK."
+  fi
   echo ""
 }
 
@@ -1288,6 +1353,7 @@ main() {
   post_deploy_check          # Pas 8
   post_production_3min_check
   run_fiscal_oracle_postdeploy_monitor
+  reconcile_postdeploy_result
   prepare_rollback_plan
   append_deploy_log          # Pas 9
   commit_deploy_logs_if_needed
