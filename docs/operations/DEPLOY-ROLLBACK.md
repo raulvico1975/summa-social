@@ -105,24 +105,24 @@ git push origin main
 
 ---
 
-### Escenari 3: Storage JSON corrupt → bot crasha
+### Escenari 3: KB repo defectuosa després d'un deploy → bot degrada respostes
 
 **Símptomes:**
 - Bot retorna fallback genèric per TOTES les preguntes
-- Logs: `[load-kb-runtime] JSON parse error:`
+- Logs: `[load-kb-runtime] Repository KB failed quality gate`
 
-**⚠️ Rollback Storage (sense tocar codi):**
+**⚠️ Rollback repo (sense tocar prod manualment):**
 
-1. Anar a Firebase Console → Storage → `support-kb/kb.json`
-2. Descarregar versió corrupta (backup per debug)
-3. Pujar versió anterior vàlida (des de backup local o commit anterior)
-4. Incrementar versió a Firestore (`system/supportKb.version`)
+1. Identificar el commit o branca que ha introduït la regressió a `docs/kb/_fallbacks.json` o `docs/kb/cards/**/*.json`
+2. Revertir o corregir el canvi al repositori
+3. Validar localment (`typecheck` + `test:node` + smoke mínim del bot)
+4. Fer el deploy normal del codi corregit
 
 **Verificació:**
-- Logs: `[load-kb-runtime] Loaded from Storage: X cards` (sense errors)
+- Logs sense errors de quality gate del runtime KB
 - Bot respon correctament
 
-**Temps estimat:** 5-7 min
+**Temps estimat:** 10-15 min
 
 **Nota:** Aquest és el rollback MÉS RÀPID si el problema és només Storage (no codi).
 

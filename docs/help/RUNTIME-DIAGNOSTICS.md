@@ -2,22 +2,19 @@
 
 ## Quina font està servint la KB
 
-- Consulta `GET /api/support/kb/diagnostics`.
-- Camps clau:
-  - `kbSource`: `storage` o `filesystem`
-  - `version`
-  - `storageVersion`
-  - `versionMismatch`
-
-Si `versionMismatch=true`, el runtime ha de considerar `filesystem` com a font efectiva.
+- El runtime del bot només carrega:
+  - `docs/kb/_fallbacks.json`
+  - `docs/kb/cards/**/*.json`
+- No hi ha API de diagnòstic KB dedicada ni cap lectura de Storage per aquesta capa.
+- Si cal verificar la font activa, revisa el codi de:
+  - `src/lib/support/load-kb.ts`
+  - `src/lib/support/load-kb-runtime.ts`
+  - `src/app/api/support/bot/route.ts`
 
 ## Quins fallback top hi ha
 
-- Des de SuperAdmin, el learning manager llegeix `/api/support/bot-questions/candidates`.
-- Els camps més útils per prioritzar:
-  - `fallbackCount`
-  - `helpfulNo`
-  - `coveragePressure`
+- Revisa els logs i comptadors del bot a Firestore.
+- Per afegir cobertura nova, crea o ajusta cards a `docs/kb/cards/**/*.json`.
 
 ## Quins anchors/manual links estan trencats
 
@@ -31,5 +28,5 @@ Si `versionMismatch=true`, el runtime ha de considerar `filesystem` com a font e
 ## Què mirar quan alguna cosa no quadra
 
 - Si el bot respon però el link no porta enlloc: `help:audit`.
-- Si la KB publicada no sembla la que toca: `/api/support/kb/diagnostics`.
-- Si falten cobertures reals: learning manager + `coveragePressure`.
+- Si sembla que falta una card, comprova si existeix realment a `docs/kb/cards/**/*.json`.
+- Si falten cobertures reals, la correcció és repo-first: afegir o editar KB via Git.

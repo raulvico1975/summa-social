@@ -3813,20 +3813,17 @@ Bot autenticat, integrat al layout del dashboard, amb recuperació determinista 
 8. La resposta torna amb `mode`, `cardId`, `answer`, `guideId`, `uiPaths` i opcionalment `clarifyOptions`
 9. El client renderitza badges clicables cap a pantalles de Summa i permet vot útil/no útil
 
-**Fonts de coneixement que es fusionen al runtime:**
+**Fonts de coneixement del runtime:**
 
 | Capa | Font | Notes |
 |------|------|-------|
-| **Base KB** | `docs/kb/_fallbacks.json` + `docs/kb/cards/**/*.json` | Cards manuals i fallbacks base |
-| **Capa generada Help+Bot** | `docs/generated/help-bot.json` | Es genera des de `help/topics/*.md` i sobreescriu IDs base si coincideixen |
-| **Versió publicada** | `support-kb/kb.json` a Firebase Storage | Només s'utilitza si `storageVersion === version` |
-| **Draft** | `support-kb/kb-draft.json` | Només per SuperAdmin; no entra al runtime d'usuari |
+| **KB repo-only** | `docs/kb/_fallbacks.json` + `docs/kb/cards/**/*.json` | Única font de coneixement operativa del bot en runtime |
 
-**Generació de la capa Help+Bot:**
+**Artefactes fora del runtime del bot:**
 - Script: `scripts/help/build-bot-kb.ts`
 - Fonts: `help/topics/*.ca.md` + `help/topics/*.es.md`
 - Output: `docs/generated/help-bot.json`
-- El resultat converteix topics operatius en cards amb `title`, `intents`, `answer`, `uiPaths`, `keywords`, `domain`, `risk` i `guardrail`
+- Pot continuar existint per usos editorials o de build, però el bot no el consumeix
 
 **Tipus de cards i govern mínim:**
 - Estructura comuna: `id`, `type`, `domain`, `risk`, `guardrail`, `answerMode`, `title`, `intents`, `guideId|answer`, `uiPaths`, `keywords`
@@ -3899,45 +3896,31 @@ Bot autenticat, integrat al layout del dashboard, amb recuperació determinista 
 **UX tracking:**
 - Events principals: `bot.send`, `bot.fallback`, `bot.clarify.select`, `bot.ui_path_click`, `bot.feedback`, `help.open`, `help.search`, `help.copyLink`, `help.manual.click`
 
-#### 3.11.15.7 Govern de la KB i operació SuperAdmin
+#### 3.11.15.7 Govern de la KB i operació
 
-El coneixement editable del bot té cicle `draft -> precheck -> publish`.
+La KB del bot està governada per Git. No existeix edició live, draft ni publish de KB des de SuperAdmin.
 
-**UI SuperAdmin:**
-- Component: `src/components/super-admin/kb-learning-manager.tsx`
-- Funcions:
-  - veure preguntes que han caigut a fallback
-  - crear o editar targetes
-  - esborrar targetes no protegides
-  - publicar després de quality gate
+**Canal oficial de canvi:**
+- editar `docs/kb/_fallbacks.json`
+- editar o afegir `docs/kb/cards/**/*.json`
+- validar els canvis al repositori i desplegar-los pel flux normal de codi
 
-**APIs principals:**
+**SuperAdmin:**
+- ja no hi ha UI per crear, editar, publicar o pujar KB del bot
+- ja no existeixen APIs de `draft`, `precheck`, `publish` o `diagnostics` específiques de KB
 
-| Ruta | Funció |
-|------|--------|
-| `GET /api/support/bot-questions/candidates` | Candidats de noves targetes a partir de preguntes reals en fallback |
-| `GET /api/support/kb/cards` | Estat fusionat base/publicat/draft |
-| `POST /api/support/kb/cards/precheck-and-publish` | Upsert/delete + validació + publicació en una sola operació |
-| `POST /api/support/kb/publish` | Publicació legacy amb quality gate |
-| `GET /api/support/kb/diagnostics` | Diagnòstic runtime (Storage, versions, flags IA) |
-
-**Persistència de govern:**
+**Configuració runtime que es manté fora de la KB:**
 - Firestore doc: `system/supportKb`
-- Camps operatius rellevants:
-  - `version`
-  - `storageVersion`
-  - `deletedCardIds`
-  - `draftCardCount`
-  - `draftUpdatedAt`, `draftUpdatedBy`
-  - `updatedAt`, `updatedBy`
-  - `aiIntentEnabled`, `aiReformatEnabled`
+- només per paràmetres de comportament del bot, com:
+  - `aiReformatEnabled`
   - `assistantTone`
   - `intentTimeoutMs`, `reformatTimeoutMs`
 
-**Quality gate abans de publicar:**
-- Validació estructural (`validateKbCards`)
-- Presència obligatòria de fallbacks i cards crítiques
-- Eval esperada CA/ES sobre `docs/kb/_eval/expected*.json`
+**Contracte actiu sense ambigüitat:**
+- runtime només `docs/kb/*`
+- `docs/generated/*` no forma part del runtime del bot
+- cap lectura de `support-kb/kb.json`
+- cap lectura de `support-kb/kb-draft.json`
 - Golden set amb llindar mínim per consultes crítiques
 - Verificació que les cards operatives crítiques tenen passos renderitzables
 - Si la KB publicada és corrupta, el runtime cau a:

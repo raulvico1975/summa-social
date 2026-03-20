@@ -60,7 +60,6 @@ import {
   RefreshCw,
   Copy,
   ChevronDown,
-  Bot,
   Megaphone,
   Database,
   Wrench,
@@ -76,8 +75,6 @@ import { CreateOrganizationDialog } from '@/components/admin/create-organization
 import { SystemHealth } from '@/components/admin/system-health';
 import { ProductUpdatesSection } from '@/components/admin/product-updates-section';
 import { I18nManager } from '@/components/super-admin/i18n-manager';
-import { KbLearningManager } from '@/components/super-admin/kb-learning-manager';
-import { KbRuntimeDiagnostics } from '@/components/super-admin/kb-runtime-diagnostics';
 import { broadcastLogoutSync } from '@/lib/session-sync';
 import { HelpAuditSection } from '@/components/admin/help-audit-section';
 import { SuperAdminsManager } from '@/components/admin/super-admins-manager';
@@ -1080,7 +1077,7 @@ function AdminPageContent() {
         <AdminSection
           id="coneixement"
           title="3. Bot"
-          description="Aquí alimentes les respostes del bot que no surten a les guies. Poden ser preguntes dels usuaris o orientacions no tan formals com les guies."
+          description="El bot carrega la seva base de coneixement només des de `docs/kb/*`. La governança és per Git i no hi ha edició live de KB des de SuperAdmin."
           tone="content"
         >
           <Card>
@@ -1113,47 +1110,25 @@ function AdminPageContent() {
 
           <Card className="mt-4">
             <CardHeader>
-              <CardTitle className="text-base">Com fer-ho (pas a pas)</CardTitle>
+              <CardTitle className="text-base">Contracte actiu</CardTitle>
             </CardHeader>
             <CardContent>
-              <ol className="list-decimal pl-5 space-y-2 text-sm">
+              <ul className="list-disc pl-5 space-y-2 text-sm">
                 <li>
-                  Fes clic a <code>Afegir noves preguntes i respostes al bot</code>.
+                  Runtime del bot: <code>docs/kb/_fallbacks.json</code> + <code>docs/kb/cards/**/*.json</code>.
                 </li>
                 <li>
-                  Tria si vols començar des de <code>Preguntes sense resposta</code> o des de <code>Nova pregunta</code>.
+                  No es consumeix <code>docs/generated/help-bot.json</code> al runtime del bot.
                 </li>
                 <li>
-                  Escriu la pregunta i la resposta en català. El castellà es copia automàticament i el pots ajustar.
+                  No hi ha draft, publish ni Storage KB dins del producte actiu.
                 </li>
                 <li>
-                  Revisa el resum del tema detectat i el nivell de seguretat.
+                  Si cal canviar la KB, s'ha de fer amb canvis versionats a Git.
                 </li>
-                <li>
-                  Fes clic a <code>Comprovar i publicar</code>.
-                </li>
-                <li>
-                  Al llistat de targetes pots <code>Editar</code> o <code>Esborrar</code> una resposta existent.
-                </li>
-              </ol>
+              </ul>
             </CardContent>
           </Card>
-
-          <Collapsible className="mt-6">
-            <CollapsibleTrigger asChild>
-              <Button variant="outline" className="w-full justify-between">
-                <span className="flex items-center gap-2">
-                  <Bot className="h-4 w-4" />
-                  Gestió avançada KB i bot
-                </span>
-                <ChevronDown className="h-4 w-4" />
-              </Button>
-            </CollapsibleTrigger>
-            <CollapsibleContent className="mt-4 space-y-4">
-              <KbLearningManager />
-              <KbRuntimeDiagnostics />
-            </CollapsibleContent>
-          </Collapsible>
         </AdminSection>
 
         <AdminSection

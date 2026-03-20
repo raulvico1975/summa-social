@@ -1,6 +1,6 @@
 # Minimum Coverage Map
 
-Objectiu: mapar la cobertura mínima obligatòria del bot contra el que ja existeix a `docs/kb/cards/**`, `docs/generated/help-bot.json`, `docs/manual-usuari-summa-social.md`, `docs/FAQ_SUMMA_SOCIAL.md` i `docs/CATALEG-FUNCIONALITATS.md`, abans de crear o reescriure cap card.
+Objectiu: mapar la cobertura mínima obligatòria del bot contra el que ja existeix a `docs/kb/cards/**`, `docs/manual-usuari-summa-social.md`, `docs/FAQ_SUMMA_SOCIAL.md` i `docs/CATALEG-FUNCIONALITATS.md`, abans de crear o reescriure cap card.
 
 Criteri de qualitat:
 - `good`: hi ha card dedicada i prou directa per resoldre el flux sense fallback ni desambiguació.
@@ -11,7 +11,7 @@ Criteri de qualitat:
 
 | flux | existingCardId | quality | source | notes |
 | --- | --- | --- | --- | --- |
-| Com dono d'alta un nou soci | `donor-create` | `weak` | `manual` | La cobertura existent és a `docs/generated/help-bot.json` i parla de crear un donant genèric. No baixa prou al cas de soci amb quota, IBAN i estat. |
+| Com dono d'alta un nou soci | `-` | `missing` | `manual` | No hi ha cap card repo-only dedicada a l'alta d'un soci. L'artefacte legacy `docs/generated/help-bot.json` no compta perquè no forma part del runtime del bot. |
 | Com dono de baixa un soci | `guide-donor-inactive` | `good` | `manual` | Card dedicada i alineada amb el manual (`3.5`). |
 | Com edito les dades d'un soci | `guide-update-donors` | `weak` | `manual` | La card existent està orientada a actualització massiva per importació, no a l'edició directa de fitxa. |
 | Com modifico l'IBAN d'un soci | `guide-update-donors` | `weak` | `manual` | Cobreix canvi d'IBAN via importació, però no el flux natural d'edició puntual des de la fitxa. |

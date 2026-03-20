@@ -138,7 +138,7 @@ Queda fora del contracte actiu com a font principal:
 - `help/topics/*`
 - `guides.*` com a promesa editorial visible
 - `docs/generated/help-guides.*.json`
-- `docs/generated/help-bot.json` com a artefacte de build, no com a font primària
+- `docs/generated/help-bot.json`: pot existir com a artefacte de build, però no forma part del runtime del bot
 - qualsevol duplicació intermèdia que només existeixi per compatibilitat legacy
 
 Política per a aquest material congelat:
