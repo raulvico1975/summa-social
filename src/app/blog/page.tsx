@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
+import { getBlogCopy } from '@/lib/blog/copy'
 import { formatBlogDate, listBlogPosts } from '@/lib/blog/firestore'
 
 export const revalidate = 60
@@ -9,9 +10,12 @@ function isBlogConfigured() {
 }
 
 export async function generateMetadata(): Promise<Metadata> {
+  const copy = getBlogCopy()
+
   if (!isBlogConfigured()) {
     return {
-      title: 'Blog | Summa Social',
+      title: copy.metaTitle,
+      description: copy.metaDescription,
       robots: {
         index: false,
         follow: false,
@@ -20,24 +24,27 @@ export async function generateMetadata(): Promise<Metadata> {
   }
 
   return {
-    title: 'Blog | Summa Social',
+    title: copy.metaTitle,
+    description: copy.metaDescription,
   }
 }
 
 export default async function BlogPage() {
+  const copy = getBlogCopy()
+
   if (!isBlogConfigured()) {
     return (
       <main className="min-h-screen bg-background">
         <div className="mx-auto max-w-5xl px-6 py-16">
           <header className="mb-6 space-y-3">
             <p className="text-sm font-medium uppercase tracking-[0.2em] text-muted-foreground">
-              Blog
+              {copy.eyebrow}
             </p>
-            <h1 className="text-4xl font-bold tracking-tight text-foreground">Articles i novetats</h1>
+            <h1 className="text-4xl font-bold tracking-tight text-foreground">{copy.title}</h1>
           </header>
 
           <p className="max-w-2xl text-base leading-7 text-muted-foreground">
-            El blog no està configurat en aquest entorn.
+            {copy.notConfigured}
           </p>
         </div>
       </main>
@@ -51,9 +58,9 @@ export default async function BlogPage() {
       <div className="mx-auto max-w-5xl px-6 py-16">
         <header className="mb-10 space-y-3">
           <p className="text-sm font-medium uppercase tracking-[0.2em] text-muted-foreground">
-            Blog
+            {copy.eyebrow}
           </p>
-          <h1 className="text-4xl font-bold tracking-tight text-foreground">Articles i novetats</h1>
+          <h1 className="text-4xl font-bold tracking-tight text-foreground">{copy.title}</h1>
         </header>
 
         <div className="space-y-6">
