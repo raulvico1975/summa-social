@@ -154,6 +154,37 @@
   }
 }
 
+@layer components {
+  .blog-rich-text {
+    @apply blog-prose max-w-none text-foreground;
+  }
+
+  .blog-rich-text :where(h2, h3, h4) {
+    color: hsl(var(--foreground));
+    letter-spacing: -0.02em;
+  }
+
+  .blog-rich-text :where(p, li) {
+    color: hsl(var(--foreground));
+  }
+
+  .blog-rich-text :where(blockquote) {
+    border-left-color: hsl(var(--border));
+    color: hsl(var(--muted-foreground));
+    font-style: normal;
+  }
+
+  .blog-rich-text :where(a) {
+    color: hsl(var(--primary));
+    text-decoration: none;
+    font-weight: 500;
+  }
+
+  .blog-rich-text :where(a:hover) {
+    color: hsl(var(--primary) / 0.82);
+  }
+}
+
 /* ═══════════════════════════════════════════════════════════════════════════
    UTILITATS PERSONALITZADES
    ═══════════════════════════════════════════════════════════════════════════ */

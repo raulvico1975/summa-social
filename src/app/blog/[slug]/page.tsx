@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
+import { getBlogCopy } from '@/lib/blog/copy'
 import { formatBlogDate, getBlogPostBySlug } from '@/lib/blog/firestore'
 
 export const revalidate = 60
@@ -12,10 +13,13 @@ function isBlogConfigured() {
   return Boolean(process.env.BLOG_ORG_ID?.trim())
 }
 
-export async function generateMetadata(): Promise<Metadata> {
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const copy = getBlogCopy()
+
   if (!isBlogConfigured()) {
     return {
-      title: 'Blog | Summa Social',
+      title: copy.metaTitle,
+      description: copy.metaDescription,
       robots: {
         index: false,
         follow: false,
@@ -23,8 +27,19 @@ export async function generateMetadata(): Promise<Metadata> {
     }
   }
 
+  const { slug } = await params
+  const post = await getBlogPostBySlug(slug)
+
+  if (!post) {
+    return {
+      title: copy.metaTitle,
+      description: copy.metaDescription,
+    }
+  }
+
   return {
-    title: 'Blog | Summa Social',
+    title: post.seoTitle,
+    description: post.metaDescription,
   }
 }
 
@@ -62,7 +77,7 @@ export default async function BlogPostPage({ params }: PageProps) {
         ) : null}
 
         <div
-          className="prose prose-neutral max-w-none"
+          className="blog-rich-text"
           dangerouslySetInnerHTML={{ __html: post.contentHtml }}
         />
       </article>
