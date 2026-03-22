@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+VERIFY_PROFILE="${VERIFY_PROFILE:-STANDARD}"
+
 echo "[verify-local] Checking i18n locale completeness..."
 npm run i18n:check
 
@@ -10,8 +12,16 @@ npm run i18n:check-tr-keys
 echo "[verify-local] Checking build env..."
 node scripts/check-build-env.mjs
 
-echo "[verify-local] Build..."
-npm run build
+if [ "$VERIFY_PROFILE" = "FAST_PUBLIC" ]; then
+  echo "[verify-local] Profile: FAST_PUBLIC (web public/blog)"
+  echo "[verify-local] Typecheck..."
+  npm run typecheck
+  echo "[verify-local] Build..."
+  npm run build
+else
+  echo "[verify-local] Build..."
+  npm run build
+fi
 
 echo "[verify-local] Checking staged TS/TSX files..."
 
@@ -39,6 +49,12 @@ if echo "$STAGED" | xargs grep -nE ':\s*undefined\b' -- >/dev/null 2>&1; then
   echo "Motiu: Firestore no accepta undefined. Omet el camp o usa null."
   echo "$STAGED" | xargs grep -nE ':\s*undefined\b' -- || true
   exit 1
+fi
+
+if [ "$VERIFY_PROFILE" = "FAST_PUBLIC" ]; then
+  echo "[verify-local] Skipping projectModule-specific i18n guardrails (FAST_PUBLIC)."
+  echo "[verify-local] OK"
+  exit 0
 fi
 
 echo "[verify-local] Checking hardcoded Catalan in projectModule..."

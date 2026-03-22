@@ -175,19 +175,24 @@ Si ja hi ha una tasca activa d'aquella àrea, el sistema bloqueja l'inici (`BLOC
 1. Preflight git al **repositori de control** (branca=main, working tree net, pull ff-only)
 2. Detectar fitxers canviats (main vs prod)
 3. Classificar risc (ALT/MITJÀ/BAIX) per patrons de path
+4. Detectar si el bloc és `FAST_PUBLIC` (només web públic/blog/landings)
 4. **Backup curt automàtic** quan el risc és ALT fiscal (si l'entorn està configurat)
 5. **Anàlisi fiscal i d'impacte** — detecta si el canvi pot afectar diners, saldos o fiscalitat.
 6. Verificacions locals (`verify-local.sh` + `verify-ci.sh`)
+   - en `FAST_PUBLIC`: i18n + build env + typecheck + build
+   - fora de `FAST_PUBLIC`: flux complet actual amb oracle/coverage/support eval
 7. Resum
 8. **Avís guiat de negoci** si hi ha risc ALT residual: no tècnic, amb impacte possible i recomanació clara.
 9. **Pla de rollback automàtic** guardat a `docs/DEPLOY-ROLLBACK-LATEST.md`
 10. Merge ritual (main→prod + push)
 11. Post-deploy check automàtic (SHA remot + smoke amb URLs resoltes automàticament)
-12. **Check post-producció automàtic de 3 minuts** (login, flux principal, informe/export)
-13. Registre a `docs/DEPLOY-LOG.md` + incidències a `docs/DEPLOY-INCIDENTS.md` si hi ha bloqueig
-14. Sincronització final de `main` amb `origin/main` si els logs han creat commits nous
-15. Si només falla la propagació immediata del SHA remot però la resta de comprovacions passen, el resultat final es considera `OK`
-16. Si hi ha worktrees actius o residuals, o si `prod` conté commits fora de `main`, bloqueja abans de publicar
+12. **Check post-producció automàtic de 3 minuts** (login, flux principal, informe/export), excepte `FAST_PUBLIC`
+13. Oracle fiscal postdeploy, excepte `FAST_PUBLIC`
+14. Registre a `docs/DEPLOY-LOG.md` + incidències a `docs/DEPLOY-INCIDENTS.md` si hi ha bloqueig
+15. Reabsorció automàtica de `prod` a `main` per deixar el següent deploy desbloquejat
+16. Sincronització final de `main` amb `origin/main` si els logs han creat commits nous
+17. Si només falla la propagació immediata del SHA remot però la resta de comprovacions passen, el resultat final es considera `OK`
+18. Si hi ha worktrees actius o residuals, o si `prod` conté commits fora de `main`, bloqueja abans de publicar
 
 ### Autorització
 
@@ -227,6 +232,7 @@ Si ja hi ha una tasca activa d'aquella àrea, el sistema bloqueja l'inici (`BLOC
 - Backup curt selectiu abans de deploy en risc ALT fiscal (si hi ha configuració d'entorn).
 - Rollback preparat automàticament abans de publicar.
 - Check post-producció de 3 minuts automatitzat.
+- Via ràpida automàtica `FAST_PUBLIC` per canvis exclusius del web públic/blog/landings.
 - Mini-registre d'incidència quan un deploy queda bloquejat.
 - Si no hi ha URLs de smoke definides, el sistema prova automàticament amb `DEPLOY_BASE_URL` o amb la URL publicada detectada a `firebase.json`.
 - Prova prèvia de merge a `integra` en worktree temporal per detectar solapaments abans de tocar `main`.

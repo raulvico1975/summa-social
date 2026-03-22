@@ -3,6 +3,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+. "$SCRIPT_DIR/change-profile.sh"
 
 STATUS_NO="No en producció"
 STATUS_READY="Preparat per producció"
@@ -335,8 +336,16 @@ stage_changes() {
 }
 
 run_checks() {
-  bash "$SCRIPT_DIR/verify-local.sh"
-  bash "$SCRIPT_DIR/verify-ci.sh"
+  local files="$1"
+  local verify_profile
+
+  verify_profile="$(summa_change_profile "$files")"
+  if [ "$verify_profile" = "FAST_PUBLIC" ]; then
+    say "Perfil de validació: FAST_PUBLIC (web públic/blog)."
+  fi
+
+  VERIFY_PROFILE="$verify_profile" bash "$SCRIPT_DIR/verify-local.sh"
+  VERIFY_PROFILE="$verify_profile" bash "$SCRIPT_DIR/verify-ci.sh"
 }
 
 collect_staged_files() {
@@ -656,7 +665,7 @@ run_acabat() {
   changed_files="$(collect_changed_files)"
   if [ -n "$changed_files" ]; then
     risk="$(classify_risk "$changed_files")"
-    if ! run_checks; then
+    if ! run_checks "$changed_files"; then
       say "BLOCKED_SAFE"
       say "Les comprovacions automàtiques han fallat. Cal corregir abans de marcar la branca com a llesta."
       exit 1
