@@ -67,10 +67,14 @@ Resultat esperat:
 - només corre des de `main` al repositori de control
 - falla en sec si hi ha worktrees actius/residuals o si `prod` conté commits fora de `main`
 - fa preflight git, verificacions i classificació de risc
+- detecta automàticament el perfil `FAST_PUBLIC` quan tots els canvis són de web públic/blog/landings (`src/app/public/*`, `src/components/public/*`, `src/app/blog/*`, `public/*`, `src/i18n/public.ts`, etc.)
+- en perfil `FAST_PUBLIC` fa validació curta però segura: i18n, build env, typecheck i build; salta cobertura, support eval i oracles fiscals
 - prepara rollback i registra el resultat a `docs/DEPLOY-LOG.md`
 - fa el merge `main -> prod`, push i post-check automàtic
+- després del deploy reabsorbeix automàticament `prod` cap a `main` perquè el següent `publica` no quedi bloquejat
 - si els logs de deploy creen commits nous a `main`, els sincronitza també a `origin/main`
 - si el SHA remot triga a reflectir `prod` però la resta de comprovacions passen, el resultat final es normalitza a `OK`
+- els commits automàtics de logs de deploy no tornen a passar pel `pre-commit` complet
 
 Resultat esperat:
 - `prod` actualitzada
@@ -105,9 +109,10 @@ Resultat esperat:
   - `docs/DEV-SOLO-MANUAL.md`
   - `docs/DEPLOY.md`
 - Bloc de commits que conté la correcció:
-  - `b070bedc` — fiabilitat d'`integra`, resum operatiu i higiene de worktrees
-  - `2f6a91ca` — sincronització final de `main` després de `publica`
-  - `955f7cb1` — normalització del resultat final de `publica` quan el SHA remot arriba tard
+- `b070bedc` — fiabilitat d'`integra`, resum operatiu i higiene de worktrees
+- `2f6a91ca` — sincronització final de `main` després de `publica`
+- `955f7cb1` — normalització del resultat final de `publica` quan el SHA remot arriba tard
+- `2026-03-22` — via ràpida `FAST_PUBLIC` per canvis de web públic/blog i reabsorció automàtica de `prod` a `main`
 - Prova real del flux complet:
   - el 2026-03-20 es va executar un cicle complet `codex/* -> acabat -> integra -> worktree:close -> publica` amb resultat final `OK`
   - el deploy va quedar confirmat per smoke, contingut públic, check de 3 minuts i oracle postdeploy

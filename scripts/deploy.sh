@@ -12,6 +12,7 @@ INCIDENT_LOG="docs/DEPLOY-INCIDENTS.md"
 ROLLBACK_PLAN_FILE="docs/DEPLOY-ROLLBACK-LATEST.md"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+. "$SCRIPT_DIR/change-profile.sh"
 
 # Globals (set per funcions)
 CHANGED_FILES=""
@@ -48,6 +49,8 @@ RESOLVED_CHECK_CORE_URL=""
 RESOLVED_CHECK_REPORT_URL=""
 GUIDED_ALERT_EMITTED=false
 GUIDED_ALERT_RECOMMENDATION=""
+CHANGE_PROFILE="STANDARD"
+FAST_PUBLIC_SCOPE=false
 
 append_incident_log() {
   if [ "$INCIDENT_RECORDED" = true ]; then
@@ -451,8 +454,14 @@ classify_risk() {
     fi
   fi
 
+  CHANGE_PROFILE="$(summa_change_profile "$CHANGED_FILES")"
+  if [ "$CHANGE_PROFILE" = "FAST_PUBLIC" ] && [ "$IS_FISCAL" = false ]; then
+    FAST_PUBLIC_SCOPE=true
+  fi
+
   echo "  Risc detectat: $RISK_LEVEL"
   echo "  Area fiscal: $([ "$IS_FISCAL" = true ] && echo "Si" || echo "No")"
+  echo "  Perfil deploy: $CHANGE_PROFILE"
   echo ""
 }
 
@@ -834,11 +843,19 @@ fiscal_impact_gate() {
 # ============================================================
 run_verifications() {
   CURRENT_PHASE="Verificacions"
+  local verify_profile="STANDARD"
+
+  if [ "$FAST_PUBLIC_SCOPE" = true ] && [ "$IS_FISCAL" = false ]; then
+    verify_profile="FAST_PUBLIC"
+  fi
+
   echo "[5/9] Executant verificacions..."
+  echo ""
+  echo "  Perfil de verificació: $verify_profile"
   echo ""
 
   echo "  --- verify-local.sh ---"
-  if ! bash "$SCRIPT_DIR/verify-local.sh"; then
+  if ! VERIFY_PROFILE="$verify_profile" bash "$SCRIPT_DIR/verify-local.sh"; then
     DEPLOY_BLOCK_REASON="La verificacio local no ha passat."
     echo ""
     echo "ERROR: verify-local.sh ha fallat."
@@ -849,7 +866,7 @@ run_verifications() {
 
   if [ -f "$SCRIPT_DIR/verify-ci.sh" ]; then
     echo "  --- verify-ci.sh ---"
-    if ! bash "$SCRIPT_DIR/verify-ci.sh"; then
+    if ! VERIFY_PROFILE="$verify_profile" bash "$SCRIPT_DIR/verify-ci.sh"; then
       DEPLOY_BLOCK_REASON="La verificacio de CI no ha passat."
       echo ""
       echo "ERROR: verify-ci.sh ha fallat."
@@ -869,6 +886,12 @@ run_fiscal_oracle_predeploy() {
   CURRENT_PHASE="Oracle fiscal predeploy"
   echo "[5b/9] Executant oracle fiscal (bloquejant)..."
   echo ""
+
+  if [ "$FAST_PUBLIC_SCOPE" = true ] && [ "$IS_FISCAL" = false ]; then
+    echo "  Oracle fiscal predeploy: NO CAL (perfil FAST_PUBLIC)."
+    echo ""
+    return
+  fi
 
   if ! node --import tsx "$SCRIPT_DIR/fiscal/run-oracle.ts" --stage=predeploy; then
     DEPLOY_BLOCK_REASON="FISCAL_ORACLE_FAIL (predeploy)"
@@ -895,6 +918,7 @@ display_deploy_summary() {
   echo "    prod:   $PROD_SHA"
   echo ""
   echo "  Risc:     $RISK_LEVEL"
+  echo "  Perfil:   $CHANGE_PROFILE"
   echo "  Fiscal:   $([ "$IS_FISCAL" = true ] && echo "Si" || echo "No")"
   echo "  Fitxers:  $CHANGED_COUNT"
   echo "  Backup:   $BACKUP_RESULT"
@@ -977,6 +1001,7 @@ post_deploy_check() {
   CURRENT_PHASE="Post-check automatic"
   local prod_sha
   local remote_sha
+  local need_dashboard_smoke=true
   prod_sha=$(git rev-parse --short prod)
 
   echo "[8/9] Post-deploy check..."
@@ -995,17 +1020,23 @@ post_deploy_check() {
 
   resolve_postdeploy_urls
 
-  if [ -n "$RESOLVED_SMOKE_PUBLIC_URL" ] && [ -n "$RESOLVED_SMOKE_DASHBOARD_URL" ]; then
+  if [ "$FAST_PUBLIC_SCOPE" = true ] && [ "$IS_FISCAL" = false ]; then
+    need_dashboard_smoke=false
+  fi
+
+  if [ -n "$RESOLVED_SMOKE_PUBLIC_URL" ] && { [ "$need_dashboard_smoke" = false ] || [ -n "$RESOLVED_SMOKE_DASHBOARD_URL" ]; }; then
     echo "  Executant smoke checks automatitzats..."
     echo "    URL publica: $RESOLVED_SMOKE_PUBLIC_URL"
-    echo "    URL accés:   $RESOLVED_SMOKE_DASHBOARD_URL"
+    if [ "$need_dashboard_smoke" = true ]; then
+      echo "    URL accés:   $RESOLVED_SMOKE_DASHBOARD_URL"
+    fi
     local smoke_ok=true
     if ! curl -fsS --max-time 20 "$RESOLVED_SMOKE_PUBLIC_URL" >/dev/null; then
       smoke_ok=false
       DEPLOY_RESULT="PENDENT"
       echo "  Smoke públic no confirmat. Estat: PENDENT."
     fi
-    if ! curl -fsS --max-time 20 "$RESOLVED_SMOKE_DASHBOARD_URL" >/dev/null; then
+    if [ "$need_dashboard_smoke" = true ] && ! curl -fsS --max-time 20 "$RESOLVED_SMOKE_DASHBOARD_URL" >/dev/null; then
       smoke_ok=false
       DEPLOY_RESULT="PENDENT"
       echo "  Smoke dashboard no confirmat. Estat: PENDENT."
@@ -1071,6 +1102,13 @@ post_production_3min_check() {
   echo "[8b/9] Check post-produccio (3 minuts)..."
   echo ""
 
+  if [ "$FAST_PUBLIC_SCOPE" = true ] && [ "$IS_FISCAL" = false ]; then
+    POSTDEPLOY_3MIN_STATUS="NO CAL"
+    echo "  Check de 3 minuts: NO CAL (perfil FAST_PUBLIC)."
+    echo ""
+    return
+  fi
+
   resolve_postdeploy_urls
 
   local login_url core_url report_url
@@ -1125,6 +1163,13 @@ run_fiscal_oracle_postdeploy_monitor() {
   echo "[8c/9] Oracle fiscal postdeploy..."
   echo ""
 
+  if [ "$FAST_PUBLIC_SCOPE" = true ] && [ "$IS_FISCAL" = false ]; then
+    POSTDEPLOY_ORACLE_STATUS="NO CAL"
+    echo "  Oracle fiscal postdeploy: NO CAL (perfil FAST_PUBLIC)."
+    echo ""
+    return
+  fi
+
   if ! node --import tsx "$SCRIPT_DIR/fiscal/run-oracle.ts" --stage=postdeploy; then
     POSTDEPLOY_ORACLE_STATUS="PENDENT"
     DEPLOY_RESULT="PENDENT"
@@ -1156,17 +1201,21 @@ reconcile_postdeploy_result() {
     runtime_checks_ok=false
   fi
 
-  if [ "$POSTDEPLOY_3MIN_STATUS" != "OK" ]; then
+  if [ "$POSTDEPLOY_3MIN_STATUS" = "PENDENT" ]; then
     runtime_checks_ok=false
   fi
 
-  if [ "$POSTDEPLOY_ORACLE_STATUS" != "OK" ]; then
+  if [ "$POSTDEPLOY_ORACLE_STATUS" = "PENDENT" ]; then
     runtime_checks_ok=false
   fi
 
   if [ "$POSTDEPLOY_REMOTE_SHA_STATUS" = "PENDENT" ] && [ "$runtime_checks_ok" = true ]; then
     DEPLOY_RESULT="OK"
-    echo "  SHA remot ha anat tard, pero la publicacio ha quedat confirmada per smoke, contingut, check de 3 minuts i oracle."
+    if [ "$FAST_PUBLIC_SCOPE" = true ] && [ "$IS_FISCAL" = false ]; then
+      echo "  SHA remot ha anat tard, pero la publicacio ha quedat confirmada per smoke i contingut public."
+    else
+      echo "  SHA remot ha anat tard, pero la publicacio ha quedat confirmada per smoke, contingut, check de 3 minuts i oracle."
+    fi
     echo "  Resultat final normalitzat a OK."
     echo ""
     return
@@ -1303,15 +1352,42 @@ commit_deploy_logs_if_needed() {
     return
   fi
 
-  git commit -m "chore(deploy): update deploy logs" -- "${tracked_files[@]}"
+  HUSKY=0 git commit -m "chore(deploy): update deploy logs" -- "${tracked_files[@]}"
   MAIN_SHA=$(git rev-parse --short HEAD)
   echo "  Commit de logs creat a main."
   echo ""
 }
 
+reabsorb_prod_into_main() {
+  CURRENT_PHASE="Reabsorbir prod a main"
+  echo "[9c/9] Reabsorbint prod a main..."
+  echo ""
+
+  git checkout main --quiet
+
+  if git merge-base --is-ancestor refs/remotes/origin/prod refs/heads/main >/dev/null 2>&1; then
+    echo "  main ja conté prod. No cal cap reabsorció."
+    echo ""
+    return
+  fi
+
+  if git merge --no-ff prod -m "chore(branches): reabsorbeix prod a main postdeploy" >/dev/null 2>&1; then
+    MAIN_SHA=$(git rev-parse --short HEAD)
+    echo "  prod reabsorbida correctament a main."
+    echo ""
+    return
+  fi
+
+  git merge --abort >/dev/null 2>&1 || true
+  DEPLOY_RESULT="PENDENT"
+  DEPLOY_BLOCK_REASON="Prod publicada però main no ha pogut reabsorbir el merge final de prod."
+  echo "  PENDENT: la reabsorció automàtica de prod a main no s'ha pogut completar."
+  echo ""
+}
+
 sync_main_after_deploy_logs() {
   CURRENT_PHASE="Sincronitzar main remot"
-  echo "[9c/9] Sincronitzant main amb origin/main..."
+  echo "[9d/9] Sincronitzant main amb origin/main..."
   echo ""
 
   git checkout main --quiet
@@ -1373,6 +1449,7 @@ main() {
   prepare_rollback_plan
   append_deploy_log          # Pas 9
   commit_deploy_logs_if_needed
+  reabsorb_prod_into_main
   sync_main_after_deploy_logs
   DEPLOY_SUCCESS=1
 
