@@ -48,6 +48,10 @@ Exemples:
 - `docs/governance/`, `docs/contracts/`, `docs/trust/`, `docs/i18n/`, `docs/product-updates/`, `docs/sync/` - documentacio tematica
 - `docs/archive/` - material retirat de la navegacio principal o residus conservats
 
+Exemple actual de `docs/contracts/`:
+
+- `docs/contracts/blog-publish-cover-image.md` - contracte extern OpenClaw -> Summa per al blog públic
+
 ## Regles de manteniment
 
 - Si un fitxer es usat per un script, conserva la ruta estable o actualitza el codi en el mateix canvi.
