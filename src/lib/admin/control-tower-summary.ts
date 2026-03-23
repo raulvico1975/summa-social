@@ -116,6 +116,20 @@ const S9_FISCAL_CATEGORY_NAME_KEYS = new Set([
   'quotes',
 ])
 
+const HIDDEN_ADMIN_ENTITY_IDS = new Set([
+  'local-blog',
+  'summa-public-blog',
+])
+
+const HIDDEN_ADMIN_ENTITY_ID_PREFIXES = [
+  'qa-invitations-',
+  'codex-prod-perms-',
+]
+
+const HIDDEN_ADMIN_ENTITY_SLUG_PREFIXES = [
+  'qa-invitacions-',
+]
+
 export const CONTROL_TOWER_THRESHOLDS: ThresholdsApplied = {
   policy: 'conservative',
   system: {
@@ -189,6 +203,31 @@ function normalizeKey(value: string): string {
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
     .replace(/\s+/g, '')
+}
+
+function shouldIncludeEntityInAdminShell(
+  orgId: string,
+  data: Record<string, unknown>
+): boolean {
+  if (HIDDEN_ADMIN_ENTITY_IDS.has(orgId)) {
+    return false
+  }
+
+  if (HIDDEN_ADMIN_ENTITY_ID_PREFIXES.some((prefix) => orgId.startsWith(prefix))) {
+    return false
+  }
+
+  const slug = typeof data.slug === 'string' ? data.slug.trim() : ''
+  if (slug && HIDDEN_ADMIN_ENTITY_SLUG_PREFIXES.some((prefix) => slug.startsWith(prefix))) {
+    return false
+  }
+
+  const createdBy = typeof data.createdBy === 'string' ? data.createdBy : ''
+  if (createdBy === 'local-blog-bootstrap' || createdBy === 'codex-blog-deploy') {
+    return false
+  }
+
+  return true
 }
 
 function inferFiscalIncomeCategoryIds(
@@ -571,21 +610,27 @@ export async function buildAdminControlTowerSummary(
     now
   )
 
-  const entitiesBase = orgsSnap.docs.map((doc) => {
-    const data = doc.data() as Record<string, unknown>
-    const createdAt = toIsoOrNull(data.createdAt)
+  const entitiesBase = orgsSnap.docs
+    .map((doc) => {
+      const data = doc.data() as Record<string, unknown>
+      if (!shouldIncludeEntityInAdminShell(doc.id, data)) {
+        return null
+      }
 
-    return {
-      id: doc.id,
-      name: String(data.name ?? '—'),
-      slug: String(data.slug ?? doc.id),
-      status: (data.status as EntityRow['status']) ?? 'pending',
-      ...(typeof data.taxId === 'string' ? { taxId: data.taxId } : {}),
-      createdAt,
-      orgUpdatedAt: toIsoOrNull(data.updatedAt),
-      configuredFiscalCategoryIds: normalizeStringArray(data.fiscalIncomeCategoryIds ?? data.fiscalCategoryIds),
-    }
-  })
+      const createdAt = toIsoOrNull(data.createdAt)
+
+      return {
+        id: doc.id,
+        name: String(data.name ?? '—'),
+        slug: String(data.slug ?? doc.id),
+        status: (data.status as EntityRow['status']) ?? 'pending',
+        ...(typeof data.taxId === 'string' ? { taxId: data.taxId } : {}),
+        createdAt,
+        orgUpdatedAt: toIsoOrNull(data.updatedAt),
+        configuredFiscalCategoryIds: normalizeStringArray(data.fiscalIncomeCategoryIds ?? data.fiscalCategoryIds),
+      }
+    })
+    .filter((entity): entity is NonNullable<typeof entity> => entity !== null)
 
   const entities: EntityRow[] = await Promise.all(
     entitiesBase.map(async (entity) => {
