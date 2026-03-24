@@ -302,7 +302,7 @@ preflight_git_checks() {
   echo "[1/9] Comprovacions previes de git..."
 
   bash "$SCRIPT_DIR/worktree.sh" gc --quiet >/dev/null 2>&1 || true
-  gate_message="$(bash "$SCRIPT_DIR/status.sh" gate publica 2>&1 || true)"
+  gate_message="$(DEPLOY_TARGET_BRANCH="$DEPLOY_TARGET_BRANCH" bash "$SCRIPT_DIR/status.sh" gate publica 2>&1 || true)"
   if [ -n "$gate_message" ]; then
     DEPLOY_BLOCK_REASON="$gate_message"
     echo "ERROR: $DEPLOY_BLOCK_REASON"
