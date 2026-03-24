@@ -41,7 +41,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Loader2, AlertTriangle, CheckCircle2, Plus, RotateCcw, Trash2, Upload } from 'lucide-react';
 import { collection, getDocs, query, where } from 'firebase/firestore';
-import { useFirebase } from '@/firebase';
+import { addDocumentNonBlocking, useFirebase } from '@/firebase';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
 import { useToast } from '@/hooks/use-toast';
 import type { Donor } from '@/lib/data';
@@ -79,6 +79,13 @@ import {
   type StripePayoutGroup,
 } from '@/components/stripe-importer/useStripeImporter';
 import { DonorSearchCombobox } from '@/components/donor-search-combobox';
+import { CreateQuickDonorDialog, type QuickDonorFormData } from '@/components/stripe-importer/CreateQuickDonorDialog';
+import { findExistingContact } from '@/lib/contact-matching';
+import {
+  buildStripeQuickDonorContactPayload,
+  toLocalDonorFromStripeQuickPayload,
+  type StripeQuickDonorKind,
+} from '@/lib/stripe/quick-donor';
 
 interface BankTransactionSummary {
   id: string;
@@ -99,6 +106,12 @@ interface CsvImportState {
   matchingGroups: StripePayoutGroup[];
   selectedTransferId: string | null;
   warning: string | null;
+}
+
+interface QuickCreateState {
+  lineLocalId: string;
+  kind: StripeQuickDonorKind;
+  initialData?: Partial<QuickDonorFormData>;
 }
 
 function buildCsvWarning(parsedWarningCount: number, matchingCount: number): string | null {
@@ -129,6 +142,8 @@ export function StripeImputationModal({
   const [pendingCsvImport, setPendingCsvImport] = React.useState<CsvImportState | null>(null);
   const [isReplaceDialogOpen, setIsReplaceDialogOpen] = React.useState(false);
   const [stripeDonorUsageById, setStripeDonorUsageById] = React.useState<StripeDonorUsageStats>({});
+  const [localDonorOverrides, setLocalDonorOverrides] = React.useState<Donor[]>([]);
+  const [quickCreateState, setQuickCreateState] = React.useState<QuickCreateState | null>(null);
   const inputRef = React.useRef<HTMLInputElement | null>(null);
   const lineIdRef = React.useRef(0);
 
@@ -147,6 +162,8 @@ export function StripeImputationModal({
       setPendingCsvImport(null);
       setIsReplaceDialogOpen(false);
       setStripeDonorUsageById({});
+      setLocalDonorOverrides([]);
+      setQuickCreateState(null);
       lineIdRef.current = 0;
       if (inputRef.current) {
         inputRef.current.value = '';
@@ -194,17 +211,24 @@ export function StripeImputationModal({
     };
   }, [firestore, open, organizationId]);
 
+  const availableDonors = React.useMemo(() => {
+    const byId = new Map<string, Donor>();
+    localDonorOverrides.forEach((donor) => byId.set(donor.id, donor));
+    donors.forEach((donor) => byId.set(donor.id, donor));
+    return Array.from(byId.values());
+  }, [donors, localDonorOverrides]);
+
   const donorByEmail = React.useMemo(() => {
     return new Map(
-      donors
+      availableDonors
         .filter((donor) => donor.email)
         .map((donor) => [donor.email!.toLowerCase().trim(), donor.id])
     );
-  }, [donors]);
+  }, [availableDonors]);
 
   const sortedDonors = React.useMemo(
-    () => sortDonorsForStripeImputation(donors, stripeDonorUsageById),
-    [donors, stripeDonorUsageById]
+    () => sortDonorsForStripeImputation(availableDonors, stripeDonorUsageById),
+    [availableDonors, stripeDonorUsageById]
   );
   const donorBadgesById = React.useMemo(
     () =>
@@ -315,9 +339,33 @@ export function StripeImputationModal({
   }, []);
 
   const handleSetLineContact = React.useCallback((localId: string, contactId: string | null) => {
-    setEditableLines((current) =>
-      current.map((line) => line.localId === localId ? { ...line, contactId } : line)
-    );
+    setEditableLines((current) => {
+      const targetLine = current.find((line) => line.localId === localId);
+      if (!targetLine) return current;
+
+      const targetEmail = targetLine.customerEmail?.toLowerCase().trim() ?? null;
+
+      return current.map((line) => {
+        if (line.localId === localId) {
+          return { ...line, contactId };
+        }
+
+        if (!contactId || !targetEmail) {
+          return line;
+        }
+
+        const lineEmail = line.customerEmail?.toLowerCase().trim() ?? null;
+        if (!lineEmail || lineEmail !== targetEmail) {
+          return line;
+        }
+
+        if (line.contactId && line.contactId !== contactId) {
+          return line;
+        }
+
+        return { ...line, contactId };
+      });
+    });
     setIsDifferenceConfirmed(false);
   }, []);
 
@@ -343,6 +391,7 @@ export function StripeImputationModal({
     setPendingCsvImport(null);
     setIsReplaceDialogOpen(false);
     setIsDifferenceConfirmed(false);
+    setQuickCreateState(null);
     if (inputRef.current) {
       inputRef.current.value = '';
     }
@@ -360,6 +409,107 @@ export function StripeImputationModal({
     setPendingCsvImport(null);
     setIsReplaceDialogOpen(false);
   }, []);
+
+  const handleOpenQuickCreate = React.useCallback((localId: string, kind: StripeQuickDonorKind) => {
+    const line = editableLines.find((currentLine) => currentLine.localId === localId);
+    setQuickCreateState({
+      lineLocalId: localId,
+      kind,
+      initialData: {
+        email: line?.customerEmail ?? '',
+      },
+    });
+  }, [editableLines]);
+
+  const handleQuickCreateOpenChange = React.useCallback((nextOpen: boolean) => {
+    if (!nextOpen) {
+      setQuickCreateState(null);
+    }
+  }, []);
+
+  const handleCreateQuickDonor = React.useCallback(async (formData: QuickDonorFormData): Promise<string | null> => {
+    if (!organizationId || !firestore || !quickCreateState) return null;
+
+    const contactsCollection = collection(firestore, 'organizations', organizationId, 'contacts');
+    const existingMatch = findExistingContact(
+      availableDonors as any[],
+      formData.taxId.trim() || undefined,
+      undefined,
+      formData.email.trim() || undefined
+    );
+
+    if (existingMatch.found && existingMatch.contact) {
+      const existingDonor = existingMatch.contact as Donor;
+
+      setLocalDonorOverrides((current) => {
+        const next = current.filter((donor) => donor.id !== existingDonor.id);
+        return [...next, existingDonor];
+      });
+      handleSetLineContact(quickCreateState.lineLocalId, existingDonor.id);
+
+      const existingIsMember = existingDonor.membershipType === 'recurring';
+      const requestedIsMember = quickCreateState.kind === 'member';
+
+      toast({
+        title: requestedIsMember ? 'Soci assignat' : 'Donant assignat',
+        description:
+          requestedIsMember && !existingIsMember
+            ? `${existingDonor.name} ja existia com a donant. L'he assignat sense canviar-lo a soci; si cal, revisa la seva fitxa.`
+            : `${existingDonor.name} ja existia i l'he assignat a la imputació.`,
+      });
+
+      return existingDonor.id;
+    }
+
+    const nowIso = new Date().toISOString();
+    const payload = buildStripeQuickDonorContactPayload({
+      kind: quickCreateState.kind,
+      formData,
+      nowIso,
+      memberSince: quickCreateState.kind === 'member'
+        ? (bankTransaction.date || nowIso.slice(0, 10))
+        : null,
+    });
+
+    try {
+      const docRef = await addDocumentNonBlocking(contactsCollection, payload);
+      if (!docRef) {
+        return null;
+      }
+
+      const localDonor = toLocalDonorFromStripeQuickPayload(docRef.id, payload);
+      setLocalDonorOverrides((current) => {
+        const next = current.filter((donor) => donor.id !== localDonor.id);
+        return [...next, localDonor];
+      });
+      handleSetLineContact(quickCreateState.lineLocalId, localDonor.id);
+
+      toast({
+        title: quickCreateState.kind === 'member' ? 'Soci creat i assignat' : 'Donant creat i assignat',
+        description: `${localDonor.name} ja queda vinculat a la donació Stripe i disponible a la seva fitxa.`,
+      });
+
+      if (!payload.taxId || !payload.zipCode) {
+        setTimeout(() => {
+          toast({
+            title: 'Falten dades fiscals',
+            description: 'Completa NIF i codi postal a la fitxa per tenir el 182 i els certificats perfectament preparats.',
+            duration: 5000,
+          });
+        }, 400);
+      }
+
+      return localDonor.id;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Error desconegut';
+      toast({
+        variant: 'destructive',
+        title: 'No s\'ha pogut crear el contacte',
+        description: message,
+      });
+      return null;
+    }
+  }, [availableDonors, bankTransaction.date, firestore, handleSetLineContact, organizationId, quickCreateState, toast]);
 
   const findDonationByStripePaymentId = React.useCallback(async (stripePaymentId: string): Promise<Donation | null> => {
     if (!organizationId) return null;
@@ -474,7 +624,7 @@ export function StripeImputationModal({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="flex h-[90vh] max-h-[90vh] w-[min(96vw,1200px)] max-w-[1200px] flex-col overflow-hidden p-0">
+          <DialogContent className="flex h-[92vh] max-h-[92vh] w-[min(97vw,1240px)] max-w-[1240px] flex-col overflow-hidden p-0">
           <DialogHeader className="shrink-0 border-b bg-background px-6 py-4 pr-12">
             <DialogTitle>Imputar Stripe</DialogTitle>
             <DialogDescription>
@@ -629,6 +779,19 @@ export function StripeImputationModal({
                               value={line.contactId}
                               onSelect={(donorId) => handleSetLineContact(line.localId, donorId)}
                               placeholder="Assigna donant"
+                              createActions={[
+                                {
+                                  key: `donor-${line.localId}`,
+                                  label: 'Donar d\'alta nou donant',
+                                  onSelect: () => handleOpenQuickCreate(line.localId, 'donor'),
+                                },
+                                {
+                                  key: `member-${line.localId}`,
+                                  label: 'Donar d\'alta nou soci',
+                                  onSelect: () => handleOpenQuickCreate(line.localId, 'member'),
+                                },
+                              ]}
+                              badgesByDonorId={donorBadgesById}
                             />
                           </TableCell>
                           <TableCell className="align-top">
@@ -747,6 +910,21 @@ export function StripeImputationModal({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <CreateQuickDonorDialog
+        open={quickCreateState !== null}
+        onOpenChange={handleQuickCreateOpenChange}
+        onSave={handleCreateQuickDonor}
+        initialData={quickCreateState?.initialData}
+        title={quickCreateState?.kind === 'member' ? 'Crear nou soci' : 'Crear nou donant'}
+        description={
+          quickCreateState?.kind === 'member'
+            ? 'Crea el soci des d\'aquí i l\'assignarem directament a la imputació Stripe.'
+            : 'Crea el donant des d\'aquí i l\'assignarem directament a la imputació Stripe.'
+        }
+        submitLabel={quickCreateState?.kind === 'member' ? 'Crear soci' : 'Crear donant'}
+        submittingLabel={quickCreateState?.kind === 'member' ? 'Creant soci...' : 'Creant donant...'}
+      />
     </>
   );
 }

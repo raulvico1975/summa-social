@@ -32,6 +32,10 @@ interface CreateQuickDonorDialogProps {
   onOpenChange: (open: boolean) => void;
   onSave: (data: QuickDonorFormData) => Promise<string | null>; // Returns donor ID or null
   initialData?: Partial<QuickDonorFormData>;
+  title?: string;
+  description?: string;
+  submitLabel?: string;
+  submittingLabel?: string;
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -43,6 +47,10 @@ export function CreateQuickDonorDialog({
   onOpenChange,
   onSave,
   initialData,
+  title,
+  description,
+  submitLabel,
+  submittingLabel,
 }: CreateQuickDonorDialogProps) {
   const { t } = useTranslations();
   const [isSaving, setIsSaving] = React.useState(false);
@@ -122,9 +130,9 @@ export function CreateQuickDonorDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle>{t.importers.stripeImporter.createQuickDonor.title}</DialogTitle>
+          <DialogTitle>{title || t.importers.stripeImporter.createQuickDonor.title}</DialogTitle>
           <DialogDescription>
-            {t.importers.stripeImporter.createQuickDonor.description}
+            {description || t.importers.stripeImporter.createQuickDonor.description}
           </DialogDescription>
         </DialogHeader>
 
@@ -227,8 +235,8 @@ export function CreateQuickDonorDialog({
           <Button onClick={handleSave} disabled={isSaving}>
             {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             {isSaving
-              ? t.importers.stripeImporter.createQuickDonor.actions.creating
-              : t.importers.stripeImporter.createQuickDonor.actions.create}
+              ? (submittingLabel || t.importers.stripeImporter.createQuickDonor.actions.creating)
+              : (submitLabel || t.importers.stripeImporter.createQuickDonor.actions.create)}
           </Button>
         </DialogFooter>
       </DialogContent>
