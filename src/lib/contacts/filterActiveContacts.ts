@@ -76,6 +76,26 @@ export function filterMatchableDonors(donors: Donor[]): Donor[] {
 }
 
 /**
+ * Donants assignables en una devolució manual.
+ * Inclou actius, pending_return i baixa, però exclou arxivats i eliminats.
+ * Ordena els donants actius/pending primer i deixa els de baixa al final.
+ */
+export function filterReturnAssignableDonors(donors: Donor[]): Donor[] {
+  return filterMatchableDonors(donors)
+    .slice()
+    .sort((a, b) => {
+      const aPriority = a.status === 'inactive' ? 1 : 0;
+      const bPriority = b.status === 'inactive' ? 1 : 0;
+
+      if (aPriority !== bPriority) {
+        return aPriority - bPriority;
+      }
+
+      return a.name.localeCompare(b.name, 'ca');
+    });
+}
+
+/**
  * Detecta si un string és numèric o gairebé numèric
  * Evita falsos positius en matching per nom (ex: "12345" no hauria de fer match)
  */

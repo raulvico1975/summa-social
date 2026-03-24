@@ -95,7 +95,10 @@ import { filterValidSelectItems } from '@/lib/ui/safe-select-options';
 import type { PrebankRemittance } from '@/lib/pending-documents/sepa-remittance';
 import { prebankRemittancesCollection } from '@/lib/pending-documents/sepa-remittance';
 import { pendingDocumentsCollection } from '@/lib/pending-documents/refs';
-import { filterActiveContacts } from '@/lib/contacts/filterActiveContacts';
+import {
+  filterActiveContacts,
+  filterReturnAssignableDonors,
+} from '@/lib/contacts/filterActiveContacts';
 import { UndoProcessingDialog } from '@/components/undo-processing-dialog';
 import { ReturnEmailDraftDialog } from '@/components/returns/ReturnEmailDraftDialog';
 import { buildReturnEmailDraft } from '@/lib/returns/build-return-email-draft';
@@ -622,6 +625,19 @@ export function TransactionsTable({
     filterActiveContacts(availableContacts?.filter(c => c.type === 'donor') as Donor[] || []),
   [availableContacts]);
 
+  const returnAssignableDonors = React.useMemo(() =>
+    filterReturnAssignableDonors(availableContacts?.filter(c => c.type === 'donor') as Donor[] || []),
+  [availableContacts]);
+
+  const returnAssignableDonorBadges = React.useMemo(() =>
+    returnAssignableDonors.reduce((acc, donor) => {
+      if (donor.status === 'inactive') {
+        acc[donor.id] = t.donors?.inactiveBadge || 'Baixa';
+      }
+      return acc;
+    }, {} as Record<string, string>),
+  [returnAssignableDonors, t.donors]);
+
   // P0: TOTS els donants per matching IBAN en remeses (sense filtrar per estat)
   // Inclou: active, inactive (baixa), archived, deleted
   const allDonorsForRemittance = React.useMemo(() =>
@@ -716,7 +732,7 @@ export function TransactionsTable({
     contactsCollection,
     organizationId,
     userId: user?.uid ?? null,
-    donors,
+    donors: returnAssignableDonors,
     contactMap,
   });
 
@@ -2199,8 +2215,11 @@ export function TransactionsTable({
     remittanceNotApplicable: t.movements.table.remittanceNotApplicable,
     splitProcessedLabel: 'Desglossat',
     undoRemittance:
-      (t.movements.table as typeof t.movements.table & { undoRemittance?: string }).undoRemittance ||
-      'Desfer remesa',
+      tr(
+        'movements.table.undoRemittance',
+        (t.movements.table as typeof t.movements.table & { undoRemittance?: string }).undoRemittance ||
+          'Desfer remesa'
+      ),
     undoSplit: 'Desfer desglossament',
     stripeImputed: 'Stripe imputat',
     viewStripeImputationDetail: 'Veure detall Stripe',
@@ -2934,9 +2953,10 @@ export function TransactionsTable({
                       >
                         <DonorSearchCombobox
                           className="min-w-0"
-                          donors={donors}
+                          donors={returnAssignableDonors}
                           value={row.contactId}
                           onSelect={(contactId) => updateSplitRow(index, { contactId })}
+                          badgesByDonorId={returnAssignableDonorBadges}
                         />
                         <Input
                           type="number"
@@ -2994,12 +3014,13 @@ export function TransactionsTable({
                     <Label>{t.movements.table.affectedDonor}</Label>
                     <DonorSearchCombobox
                       className="min-w-0"
-                      donors={donors}
+                      donors={returnAssignableDonors}
                       value={returnDonorId}
                       onSelect={(donorId) => {
                         setReturnDonorId(donorId);
                         setReturnLinkedTxId(null);
                       }}
+                      badgesByDonorId={returnAssignableDonorBadges}
                     />
                   </div>
 
