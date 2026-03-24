@@ -1,6 +1,6 @@
 # ═══════════════════════════════════════════════════════════════════════════════
 # SUMMA SOCIAL - REFERÈNCIA COMPLETA DEL PROJECTE
-# Última actualització: 12 Març 2026
+# Última actualització: 23 Març 2026
 # ═══════════════════════════════════════════════════════════════════════════════
 
 
@@ -83,6 +83,7 @@ Eina centralitzada amb:
 - Importador de devolucions del banc
 - Importador de donacions Stripe
 - Multicomptes bancaris amb filtre i traçabilitat
+- Web pública multiidioma amb landing, contacte, privacitat, pàgina "Qui som" i blog editorial
 
 ## 1.4 URLs i Recursos
 
@@ -344,11 +345,21 @@ El sistema de categorització IA genera logs estructurats per facilitar el diagn
 ```
 /src
   /app                          → Pàgines (Next.js App Router)
+    /blog                       → Blog públic editorial
+      /page.tsx                 → Llistat de posts (ISR 60s)
+      /[slug]/page.tsx          → Detall del post
+    /api/blog                   → API de publicació externa del blog
+      /publish/route.ts         → Alta de posts via secret Bearer
+      /upload-cover/route.ts    → Upload de cobertes del blog
     /public/[lang]               → Rutes públiques multiidioma (segment real `public`)
       /page.tsx                  → HOME multiidioma
       /funcionalitats/page.tsx   → Funcionalitats (CA)
       /funcionalidades/page.tsx  → Funcionalitats (ES)
       /fonctionnalites/page.tsx  → Funcionalitats (FR)
+      /qui-som/page.tsx          → Pàgina corporativa "Qui som" (canònica a tots els idiomes)
+      /quienes-somos/page.tsx    → Alias ES → /{lang}/qui-som
+      /qui-sommes-nous/page.tsx  → Alias FR → /{lang}/qui-som
+      /quem-somos/page.tsx       → Alias PT → /{lang}/qui-som
       /privacy/page.tsx          → Política de privacitat (CA/EN)
       /privacidad/page.tsx       → Política de privacitat (ES)
       /confidentialite/page.tsx  → Política de privacitat (FR)
@@ -411,8 +422,13 @@ El sistema de categorització IA genera logs estructurats per facilitar el diagn
     /contacts                    → Helpers de contactes (filterActiveContacts)
     /sepa                        → Generadors SEPA (pain.001, pain.008)
     /files                       → Gestió de fitxers (attach-document, sha256)
+    /blog                        → Contracte, lectura i publicació del blog
+      /firestore.ts              → Lectura llistat/detall + resolució d'org
+      /validateBlogPost.ts       → Validació server-side del payload
+      /publish-local-store.ts    → Store local segur fora de producció
+      /__tests__                 → Tests de publish i upload de portada
     /notifications.ts            → Product updates (deprecated, fallback local)
-    /__tests__                   → Tests unitaris (7 fitxers)
+    /__tests__                   → Tests unitaris Node de domini i integració
   /scripts                       → Scripts d'utilitat i demo
   /help                          → Contingut d'ajuda per idioma (ca/, es/, fr/)
   /i18n                          → Traduccions
@@ -690,19 +706,17 @@ El SuperAdmin **no és un rol d'organització**. Es gestiona globalment:
 
 ## 2.5 Tests Unitaris
 
-Tests unitaris per funcions pures a `src/lib/__tests__/`:
+La suite Node actual s'executa amb `npm test` i cobreix tres blocs:
 
-| Fitxer | Cobertura |
-|--------|-----------|
-| `normalize.test.ts` | normalizeTaxId, normalizeIBAN, normalizeZipCode, formatNumberEU, parseNumberEU |
-| `auto-match.test.ts` | normalizeForMatching, extractNameTokens, findMatchingContact |
-| `model182.test.ts` | calculateModel182Totals, calculateTransactionNetAmount, isReturnTransaction |
-| `stripe-importer.test.ts` | Parsing i matching Stripe |
-| `build-document-filename.test.ts` | Generació de noms de fitxer |
-| `calculate-donor-net.test.ts` | Càlcul net per donant (donacions - devolucions) |
-| `fiscal-invariant.test.ts` | Validació invariants fiscals A1-A3 |
+- `src/lib/__tests__/*.test.ts` → domini econòmic, fiscalitat, remeses, imports, permisos, suport i integritat
+- `src/lib/blog/__tests__/*.test.ts` → validació de publish del blog i upload de cobertes
+- `tests/sepa-pain008/*.test.ts` → generació i invariants del cobrament SEPA
 
-**Hook pre-commit (Husky):** Els tests s'executen automàticament abans de cada commit.
+**Cobertura rellevant afegida recentment:**
+- `validateBlogPost.test.ts` valida slug segur, dates ISO, camps SEO obligatoris i contracte `coverImageAlt` ↔ `coverImageUrl`
+- `uploadBlogCover.test.ts` prova autenticació Bearer, validació del payload i resposta d'upload de portada
+
+**Hook pre-commit (Husky):** es mantenen comprovacions automàtiques abans de cada commit, però la verificació forta de producte passa pels scripts `verify-local.sh` i `verify-ci.sh`.
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -2778,10 +2792,11 @@ Per a més detall operatiu, veure `docs/i18n.md`.
 
 #### Context i problema resolt
 
-Les pàgines públiques (login, privacy, contact) estaven només en català amb textos hardcoded. Per millorar:
+Les pàgines públiques (home, funcionalitats, login, privacy, contact i "Qui som") viuen en una capa separada de l'app privada. Aquesta capa resol:
 - SEO internacional amb canonical + hreflang
 - Experiència d'usuari en el seu idioma preferit
 - Consistència amb l'app privada (4 idiomes)
+- Navegació corporativa comuna cap a funcionalitats, "Qui som", blog i contacte
 
 #### Arquitectura
 
@@ -2792,9 +2807,13 @@ les pàgines públiques estan sota un segment real `public`:
 /src/app/public/[lang]/       → Segment real + dinàmic (intern)
   /page.tsx                   → HOME multiidioma
   /funcionalitats/page.tsx    → Funcionalitats
+  /qui-som/page.tsx           → Pàgina corporativa canònica
   /login/page.tsx             → Pàgina login multiidioma
   /privacy/page.tsx           → Política de privacitat
   /contact/page.tsx           → Pàgina de contacte
+  /quienes-somos/page.tsx     → Alias ES → /{lang}/qui-som
+  /qui-sommes-nous/page.tsx   → Alias FR → /{lang}/qui-som
+  /quem-somos/page.tsx        → Alias PT → /{lang}/qui-som
   layout.tsx                  → Validació idioma + SSG params
 
 /src/app/page.tsx             → Redirect stub → /${lang}
@@ -2814,10 +2833,10 @@ les pàgines públiques estan sota un segment real `public`:
 
 | Codi | Idioma | URL exemple |
 |------|--------|-------------|
-| `ca` | Català | `/ca/login`, `/ca/privacy`, `/ca/contact` |
-| `es` | Español | `/es/login`, `/es/privacy`, `/es/contact` |
-| `fr` | Français | `/fr/login`, `/fr/privacy`, `/fr/contact` |
-| `pt` | Português | `/pt/login`, `/pt/privacy`, `/pt/contact` |
+| `ca` | Català | `/ca/login`, `/ca/privacy`, `/ca/contact`, `/ca/qui-som` |
+| `es` | Español | `/es/login`, `/es/privacy`, `/es/contact`, `/es/qui-som` |
+| `fr` | Français | `/fr/login`, `/fr/privacy`, `/fr/contact`, `/fr/qui-som` |
+| `pt` | Português | `/pt/login`, `/pt/privacy`, `/pt/contact`, `/pt/qui-som` |
 
 #### Detecció automàtica d'idioma
 
@@ -2842,10 +2861,11 @@ Accept-Language: de-DE,de;q=0.9,en;q=0.8
 | Fitxer | Responsabilitat |
 |--------|-----------------|
 | `src/lib/public-locale.ts` | Tipus `PublicLocale`, `detectPublicLocale()`, `generatePublicPageMetadata()` |
-| `src/i18n/public.ts` | Traduccions completes per home, funcionalitats, login, privacy, contact (CA/ES/FR/PT) |
+| `src/i18n/public.ts` | Traduccions completes per home, funcionalitats, qui-som, login, privacy i contact (CA/ES/FR/PT) |
 | `src/middleware.ts` | Rewrite `/fr/...` → `/public/fr/...` + protecció segments reservats |
 | `src/app/public/[lang]/layout.tsx` | Validació idioma + `generateStaticParams()` per SSG |
 | `src/app/public/[lang]/*/page.tsx` | Pàgines amb traduccions i metadades SEO |
+| `src/components/public/PublicSiteHeader.tsx` | Navegació comuna desktop/mòbil cap a funcionalitats, qui-som, blog i CTA de contacte |
 | `src/components/IdleLogoutProvider.tsx` | RESERVED_SEGMENTS (inclou idiomes) |
 
 #### SEO: Canonical i Hreflang
@@ -2884,9 +2904,16 @@ export interface PublicTranslations {
   common: {
     appName: string;
     tagline: string;
+    about: string;
+    blog: string;
+    menu: string;
     close: string;
     backToHome: string;
     // ...
+  };
+  about: {
+    metaTitle: string;
+    metaDescription: string;
   };
   login: {
     title: string;
@@ -2949,6 +2976,9 @@ Les URLs antigues continuen funcionant amb redirect:
 | `/privacy` | `/{detectat}/privacy` |
 | `/privacitat` | `/{detectat}/privacy` |
 | `/contacte` | `/{detectat}/contact` |
+| `/es/quienes-somos` | `/es/qui-som` |
+| `/fr/qui-sommes-nous` | `/fr/qui-som` |
+| `/pt/quem-somos` | `/pt/qui-som` |
 
 On `{detectat}` és l'idioma detectat via Accept-Language (default: `ca`).
 
@@ -2962,6 +2992,56 @@ On `{detectat}` és l'idioma detectat via Accept-Language (default: `ca`).
 | **Detecció** | Preferència guardada | `Accept-Language` header |
 | **SEO** | No aplica (app privada) | Canonical + hreflang |
 | **SSG** | No (dinàmic) | Sí (`generateStaticParams`) |
+
+### 3.9.9 Web Públic Corporatiu i Blog Editorial
+
+#### Landing corporativa actual
+
+- La HOME pública (`/{lang}`) funciona com a landing comercial de Summa Social
+- Inclou hero, mètriques resum, bloc de workflow, capacitats principals i CTA directe a contacte
+- Els anchors de secció són per idioma (`conciliacio-bancaria`, `remesas-devoluciones`, etc.) per mantenir URL semàntica
+- La capçalera pública és comuna a desktop i mòbil i mostra sempre accessos a funcionalitats, "Qui som", blog i contacte
+
+#### Pàgina "Qui som"
+
+- La ruta canònica és `/{lang}/qui-som` per als 4 idiomes
+- Els slugs naturals per ES/FR/PT existeixen només com a alias de compatibilitat i fan `redirect()` a la ruta canònica
+- Les metadades SEO es generen amb `generatePublicPageMetadata(lang, '/qui-som')`, de manera que `canonical` i `hreflang` apunten a la mateixa estructura estable
+
+#### Blog públic
+
+- El blog viu fora del segment `public`, a `/blog` i `/blog/[slug]`
+- El llistat i el detall tenen `revalidate = 60`
+- Si `BLOG_ORG_ID` no està configurat, el llistat mostra estat no configurat i les metadades del blog queden amb `robots: noindex, nofollow`
+- El detall del post renderitza portada opcional, data publicada, categoria i `contentHtml`
+- A la fitxa del post, la imatge de portada s'ajusta amb `object-contain` per evitar retalls agressius en peces editorials
+
+#### Publicació externa del blog
+
+- API: `POST /api/blog/publish`
+- Autenticació: `Authorization: Bearer <BLOG_PUBLISH_SECRET>`
+- Validació server-side: `title`, `slug`, `seoTitle`, `metaDescription`, `excerpt`, `contentHtml`, `tags`, `category`, `publishedAt`
+- `slug` ha de ser URL-safe (`^[a-z0-9]+(?:-[a-z0-9]+)*$`)
+- `coverImageUrl` és opcional, però `coverImageAlt` només és vàlid si hi ha URL
+- Si el `slug` ja existeix, la resposta és `409 duplicate_slug`
+- Després d'escriure el post es revalida `/blog` i `/blog/{slug}`
+
+#### Upload de cobertes
+
+- API: `POST /api/blog/upload-cover`
+- Accepta `imageBase64` pur o en format `data:image/...;base64,...`
+- MIME permesos: `image/png`, `image/jpeg`, `image/webp`, `image/gif`
+- Límit: 10 MB
+- En entorns locals/desenvolupament, si el mode actiu és `local-file`, la portada es desa a `public/blog-covers/*`
+- En entorn real, la portada es desa a Firebase Storage i retorna una URL pública immutable
+
+#### Guardrails de publicació
+
+- Producció prohibeix explícitament el mode `local-file` per al blog (`assertNoLocalBlogPublishStorageInProduction`)
+- En local, si no hi ha `BLOG_ORG_ID`, el sistema fa bootstrap segur amb org local de blog
+- La resolució d'org del blog és resilient: si només hi ha una org amb posts, es fa servir aquesta encara que `BLOG_ORG_ID` hagi quedat desalineat
+- Existeix smoke test local de cap a cap: `npm run test:blog-publish-local`
+- Contracte extern complet de la integració: `docs/contracts/blog-publish-cover-image.md`
 
 
 ## 3.10 IMPORTADOR STRIPE
@@ -5601,10 +5681,10 @@ Indicadors que requeririen intervenció:
 ## 9.2 Flux
 ```
 1. Iniciar feina amb `npm run inicia` o `npm run implementa`
-2. Codex treballa al worktree de tasca corresponent
-3. Validar i tancar amb `npm run acabat`
-4. Si queda preparat per producció, autoritzar publicació
-5. Publicar amb `npm run publica`
+2. Treballar al worktree de tasca corresponent
+3. Tancar la peça amb `npm run acabat` (commits + checks guiats)
+4. Integrar a `main` amb `npm run integra`
+5. Publicar des de `main` amb `npm run publica`
 ```
 
 ## 9.3 URLs
@@ -5612,9 +5692,20 @@ Indicadors que requeririen intervenció:
 - Firebase App Hosting: https://studio--summa-social.us-central1.hosted.app
 
 ## 9.4 Tests
-- Tests unitaris a `src/lib/__tests__/` (7 fitxers)
-- Hook pre-commit amb Husky
-- `npm test` abans de cada commit
+- `npm test` executa la suite Node de domini (`src/lib/__tests__`), blog (`src/lib/blog/__tests__`) i SEPA (`tests/sepa-pain008`)
+- `npm run test:blog-publish-local` valida el flux local complet de `upload-cover` + `publish`
+- `scripts/verify-local.sh` i `scripts/verify-ci.sh` són la capa real de verificació predeploy
+- Si tots els fitxers canviats són de web pública/blog/docs, s'activa perfil `FAST_PUBLIC`
+- `FAST_PUBLIC` manté `typecheck + build + guardrails docs/i18n`, però omet comprovacions específiques de `projectModule` i oracle fiscal quan no hi ha impacte fiscal
+
+## 9.4b Ritual de Deploy Actual
+
+- `scripts/deploy.sh` és un deploy determinista de 9 passos: preflight git, diff `main..prod`, classificació de risc, verificacions, oracle fiscal, push a `prod` i checks postdeploy
+- El script només permet desplegar des de `main`, amb working tree net i `main/prod` sincronitzades amb remot
+- El risc es classifica en `BAIX`, `MITJA` o `ALT`; també detecta si el canvi toca àrea fiscal
+- Si el conjunt és només web públic/blog/docs i no és fiscal, el deploy usa perfil `FAST_PUBLIC`
+- En canvis fiscals `ALT` es pot exigir backup predeploy de Firestore; en canvis no fiscals ràpids no s'activa aquesta càrrega addicional
+- El postdeploy intenta resoldre URLs automàticament i fa smoke checks sobre home pública, login i rutes clau
 
 ## 9.5 Gate i18n pre-commit
 
@@ -5674,6 +5765,7 @@ Les fites històriques i els desplegaments anteriors es documenten a `docs/CHANG
 | 1.7 | Des 2024 | Excel Model 182 per gestoria, suport Excel remeses, camps city/province, session persistence |
 | 1.8 | Des 2024 | Importador devolucions del banc, remeses parcials, suport multi-banc (Santander/Triodos), tests unitaris, fixes modals Radix, UX simplificada |
 | 1.9 | Des 2025 | Importador Stripe (payouts → donacions + comissions), matching per email, traçabilitat completa |
+| **1.47** | **22 Mar 2026** | **Web pública reforçada: HOME comercial polida, capçalera amb accés visible a funcionalitats/"Qui som"/blog, nova pàgina corporativa `/{lang}/qui-som` amb aliases ES/FR/PT, i millores visuals al detall de blog. Blog editorial operable per API: nou endpoint `/api/blog/upload-cover`, validació server-side de portada i `publish`, persistència local segura per entorns no productius, verificació d'escriptura i smoke test local `test:blog-publish-local`. Operativa de deploy accelerada per canvis de web/blog amb perfil `FAST_PUBLIC` i guardrails associats.** |
 | **1.10** | **Des 2025** | **Mòdul Projectes: justificació econòmica per partides, suggerències heurístiques, split parcial de despeses, simulació en memòria** |
 | **1.11** | **Des 2025** | **Captura de despeses de terreny (quickMode, pujada ràpida <10s), i18n Francès complet (fr.ts), selector d'idioma amb 3 opcions** |
 | **1.12** | **Des 2025** | **Multicomptes bancaris (CRUD, filtre per compte, traçabilitat bankAccountId), filtre per origen (source), diàleg crear donant a importador devolucions, mode bulk NET** |
@@ -6519,5 +6611,5 @@ Les següents regles han de ser certes en tot moment. Si es trenca alguna, cal c
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # FI DEL DOCUMENT
-# Última actualització: 7 Març 2026
+# Última actualització: 23 Març 2026
 # ═══════════════════════════════════════════════════════════════════════════════
