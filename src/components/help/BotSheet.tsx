@@ -79,6 +79,9 @@ function resolveUiPathHref(rawPath: string, pathname: string): string | null {
   if (path.includes('manual')) return `${base}/manual`
   if (path.includes('ajuda contextual') || path.includes('ayuda contextual')) return buildHelpHref(pathname)
   if (path.includes('hub de guies') || path.includes('hub de guias') || path.includes('guies') || path.includes('guias') || path.includes('guides')) return buildHelpHref(pathname)
+  if (path.includes('assignacio de despeses') || path.includes('asignacion de gastos')) return `${base}/project-module/expenses`
+  if (path.includes('liquidacions') || path.includes('liquidaciones')) return `${base}/movimientos/liquidacions`
+  if (path.includes('pendents') || path.includes('pendientes')) return `${base}/movimientos/pendents`
   if (path.includes('moviments') || path.includes('movimientos')) return `${base}/movimientos`
   if (path.includes('donants') || path.includes('donantes')) return `${base}/donants`
   if (path.includes('informes')) return `${base}/informes`
