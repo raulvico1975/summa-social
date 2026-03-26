@@ -95,7 +95,7 @@ const SYNONYM_GROUPS: Array<{ canon: string; variants: string[] }> = [
   { canon: 'extracte', variants: ['extractes', 'extracte', 'extracto', 'extractos', 'moviments', 'movimiento', 'movimientos'] },
   { canon: 'duplicat', variants: ['duplicats', 'duplicat', 'duplicados', 'duplicado', 'repetit', 'repetits', 'repetido', 'repetidos', 'duplicada', 'duplicades', 'duplicadas', 'mateix', 'mateixos', 'mismo', 'mismos'] },
   { canon: 'devolucio', variants: ['devolucions', 'devolucion', 'devoluciones', 'retorn', 'retorns', 'retorno', 'retornos', 'rebutjada', 'rechazo', 'devuelto', 'devueltos', 'tornat', 'tornats', 'vuelto', 'vueltos'] },
-  { canon: 'crear', variants: ['crear', 'creo', 'crea', 'nou', 'nueva', 'nuevo', 'afegir', 'afegeixo', 'añadir', 'anadir', 'anado', 'agregar', 'alta'] },
+  { canon: 'crear', variants: ['crear', 'creo', 'crea', 'nou', 'nova', 'nueva', 'nuevo', 'afegir', 'afegeixo', 'añadir', 'anadir', 'anado', 'agregar', 'alta', 'introduir', 'introdueixo', 'introducir', 'introduzco'] },
   { canon: 'document', variants: ['document', 'documents', 'factura', 'factures', 'facturas', 'rebut', 'rebuts', 'recibo', 'recibos', 'justificant', 'justificante', 'nomina', 'nomines', 'nómina', 'archivo', 'archivos'] },
   { canon: 'contrasenya', variants: ['contrasenya', 'contraseña', 'contrasena', 'password', 'clau'] },
   { canon: 'historial', variants: ['historial', 'resum', 'resumen', 'summary'] },
@@ -861,6 +861,15 @@ function detectDirectIntentMatch(tokens: string[]): DirectIntentMatch | null {
     !hasToken(set, 'contrasenya', 'contrasena', 'contraseña', 'password', 'usuari', 'usuario', 'user')
   ) {
     return { cardId: 'guide-access-security', minScore: 670 }
+  }
+
+  // "Com introdueixo una nova despesa?"
+  if (
+    hasToken(set, 'despesa', 'gasto') &&
+    hasToken(set, 'crear', 'creo', 'crea', 'nou', 'nova', 'nuevo', 'nueva', 'afegir', 'afegeixo', 'añadir', 'anadir', 'agregar', 'introduir', 'introdueixo', 'introducir', 'introduzco', 'entrar', 'entro', 'meter', 'meto') &&
+    !hasToken(set, 'projecte', 'proyecto', 'imputar', 'repartir', 'dividir', 'remesa', 'sepa', 'devolucio', 'devolucion', 'retorn', 'retorno')
+  ) {
+    return { cardId: 'howto-enter-expense', minScore: 690 }
   }
 
   // "Com desfer una remesa?" / "Puc reprocessar una remesa?"

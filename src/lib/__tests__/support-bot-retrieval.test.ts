@@ -58,6 +58,18 @@ test('retrieveCard understands expense allocation variants', () => {
   assert.equal(result.mode, 'card')
 })
 
+test('retrieveCard resolves generic new expense entry question without drifting to projects', () => {
+  const ca = retrieveCard('Com introdueixo una nova despesa?', 'ca', cards)
+  assert.equal(ca.card.id, 'howto-enter-expense')
+  assert.equal(ca.mode, 'card')
+  assert.equal(ca.confidence, 'high')
+
+  const es = retrieveCard('Como introduzco un gasto nuevo?', 'es', cards)
+  assert.equal(es.card.id, 'howto-enter-expense')
+  assert.equal(es.mode, 'card')
+  assert.equal(es.confidence, 'high')
+})
+
 test('retrieveCard resolves logo change question', () => {
   const result = retrieveCard("vull canviar el logo de l'entitat", 'ca', cards)
   assert.equal(result.card.id, 'manual-change-logo')
