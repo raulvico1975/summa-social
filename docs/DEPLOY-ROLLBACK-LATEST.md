@@ -4,14 +4,14 @@ Generat: 2026-03-26 09:06
 Risc: ALT
 Backup curt: NO_REQUIRED
 SHA prod abans de publicar: 06ff1050
-SHA branca a publicar (main): 98c42354
+SHA branca a publicar (main): cedd12fd
 
 ## Si cal marxa enrere rapida
 
 Opcio recomanada (preserva historial):
 ```bash
 git checkout main
-git revert 98c42354 --no-edit
+git revert cedd12fd --no-edit
 git push origin main
 bash scripts/deploy.sh main
 ```
