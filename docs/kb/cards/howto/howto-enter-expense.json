@@ -1,0 +1,68 @@
+{
+  "id": "howto-enter-expense",
+  "type": "howto",
+  "domain": "transactions",
+  "risk": "safe",
+  "guardrail": "none",
+  "answerMode": "full",
+  "title": {
+    "ca": "Introduir una nova despesa",
+    "es": "Introducir un gasto nuevo"
+  },
+  "intents": {
+    "ca": [
+      "com introdueixo una nova despesa",
+      "com entro una despesa",
+      "on poso una despesa nova",
+      "com afegeixo una despesa",
+      "on va una despesa nova"
+    ],
+    "es": [
+      "como introduzco un gasto nuevo",
+      "como meto un gasto",
+      "donde pongo un gasto nuevo",
+      "como anado un gasto",
+      "donde va un gasto nuevo"
+    ]
+  },
+  "guideId": null,
+  "answer": {
+    "ca": "Per introduir una despesa nova, primer identifica quin cas és:\n1. Si la despesa ja surt a l'extracte del banc, ves a Moviments > Importar extracte bancari i importa l'extracte.\n2. Si és un tiquet o rebut de viatge per preparar un reemborsament, ves a Moviments > Liquidacions, crea una nova liquidació i puja-hi els tiquets o assigna'ls des de la pestanya Tickets.\n3. Si la despesa ja és dins Summa i només l'has d'imputar a un projecte, ves a Projectes > Assignació de despeses.\n\nComprovació final: la despesa queda al lloc correcte segons el cas: Moviments, Liquidacions o Projectes.\nError típic: intentar entrar una despesa bancària nova des de Projectes o des de Liquidacions.",
+    "es": "Para introducir un gasto nuevo, primero identifica qué caso es:\n1. Si el gasto ya sale en el extracto del banco, ve a Movimientos > Importar extracto bancario e importa el extracto.\n2. Si es un ticket o recibo de viaje para preparar un reembolso, ve a Movimientos > Liquidaciones, crea una nueva liquidación y sube ahí los tickets o asígnalos desde la pestaña Tickets.\n3. Si el gasto ya está dentro de Summa y solo tienes que imputarlo a un proyecto, ve a Proyectos > Asignación de gastos.\n\nComprobación final: el gasto queda en el sitio correcto según el caso: Movimientos, Liquidaciones o Proyectos.\nError típico: intentar entrar un gasto bancario nuevo desde Proyectos o desde Liquidaciones."
+  },
+  "uiPaths": [
+    "Moviments > Importar extracte bancari",
+    "Moviments > Liquidacions",
+    "Projectes > Assignació de despeses"
+  ],
+  "needsSnapshot": false,
+  "keywords": [
+    "despesa",
+    "gasto",
+    "nova",
+    "nuevo",
+    "introduir",
+    "introducir",
+    "liquidacions",
+    "reemborsament",
+    "extracte",
+    "imputar"
+  ],
+  "source_faq": [],
+  "source_manual": [
+    "5.1",
+    "6c",
+    "10.1"
+  ],
+  "source_guides": [],
+  "related": [
+    "guide-import-movements",
+    "guide-travel-receipts",
+    "guide-projects"
+  ],
+  "error_key": null,
+  "symptom": {
+    "ca": null,
+    "es": null
+  }
+}

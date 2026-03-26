@@ -40,6 +40,24 @@ test('orchestrator keeps operational card answer for trusted guide card', async 
   assert.match(result.response.answer, /\n1\.\s+/)
 })
 
+test('orchestrator routes generic new expense question to the dedicated expense guide', async () => {
+  const result = await orchestrator({
+    message: 'com introdueixo una nova despesa?',
+    kbLang: 'ca',
+    cards,
+    clarifyOptionIds: [],
+    assistantTone: 'neutral',
+    allowAiIntent: false,
+    allowAiReformat: false,
+  })
+
+  assert.equal(result.response.mode, 'card')
+  assert.equal(result.response.cardId, 'howto-enter-expense')
+  assert.equal(result.meta.trustedOperationalCard, true)
+  assert.match(result.response.answer, /Moviments > Importar extracte bancari/)
+  assert.match(result.response.answer, /Moviments > Liquidacions/)
+})
+
 test('renderer refuses generic procedural guide content when steps are missing', async () => {
   const brokenGuideCard: KBCard = {
     id: 'guide-missing-content',
