@@ -113,6 +113,23 @@ export async function createLocalBlogPost(orgId: string, post: BlogPost): Promis
   await writeStore(store)
 }
 
+export async function updateLocalBlogPost(orgId: string, post: BlogPost): Promise<boolean> {
+  const store = await readStore()
+  const postsByOrg = store.posts[orgId] ?? {}
+
+  if (!postsByOrg[post.slug]) {
+    return false
+  }
+
+  store.posts[orgId] = {
+    ...postsByOrg,
+    [post.slug]: sanitizeBlogPost(post),
+  }
+
+  await writeStore(store)
+  return true
+}
+
 export async function readLocalBlogPublishStore(): Promise<LocalBlogPublishStore> {
   return readStore()
 }

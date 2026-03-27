@@ -66,9 +66,6 @@ export async function BlogPostView({
               <p className="mt-4 text-sm text-muted-foreground">
                 <time dateTime={post.publishedAt}>{formatBlogDate(post.publishedAt, locale)}</time>
               </p>
-              <div className="mt-6 rounded-[1.35rem] border border-sky-100 bg-sky-50/70 p-4 text-sm leading-6 text-muted-foreground">
-                {copy.detailAside}
-              </div>
             </aside>
 
             <div className="space-y-5">
@@ -84,11 +81,11 @@ export async function BlogPostView({
       {post.coverImageUrl ? (
         <section className="px-6 pb-10">
           <div className="mx-auto max-w-5xl rounded-[2rem] border border-border/60 bg-white/95 p-5 shadow-[0_28px_80px_-56px_rgba(15,23,42,0.22)] sm:p-6">
-            <div className="flex min-h-[280px] items-center justify-center rounded-[1.6rem] border border-sky-100 bg-[linear-gradient(180deg,rgba(248,250,252,0.96),rgba(241,245,249,0.8))] p-6 sm:min-h-[360px]">
+            <div className="flex min-h-[220px] items-center justify-center rounded-[1.6rem] border border-sky-100 bg-[linear-gradient(180deg,rgba(248,250,252,0.96),rgba(241,245,249,0.8))] p-5 sm:min-h-[280px] sm:p-6 lg:min-h-[320px]">
               <img
                 src={post.coverImageUrl}
                 alt={post.coverImageAlt || post.title}
-                className="h-full min-h-[240px] w-full object-contain object-center sm:min-h-[320px]"
+                className="block max-h-[260px] w-auto max-w-full object-contain object-center sm:max-h-[340px] lg:max-h-[420px]"
               />
             </div>
           </div>

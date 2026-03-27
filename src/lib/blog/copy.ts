@@ -23,7 +23,6 @@ const EXTRA_COPY: Record<
     discoverFeatures: string
     panelTitle: string
     panelPoints: string[]
-    detailAside: string
     emptyTitle: string
     emptyDescription: string
     continueTitle: string
@@ -44,8 +43,6 @@ const EXTRA_COPY: Record<
       'Context fiscal perquè els tancaments arribin amb la base preparada.',
       'Novetats que afecten la manera de treballar amb Summa.',
     ],
-    detailAside:
-      'Aquest article baixa a un cas concret de gestió econòmica i l’explica amb context operatiu.',
     emptyTitle: 'Encara no hi ha articles publicats',
     emptyDescription:
       'Quan activem noves peces editorials, apareixeran aquí amb el mateix criteri visual que la resta del web.',
@@ -67,8 +64,6 @@ const EXTRA_COPY: Record<
       'Contexto fiscal para que los cierres lleguen con la base preparada.',
       'Novedades que afectan a la forma de trabajar con Summa.',
     ],
-    detailAside:
-      'Este artículo baja a un caso concreto de gestión económica y lo explica con contexto operativo.',
     emptyTitle: 'Todavía no hay artículos publicados',
     emptyDescription:
       'Cuando activemos nuevas piezas editoriales, aparecerán aquí con el mismo criterio visual que el resto de la web.',
@@ -90,8 +85,6 @@ const EXTRA_COPY: Record<
       'Du contexte fiscal pour préparer les clôtures avec une base claire.',
       'Des nouveautés qui touchent la manière de travailler avec Summa.',
     ],
-    detailAside:
-      'Cet article descend dans un cas concret de gestion économique et l’explique avec un contexte opérationnel.',
     emptyTitle: 'Aucun article publié pour le moment',
     emptyDescription:
       'Quand nous activerons de nouvelles pièces éditoriales, elles apparaîtront ici avec le même langage visuel que le reste du site.',
@@ -113,8 +106,6 @@ const EXTRA_COPY: Record<
       'Contexto fiscal para que os fechos cheguem com a base preparada.',
       'Novidades que afetam a forma de trabalhar com a Summa.',
     ],
-    detailAside:
-      'Este artigo desce a um caso concreto de gestão económica e explica-o com contexto operacional.',
     emptyTitle: 'Ainda não há artigos publicados',
     emptyDescription:
       'Quando ativarmos novas peças editoriais, elas aparecerão aqui com o mesmo critério visual do resto do site.',
@@ -142,7 +133,6 @@ export function getBlogCopy(locale: PublicLocale = 'ca') {
     discoverFeatures: extra.discoverFeatures,
     panelTitle: extra.panelTitle,
     panelPoints: extra.panelPoints,
-    detailAside: extra.detailAside,
     emptyTitle: extra.emptyTitle,
     emptyDescription: extra.emptyDescription,
     continueTitle: extra.continueTitle,
