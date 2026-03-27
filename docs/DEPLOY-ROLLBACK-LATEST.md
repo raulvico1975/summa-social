@@ -1,24 +1,24 @@
 # Rollback Plan (auto) — Summa Social
 
-Generat: 2026-03-27 15:37
+Generat: 2026-03-27 17:01
 Risc: ALT
 Backup curt: NO_REQUIRED
-SHA prod abans de publicar: 6b045417
-SHA branca a publicar (codex/blog-bilingual-locale): 6e6aee6f
+SHA prod abans de publicar: 0f49eda1
+SHA branca a publicar (main): efb38677
 
 ## Si cal marxa enrere rapida
 
 Opcio recomanada (preserva historial):
 ```bash
-git checkout codex/blog-bilingual-locale
-git revert 6e6aee6f --no-edit
-git push origin codex/blog-bilingual-locale
-bash scripts/deploy.sh codex/blog-bilingual-locale
+git checkout main
+git revert efb38677 --no-edit
+git push origin main
+bash scripts/deploy.sh main
 ```
 
 Emergencia critica (nomes si la produccio cau i no hi ha alternativa):
 ```bash
 git checkout prod
-git reset --hard 6b045417
+git reset --hard 0f49eda1
 git push origin prod --force-with-lease
 ```
