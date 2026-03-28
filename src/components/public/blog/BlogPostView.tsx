@@ -13,7 +13,6 @@ import {
   formatBlogReadingTime,
 } from '@/lib/blog/reading-time'
 import type { PublicLocale } from '@/lib/public-locale'
-import { getPublicFeaturesHref } from '@/lib/public-site-paths'
 import { getPublicTranslations } from '@/i18n/public'
 
 const pageShellClass =
@@ -56,7 +55,7 @@ export async function BlogPostView({
   const copy = getBlogCopy(locale)
   const t = getPublicTranslations(locale)
   const categoryLabel = getBlogCategoryLabel(post.category, locale)
-  const featuresHref = getPublicFeaturesHref(locale)
+  const featuresHref = `/${locale}#capabilities`
   const readingTime = formatBlogReadingTime(
     estimateBlogReadingTimeMinutes(post.contentHtml),
     locale
