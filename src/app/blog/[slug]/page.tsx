@@ -53,7 +53,6 @@ export default async function BlogPostPage({ params }: PageProps) {
       locale={locale}
       slug={slug}
       blogBasePath="/blog"
-      homeHref="/ca"
     />
   )
 }
