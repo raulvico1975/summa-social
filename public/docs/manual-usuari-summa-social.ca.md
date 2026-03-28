@@ -1,7 +1,7 @@
 # SUMMA SOCIAL - Manual d'Usuari Complet
 
-**Versió**: 1.17
-**Última actualització**: Desembre 2025
+**Versió**: 1.46
+**Última actualització**: 28 març 2026
 
 ---
 
@@ -27,11 +27,13 @@ Endavant!
 4. [Gestió de Proveïdors i Treballadors](#4-gestió-de-proveïdors-i-treballadors)
 5. [Gestió de Moviments](#5-gestió-de-moviments)
 6. [Divisor de Remeses](#6-divisor-de-remeses)
-6b. [Documents Pendents i Remeses SEPA OUT](#6b-documents-pendents-i-remeses-sepa-out)
+6b. [Documents Pendents i Remeses SEPA OUT](#6b-documents-pendents)
+6c. [Liquidacions de Despeses de Viatge](#6c-liquidacions-de-despeses-de-viatge)
 7. [Gestió de Devolucions Bancàries](#7-gestió-de-devolucions-bancàries)
 8. [Donacions via Stripe](#8-donacions-via-stripe)
 9. [Informes Fiscals](#9-informes-fiscals)
-10. [Projectes i Justificació de Subvencions](#10-projectes-i-justificació-de-subvencions)
+10. [Projectes i Justificació de Subvencions](#10-projectes)
+10b. [Paquet de Tancament](#10b-paquet-de-tancament)
 11. [Resolució de Problemes](#11-resolució-de-problemes)
 12. [Glossari](#12-glossari)
 
@@ -69,27 +71,45 @@ Per protegir les dades de l'entitat, hem configurat algunes mesures de seguretat
 
 - ✅ **La sessió es tanca** quan tanques el navegador
 - ✅ **La sessió es tanca** després de **30 minuts sense activitat** (rebràs un avís 1 minut abans per si vols continuar)
+- ✅ **Cal tornar a iniciar sessió cada 12 hores** encara que hi hagi activitat
 - ✅ Si uses un **ordinador compartit**, recorda tancar sessió manualment quan acabis
 
-**Com tancar sessió:** Clica el teu nom (a dalt a la dreta) → "Tancar sessió"
+**Com tancar sessió:** Ves al peu del menú lateral i clica **"Tancar sessió"**.
+
+### Si treballes amb més d'una organització
+
+Abans d'importar moviments o generar informes, fixa't en el **nom de l'organització** que surt sota el logo al menú lateral. És la comprovació ràpida per assegurar-te que estàs treballant al lloc correcte.
+
+### Sobre les còpies de seguretat
+
+Les còpies de seguretat de l'entitat les gestiona el perfil de **SuperAdmin Summa**. Si tu no veus l'apartat de backups a Configuració, és normal.
 
 ---
 
-## 1.2 Canviar l'idioma de l'aplicació
+## 1.2 Preferències personals: idioma i contrasenya
 
 L'aplicació està disponible en **3 idiomes**:
 - 🇨🇦 Català
 - 🇪🇸 Espanyol  
 - 🇫🇷 Francès
 
-### Com canviar-lo
+### Com canviar l'idioma
 
-1. Clica el teu **nom** (a dalt a la dreta)
-2. Veuràs les opcions d'idioma
+1. Ves a ⚙️ **Configuració**
+2. A **Configuració d'Usuari**, busca **"Idioma de l'aplicació"**
 3. Selecciona l'idioma que prefereixis
 4. El canvi s'aplica immediatament
 
 > 💡 Cada persona de l'equip pot tenir el seu propi idioma configurat. El teu canvi no afecta els altres.
+
+### Com canviar la contrasenya
+
+1. Ves al peu del menú lateral
+2. Clica **"Canviar contrasenya"**
+3. Rebràs un correu per restablir-la
+4. Obre l'enllaç del correu i completa el canvi
+
+Si no et arriba el correu, revisa spam o prova-ho de nou passats uns minuts.
 
 ---
 
@@ -106,7 +126,16 @@ A la part esquerra de la pantalla tens el **menú de navegació**. Aquí tens un
 | 👷 | **Treballadors** | El personal contractat |
 | 📁 | **Projectes** | Per organitzar per àrees de treball i justificar subvencions |
 | 📄 | **Informes** | Model 182, Model 347 i certificats de donació |
-| ⚙️ | **Configuració** | Dades de l'entitat, categories, membres de l'equip |
+| ⚙️ | **Configuració** | Dades de l'entitat, categories, membres de l'equip i mòduls |
+
+### Detalls útils de navegació
+
+- Algunes seccions poden aparèixer o no segons el teu **rol** i els **permisos** que t'hagin donat.
+- Si el **Mòdul Projectes** està actiu, dins de Projectes pots veure un submenú amb **Gestió de projectes** i **Assignació de despeses**.
+- Al **peu del menú lateral** tens les accions personals: **Canviar contrasenya**, **Privacitat** i **Tancar sessió**.
+- A la part inferior de la pantalla tens dos accessos flotants:
+  - **Novetats**: obre la safata de millores del producte quan n'hi ha de noves.
+  - **Bot**: per resoldre dubtes operatius ràpids o arribar a la pantalla correcta.
 
 ---
 
@@ -129,10 +158,24 @@ Ens agrada celebrar les petites victòries!
 |---------|------------|
 | **Ingressos** | Tot el que ha entrat al compte |
 | **Despeses operatives** | Tot el que ha sortit (sense comptar transferències a contraparts) |
-| **Balanç operatiu** | La diferència: Ingressos − Despeses |
-| **Transferències a contraparts** | Diners enviats a entitats sòcies |
+| **Balanç operatiu** | Ingressos − despeses − enviaments a terreny |
+| **Transferències a terreny** | Diners enviats a entitats sòcies o contraparts |
 
 > 💡 **Què són les contraparts?** Són organitzacions associades amb qui executeu projectes de cooperació. Els diners que els envieu no són "despesa" en el sentit clàssic — són part de la vostra missió.
+
+### ❤️ Bloc "Donacions i Socis"
+
+Mostra les persones que sostenen l'entitat i separa el que és recurrent del que és puntual.
+
+| Targeta | Què et diu |
+|---------|------------|
+| **Quotes de socis** | Imports cobrats a persones recurrents |
+| **Donacions** | Donacions puntuals del període |
+| **Altres ingressos** | Subvencions, reintegraments, interessos, loteria o ingressos sense persona assignada |
+| **Socis actius** | Persones recurrents que han pagat almenys una quota en el període |
+| **Donants actius** | Persones no recurrents que han donat almenys una vegada en el període |
+
+> 💡 Si sumes **Quotes de socis + Donacions + Altres ingressos**, hauria de quadrar amb els **Ingressos** totals del compte.
 
 ### 🔔 Bloc d'Alertes
 
@@ -145,6 +188,39 @@ Les alertes t'avisen de coses que necessiten la teva atenció:
 | "X devolucions pendents" | Hi ha rebuts retornats que cal gestionar |
 
 > 🧘 **No t'espantis!** És completament normal tenir moltes alertes al principi. A mesura que vagis ordenant les dades, aniran desapareixent. Ningú ho té tot perfecte el primer dia.
+
+### 📊 Despeses principals per categoria
+
+Aquest bloc et mostra les categories de despesa amb més pes en el període seleccionat.
+
+Quan cliques **"Veure"** en una categoria, vas directament a **Moviments** amb aquell filtre aplicat.
+
+### 🗓️ Selector de període
+
+El període que triïs afecta tot el Dashboard alhora.
+
+Opcions habituals:
+- Tot
+- Mes
+- Trimestre
+- Any
+- Rang personalitzat
+
+> 💡 Si vols comparar bé, utilitza períodes equivalents (per exemple, trimestre actual vs trimestre anterior).
+
+### 🔗 Compartir resum
+
+Aquest botó obre una finestra amb un resum del període, pensada per compartir amb junta o equip.
+
+Pas a pas recomanat:
+1. Tria el període
+2. Clica **"Compartir resum"**
+3. Revisa el text generat
+4. Si cal, edita els blocs narratius
+5. Tria com el vols compartir: **Copiar**, **Email** o **Exportar Excel/CSV**
+
+> 💡 Aquest botó no crea un enllaç públic: comparteixes un resum en format text o fitxer.
+> 💡 Abans de compartir, val la pena revisar si tens moviments sense categoria o sense contacte.
 
 ### 📅 Obligacions Fiscals
 
@@ -320,6 +396,8 @@ Si només tens un compte, pots saltar-te aquest pas.
    - **Nom del banc**: CaixaBank
 4. Clica **"Crear"**
 
+Si l'entitat genera remeses de cobrament, comprova també que el compte tingui informat l'**Identificador de creditor SEPA (ICS)**.
+
 ---
 
 ## 2.6 Convidar membres de l'equip
@@ -345,6 +423,38 @@ Si altres persones de l'entitat necessiten accedir a Summa Social, pots convidar
 La persona rebrà un email amb instruccions.
 
 > 💡 **Consell de seguretat:** Dona sempre el rol mínim necessari. Si algú només ha de consultar dades, fes-lo Viewer.
+
+## 2.7 Mòduls opcionals
+
+Si tens rol d'administrador, des de **Configuració > Mòduls opcionals** pots activar o desactivar funcionalitats addicionals.
+
+Els dos casos més habituals són:
+- **Mòdul Projectes**: activa el submenú de gestió de projectes i assignació de despeses.
+- **Documents pendents**: permet pujar factures i nòmines abans de tenir el moviment bancari i conciliarlos després.
+
+> 💡 **Documents pendents** i **Liquidacions** solen venir activats per defecte, però cada entitat pot decidir si els fa servir.
+
+## 2.8 Backups i Zona de Perill (només SuperAdmin Summa)
+
+Aquest bloc **no és visible per a tots els usuaris**. Només apareix a perfils de **SuperAdmin Summa**.
+
+### Backups
+
+Permet connectar un proveïdor de backup (**Dropbox** o **Google Drive**) i executar un backup manual quan cal.
+
+### Zona de Perill
+
+És l'espai d'accions **irreversibles**:
+- esborrats massius
+- accions avançades sobre remeses
+- operacions de manteniment que no formen part del flux habitual
+
+Abans d'usar-la:
+1. Comprova si el que necessites és realment una acció extraordinària
+2. Si estàs corregint una remesa normal, prova primer **Desfer remesa**
+3. Si no tens clar l'impacte, no continuïs
+
+> ⚠️ Aquest apartat existeix per a manteniment avançat, no per a l'operativa diària.
 
 ---
 
@@ -500,6 +610,12 @@ La fitxa del donant és el lloc on mantens al dia les dades que afecten operativ
 ### On trobar-ho a Summa
 
 **Donants > Fitxa del donant > Editar**
+
+### Com veure les quotes que ha pagat un soci
+
+Des de la mateixa fitxa del donant pots revisar l'**historial de moviments** o de **quotes associades**.
+
+Si la remesa s'ha dividit correctament, hi veuràs cada quota individual amb **data** i **import**.
 
 ---
 
@@ -664,6 +780,24 @@ Clica **directament sobre qualsevol cel·la** per editar-la. Els canvis es guard
 | Document | Icona 📎 per pujar |
 | Nota | Text lliure |
 
+### Què vol dir un moviment sense contacte
+
+Vol dir que la transacció **no té cap donant, proveïdor o treballador assignat**.
+
+És útil assignar contacte quan necessites traçabilitat i informes per persona o entitat. Però hi ha casos en què és normal deixar-lo sense contacte, com:
+- comissions bancàries
+- interessos
+- ajustos interns
+
+### Com tractar transferències internes entre comptes
+
+Les transferències internes **no són ingrés ni despesa real**: simplement mouen diners d'un compte propi a un altre.
+
+Recomanació pràctica:
+1. Crea o utilitza una categoria del tipus **"Transferències internes"**
+2. Marca tant la sortida com l'entrada amb el mateix criteri
+3. Si cal, afegeix una nota per relacionar-les
+
 ---
 
 ## 5.5 Adjuntar documents amb Drag & Drop
@@ -764,6 +898,7 @@ Sense dividir:
 2. ✅ El fitxer de detall que proporciona el banc (CSV o Excel)
 
 > 💡 **On trobar el fitxer de detall?** A la banca online, secció "Remeses" o "Cobraments". Descarrega el detall de la remesa concreta.
+> 💡 Un cop dividida, podràs veure l'historial de quotes de cada soci des de la seva fitxa de **Donants**.
 
 ---
 
@@ -885,15 +1020,66 @@ Per generar una remesa SEPA de cobrament:
 
 ## 6c Liquidacions de despeses de viatge [id:6c-liquidacions-de-despeses-de-viatge]
 
-Per preparar una liquidació de despeses de viatge:
+**Aquesta secció t'ajudarà a...**
 
+Agrupar tiquets i quilometratge d'un viatge en una sola liquidació, generar el PDF i deixar el reemborsament ben documentat.
+
+> **Nota:** La pantalla de **Liquidacions** forma part del mòdul de **Documents pendents**. Si no et surt al menú, un administrador el pot activar o desactivar a **Configuració > Mòduls opcionals**.
+
+## 6c.1 Dues maneres de treballar
+
+**Opció A: Primer tiquets, després liquidació**
+1. Ves a **Moviments > Pendents** i puja els tiquets
+2. Ves a **Moviments > Liquidacions**
+3. Crea una nova liquidació
+4. Assigna-hi els tiquets i afegeix quilometratge si cal
+5. Genera el PDF
+
+**Opció B: Liquidació directa**
 1. Ves a **Moviments > Liquidacions**
-2. Crea o obre una liquidació
-3. Puja tiquets i completa, si cal, el quilometratge
-4. Revisa els pendents abans de generar el PDF
-5. Genera el PDF final només quan tot quadra
+2. Crea una nova liquidació
+3. Arrossega els tiquets directament dins la liquidació
+4. Afegeix quilometratge si cal
+5. Genera el PDF
 
-> Aquesta pantalla és per liquidacions de viatge; no és una pantalla de remeses.
+## 6c.2 Com s'organitza la pantalla
+
+A dalt tens 3 pestanyes principals:
+- **Liquidacions**: llistat de liquidacions creades
+- **Tiquets**: safata de tiquets pendents d'assignar
+- **Quilometratge**: accés ràpid per editar km dins de liquidacions obertes
+
+Dins de **Liquidacions**, cada registre passa per aquests estats:
+- **Esborrany**: encara l'estàs preparant
+- **Enviada**: llesta per tramitar el reemborsament
+- **Conciliada**: ja vinculada al moviment bancari
+- **Arxivada**: tancada i fora del circuit operatiu
+
+## 6c.3 Afegir tiquets amb drag & drop
+
+Dins la liquidació, la card de **Tiquets** accepta arrossegar fitxers:
+1. Arrossega els fitxers sobre la card
+2. Veuràs un overlay blau
+3. Deixa anar i s'obrirà el modal de pujada
+4. Els tiquets nous quedaran vinculats automàticament a la liquidació
+
+**Formats admesos:** PDF, XML, JPG, JPEG, PNG
+
+## 6c.4 Quilometratge
+
+Pots afegir múltiples línies de quilometratge amb:
+- Data del desplaçament
+- Quilòmetres
+- Tarifa €/km
+- Notes (ruta o motiu)
+
+## 6c.5 Generar PDF
+
+El PDF inclou:
+- Dades de la liquidació i beneficiari
+- Llista de tiquets amb imports
+- Línies de quilometratge
+- Total desglossat
 
 ---
 
@@ -1157,6 +1343,43 @@ Import al Model 182 = Donacions − Devolucions
 
 Si el total és ≤ 0, el donant **no apareix** al Model 182.
 
+## 7.8 Desfer una remesa de devolucions
+
+Si t'has equivocat processant una remesa de devolucions, la pots desfer i tornar-la a processar bé.
+
+### Pas a pas
+
+1. Ves a 💰 **Moviments**
+2. Localitza la remesa de devolucions processada
+3. Clica el badge de la remesa per obrir-ne el detall
+4. Clica **"Desfer remesa"**
+5. Confirma l'acció
+6. Revisa les dades i torna-la a processar només quan les correccions estiguin clares
+
+> ⚠️ El sistema no permet processar directament una remesa de devolucions que ja està processada. Per seguretat, primer l'has de desfer.
+
+## 7.9 Checklist mensual de devolucions
+
+Per tenir-les ben controlades, aquest és el flux recomanat cada mes:
+
+1. ☐ Importa l'extracte del banc del mes
+2. ☐ Revisa si apareix el banner de devolucions pendents
+3. ☐ Si n'hi ha, descarrega el fitxer de detall del banc
+4. ☐ Importa el fitxer per fer matching automàtic
+5. ☐ Repassa les devolucions que no s'han identificat
+6. ☐ Actualitza l'IBAN o el DNI del donant si cal
+7. ☐ Processa el fitxer
+8. ☐ Comprova a la fitxa del donant que la devolució queda reflectida
+
+### Abans del gener (Model 182)
+
+Abans de generar el Model 182, assegura't que:
+1. ☐ Totes les devolucions de l'any estan assignades
+2. ☐ No en queden de pendents
+3. ☐ El total net de cada donant és correcte
+
+> 💡 Si un donant té més devolucions que donacions i el total queda ≤ 0, no apareixerà al Model 182. Això és correcte.
+
 ---
 
 # 8. Donacions via Stripe [id:8-donacions-via-stripe]
@@ -1324,6 +1547,26 @@ Declaració d'operacions amb tercers que superen **3.005,06€ anuals**.
 3. Clica **"Generar tots"**
 4. Es descarrega un ZIP amb tots els PDFs
 
+### Enviar certificats per email des de Summa Social
+
+També els pots enviar directament des de **📄 Informes > Certificats**, sense sortir de l'app.
+
+**Enviament individual:**
+1. A la fila del donant, clica la icona de **correu**
+2. Confirma l'enviament
+3. Summa envia el certificat en PDF adjunt automàticament
+
+**Enviament massiu:**
+1. Selecciona diversos donants
+2. Clica **"Enviar seleccionats"**
+3. Revisa el resum de confirmació
+4. Confirma l'enviament
+
+**Abans d'enviar, revisa això:**
+- El donant ha de tenir email informat
+- El teu usuari ha de tenir permís per generar certificats fiscals
+- Si s'arriba al límit diari d'enviaments, el sistema t'avisa i pots continuar l'endemà
+
 > 💡 Si el total d'un donant és ≤ 0 (per devolucions), no es genera certificat.
 
 ---
@@ -1426,6 +1669,97 @@ A la pantalla d'assignació de despeses, pots arrossegar fitxers directament sob
 
 ---
 
+# 10b. Paquet de Tancament
+
+**Aquesta secció t'ajudarà a...**
+
+Generar un paquet complet amb moviments i documents d'un període. És útil per a tancaments d'exercici, auditories o per enviar a comptabilitat externa un recull ordenat de l'activitat econòmica.
+
+## 10b.1 Què és el Paquet de Tancament?
+
+És un ZIP que inclou, segons les dades disponibles:
+- `moviments.xlsx`
+- `resum.txt`
+- carpeta `documents/`
+- `README.txt`
+- carpeta `debug/` amb diagnòstic tècnic
+
+## 10b.2 Com generar-lo
+
+### Pas a pas
+
+1. Ves a 📄 **Informes**
+2. Busca la targeta **"Paquet de tancament"**
+3. Clica **"Generar paquet"**
+4. Tria el període:
+   - **Any actual**
+   - **Any anterior**
+   - **Personalitzat**
+5. Si tries **Personalitzat**, informa **data inici** i **data fi**
+6. Clica **"Descarregar ZIP"**
+
+### Requisits i límits
+
+- Cal tenir permisos d'**exportar informes**
+- Si no hi ha moviments en el període, el paquet no es genera
+- Límit actual: **120 documents**
+- Mida total màxima: **350 MB**
+
+## 10b.3 Contingut del ZIP
+
+L'estructura habitual és aquesta:
+
+```
+summa_tancament_{org}_{data_inici}_{data_fi}.zip
+├── README.txt
+├── moviments.xlsx
+├── resum.txt
+├── documents/
+└── debug/
+    ├── resum_debug.txt
+    └── debug.xlsx
+```
+
+## 10b.4 `moviments.xlsx`
+
+És el fitxer principal per a l'entitat. Cada fila correspon a un moviment del període i mostra, com a mínim:
+- ordre
+- data
+- import
+- concepte
+- categoria
+- contacte
+- document associat (si n'hi ha)
+
+## 10b.5 Carpeta `debug/`
+
+Conté informació tècnica per diagnosticar incidències. Normalment no cal mirar-la, però és útil si:
+- falta un document que esperaves
+- vols entendre per què un fitxer no s'ha inclòs
+
+## 10b.6 Què enviar a comptabilitat
+
+Per a un tancament normal, acostuma a ser suficient enviar:
+1. `moviments.xlsx`
+2. `resum.txt`
+3. carpeta `documents/`
+
+## 10b.7 Preguntes freqüents
+
+### Per què falten documents?
+
+Si la columna de document és buida o el fitxer no s'ha pogut descarregar, consulta `debug/debug.xlsx`.
+
+### Puc generar paquets de períodes anteriors?
+
+Sí. Pots triar **any anterior** o un rang **personalitzat**.
+
+### El ZIP triga molt
+
+És normal si hi ha molts documents. Si supera els límits o triga massa, prova amb un període més curt.
+
+---
+
 # 11. Resolució de Problemes [id:11-resolucio-de-problemes]
 
 **Aquesta secció t'ajudarà a...**
@@ -1436,17 +1770,21 @@ Trobar respostes ràpides als problemes més comuns. Si et trobes encallat, mira
 
 ## 11.0 Com buscar ajuda dins Summa
 
-Tens tres punts d'ajuda reals dins l'app:
+Tens quatre punts útils dins l'app:
 
 - **Ajuda contextual (`?`)**: per entendre la pantalla on estàs.
 - **Manual**: per repassar el procés complet.
 - **Bot**: per dubtes operatius curts i per arribar ràpid al destí correcte.
+- **Novetats**: per veure millores i canvis recents quan hi ha contingut nou.
 
 Quan dubtis:
 
 1. Si ets dins d'una pantalla concreta, obre `?`.
 2. Si el procés és llarg o sensible, obre el Manual.
 3. Si no saps on anar, pregunta-ho al bot i segueix el destí recomanat.
+4. Si vols revisar canvis del producte, obre la safata de **Novetats** des del botó flotant blau.
+
+> 💡 Les novetats no interrompen la feina amb pop-ups: tu decideixes quan revisar-les.
 
 ---
 
@@ -1543,6 +1881,6 @@ Molta sort! 🍀
 
 ---
 
-**Summa Social v1.17** — Desembre 2025
+**Summa Social v1.46** — Març 2026
 
 *Gestió financera pensada per a entitats que volen dedicar el seu temps al que realment importa.*

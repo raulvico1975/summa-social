@@ -89,12 +89,54 @@ Gestors, administradors i tresorers d'entitats sense ànim de lucre que necessit
 
 ---
 
+## Desenvolupament ràpid
+
+Per entrar al projecte com a desenvolupador o amb Codex:
+
+1. Instal·la dependències amb `npm install`
+2. Crea `.env.local` a partir de `.env.local.example`
+3. Arrenca la web general amb `npm run dev:turbo`
+4. Si necessites la demo guiada, usa `npm run dev:demo`
+5. Abans d'integrar, valida com a mínim `npm run build` i `npm run test`
+
+Scripts útils:
+
+- `npm run dev:turbo` — arrencada principal de la web
+- `npm run dev:demo` — entorn demo amb dades preparades
+- `npm run build` — build segur del projecte
+- `npm run test` — test suite Node
+- `npm run docs:check` — validació bàsica de documentació
+- `npm run status` — estat operatiu del flux worktree/deploy
+
+## Mapa ràpid del repo
+
+- `src/` — aplicació Next.js, UI i lògica de negoci
+- `functions/` — Cloud Functions separades de la web principal
+- `scripts/` — automatitzacions, manteniment, CI i utilitats operatives
+- `docs/` — documentació d'autoritat, operativa i suport
+- `agents/` — prompts i guardrails versionats per fluxos d'agent
+- `octavi/` — runtime editorial i artefactes del sistema extern/editorial
+- `help/` — capa legacy congelada per compatibilitat amb adaptadors antics
+- `public/` — assets estàtics, manuals publicats i visuals
+- `tests/` — proves complementàries i fixtures
+
+Nota important:
+
+- Aquest repo conserva algunes rutes estables per compatibilitat (`help/topics`, `octavi/summa/editorial`, documents d'autoritat de `docs/`).
+- Per professionalitzar l'entrada sense risc, s'han prioritzat millores additives i no moviments de carpetes.
+
+## Handoff tècnic
+
+- [Guia de contribució](CONTRIBUTING.md) — normes pràctiques per tocar el repo sense regressions
+- [Entrada per desenvolupament](docs/developer/README.md) — mapa del repo, rutes estables i pla segur de reorganització
+
 ## Documentació
 
 - [Contracte curt de deploy](docs/DEPLOY.md) — Autoritat operativa curta
 - [Norma de codi i deploy](docs/GOVERN-DE-CODI-I-DEPLOY.md) — Contracte normatiu llarg
 - [Higiene i diagnòstic del repo](docs/REPO-HIGIENE-I-DIAGNOSTIC.md) — Bloquejos, residus i neteja
 - [Manual pràctic del mantenidor](docs/DEV-SOLO-MANUAL.md) — Checklists i ús quotidià
+- [Entrada per desenvolupament](docs/developer/README.md) — Onboarding tècnic curt i orientació del repo
 - [Índex de documentació](docs/README.md) — Mapa i criteri d'ordre de `/docs`
 - [Manual de referència complet](docs/SUMMA-SOCIAL-REFERENCIA-COMPLETA.md) — Document mestre del projecte
 

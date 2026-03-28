@@ -9,12 +9,13 @@ Aquest directori queda ordenat amb un criteri conservador:
 
 ## Llegeix primer
 
-1. `docs/DEPLOY.md` - contracte curt d'autoritat operativa
-2. `docs/GOVERN-DE-CODI-I-DEPLOY.md` - norma llarga de worktree, integracio i deploy
-3. `docs/REPO-HIGIENE-I-DIAGNOSTIC.md` - diagnòstic i neteja de bloquejos
-4. `docs/DEV-SOLO-MANUAL.md` - manual pràctic del mantenidor
-5. `docs/SUMMA-SOCIAL-REFERENCIA-COMPLETA.md` - document mestre del producte
-6. `docs/PATRONS-CODI-OBLIGATORIS.md` - invariants i patrons obligatoris
+1. `docs/developer/README.md` - entrada curta per a desenvolupament i handoff
+2. `docs/DEPLOY.md` - contracte curt d'autoritat operativa
+3. `docs/GOVERN-DE-CODI-I-DEPLOY.md` - norma llarga de worktree, integracio i deploy
+4. `docs/REPO-HIGIENE-I-DIAGNOSTIC.md` - diagnòstic i neteja de bloquejos
+5. `docs/DEV-SOLO-MANUAL.md` - manual pràctic del mantenidor
+6. `docs/SUMMA-SOCIAL-REFERENCIA-COMPLETA.md` - document mestre del producte
+7. `docs/PATRONS-CODI-OBLIGATORIS.md` - invariants i patrons obligatoris
 
 ## Mapa rapid
 
@@ -46,6 +47,9 @@ Exemples:
   - `docs/operations/CONTEXT-OPERATIU-WEB-I-INTEGRACIONS.md` - web public, contacte, WhatsApp, correu del domini i runtime extern d'OpenClaw
   - `docs/operations/SUMMA-MAIL-OPERATIVA-RAPIDA.md` - on es veu l'inbox de `hola@`, on es veuen els enviats i com no perdre's amb el runtime comercial
   - `docs/operations/SUMMA-INBOUND-FUNNEL.md` - com `Octavi` detecta, briefa i acompanya els contactes entrants de `hola@summasocial.app`
+- `docs/developer/` - entrada curta per a desenvolupament, handoff i topologia estable del repo
+- `docs/stripe/` - decisions, requeriments i especificacions del domini Stripe
+- `docs/reports/` - informes puntuals d'integracio, diagnòstic o validació
 - `docs/guardrails/` - fitxes curtes de guardrails i criteris d'implementacio
 - `docs/QA/` - proves manuals, cobertura i analisi estatica
 - `docs/security/` - auditories i documents de seguretat/privacitat
@@ -62,6 +66,8 @@ Exemple actual de `docs/contracts/`:
 ## Regles de manteniment
 
 - Si un fitxer es usat per un script, conserva la ruta estable o actualitza el codi en el mateix canvi.
+- Si una carpeta te estat runtime o rutes absolutes consumides externament, no la moguis en una neteja cosmetica.
+- Si cal reubicar documentacio per ordre, prefereix moure el contingut canònic a una subcarpeta i deixar un alias curt a la ruta antiga mentre encara hi hagi referències vives.
 - Si un document es temporal, d'experiment o brut, no va a l'arrel.
 - Si un document deixa de ser operatiu pero pot tenir valor historic, mou-lo a `docs/archive/`.
 - No afegir nous pseudo-"skills" a `docs/`; les fitxes curtes van a `docs/guardrails/`.

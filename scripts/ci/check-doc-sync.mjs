@@ -7,6 +7,11 @@ const MANUAL_FILE = 'docs/manual-usuari-summa-social.md'
 const FAQ_FILE = 'docs/FAQ_SUMMA_SOCIAL.md'
 
 const FUNCTIONAL_PREFIXES = ['src/app/', 'src/components/', 'src/lib/']
+const USER_VISIBLE_FILE_PATTERNS = [
+  /^src\/app\/(?!api\/)/,
+  /^src\/components\//,
+  /^src\/i18n\/public\.ts$/,
+]
 const GUIDE_LOCALE_FILES = [
   'src/i18n/locales/ca.json',
   'src/i18n/locales/es.json',
@@ -66,6 +71,19 @@ function startsWithAny(value, prefixes) {
   return prefixes.some(prefix => value.startsWith(prefix))
 }
 
+function matchesAnyPattern(value, patterns) {
+  return patterns.some(pattern => pattern.test(value))
+}
+
+function isLikelyUserVisibleFile(file) {
+  if (matchesAnyPattern(file, USER_VISIBLE_FILE_PATTERNS)) return true
+  if (GUIDE_LOCALE_FILES.includes(file)) return true
+  if (HELP_GENERATED_GUIDE_FILES.includes(file)) return true
+  if (file.startsWith(HELP_TOPICS_PREFIX)) return true
+  if (file === MANUAL_FILE || file === FAQ_FILE) return true
+  return false
+}
+
 function hasGuidesLocaleDiff(ref) {
   const targetFiles = GUIDE_LOCALE_FILES.join(' ')
   const commands = [
@@ -90,7 +108,13 @@ function hasGuidesLocaleDiff(ref) {
 function parseImpact(content) {
   const manualUpdated = /-\s*manual_updated:\s*(yes|no)/i.exec(content)?.[1]?.toLowerCase() ?? ''
   const faqUpdated = /-\s*faq_updated:\s*(yes|no)/i.exec(content)?.[1]?.toLowerCase() ?? ''
+  const visibleUserChange = /-\s*visible_user_change:\s*(yes|no)/i.exec(content)?.[1]?.toLowerCase() ?? ''
   const justification = /-\s*justification_if_no_change:\s*(.*)$/im.exec(content)?.[1]?.trim() ?? ''
+  const userScope = /-\s*user_scope:\s*(.*)$/im.exec(content)?.[1]?.trim() ?? ''
+  const userProblemBefore = /-\s*user_problem_before:\s*(.*)$/im.exec(content)?.[1]?.trim() ?? ''
+  const userChangeNow = /-\s*user_change_now:\s*(.*)$/im.exec(content)?.[1]?.trim() ?? ''
+  const userDayToDay = /-\s*user_day_to_day:\s*(.*)$/im.exec(content)?.[1]?.trim() ?? ''
+  const userActionRequired = /-\s*user_action_required:\s*(.*)$/im.exec(content)?.[1]?.trim() ?? ''
 
   const topicSection = content.match(/-\s*help_topics_updated:\s*([\s\S]*?)(?:\n-\s*manual_updated:|$)/i)?.[1] ?? ''
   const topics = Array.from(topicSection.matchAll(/-\s+([a-z0-9]+(?:-[a-z0-9]+)*)/g)).map(match => match[1])
@@ -98,9 +122,21 @@ function parseImpact(content) {
   return {
     manualUpdated,
     faqUpdated,
+    visibleUserChange,
     justification,
+    userScope,
+    userProblemBefore,
+    userChangeNow,
+    userDayToDay,
+    userActionRequired,
     topics,
   }
+}
+
+function hasMeaningfulValue(value, { allowCap = false } = {}) {
+  if (!value) return false
+  if (!allowCap && value.toLowerCase() === 'cap') return false
+  return true
 }
 
 function fail(message) {
@@ -134,6 +170,7 @@ function main() {
   const faqChanged = files.includes(FAQ_FILE)
   const localeChanged = files.some(file => GUIDE_LOCALE_FILES.includes(file))
   const helpTopicsChanged = files.some(file => file.startsWith(HELP_TOPICS_PREFIX))
+  const userVisibleChanged = files.some(isLikelyUserVisibleFile)
 
   if (localeChanged && hasGuidesLocaleDiff(ref)) {
     const hasHelpTopicChanges = helpTopicsChanged
@@ -160,13 +197,16 @@ function main() {
   }
 
   if (!impactChanged) {
-    reportViolation(`Functional changes without ${IMPACT_FILE}. Add it to document impact and keep deploy context clear.`)
+    reportViolation(
+      `Functional changes without ${IMPACT_FILE}. Add it to document impact and keep deploy context clear.`,
+      { hard: userVisibleChanged },
+    )
     console.log('[check-doc-sync] OK (with warnings)')
     return
   }
 
   if (!existsSync(IMPACT_FILE)) {
-    reportViolation(`Missing ${IMPACT_FILE}`)
+    reportViolation(`Missing ${IMPACT_FILE}`, { hard: userVisibleChanged })
     console.log('[check-doc-sync] OK (with warnings)')
     return
   }
@@ -178,6 +218,9 @@ function main() {
   }
   if (!['yes', 'no'].includes(parsed.faqUpdated)) {
     reportViolation('impact.md should declare faq_updated: yes|no')
+  }
+  if (!['yes', 'no'].includes(parsed.visibleUserChange)) {
+    reportViolation('impact.md should declare visible_user_change: yes|no', { hard: userVisibleChanged })
   }
 
   if (parsed.manualUpdated === 'yes' && !manualChanged) {
@@ -208,6 +251,29 @@ function main() {
     }
   }
 
+  if (parsed.visibleUserChange === 'yes') {
+    const visibleBriefFields = [
+      ['user_scope', parsed.userScope],
+      ['user_problem_before', parsed.userProblemBefore],
+      ['user_change_now', parsed.userChangeNow],
+      ['user_day_to_day', parsed.userDayToDay],
+      ['user_action_required', parsed.userActionRequired],
+    ]
+
+    for (const [field, value] of visibleBriefFields) {
+      const isValid = hasMeaningfulValue(value, { allowCap: field === 'user_action_required' })
+      if (!isValid) {
+        reportViolation(`impact.md says visible_user_change=yes but ${field} is missing or too vague`, { hard: true })
+      }
+    }
+  }
+
+  if (parsed.visibleUserChange === 'no' && userVisibleChanged) {
+    reportViolation(
+      'Likely user-visible files changed but impact.md says visible_user_change=no. Review whether this should be a product brief.',
+    )
+  }
+
   const noDeclaredUpdates = parsed.topics.length === 0 && parsed.manualUpdated === 'no' && parsed.faqUpdated === 'no'
   if (noDeclaredUpdates && parsed.justification.length === 0) {
     reportViolation('impact.md should include justification_if_no_change when no docs/help layer is updated')
@@ -215,7 +281,7 @@ function main() {
 
   console.log('[check-doc-sync] OK')
   if (!DOC_SYNC_STRICT) {
-    console.log('[check-doc-sync] Tip: set DOC_SYNC_STRICT=1 to enforce hard blocking mode for all doc sync checks.')
+    console.log('[check-doc-sync] Tip: set DOC_SYNC_STRICT=1 to enforce hard blocking mode for all doc sync checks, including internal-only changes.')
   }
 }
 

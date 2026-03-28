@@ -38,8 +38,17 @@ const UI_STRINGS = {
 function shouldFallbackToCatalan(locale: 'ca' | 'es' | 'fr', text: string): boolean {
   if (locale === 'ca') return false;
   const toc = extractToc(text);
-  if (toc.length < 8) return true;
-  return !toc.some((entry) => entry.id === '11-resolucio-de-problemes');
+  if (toc.length < 25) return true;
+  const requiredAnchors = [
+    '1-primers-passos',
+    '5-gestio-de-moviments',
+    '7-gestio-de-devolucions',
+    '9-informes-fiscals',
+    '11-resolucio-de-problemes',
+    '12-glossari',
+  ];
+  const anchorSet = new Set(toc.map((entry) => entry.id));
+  return requiredAnchors.some((anchor) => !anchorSet.has(anchor));
 }
 
 /**

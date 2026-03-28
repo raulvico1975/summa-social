@@ -80,9 +80,34 @@ La decisió de publicar és separada del tancament i de la integració. Acabar u
 - S'executa només des del repositori de control.
 - És l'única porta d'entrada a `prod`.
 - Publica a `prod` només allò que ja és a `main`.
+- Abans de publicar, el canvi ha de tenir un `impact brief` orientat a usuari si altera comportament visible o fluxos reals de treball.
 - Si falla, `prod` no s'ha de donar per actualitzada.
 
-## 4. Bloquejos que aturen el ritual
+## 4. Impact brief obligatori abans de publicar
+
+Quan un canvi pugui acabar convertit en `novetat`, help, FAQ o comunicacio de producte, no n'hi ha prou amb el resum tecnic del commit.
+
+Abans de `npm run publica`, cal deixar escrit a `docs/sync/impact.md` un resum curt i verificable orientat a usuari que expliqui:
+
+- què ha canviat de veritat
+- per què li importa a una entitat o a la persona que fa la feina
+- com ho notarà en el dia a dia
+- si ha de fer alguna acció o si no ha de fer res
+
+Regles:
+
+- el `impact brief` s'escriu amb llenguatge de producte, no amb llenguatge de commit
+- no pot limitar-se a copiar un `feat:` o `fix:` tècnic
+- si el canvi no és visible per a l'usuari, cal justificar explícitament per què no genera brief de novetat
+- si el canvi és intern o tècnic, `visible_user_change: no` + justificació és suficient; no cal forçar una peça d'outreach
+- si el canvi és visible, aquest brief és la font preferida per alimentar `novetats` i altres peces de comunicació
+
+Referència operativa:
+
+- plantilla base: `docs/sync/impact-template.md`
+- estat viu del canvi actual: `docs/sync/impact.md`
+
+## 5. Bloquejos que aturen el ritual
 
 Qualsevol d'aquests casos talla el flux:
 
@@ -93,10 +118,11 @@ Qualsevol d'aquests casos talla el flux:
 - feina local o commits sense pujar dins dels worktrees.
 - `prod` amb commits fora de `main`.
 - `ESTAT GLOBAL: BLOQUEJAT`.
+- canvi visible sense `impact brief` usable a `docs/sync/impact.md`.
 
 Quan passi, no s'interpreta ni es força res. Es diagnostica amb `docs/REPO-HIGIENE-I-DIAGNOSTIC.md`.
 
-## 5. Comandes auxiliars
+## 6. Comandes auxiliars
 
 Aquestes comandes són de manteniment, no de govern:
 
@@ -106,7 +132,7 @@ Aquestes comandes són de manteniment, no de govern:
 
 Cap d'aquestes comandes substitueix `acabat`, `integra` o `publica`.
 
-## 6. Prohibicions
+## 7. Prohibicions
 
 - No treballar sense worktree de tasca.
 - No implementar al repositori de control.
@@ -116,8 +142,9 @@ Cap d'aquestes comandes substitueix `acabat`, `integra` o `publica`.
 - No barrejar neteja de repo amb una feature.
 - No fer cherry-picks improvisats per trencar un bloqueig sense aclarir abans l'estat real.
 - No deixar dues versions actives del mateix ritual.
+- No donar per bona una explicació orientada a usuari si només és un resum tècnic del diff.
 
-## 7. Regla final
+## 8. Regla final
 
 Quan hi hagi dubte:
 

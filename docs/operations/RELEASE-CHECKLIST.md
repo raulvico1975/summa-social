@@ -4,6 +4,7 @@
 - `node scripts/check-build-env.mjs` (credencials mínimes per build)
 - `npm run check` (tsc + tests + build) → ha de donar `CHECK_OK`
 - `git diff --stat` revisat
+- Si el canvi és visible per a usuari: `docs/sync/impact.md` actualitzat amb brief de producte orientat a usuari
 
 ## Després de deploy a producció (incògnit, sense extensions)
 1) `/admin`

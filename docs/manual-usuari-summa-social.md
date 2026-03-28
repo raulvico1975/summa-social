@@ -1,7 +1,7 @@
 # SUMMA SOCIAL - Manual d'Usuari Complet
 
 **Versió**: 1.46
-**Última actualització**: 12 Març 2026
+**Última actualització**: 28 Març 2026
 
 ---
 
@@ -74,7 +74,11 @@ Per protegir les dades de l'entitat, hem configurat algunes mesures de seguretat
 - ✅ **Reautenticació cada 12 hores** encara que hi hagi activitat (per seguretat)
 - ✅ Si uses un **ordinador compartit**, recorda tancar sessió manualment quan acabis
 
-**Com tancar sessió:** Clica el teu nom (a dalt a la dreta) → "Tancar sessió"
+**Com tancar sessió:** Ves al peu del menú lateral i clica **"Tancar sessió"**.
+
+### Si treballes amb més d'una organització
+
+Abans d'importar moviments o generar informes, fixa't en el **nom de l'organització** que surt sota el logo al menú lateral. És la comprovació ràpida per assegurar-te que estàs treballant a l'entitat correcta.
 
 ### Sobre les còpies de seguretat
 
@@ -84,14 +88,14 @@ Si necessites una còpia de les dades de la teva entitat (per exemple, per a una
 
 ---
 
-## 1.2 Configuració d'Usuari: Idioma de l'aplicació
+## 1.2 Configuració d'Usuari: idioma i contrasenya
 
 L'aplicació està disponible en **3 idiomes**:
 - 🇨🇦 Català
 - 🇪🇸 Espanyol  
 - 🇫🇷 Francès
 
-### Com canviar-lo
+### Com canviar l'idioma
 
 1. Ves a ⚙️ **Configuració**
 2. A l'apartat **Configuració d'Usuari**, busca **"Idioma de l'aplicació"**
@@ -99,6 +103,15 @@ L'aplicació està disponible en **3 idiomes**:
 4. El canvi s'aplica immediatament
 
 > 💡 Cada persona de l'equip pot tenir el seu propi idioma configurat. El teu canvi no afecta els altres.
+
+### Com canviar la contrasenya
+
+1. Ves al peu del menú lateral
+2. Clica **"Canviar contrasenya"**
+3. Rebràs un correu per restablir-la
+4. Obre l'enllaç del correu i completa el canvi
+
+Si no et arriba el correu, revisa spam o prova-ho de nou passats uns minuts.
 
 ---
 
@@ -116,6 +129,12 @@ A la part esquerra de la pantalla tens el **menú de navegació**. Aquí tens un
 | 📁 | **Projectes** | Per organitzar per àrees de treball i justificar subvencions |
 | 📄 | **Informes** | Model 182, Model 347 i certificats de donació |
 | ⚙️ | **Configuració** | Preferències d'usuari, dades de l'entitat i mòduls |
+
+Detalls útils de navegació:
+- Algunes seccions poden aparèixer o no segons el teu **rol** i els **permisos** que t'hagin donat.
+- Si el **Mòdul Projectes** està actiu, dins de Projectes pots veure un submenú amb **Gestió de projectes** i **Assignació de despeses**.
+- Al **peu del menú lateral** tens les accions personals: **Canviar contrasenya**, **Privacitat** i **Tancar sessió**.
+- A la part inferior de la pantalla tens dos accessos flotants: **Novetats** i **Bot**.
 
 ---
 
@@ -226,12 +245,10 @@ Per fer-ho fàcil, seguim sempre aquest ordre:
 
 ### Canviar contrasenya
 
-1. Ves a ⚙️ **Configuració**
-2. A **Canviar contrasenya**, informa:
-   - Contrasenya actual
-   - Nova contrasenya
-   - Confirmació de la nova contrasenya
-3. Clica **"Guardar nova contrasenya"**
+1. Ves al peu del menú lateral
+2. Clica **"Canviar contrasenya"**
+3. Rebràs un correu per restablir-la
+4. Obre l'enllaç del correu i completa el canvi
 
 Si no recordes la contrasenya actual, fes servir la recuperació des de la pantalla de login (ho tens explicat a la secció 11.1).
 
@@ -350,6 +367,28 @@ Exemples habituals:
 Punt important:
 - **Documents pendents** i **Liquidacions** solen venir activats per defecte
 - L'entitat pot decidir desactivar-los en qualsevol moment des d'aquí (administradors)
+
+---
+
+## 2.6 Backups i Zona de Perill (només SuperAdmin Summa)
+
+Aquest bloc **no és visible per a tots els usuaris**. Només apareix a perfils de **SuperAdmin Summa**.
+
+### Backups
+
+Permet connectar un proveïdor de backup (**Dropbox** o **Google Drive**) i executar un backup manual quan cal.
+
+### Zona de Perill
+
+És l'espai d'accions **irreversibles**:
+- esborrats massius
+- accions avançades sobre remeses
+- operacions de manteniment que no formen part del flux habitual
+
+Abans d'usar-la:
+1. Comprova si el que necessites és realment una acció extraordinària
+2. Si estàs corregint una remesa normal, prova primer **Desfer remesa**
+3. Si no tens clar l'impacte, no continuïs
 
 ---
 
@@ -797,6 +836,24 @@ Clica **directament sobre qualsevol cel·la** per editar-la. Els canvis es guard
 | Projecte | Selector |
 | Document | Icona 📎 per pujar |
 | Nota | Text lliure |
+
+### Què vol dir un moviment sense contacte
+
+Vol dir que la transacció **no té cap donant, proveïdor o treballador assignat**.
+
+És útil assignar contacte quan necessites traçabilitat i informes per persona o entitat. Però hi ha casos en què és normal deixar-lo sense contacte, com:
+- comissions bancàries
+- interessos
+- ajustos interns
+
+### Com tractar transferències internes entre comptes
+
+Les transferències internes **no són ingrés ni despesa real**: simplement mouen diners d'un compte propi a un altre.
+
+Recomanació pràctica:
+1. Crea o utilitza una categoria del tipus **"Transferències internes"**
+2. Marca tant la sortida com l'entrada amb el mateix criteri
+3. Si cal, afegeix una nota per relacionar-les
 
 ---
 
@@ -2118,10 +2175,12 @@ Generar un paquet complet amb tots els moviments i documents d'un període. És 
 
 ## 10b.1 Què és el Paquet de Tancament?
 
-És un ZIP que conté:
-- Un Excel amb tots els moviments del període
-- Els documents adjunts (factures, tiquets) numerats
-- Un resum econòmic
+És un ZIP que inclou, segons les dades disponibles:
+- `moviments.xlsx`
+- `resum.txt`
+- carpeta `documents/`
+- `README.txt`
+- carpeta `debug/` amb diagnòstic tècnic
 
 **Cas d'ús típic:** Al final de l'any, generes el paquet i l'envies a comptabilitat. Ells tenen tot el que necessiten sense haver d'accedir a Summa Social.
 
@@ -2131,20 +2190,22 @@ Generar un paquet complet amb tots els moviments i documents d'un període. És 
 
 ### Pas a pas
 
-1. Ves a 💰 **Moviments**
-2. Clica el menú **⋮** → **"Paquet de tancament"**
-3. Selecciona el **període** (data inici i data fi)
-4. Clica **"Generar"**
-5. Es descarrega un fitxer ZIP
+1. Ves a 📄 **Informes**
+2. Busca la targeta **"Paquet de tancament"**
+3. Clica **"Generar paquet"**
+4. Tria el període:
+   - **Any actual**
+   - **Any anterior**
+   - **Personalitzat**
+5. Si tries **Personalitzat**, informa **data inici** i **data fi**
+6. Clica **"Descarregar ZIP"**
 
-### Límits
+### Requisits i límits
 
-| Límit | Valor |
-|-------|-------|
-| Màxim de documents | 120 |
-| Mida total màxima | 350 MB |
-
-Si superes els límits, prova amb un període més curt (trimestre o mes).
+- Cal tenir permisos d'**exportar informes**
+- Si no hi ha moviments en el període, el paquet no es genera
+- Límit actual: **120 documents**
+- Mida total màxima: **350 MB**
 
 ---
 
@@ -2234,11 +2295,11 @@ Per saber el motiu exacte, consulta `debug/debug.xlsx`.
 
 ### Puc generar paquets de períodes anteriors?
 
-Sí. El sistema guarda tots els documents històrics. Pots generar un paquet de qualsevol any passat.
+Sí. Pots triar **any anterior** o un rang **personalitzat**.
 
 ### El ZIP triga molt a generar-se
 
-És normal si tens molts documents. El sistema ha de descarregar cada fitxer i comprimir-lo. Per a un any complet amb 100+ documents, pot trigar 1-2 minuts.
+És normal si tens molts documents. Si supera els límits o triga massa, prova amb un període més curt.
 
 ### Els imports apareixen com a text a Excel
 
@@ -2259,11 +2320,20 @@ Trobar respostes ràpides als problemes més comuns. Si et trobes encallat, mira
 
 ## 11.0 Com buscar ajuda dins Summa
 
-Abans de sortir de l'app, a Summa tens **tres punts d'ajuda reals**:
+Abans de sortir de l'app, a Summa tens **quatre punts útils**:
 
 - **Ajuda contextual (`?`)**: per entendre la pantalla on estàs ara mateix.
 - **Manual**: per repassar un procés complet o entendre un tema de punta a punta.
-- **Bot**: per dubtes operatius curts, especialment si no saps per on començar.
+- **Bot**: per dubtes operatius curts i per arribar ràpid al destí correcte.
+- **Novetats**: per veure millores i canvis recents quan hi ha contingut nou.
+
+Quan dubtis:
+1. Si ets dins d'una pantalla concreta, obre `?`.
+2. Si el procés és llarg o sensible, obre el Manual.
+3. Si no saps on anar, pregunta-ho al bot i segueix el destí recomanat.
+4. Si vols revisar canvis del producte, obre la safata de **Novetats** des del botó flotant blau.
+
+> 💡 Les novetats no interrompen la feina amb pop-ups: tu decideixes quan revisar-les.
 
 ### Quin punt d'ajuda t'interessa segons el cas
 
@@ -2393,6 +2463,6 @@ Molta sort! 🍀
 
 ---
 
-**Summa Social v1.41** — Febrer 2026
+**Summa Social v1.46** — Març 2026
 
 *Gestió financera pensada per a entitats que volen dedicar el seu temps al que realment importa.*
