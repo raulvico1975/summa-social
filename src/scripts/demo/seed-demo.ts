@@ -108,6 +108,10 @@ const DEMO_WORK_MODEL_182_EXCLUDED_DONOR_ID = `${DEMO_ID_PREFIX}model182_exclude
 const DEMO_WORK_MODEL_182_EXCLUDED_DONATION_ID = `${DEMO_ID_PREFIX}model182_excluded_donation_001`;
 const DEMO_WORK_MODEL_182_EXCLUDED_NAME = 'Mireia Serra Vidal';
 const DEMO_WORK_MODEL_182_EXCLUDED_AMOUNT = 90;
+const DEMO_WORK_MODEL_347_EXCLUDED_SUPPLIER_ID = `${DEMO_ID_PREFIX}model347_excluded_supplier_001`;
+const DEMO_WORK_MODEL_347_EXCLUDED_TX_PREFIX = `${DEMO_ID_PREFIX}model347_excluded_tx_`;
+const DEMO_WORK_MODEL_347_EXCLUDED_NAME = 'Cooperativa Social Sense CIF';
+const DEMO_WORK_MODEL_347_EXCLUDED_TOTAL = 3330;
 
 const VOLUMES = {
   donors: 50,
@@ -566,9 +570,10 @@ export async function runDemoSeed(
     const membershipFeeCategory = categories.find(
       (cat) => cat.type === 'income' && cat.name === 'Quotes socis'
     ) ?? donationCategory;
+    const expenseCategory = categories.find((cat) => cat.type === 'expense');
 
-    if (!donationCategory || !membershipFeeCategory) {
-      throw new Error('[seed-demo] Falten categories fiscals income (Donacions/Quotes socis)');
+    if (!donationCategory || !membershipFeeCategory || !expenseCategory) {
+      throw new Error('[seed-demo] Falten categories demo necessaries (Donacions/Quotes socis/Despesa)');
     }
 
     // Anomalia 1: 3 parells de duplicats (concepte i import similar, dates properes)
@@ -948,6 +953,81 @@ export async function runDemoSeed(
     console.log('[seed-demo]   - Control donacions: 1 donant demo amb 3 donacions i 1 devolució');
     console.log('[seed-demo]   - Model 182: 1 donant demo exclòs AEAT per NIF buit');
 
+    const model347ExcludedSupplier = {
+      id: DEMO_WORK_MODEL_347_EXCLUDED_SUPPLIER_ID,
+      name: DEMO_WORK_MODEL_347_EXCLUDED_NAME,
+      type: 'supplier' as const,
+      taxId: '',
+      email: 'cooperativa.sensecif@example.demo',
+      phone: '934567890',
+      address: 'Passeig del Rec, 12',
+      city: 'Barcelona',
+      province: 'Barcelona',
+      zipCode: '08003',
+      createdAt: nowStr,
+      updatedAt: nowStr,
+      isDemoData: true as const,
+    };
+    allContacts.push(model347ExcludedSupplier);
+
+    const model347ExcludedTransactions = [
+      {
+        id: `${DEMO_WORK_MODEL_347_EXCLUDED_TX_PREFIX}001`,
+        date: `${currentYear}-01-19`,
+        description: 'Servei anual gestoria Cooperativa Social Sense CIF',
+        amount: -820,
+        category: expenseCategory.id,
+        contactId: DEMO_WORK_MODEL_347_EXCLUDED_SUPPLIER_ID,
+        contactType: 'supplier' as const,
+        source: 'bank' as const,
+        transactionType: 'normal' as const,
+        createdAt: nowStr,
+        isDemoData: true as const,
+      },
+      {
+        id: `${DEMO_WORK_MODEL_347_EXCLUDED_TX_PREFIX}002`,
+        date: `${currentYear}-04-08`,
+        description: 'Factura trimestre 2 Cooperativa Social Sense CIF',
+        amount: -760,
+        category: expenseCategory.id,
+        contactId: DEMO_WORK_MODEL_347_EXCLUDED_SUPPLIER_ID,
+        contactType: 'supplier' as const,
+        source: 'bank' as const,
+        transactionType: 'normal' as const,
+        createdAt: nowStr,
+        isDemoData: true as const,
+      },
+      {
+        id: `${DEMO_WORK_MODEL_347_EXCLUDED_TX_PREFIX}003`,
+        date: `${currentYear}-07-12`,
+        description: 'Factura trimestre 3 Cooperativa Social Sense CIF',
+        amount: -910,
+        category: expenseCategory.id,
+        contactId: DEMO_WORK_MODEL_347_EXCLUDED_SUPPLIER_ID,
+        contactType: 'supplier' as const,
+        source: 'bank' as const,
+        transactionType: 'normal' as const,
+        createdAt: nowStr,
+        isDemoData: true as const,
+      },
+      {
+        id: `${DEMO_WORK_MODEL_347_EXCLUDED_TX_PREFIX}004`,
+        date: `${currentYear}-10-05`,
+        description: 'Factura trimestre 4 Cooperativa Social Sense CIF',
+        amount: -840,
+        category: expenseCategory.id,
+        contactId: DEMO_WORK_MODEL_347_EXCLUDED_SUPPLIER_ID,
+        contactType: 'supplier' as const,
+        source: 'bank' as const,
+        transactionType: 'normal' as const,
+        createdAt: nowStr,
+        isDemoData: true as const,
+      },
+    ];
+    transactions.push(...model347ExcludedTransactions);
+
+    console.log('[seed-demo]   - Model 347: 1 proveïdor demo exclòs AEAT per CIF buit');
+
     // ─────────────────────────────────────────────────────────────────────────
     // Cas especial 3: Devolució pendent d'assignar (sense contacte)
     // Per demo de workflow de resolució de devolucions
@@ -1245,9 +1325,10 @@ export async function runDemoSeed(
     // Work: 100 base + 3 duplicats + 5 pendents + 3 traçabilitat
     //       + 5 casos oracle (donation/non_fiscal/pending + 2 returns)
     //       + 5 control/fiscal (3 donacions + 1 devolució + 1 exclòs AEAT)
+    //       + 4 Model 347 (proveïdor exclòs AEAT per CIF buit)
     //       + 9 SEPA IN (1 pare + 8 línies) + 1 pare pendent de dividir
-    //       + 8 Stripe (1 pare + 6 donacions + 1 fee) = 139
-    const expectedWorkTx = 100 + WORK_ANOMALIES.duplicates + WORK_ANOMALIES.pending + 3 + 5 + 5 + 9 + 1 + 8;
+    //       + 8 Stripe (1 pare + 6 donacions + 1 fee) = 143
+    const expectedWorkTx = 100 + WORK_ANOMALIES.duplicates + WORK_ANOMALIES.pending + 3 + 5 + 5 + 4 + 9 + 1 + 8;
     if (counts.transactions !== expectedWorkTx) {
       invariantErrors.push(`[work] transactions: esperats ${expectedWorkTx}, obtinguts ${counts.transactions}`);
     }
@@ -1369,6 +1450,34 @@ export async function runDemoSeed(
       if (Math.abs(model182ExcludedDonation.amount - DEMO_WORK_MODEL_182_EXCLUDED_AMOUNT) > 0.01) {
         invariantErrors.push(
           `[work] model 182: import esperat ${DEMO_WORK_MODEL_182_EXCLUDED_AMOUNT}, obtingut ${model182ExcludedDonation.amount}`
+        );
+      }
+    }
+
+    const model347ExcludedSupplier = allContacts.find(
+      (contact) => contact.id === DEMO_WORK_MODEL_347_EXCLUDED_SUPPLIER_ID
+    );
+    if (!model347ExcludedSupplier) {
+      invariantErrors.push('[work] model 347: proveïdor exclòs demo no existeix');
+    } else if (model347ExcludedSupplier.taxId !== '') {
+      invariantErrors.push('[work] model 347: el proveïdor exclòs ha de tenir taxId buit');
+    }
+
+    const model347ExcludedTransactions = transactions.filter((tx) =>
+      tx.id.startsWith(DEMO_WORK_MODEL_347_EXCLUDED_TX_PREFIX)
+    );
+    if (model347ExcludedTransactions.length !== 4) {
+      invariantErrors.push(
+        `[work] model 347: esperades 4 transaccions demo, obtingudes ${model347ExcludedTransactions.length}`
+      );
+    } else {
+      const model347ExcludedTotal = model347ExcludedTransactions.reduce(
+        (sum, tx) => sum + Math.abs(tx.amount),
+        0
+      );
+      if (Math.abs(model347ExcludedTotal - DEMO_WORK_MODEL_347_EXCLUDED_TOTAL) > 0.01) {
+        invariantErrors.push(
+          `[work] model 347: total esperat ${DEMO_WORK_MODEL_347_EXCLUDED_TOTAL}, obtingut ${model347ExcludedTotal}`
         );
       }
     }

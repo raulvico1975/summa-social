@@ -12,14 +12,14 @@ import { chromium } from 'playwright';
 
 const DEMO_ORG_ID = 'demo-org';
 const DEFAULT_BASE_URL = 'http://localhost:9002/demo';
-const DEFAULT_TMP_DIR = path.join(process.cwd(), 'tmp', 'model-182-demo');
+const DEFAULT_TMP_DIR = path.join(process.cwd(), 'tmp', 'donation-certificates-demo');
 const DEFAULT_EMAIL = 'demo.recorder@summasocial.local';
 const DEFAULT_PASSWORD = 'DemoRecorder!2026';
-const SCENARIO_SLUG = 'model-182-demo';
+const SCENARIO_SLUG = 'donation-certificates-demo';
 const DEFAULT_OUTPUT_DIR = path.join(process.cwd(), 'output', 'playwright', SCENARIO_SLUG);
-const DEMO_EXCLUDED_DONOR_ID = 'demo_model182_excluded_donor_001';
-const DEMO_EXCLUDED_DONATION_ID = 'demo_model182_excluded_donation_001';
-const DEMO_EXCLUDED_DONOR_NAME = 'Mireia Serra Vidal';
+const DEMO_DONOR_ID = 'demo_oracle_donor_001';
+const DEMO_DONOR_NAME = 'Maria García López';
+const DEMO_RETURN_TX_ID = 'demo_oracle_tx_return_donor_001';
 const DEMO_REPORT_YEAR = String(new Date().getFullYear());
 const COMMERCIAL_VIEWPORT = {
   width: 1920,
@@ -147,7 +147,7 @@ async function ensureDemoRecorder(auth, db, email, password) {
       {
         email: normalizedEmail,
         createdAt: nowIso,
-        createdBy: 'record-model-182-script',
+        createdBy: 'record-donation-certificates-script',
         autoCreated: true,
       },
       { merge: true }
@@ -171,7 +171,7 @@ async function ensureDemoRecorder(auth, db, email, password) {
         displayName,
         role: 'admin',
         joinedAt: nowIso,
-        invitationId: 'record-model-182-script',
+        invitationId: 'record-donation-certificates-script',
       },
       { merge: true }
     ),
@@ -185,22 +185,17 @@ async function ensureDemoRecorder(auth, db, email, password) {
 }
 
 async function assertScenarioDataExists(db) {
-  const [donorDoc, donationDoc] = await Promise.all([
-    db.doc(`organizations/${DEMO_ORG_ID}/contacts/${DEMO_EXCLUDED_DONOR_ID}`).get(),
-    db.doc(`organizations/${DEMO_ORG_ID}/transactions/${DEMO_EXCLUDED_DONATION_ID}`).get(),
+  const [donorDoc, returnDoc] = await Promise.all([
+    db.doc(`organizations/${DEMO_ORG_ID}/contacts/${DEMO_DONOR_ID}`).get(),
+    db.doc(`organizations/${DEMO_ORG_ID}/transactions/${DEMO_RETURN_TX_ID}`).get(),
   ]);
 
   if (!donorDoc.exists) {
-    throw new Error(`No existeix el donant demo ${DEMO_EXCLUDED_DONOR_ID}. Executa el seed work.`);
+    throw new Error(`No existeix el donant demo ${DEMO_DONOR_ID}. Executa el seed work.`);
   }
 
-  const donor = donorDoc.data() ?? {};
-  if ((donor.taxId ?? null) !== '') {
-    throw new Error('El donant exclòs demo ja no té el NIF buit. Reexecuta el seed work.');
-  }
-
-  if (!donationDoc.exists) {
-    throw new Error(`No existeix la donació demo ${DEMO_EXCLUDED_DONATION_ID}. Executa el seed work.`);
+  if (!returnDoc.exists) {
+    throw new Error(`No existeix la devolució demo ${DEMO_RETURN_TX_ID}. Executa el seed work.`);
   }
 }
 
@@ -242,7 +237,7 @@ async function applyStablePresentation(page) {
   await sleep(250);
 }
 
-async function openReportsPage(page, credentials, artifactDir) {
+async function openCertificatesPage(page, credentials, artifactDir) {
   await page.goto(`${BASE_URL}/login`, { waitUntil: 'domcontentloaded' });
   await page.locator('#email').fill(credentials.email);
   await page.locator('#password').fill(credentials.password);
@@ -251,8 +246,8 @@ async function openReportsPage(page, credentials, artifactDir) {
     page.getByRole('button', { name: /Acceder|Accedir/i }).click(),
   ]);
 
-  await page.goto(`${BASE_URL}/dashboard/informes`, { waitUntil: 'domcontentloaded' });
-  await page.getByRole('heading', { name: /Informes|Reportes/i }).waitFor({
+  await page.goto(`${BASE_URL}/dashboard/informes/certificats`, { waitUntil: 'domcontentloaded' });
+  await page.getByRole('heading', { name: /Certificats|Certificados/i }).waitFor({
     state: 'visible',
     timeout: 30000,
   });
@@ -261,7 +256,7 @@ async function openReportsPage(page, credentials, artifactDir) {
   await sleep(1400);
 
   await page.screenshot({
-    path: path.join(artifactDir, 'model-182-start.png'),
+    path: path.join(artifactDir, 'certificates-start.png'),
     fullPage: false,
   });
 }
@@ -273,7 +268,7 @@ async function runFlow(page, artifactDir) {
       : { width: 1440, height: 960 }
   );
   await applyStablePresentation(page);
-  await sleep(1200);
+  await sleep(1000);
 
   const yearTrigger = page.getByRole('combobox').first();
   await yearTrigger.waitFor({ state: 'visible', timeout: 30000 });
@@ -286,38 +281,39 @@ async function runFlow(page, artifactDir) {
   await moveAndClick(page, yearOption);
   await sleep(700);
 
-  const generateButton = page.getByRole('button', { name: /Generar Informe|Generar/i }).first();
-  await generateButton.waitFor({ state: 'visible', timeout: 30000 });
-  await moveAndClick(page, generateButton);
+  const loadButton = page.getByRole('button', { name: /Carregar donants|Cargar donantes/i }).first();
+  await loadButton.waitFor({ state: 'visible', timeout: 30000 });
+  await moveAndClick(page, loadButton);
 
-  await page.getByText(/Informe Generat|Informe Generado/i).first().waitFor({
-    state: 'visible',
-    timeout: 30000,
-  });
-  await page.getByText(new RegExp(DEMO_EXCLUDED_DONOR_NAME, 'i')).waitFor({
+  const donorRow = page.locator('tr', { hasText: DEMO_DONOR_NAME }).first();
+  await donorRow.waitFor({ state: 'visible', timeout: 30000 });
+  await page.getByText(/devolucions|devoluciones/i).first().waitFor({
     state: 'visible',
     timeout: 30000,
   });
   await sleep(2600);
 
   await page.screenshot({
-    path: path.join(artifactDir, 'model-182-report.png'),
+    path: path.join(artifactDir, 'certificates-list.png'),
     fullPage: false,
   });
 
-  const exportButton = page.getByRole('button', { name: /AEAT/i }).first();
-  await exportButton.waitFor({ state: 'visible', timeout: 30000 });
-  await moveAndClick(page, exportButton);
+  const previewButton = donorRow.locator(
+    'button[title*="Vista"], button[title*="Previsual"], button[title*="Preview"]'
+  ).first();
+  await previewButton.waitFor({ state: 'visible', timeout: 30000 });
+  await moveAndClick(page, previewButton);
 
-  await page.getByRole('dialog').waitFor({ state: 'visible', timeout: 30000 });
-  await page.getByText(/Hi ha donants exclosos|Hay donantes excluidos/i).waitFor({
+  const dialog = page.getByRole('dialog');
+  await dialog.waitFor({ state: 'visible', timeout: 30000 });
+  await dialog.getByText(new RegExp(DEMO_DONOR_NAME, 'i')).first().waitFor({
     state: 'visible',
     timeout: 30000,
   });
   await sleep(3400);
 
   await page.screenshot({
-    path: path.join(artifactDir, 'model-182-dialog.png'),
+    path: path.join(artifactDir, 'certificates-preview.png'),
     fullPage: false,
   });
 }
@@ -445,7 +441,7 @@ async function main() {
   const recordingStartedAt = Date.now();
 
   try {
-    await openReportsPage(page, credentials, OUTPUT_DIR);
+    await openCertificatesPage(page, credentials, OUTPUT_DIR);
     const demoStart = Date.now();
     await runFlow(page, OUTPUT_DIR);
     const demoEnd = Date.now();
@@ -477,8 +473,8 @@ async function main() {
     cursorVisible: false,
     baseUrl: BASE_URL,
     email: credentials.email,
-    excludedDonorId: DEMO_EXCLUDED_DONOR_ID,
-    excludedDonorName: DEMO_EXCLUDED_DONOR_NAME,
+    donorId: DEMO_DONOR_ID,
+    donorName: DEMO_DONOR_NAME,
     reportYear: DEMO_REPORT_YEAR,
     rawVideoPath,
     finalVideoPath,

@@ -12,14 +12,14 @@ import { chromium } from 'playwright';
 
 const DEMO_ORG_ID = 'demo-org';
 const DEFAULT_BASE_URL = 'http://localhost:9002/demo';
-const DEFAULT_TMP_DIR = path.join(process.cwd(), 'tmp', 'model-182-demo');
+const DEFAULT_TMP_DIR = path.join(process.cwd(), 'tmp', 'model-347-demo');
 const DEFAULT_EMAIL = 'demo.recorder@summasocial.local';
 const DEFAULT_PASSWORD = 'DemoRecorder!2026';
-const SCENARIO_SLUG = 'model-182-demo';
+const SCENARIO_SLUG = 'model-347-demo';
 const DEFAULT_OUTPUT_DIR = path.join(process.cwd(), 'output', 'playwright', SCENARIO_SLUG);
-const DEMO_EXCLUDED_DONOR_ID = 'demo_model182_excluded_donor_001';
-const DEMO_EXCLUDED_DONATION_ID = 'demo_model182_excluded_donation_001';
-const DEMO_EXCLUDED_DONOR_NAME = 'Mireia Serra Vidal';
+const DEMO_EXCLUDED_SUPPLIER_ID = 'demo_model347_excluded_supplier_001';
+const DEMO_EXCLUDED_TX_PREFIX = 'demo_model347_excluded_tx_';
+const DEMO_EXCLUDED_SUPPLIER_NAME = 'Cooperativa Social Sense CIF';
 const DEMO_REPORT_YEAR = String(new Date().getFullYear());
 const COMMERCIAL_VIEWPORT = {
   width: 1920,
@@ -147,7 +147,7 @@ async function ensureDemoRecorder(auth, db, email, password) {
       {
         email: normalizedEmail,
         createdAt: nowIso,
-        createdBy: 'record-model-182-script',
+        createdBy: 'record-model-347-script',
         autoCreated: true,
       },
       { merge: true }
@@ -171,7 +171,7 @@ async function ensureDemoRecorder(auth, db, email, password) {
         displayName,
         role: 'admin',
         joinedAt: nowIso,
-        invitationId: 'record-model-182-script',
+        invitationId: 'record-model-347-script',
       },
       { merge: true }
     ),
@@ -185,22 +185,19 @@ async function ensureDemoRecorder(auth, db, email, password) {
 }
 
 async function assertScenarioDataExists(db) {
-  const [donorDoc, donationDoc] = await Promise.all([
-    db.doc(`organizations/${DEMO_ORG_ID}/contacts/${DEMO_EXCLUDED_DONOR_ID}`).get(),
-    db.doc(`organizations/${DEMO_ORG_ID}/transactions/${DEMO_EXCLUDED_DONATION_ID}`).get(),
-  ]);
-
-  if (!donorDoc.exists) {
-    throw new Error(`No existeix el donant demo ${DEMO_EXCLUDED_DONOR_ID}. Executa el seed work.`);
+  const supplierDoc = await db.doc(`organizations/${DEMO_ORG_ID}/contacts/${DEMO_EXCLUDED_SUPPLIER_ID}`).get();
+  if (!supplierDoc.exists) {
+    throw new Error(`No existeix el proveidor demo ${DEMO_EXCLUDED_SUPPLIER_ID}. Executa el seed work.`);
   }
 
-  const donor = donorDoc.data() ?? {};
-  if ((donor.taxId ?? null) !== '') {
-    throw new Error('El donant exclòs demo ja no té el NIF buit. Reexecuta el seed work.');
-  }
+  const txSnapshot = await db
+    .collection(`organizations/${DEMO_ORG_ID}/transactions`)
+    .where('contactId', '==', DEMO_EXCLUDED_SUPPLIER_ID)
+    .get();
 
-  if (!donationDoc.exists) {
-    throw new Error(`No existeix la donació demo ${DEMO_EXCLUDED_DONATION_ID}. Executa el seed work.`);
+  const demoTransactions = txSnapshot.docs.filter((doc) => doc.id.startsWith(DEMO_EXCLUDED_TX_PREFIX));
+  if (demoTransactions.length < 4) {
+    throw new Error('Falten transaccions demo del Model 347. Executa el seed work actualitzat.');
   }
 }
 
@@ -242,6 +239,16 @@ async function applyStablePresentation(page) {
   await sleep(250);
 }
 
+async function resolveModel347Card(page) {
+  const heading = page.getByText(/Model 347|Modelo 347/i).first();
+  await heading.waitFor({ state: 'visible', timeout: 30000 });
+  await heading.scrollIntoViewIfNeeded();
+  await sleep(700);
+
+  const card = heading.locator('xpath=ancestor::div[contains(@class,"rounded")][1]');
+  return { heading, card };
+}
+
 async function openReportsPage(page, credentials, artifactDir) {
   await page.goto(`${BASE_URL}/login`, { waitUntil: 'domcontentloaded' });
   await page.locator('#email').fill(credentials.email);
@@ -258,10 +265,10 @@ async function openReportsPage(page, credentials, artifactDir) {
   });
   await waitForAppIdle(page);
   await applyStablePresentation(page);
-  await sleep(1400);
+  await resolveModel347Card(page);
 
   await page.screenshot({
-    path: path.join(artifactDir, 'model-182-start.png'),
+    path: path.join(artifactDir, 'model-347-start.png'),
     fullPage: false,
   });
 }
@@ -275,7 +282,8 @@ async function runFlow(page, artifactDir) {
   await applyStablePresentation(page);
   await sleep(1200);
 
-  const yearTrigger = page.getByRole('combobox').first();
+  const { card } = await resolveModel347Card(page);
+  const yearTrigger = card.getByRole('combobox').first();
   await yearTrigger.waitFor({ state: 'visible', timeout: 30000 });
   await moveAndClick(page, yearTrigger);
   let yearOption = page.getByRole('option', { name: DEMO_REPORT_YEAR }).first();
@@ -286,38 +294,41 @@ async function runFlow(page, artifactDir) {
   await moveAndClick(page, yearOption);
   await sleep(700);
 
-  const generateButton = page.getByRole('button', { name: /Generar Informe|Generar/i }).first();
+  const generateButton = card.getByRole('button', { name: /Generar/i }).first();
   await generateButton.waitFor({ state: 'visible', timeout: 30000 });
   await moveAndClick(page, generateButton);
 
-  await page.getByText(/Informe Generat|Informe Generado/i).first().waitFor({
-    state: 'visible',
-    timeout: 30000,
-  });
-  await page.getByText(new RegExp(DEMO_EXCLUDED_DONOR_NAME, 'i')).waitFor({
+  const supplierRow = page.locator('tr', { hasText: DEMO_EXCLUDED_SUPPLIER_NAME }).first();
+  await supplierRow.waitFor({ state: 'visible', timeout: 30000 });
+  await page.getByText(/sense NIF|sin NIF|missing tax/i).first().waitFor({
     state: 'visible',
     timeout: 30000,
   });
   await sleep(2600);
 
   await page.screenshot({
-    path: path.join(artifactDir, 'model-182-report.png'),
+    path: path.join(artifactDir, 'model-347-report.png'),
     fullPage: false,
   });
 
-  const exportButton = page.getByRole('button', { name: /AEAT/i }).first();
+  const exportButton = card.getByRole('button', { name: /AEAT/i }).first();
   await exportButton.waitFor({ state: 'visible', timeout: 30000 });
   await moveAndClick(page, exportButton);
 
-  await page.getByRole('dialog').waitFor({ state: 'visible', timeout: 30000 });
-  await page.getByText(/Hi ha donants exclosos|Hay donantes excluidos/i).waitFor({
+  const dialog = page.getByRole('dialog');
+  await dialog.waitFor({ state: 'visible', timeout: 30000 });
+  await dialog.getByText(/prove[iï]dors exclosos|proveedores excluidos/i).first().waitFor({
+    state: 'visible',
+    timeout: 30000,
+  });
+  await dialog.getByText(new RegExp(DEMO_EXCLUDED_SUPPLIER_NAME, 'i')).first().waitFor({
     state: 'visible',
     timeout: 30000,
   });
   await sleep(3400);
 
   await page.screenshot({
-    path: path.join(artifactDir, 'model-182-dialog.png'),
+    path: path.join(artifactDir, 'model-347-dialog.png'),
     fullPage: false,
   });
 }
@@ -477,8 +488,8 @@ async function main() {
     cursorVisible: false,
     baseUrl: BASE_URL,
     email: credentials.email,
-    excludedDonorId: DEMO_EXCLUDED_DONOR_ID,
-    excludedDonorName: DEMO_EXCLUDED_DONOR_NAME,
+    excludedSupplierId: DEMO_EXCLUDED_SUPPLIER_ID,
+    excludedSupplierName: DEMO_EXCLUDED_SUPPLIER_NAME,
     reportYear: DEMO_REPORT_YEAR,
     rawVideoPath,
     finalVideoPath,

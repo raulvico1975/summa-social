@@ -12,15 +12,14 @@ import { chromium } from 'playwright';
 
 const DEMO_ORG_ID = 'demo-org';
 const DEFAULT_BASE_URL = 'http://localhost:9002/demo';
-const DEFAULT_TMP_DIR = path.join(process.cwd(), 'tmp', 'model-182-demo');
+const DEFAULT_TMP_DIR = path.join(process.cwd(), 'tmp', 'returns-resolution-demo');
 const DEFAULT_EMAIL = 'demo.recorder@summasocial.local';
 const DEFAULT_PASSWORD = 'DemoRecorder!2026';
-const SCENARIO_SLUG = 'model-182-demo';
+const SCENARIO_SLUG = 'returns-resolution-demo';
 const DEFAULT_OUTPUT_DIR = path.join(process.cwd(), 'output', 'playwright', SCENARIO_SLUG);
-const DEMO_EXCLUDED_DONOR_ID = 'demo_model182_excluded_donor_001';
-const DEMO_EXCLUDED_DONATION_ID = 'demo_model182_excluded_donation_001';
-const DEMO_EXCLUDED_DONOR_NAME = 'Mireia Serra Vidal';
-const DEMO_REPORT_YEAR = String(new Date().getFullYear());
+const DEMO_RETURN_TX_ID = 'demo_oracle_tx_return_orphan_001';
+const DEMO_RETURN_DESCRIPTION = 'DEVOLUCIÓN RECIBO CUOTA SOCIO';
+const DEMO_DONOR_NAME = 'Maria García López';
 const COMMERCIAL_VIEWPORT = {
   width: 1920,
   height: 1080,
@@ -147,7 +146,7 @@ async function ensureDemoRecorder(auth, db, email, password) {
       {
         email: normalizedEmail,
         createdAt: nowIso,
-        createdBy: 'record-model-182-script',
+        createdBy: 'record-returns-resolution-script',
         autoCreated: true,
       },
       { merge: true }
@@ -171,7 +170,7 @@ async function ensureDemoRecorder(auth, db, email, password) {
         displayName,
         role: 'admin',
         joinedAt: nowIso,
-        invitationId: 'record-model-182-script',
+        invitationId: 'record-returns-resolution-script',
       },
       { merge: true }
     ),
@@ -185,22 +184,14 @@ async function ensureDemoRecorder(auth, db, email, password) {
 }
 
 async function assertScenarioDataExists(db) {
-  const [donorDoc, donationDoc] = await Promise.all([
-    db.doc(`organizations/${DEMO_ORG_ID}/contacts/${DEMO_EXCLUDED_DONOR_ID}`).get(),
-    db.doc(`organizations/${DEMO_ORG_ID}/transactions/${DEMO_EXCLUDED_DONATION_ID}`).get(),
-  ]);
-
-  if (!donorDoc.exists) {
-    throw new Error(`No existeix el donant demo ${DEMO_EXCLUDED_DONOR_ID}. Executa el seed work.`);
+  const returnDoc = await db.doc(`organizations/${DEMO_ORG_ID}/transactions/${DEMO_RETURN_TX_ID}`).get();
+  if (!returnDoc.exists) {
+    throw new Error(`No existeix la devolució demo ${DEMO_RETURN_TX_ID}. Executa el seed work.`);
   }
 
-  const donor = donorDoc.data() ?? {};
-  if ((donor.taxId ?? null) !== '') {
-    throw new Error('El donant exclòs demo ja no té el NIF buit. Reexecuta el seed work.');
-  }
-
-  if (!donationDoc.exists) {
-    throw new Error(`No existeix la donació demo ${DEMO_EXCLUDED_DONATION_ID}. Executa el seed work.`);
+  const returnData = returnDoc.data() ?? {};
+  if (returnData.contactId) {
+    throw new Error('La devolució demo ja no està pendent. Reexecuta el seed work.');
   }
 }
 
@@ -242,7 +233,7 @@ async function applyStablePresentation(page) {
   await sleep(250);
 }
 
-async function openReportsPage(page, credentials, artifactDir) {
+async function openMovementsPage(page, credentials, artifactDir) {
   await page.goto(`${BASE_URL}/login`, { waitUntil: 'domcontentloaded' });
   await page.locator('#email').fill(credentials.email);
   await page.locator('#password').fill(credentials.password);
@@ -251,8 +242,8 @@ async function openReportsPage(page, credentials, artifactDir) {
     page.getByRole('button', { name: /Acceder|Accedir/i }).click(),
   ]);
 
-  await page.goto(`${BASE_URL}/dashboard/informes`, { waitUntil: 'domcontentloaded' });
-  await page.getByRole('heading', { name: /Informes|Reportes/i }).waitFor({
+  await page.goto(`${BASE_URL}/dashboard/movimientos`, { waitUntil: 'domcontentloaded' });
+  await page.getByRole('heading', { name: /Moviments/i }).waitFor({
     state: 'visible',
     timeout: 30000,
   });
@@ -261,9 +252,35 @@ async function openReportsPage(page, credentials, artifactDir) {
   await sleep(1400);
 
   await page.screenshot({
-    path: path.join(artifactDir, 'model-182-start.png'),
+    path: path.join(artifactDir, 'returns-start.png'),
     fullPage: false,
   });
+}
+
+async function getSearchInput(page) {
+  const input = page.locator(
+    'input[placeholder*="concepte"], input[placeholder*="concepto"], input[placeholder*="nota"], input[placeholder*="importe"]'
+  ).first();
+  await input.waitFor({ state: 'visible', timeout: 30000 });
+  return input;
+}
+
+async function typeSearch(page, input, value) {
+  await moveAndClick(page, input);
+  await input.fill('');
+  for (const char of value) {
+    await page.keyboard.type(char, { delay: 55 });
+  }
+  await sleep(1200);
+}
+
+async function openDonorSearch(page) {
+  const combobox = page.getByRole('combobox').first();
+  await combobox.waitFor({ state: 'visible', timeout: 30000 });
+  await moveAndClick(page, combobox);
+  const searchInput = page.locator('input[placeholder*="nom"], input[placeholder*="DNI"], input[placeholder*="email"]').first();
+  await searchInput.waitFor({ state: 'visible', timeout: 30000 });
+  return searchInput;
 }
 
 async function runFlow(page, artifactDir) {
@@ -273,51 +290,80 @@ async function runFlow(page, artifactDir) {
       : { width: 1440, height: 960 }
   );
   await applyStablePresentation(page);
-  await sleep(1200);
+  await sleep(1000);
 
-  const yearTrigger = page.getByRole('combobox').first();
-  await yearTrigger.waitFor({ state: 'visible', timeout: 30000 });
-  await moveAndClick(page, yearTrigger);
-  let yearOption = page.getByRole('option', { name: DEMO_REPORT_YEAR }).first();
-  if (!(await yearOption.count())) {
-    yearOption = page.getByText(DEMO_REPORT_YEAR, { exact: true }).last();
-  }
-  await yearOption.waitFor({ state: 'visible', timeout: 30000 });
-  await moveAndClick(page, yearOption);
-  await sleep(700);
+  const searchInput = await getSearchInput(page);
+  await typeSearch(page, searchInput, 'cuota socio');
 
-  const generateButton = page.getByRole('button', { name: /Generar Informe|Generar/i }).first();
-  await generateButton.waitFor({ state: 'visible', timeout: 30000 });
-  await moveAndClick(page, generateButton);
-
-  await page.getByText(/Informe Generat|Informe Generado/i).first().waitFor({
-    state: 'visible',
-    timeout: 30000,
-  });
-  await page.getByText(new RegExp(DEMO_EXCLUDED_DONOR_NAME, 'i')).waitFor({
-    state: 'visible',
-    timeout: 30000,
-  });
-  await sleep(2600);
+  const row = page.locator('tr', { hasText: DEMO_RETURN_DESCRIPTION }).first();
+  await row.waitFor({ state: 'visible', timeout: 30000 });
+  await sleep(1700);
 
   await page.screenshot({
-    path: path.join(artifactDir, 'model-182-report.png'),
+    path: path.join(artifactDir, 'returns-filtered.png'),
     fullPage: false,
   });
 
-  const exportButton = page.getByRole('button', { name: /AEAT/i }).first();
-  await exportButton.waitFor({ state: 'visible', timeout: 30000 });
-  await moveAndClick(page, exportButton);
+  const assignButton = row.getByRole('button', { name: /Assignar donant|Asignar donante/i }).first();
+  await assignButton.waitFor({ state: 'visible', timeout: 30000 });
+  await moveAndClick(page, assignButton);
 
   await page.getByRole('dialog').waitFor({ state: 'visible', timeout: 30000 });
-  await page.getByText(/Hi ha donants exclosos|Hay donantes excluidos/i).waitFor({
+  await page.getByText(/Gestionar devoluci[oó]|Asignar donante afectado/i).first().waitFor({
     state: 'visible',
     timeout: 30000,
   });
-  await sleep(3400);
+  await sleep(1000);
+
+  const donorSearch = await openDonorSearch(page);
+  await donorSearch.fill(DEMO_DONOR_NAME);
+  await sleep(700);
+  const donorOption = page.getByRole('button', { name: new RegExp(DEMO_DONOR_NAME, 'i') }).first();
+  await donorOption.waitFor({ state: 'visible', timeout: 30000 });
+  await moveAndClick(page, donorOption);
+  await sleep(900);
 
   await page.screenshot({
-    path: path.join(artifactDir, 'model-182-dialog.png'),
+    path: path.join(artifactDir, 'returns-dialog.png'),
+    fullPage: false,
+  });
+
+  const saveButton = page.getByRole('button', { name: /Guardar|Guardar/i }).last();
+  await saveButton.waitFor({ state: 'visible', timeout: 30000 });
+  await moveAndClick(page, saveButton);
+
+  await page.getByRole('dialog').waitFor({ state: 'hidden', timeout: 30000 });
+  await page.getByText(/devoluci[oó] assignada|devoluci[oó]n asignada/i).first().waitFor({
+    state: 'visible',
+    timeout: 30000,
+  });
+  await sleep(2400);
+
+  const postSaveSearchInput = await getSearchInput(page);
+  await moveAndClick(page, postSaveSearchInput);
+  await postSaveSearchInput.fill('');
+  await sleep(500);
+  await typeSearch(page, postSaveSearchInput, 'cuota socio');
+
+  await row.waitFor({ state: 'visible', timeout: 30000 });
+  await page
+    .waitForFunction(
+      ({ description, donorName }) => {
+        return Array.from(document.querySelectorAll('tr')).some((tableRow) => {
+          const text = tableRow.textContent || '';
+          return text.includes(description) && text.includes(donorName);
+        });
+      },
+      { description: DEMO_RETURN_DESCRIPTION, donorName: DEMO_DONOR_NAME },
+      { timeout: 12000 }
+    )
+    .catch(() => null);
+  const rowTextAfterSave = (await row.textContent().catch(() => '')) ?? '';
+  log(`Fila devolucio despres de guardar: ${rowTextAfterSave.replace(/\s+/g, ' ').trim()}`);
+  await sleep(3200);
+
+  await page.screenshot({
+    path: path.join(artifactDir, 'returns-result.png'),
     fullPage: false,
   });
 }
@@ -445,7 +491,7 @@ async function main() {
   const recordingStartedAt = Date.now();
 
   try {
-    await openReportsPage(page, credentials, OUTPUT_DIR);
+    await openMovementsPage(page, credentials, OUTPUT_DIR);
     const demoStart = Date.now();
     await runFlow(page, OUTPUT_DIR);
     const demoEnd = Date.now();
@@ -477,9 +523,8 @@ async function main() {
     cursorVisible: false,
     baseUrl: BASE_URL,
     email: credentials.email,
-    excludedDonorId: DEMO_EXCLUDED_DONOR_ID,
-    excludedDonorName: DEMO_EXCLUDED_DONOR_NAME,
-    reportYear: DEMO_REPORT_YEAR,
+    returnTxId: DEMO_RETURN_TX_ID,
+    donorName: DEMO_DONOR_NAME,
     rawVideoPath,
     finalVideoPath,
     durationSeconds: Number(finalDurationSeconds.toFixed(2)),
