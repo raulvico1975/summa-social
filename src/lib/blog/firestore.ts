@@ -6,11 +6,17 @@ import {
   resolveLocalizedBlogPosts,
   type LocalizedBlogPost,
 } from '@/lib/blog/localized'
+import { normalizeBlogContentHtml } from '@/lib/blog/normalizeContentHtml'
 import type { PublicLocale } from '@/lib/public-locale'
 
 const BLOG_SITE_URL = 'https://summasocial.app'
 const LOCAL_BLOG_ORG_ID = 'local-blog'
 const BLOG_ORG_DISCOVERY_LIMIT = 25
+
+export type BlogPublishLocalizedUrls = {
+  ca: string
+  es: string
+}
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
@@ -54,7 +60,7 @@ function mapBlogTranslation(value: unknown): BlogPostTranslation | null {
     seoTitle,
     metaDescription,
     excerpt,
-    contentHtml,
+    contentHtml: normalizeBlogContentHtml(contentHtml, title),
   }
 
   if (coverImageAlt !== undefined) {
@@ -90,6 +96,26 @@ export function buildBlogUrl(slug: string): string {
     BLOG_SITE_URL
 
   return `${baseUrl.replace(/\/+$/, '')}/blog/${slug}`
+}
+
+export function buildLocalizedBlogUrl(
+  slug: string,
+  locale: keyof BlogPublishLocalizedUrls
+): string {
+  const baseUrl =
+    process.env.BLOG_PUBLISH_BASE_URL?.trim() ||
+    process.env.BLOG_BASE_URL?.trim() ||
+    process.env.NEXT_PUBLIC_SITE_URL?.trim() ||
+    BLOG_SITE_URL
+
+  return `${baseUrl.replace(/\/+$/, '')}/${locale}/blog/${slug}`
+}
+
+export function buildLocalizedBlogUrls(slug: string): BlogPublishLocalizedUrls {
+  return {
+    ca: buildLocalizedBlogUrl(slug, 'ca'),
+    es: buildLocalizedBlogUrl(slug, 'es'),
+  }
 }
 
 export function formatBlogDate(
@@ -167,7 +193,7 @@ function mapBlogPost(docId: string, value: unknown): BlogPost | null {
     seoTitle,
     metaDescription,
     excerpt,
-    contentHtml,
+    contentHtml: normalizeBlogContentHtml(contentHtml, title),
     tags,
     category,
     coverImageUrl: coverImageUrl ?? null,

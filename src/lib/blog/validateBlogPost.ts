@@ -1,4 +1,5 @@
 import type { BlogPost } from '@/lib/blog/types'
+import { normalizeBlogContentHtml } from '@/lib/blog/normalizeContentHtml'
 
 export type BlogPostPublishInput = Omit<BlogPost, 'id' | 'createdAt' | 'updatedAt'>
 
@@ -106,6 +107,16 @@ function normalizeTranslationField(
   return normalizeRequiredString(value, field, errors)
 }
 
+function normalizeRequiredContentHtml(
+  value: unknown,
+  field: string,
+  title: string | undefined,
+  errors: string[]
+): string {
+  const normalized = normalizeRequiredString(value, field, errors)
+  return normalized ? normalizeBlogContentHtml(normalized, title) : normalized
+}
+
 function normalizeEsTranslation(
   value: unknown,
   coverImageUrl: string | null | undefined,
@@ -126,9 +137,10 @@ function normalizeEsTranslation(
     errors
   )
   const excerpt = normalizeTranslationField(value.excerpt, 'translations.es.excerpt', errors)
-  const contentHtml = normalizeTranslationField(
+  const contentHtml = normalizeRequiredContentHtml(
     value.contentHtml,
     'translations.es.contentHtml',
+    title,
     errors
   )
   const coverImageAlt = normalizeOptionalCoverImageAlt(value.coverImageAlt, errors)
@@ -252,7 +264,7 @@ export function validateBlogPost(payload: unknown): BlogPostValidationResult {
   const seoTitle = normalizeRequiredString(payload.seoTitle, 'seoTitle', errors)
   const metaDescription = normalizeRequiredString(payload.metaDescription, 'metaDescription', errors)
   const excerpt = normalizeRequiredString(payload.excerpt, 'excerpt', errors)
-  const contentHtml = normalizeRequiredString(payload.contentHtml, 'contentHtml', errors)
+  const contentHtml = normalizeRequiredContentHtml(payload.contentHtml, 'contentHtml', title, errors)
   const category = normalizeRequiredString(payload.category, 'category', errors)
   const tags = normalizeTags(payload.tags, errors)
   const baseLocale = normalizeBaseLocale(payload.baseLocale, errors)

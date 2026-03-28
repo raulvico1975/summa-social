@@ -187,6 +187,33 @@ test('validateBlogPost accepts an es translation payload', () => {
   }
 })
 
+test('validateBlogPost normalizes duplicated lead headings and markdown emphasis markers', () => {
+  const result = validateBlogPost({
+    ...buildLocalizedPayload(),
+    title: 'Gestió de quotes',
+    contentHtml: '<h1>Gestió de quotes</h1><p>Text amb **negreta** i *cursiva*.</p>',
+    translations: {
+      es: {
+        ...buildLocalizedPayload().translations.es,
+        title: 'Gestión de cuotas',
+        contentHtml: '<h1>Gestión de cuotas</h1><p>Texto con **negrita** y *cursiva*.</p>',
+      },
+    },
+  })
+
+  assert.equal(result.ok, true)
+  if (result.ok) {
+    assert.equal(
+      result.value.contentHtml,
+      '<p>Text amb <strong>negreta</strong> i <em>cursiva</em>.</p>'
+    )
+    assert.equal(
+      result.value.translations?.es?.contentHtml,
+      '<p>Texto con <strong>negrita</strong> y <em>cursiva</em>.</p>'
+    )
+  }
+})
+
 test('validateBlogPost rejects unsupported translations locales', () => {
   const payload = {
     ...buildLocalizedPayload(),
@@ -331,6 +358,19 @@ test('handleBlogPublish persists cover fields when provided', async () => {
   )
 
   assert.equal(response.status, 200)
+  const body = await response.json() as {
+    success: boolean
+    url?: string
+    localizedUrls?: { ca: string; es: string }
+    legacyUrl?: string
+  }
+  assert.equal(body.success, true)
+  assert.equal(body.url, 'https://summasocial.app/ca/blog/primer-post')
+  assert.deepEqual(body.localizedUrls, {
+    ca: 'https://summasocial.app/ca/blog/primer-post',
+    es: 'https://summasocial.app/es/blog/primer-post',
+  })
+  assert.equal(body.legacyUrl, 'https://summasocial.app/blog/primer-post')
   assert.equal(createdPayloads.length, 1)
   assert.equal(createdPayloads[0].coverImageUrl, 'https://example.com/cover.jpg')
   assert.equal(createdPayloads[0].coverImageAlt, 'Portada del primer post')
@@ -502,9 +542,21 @@ test('handleBlogPublish writes to the established blog org and revalidates publi
   ]])
   assert.ok(store.has('organizations/real-blog-org/blogPosts/primer-post'))
 
-  const body = await response.json() as { success: boolean; orgId?: string }
+  const body = await response.json() as {
+    success: boolean
+    orgId?: string
+    url?: string
+    localizedUrls?: { ca: string; es: string }
+    legacyUrl?: string
+  }
   assert.equal(body.success, true)
   assert.equal(body.orgId, 'real-blog-org')
+  assert.equal(body.url, 'https://summasocial.app/ca/blog/primer-post')
+  assert.deepEqual(body.localizedUrls, {
+    ca: 'https://summasocial.app/ca/blog/primer-post',
+    es: 'https://summasocial.app/es/blog/primer-post',
+  })
+  assert.equal(body.legacyUrl, 'https://summasocial.app/blog/primer-post')
 })
 
 test('handleBlogPublish blocks local publish storage in production', async () => {
