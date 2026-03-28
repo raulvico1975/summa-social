@@ -14,6 +14,7 @@
 - La implementació es fa només dins del worktree de tasca.
 - Si `git status --short` no és net, no s'inicia cap tasca nova en aquest checkout.
 - `git status` és només higiene local del checkout; no substitueix `npm run status`.
+- Davant d'una petició nova de l'usuari, l'agent assumeix una tasca nova per defecte i aplica el protocol de separació sense exigir ordres especials de workflow a l'usuari.
 - `npm run inicia` o `npm run implementa` només es llancen des del repositori de control, a `main` i net.
 - Una tasca nova equival a una branca `codex/*` i a un worktree de tasca.
 - Una branca equival a un únic objectiu publicable i a un únic PR.
