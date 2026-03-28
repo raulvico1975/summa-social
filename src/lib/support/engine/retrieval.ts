@@ -14,6 +14,24 @@ export type RetrievalResolution = {
   selectedByClarify: boolean
 }
 
+export function canAcceptIntentSelection(input: {
+  deterministic: RetrievalResult
+  selectedBestCardId?: string
+  decisionReason?: string
+}): boolean {
+  const { deterministic, selectedBestCardId, decisionReason } = input
+  const deterministicBestCardId = deterministic.bestCardId ?? deterministic.card?.id
+  if (!deterministicBestCardId || !selectedBestCardId) return true
+  if (deterministicBestCardId === selectedBestCardId) return true
+
+  const isAiIntentSelection = decisionReason?.startsWith('ai_intent_') ?? false
+  if (!isAiIntentSelection) return false
+
+  const safeCandidates = new Set([deterministicBestCardId, deterministic.secondCardId].filter(Boolean))
+
+  return safeCandidates.has(selectedBestCardId)
+}
+
 export async function resolveRetrieval(input: {
   message: string
   lang: KbLang
@@ -50,7 +68,8 @@ export async function resolveRetrieval(input: {
     useIntentClassifier &&
     classifyIntent &&
     cards.length > 0 &&
-    (!result || result.mode === 'fallback' || result.confidence === 'low')
+    !selectedByClarify &&
+    (!result || result.mode === 'fallback' || result.confidence !== 'high')
   ) {
     try {
       const aiIntent = await classifyIntent({ message, lang, cards })

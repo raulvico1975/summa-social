@@ -85,22 +85,25 @@ const STOPWORDS = new Set([
 ])
 
 const SYNONYM_GROUPS: Array<{ canon: string; variants: string[] }> = [
+  { canon: 'actualitzar', variants: ['actualitzar', 'actualitzo', 'actualitza', 'actualizar', 'actualizo', 'actualiza', 'actualizado'] },
   { canon: 'certificat', variants: ['certificados', 'certificado', 'certificats', 'certficat', 'certificatio', 'certificados'] },
   { canon: 'donacio', variants: ['donacio', 'donacio', 'donacions', 'donacion', 'donaciones', 'donativo', 'donativos'] },
   { canon: 'soci', variants: ['socis', 'socio', 'socios', 'donant', 'donants', 'donante', 'donantes'] },
+  { canon: 'usuari', variants: ['usuari', 'usuaris', 'usuaria', 'usuaries', 'usuario', 'usuarios', 'usuarias', 'users', 'user'] },
   { canon: 'remesa', variants: ['remeses', 'remessa', 'remessas', 'remesas'] },
   { canon: 'dividir', variants: ['divideixo', 'dividir', 'divido', 'divide', 'fraccionar', 'fracciono', 'repartir', 'separar', 'separo', 'desglossar', 'desglosar', 'partir'] },
   { canon: 'desfer', variants: ['desfer', 'desfaig', 'desfem', 'desfeta', 'deshacer', 'deshago', 'anullar', 'anulo', 'anular', 'undo'] },
   { canon: 'importar', variants: ['importo', 'importar', 'importacio', 'importacion', 'importat', 'importada', 'importado', 'carregar', 'carrego', 'cargar', 'cargo', 'pujar', 'pujo', 'subir', 'subo'] },
   { canon: 'extracte', variants: ['extractes', 'extracte', 'extracto', 'extractos', 'moviments', 'movimiento', 'movimientos'] },
   { canon: 'duplicat', variants: ['duplicats', 'duplicat', 'duplicados', 'duplicado', 'repetit', 'repetits', 'repetido', 'repetidos', 'duplicada', 'duplicades', 'duplicadas', 'mateix', 'mateixos', 'mismo', 'mismos'] },
-  { canon: 'devolucio', variants: ['devolucions', 'devolucion', 'devoluciones', 'retorn', 'retorns', 'retorno', 'retornos', 'rebutjada', 'rechazo', 'devuelto', 'devueltos', 'tornat', 'tornats', 'vuelto', 'vueltos'] },
+  { canon: 'devolucio', variants: ['devolucions', 'devolucion', 'devoluciones', 'retorn', 'retorns', 'retorno', 'retornos', 'retornat', 'retornats', 'retornada', 'retornades', 'rebutjada', 'rechazo', 'devuelto', 'devueltos', 'devuelta', 'devueltas', 'tornat', 'tornats', 'vuelto', 'vueltos'] },
   { canon: 'crear', variants: ['crear', 'creo', 'crea', 'nou', 'nova', 'nueva', 'nuevo', 'afegir', 'afegeixo', 'añadir', 'anadir', 'anado', 'agregar', 'alta', 'introduir', 'introdueixo', 'introducir', 'introduzco'] },
   { canon: 'document', variants: ['document', 'documents', 'factura', 'factures', 'facturas', 'rebut', 'rebuts', 'recibo', 'recibos', 'justificant', 'justificante', 'nomina', 'nomines', 'nómina', 'archivo', 'archivos'] },
   { canon: 'contrasenya', variants: ['contrasenya', 'contraseña', 'contrasena', 'password', 'clau'] },
   { canon: 'historial', variants: ['historial', 'resum', 'resumen', 'summary'] },
   { canon: 'entrar', variants: ['entrar', 'entro', 'accedir', 'accedo', 'acceso', 'login', 'sessio', 'sesion', 'iniciar', 'inicio'] },
   { canon: 'fitxer', variants: ['fitxer', 'fitxers', 'fichero', 'ficheros', 'archivo', 'archivos', 'detalle', 'detall'] },
+  { canon: 'fitxer_banc', variants: ['csv', 'excel', 'xls', 'xlsx'] },
   { canon: 'correcte', variants: ['correcte', 'correctament', 'correcto', 'correctamente', 'quadra', 'cuadra', 'resum', 'resumen', 'previsualitzacio', 'previsualizacion', 'confirmar', 'confirmo'] },
   { canon: 'imputar', variants: ['imputo', 'imputar', 'imputacio', 'imputacion', 'prorratejar', 'prorratear', 'prorrateo', 'distribuir'] },
   { canon: 'projecte', variants: ['projectes', 'proyecto', 'proyectos'] },
@@ -108,6 +111,7 @@ const SYNONYM_GROUPS: Array<{ canon: string; variants: string[] }> = [
   { canon: 'moviment', variants: ['moviments', 'movimiento', 'movimientos'] },
   { canon: 'banc', variants: ['banco', 'compte', 'cuenta', 'iban'] },
   { canon: 'quota', variants: ['quotes', 'cuota', 'cuotas'] },
+  { canon: 'veure', variants: ['veure', 'veig', 'ver', 'veo', 'mirar', 'miro', 'consultar', 'consulto', 'trobar', 'trobo', 'detectar', 'detecto'] },
 ]
 
 const COMMON_TYPO_MAP: Record<string, string> = {
@@ -645,7 +649,7 @@ export function inferQuestionDomain(message: string): QuestionDomain {
   if (/fiscal|182|347|aeat|hisenda|hacienda|certificat|model|modelo|donacio/.test(joined)) {
     return 'fiscal'
   }
-  if (/sepa|pain|pain008|pain001|domiciliacio|xml|banc|banco/.test(joined)) {
+  if (/sepa|pain|pain008|pain001|domiciliacio|domiciliacion|xml/.test(joined)) {
     return 'sepa'
   }
   if (/devoluci|devolucion|retorn|retorno|rebutjada|rechazo|devuelto/.test(joined)) {
@@ -701,7 +705,7 @@ function detectProtectedOverride(message: string): RetrievalOverride | null {
     return { kind: 'fallback', cardId: 'fallback-fiscal-unclear', decisionReason: 'fiscal_complex_stripe_182' }
   }
 
-  if (/\b(no em surt|no me sale|no sale)\b/.test(normalized) && /\b(donant|donante)\b/.test(normalized) && /\b182\b/.test(normalized)) {
+  if (/\b(no em surt|no surt|no me sale|no sale)\b/.test(normalized) && /\b(donant|donante)\b/.test(normalized) && /\b182\b/.test(normalized)) {
     return { kind: 'card', cardId: 'ts-model-182-donor-missing', minScore: 720, decisionReason: 'specific_case_safe_checklist' }
   }
 
@@ -744,8 +748,8 @@ function detectDirectIntentMatch(tokens: string[]): DirectIntentMatch | null {
 
   // "Com importo l'extracte del banc?" / "Com carrego els moviments del banc?"
   if (
-    hasToken(set, 'importar', 'importo', 'importat', 'carregar', 'carrego', 'cargar', 'cargo', 'pujar', 'pujo', 'subir', 'subo') &&
-    hasToken(set, 'extracte', 'extracto', 'moviment', 'moviments', 'movimiento', 'movimientos') &&
+    hasToken(set, 'importar') &&
+    hasToken(set, 'extracte', 'extracto', 'moviment', 'moviments', 'movimiento', 'movimientos', 'fitxer_banc') &&
     hasToken(set, 'banc', 'banco', 'compte', 'cuenta') &&
     !hasToken(set, 'duplicat', 'duplicats', 'duplicado', 'duplicados', 'repetit', 'repetits', 'repetido', 'repetidos', 'mateix', 'mateixos', 'mismo', 'mismos', 'devolucio', 'devolucions', 'devolucion', 'devoluciones', 'retorn', 'retorno', 'tornat', 'tornats', 'vuelto', 'vueltos')
   ) {
@@ -775,8 +779,9 @@ function detectDirectIntentMatch(tokens: string[]): DirectIntentMatch | null {
 
   // "M'han tornat uns rebuts del banc" / "Com entro devolucions?"
   if (
-    hasToken(set, 'devolucio', 'devolucions', 'devolucion', 'devoluciones', 'retorn', 'retorno', 'rebutjada', 'rechazo', 'devuelto') &&
-    hasToken(set, 'importar', 'importo', 'importat', 'importado', 'carregar', 'carrego', 'cargar', 'cargo', 'pujar', 'pujo', 'subir', 'subo', 'entrar', 'entro', 'meter', 'meto', 'fitxer', 'fichero', 'archivo', 'detalle', 'detall')
+    hasToken(set, 'devolucio', 'devolucion') &&
+    hasToken(set, 'importar', 'entrar', 'meter', 'fitxer', 'fitxer_banc', 'document') &&
+    hasToken(set, 'banc', 'banco', 'compte', 'cuenta')
   ) {
     return { cardId: 'howto-import-bank-returns', minScore: 690 }
   }
@@ -838,6 +843,24 @@ function detectDirectIntentMatch(tokens: string[]): DirectIntentMatch | null {
     hasToken(set, 'anterior', 'anteriors', 'anteriores', 'periode', 'periodo')
   ) {
     return { cardId: 'guide-change-period', minScore: 670 }
+  }
+
+  // "On veig els moviments sense assignar?" / "Com detecto pendents?"
+  if (
+    hasToken(set, 'moviment', 'movimiento') &&
+    hasToken(set, 'veure', 'pendents', 'pendent', 'anomalia', 'anomalies') &&
+    hasToken(set, 'assignar', 'asignar', 'categoritzar', 'categorizar', 'contacte', 'contacto')
+  ) {
+    return { cardId: 'howto-movement-unassigned-alerts', minScore: 675 }
+  }
+
+  // "Com divideixo un moviment bancari?"
+  if (
+    hasToken(set, 'dividir') &&
+    hasToken(set, 'moviment', 'movimiento') &&
+    hasToken(set, 'banc', 'banco', 'bancari', 'bancario')
+  ) {
+    return { cardId: 'howto-movement-split-amount', minScore: 680 }
   }
 
   // "Com edito un moviment?"
@@ -917,6 +940,15 @@ function detectDirectIntentMatch(tokens: string[]): DirectIntentMatch | null {
     return { cardId: 'guide-model-182-generate', minScore: 680 }
   }
 
+  // "On trec el paquet de tancament?"
+  if (
+    hasToken(set, 'paquet', 'paquete') &&
+    hasToken(set, 'tancament', 'cierre') &&
+    hasToken(set, 'generar', 'crear', 'treure', 'trec', 'sacar', 'saco', 'obrir', 'abrir')
+  ) {
+    return { cardId: 'manual-closing-package', minScore: 680 }
+  }
+
   // "No puc entrar"
   if (
     hasToken(set, 'entrar', 'accedir', 'login', 'sessio', 'sesion', 'contrasenya', 'contrasena', 'password') &&
@@ -969,8 +1001,8 @@ function detectDirectIntentMatch(tokens: string[]): DirectIntentMatch | null {
 
   // "Com puc saber les quotes que un soci ha pagat?"
   if (
-    hasToken(set, 'quote', 'quota', 'pagat', 'pagar', 'historial', 'aportacio') &&
-    hasToken(set, 'soci', 'donant') &&
+    hasToken(set, 'quota', 'pagat', 'pagar', 'historial', 'aportacio', 'veure') &&
+    hasToken(set, 'soci', 'donant', 'socio', 'donante') &&
     !hasToken(set, 'canviar', 'canvio', 'cambiar', 'cambio', 'modificar', 'editar', 'actualitzar', 'actualizar')
   ) {
     return { cardId: 'manual-member-paid-quotas', minScore: 500 }
@@ -1015,7 +1047,7 @@ function detectFollowUpDirectIntent(currentTokens: string[], contextTokens: stri
 
   if (
     hasToken(currentSet, 'canviar', 'canvio', 'cambiar', 'cambio', 'editar', 'edito', 'actualitzar', 'actualizar') &&
-    hasToken(contextSet, 'permis', 'permiso', 'permisos', 'rol', 'roles') &&
+    hasToken(currentSet, 'permis', 'permiso', 'permisos', 'rol', 'roles') &&
     hasToken(contextSet, 'usuari', 'usuario', 'user')
   ) {
     return { cardId: 'howto-member-user-permissions', minScore: 690 }
@@ -1037,8 +1069,8 @@ function findGenericFallback(cards: KBCard[]): KBCard | null {
 
 function isRetrievableCard(card: KBCard): boolean {
   if (card.type === 'fallback') return false
-  // Safety: ignore corrupted guide cards (import mistakes).
-  if (card.id.startsWith('guide-') && !card.guideId) return false
+  // Safety: ignore corrupted guide cards only when they have neither guide-backed nor inline content.
+  if (card.id.startsWith('guide-') && !card.guideId && !card.answer?.ca && !card.answer?.es) return false
   return true
 }
 
@@ -1070,6 +1102,7 @@ export function retrieveCard(
   if (override) {
     const matchedCard = cards.find(card => card.id === override.cardId)
     if (matchedCard) {
+      const overrideSpecificCase = specificCaseDetected || override.decisionReason.startsWith('specific_case_')
       return {
         card: matchedCard,
         mode: override.kind === 'fallback' ? 'fallback' : 'card',
@@ -1080,7 +1113,7 @@ export function retrieveCard(
         confidence: HIGH_CONFIDENCE,
         confidenceBand: HIGH_CONFIDENCE,
         decisionReason: override.decisionReason,
-        specificCaseDetected,
+        specificCaseDetected: overrideSpecificCase,
         questionDomain,
       }
     }
@@ -1277,7 +1310,7 @@ export function debugRetrieveCard(
       cardId: card.id,
       reason: card.type === 'fallback'
         ? 'policy:fallback_excluded_from_ranking'
-        : 'policy:guide_missing_guide_id',
+        : 'policy:guide_missing_content',
     }))
 
   const result = retrieveCard(message, lang, cards, supportContext)

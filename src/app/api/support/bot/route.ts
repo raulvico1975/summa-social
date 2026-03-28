@@ -14,8 +14,9 @@ import { requireOperationalAccess } from '@/lib/api/require-operational-access'
 import { loadGuideContent, type KBCard } from '@/lib/support/load-kb'
 import { loadKbCards } from '@/lib/support/load-kb-runtime'
 import { incrementBotQuestionCounters, logBotQuestion, normalizeForHash } from '@/lib/support/bot-question-log'
-import { debugRetrieveCard, detectSmallTalkResponse, retrieveCard, type KbLang, type RetrievalResult, type RetrievalTraceDiscard } from '@/lib/support/bot-retrieval'
+import { debugRetrieveCard, detectSmallTalkResponse, retrieveCard, type KbLang, type RetrievalTraceDiscard } from '@/lib/support/bot-retrieval'
 import { orchestrator } from '@/lib/support/engine/orchestrator'
+import { canAcceptIntentSelection } from '@/lib/support/engine/retrieval'
 import { buildEmergencyFallback } from '@/lib/support/engine/renderer'
 import { extractOperationalSteps, normalizeUiPathsAgainstCatalog } from '@/lib/support/engine/policy'
 import { clampTimeout, normalizeAssistantTone, normalizeLang, parseClarifyOptionIds, withTimeout } from '@/lib/support/engine/normalize'
@@ -423,15 +424,6 @@ function getCardRawAnswer(card: KBCard | null | undefined, kbLang: KbLang): stri
   return card.answer?.[kbLang] ?? card.answer?.ca ?? card.answer?.es ?? ''
 }
 
-function isBestCardMismatch(
-  deterministic: RetrievalResult,
-  selectedBestCardId: string | undefined
-): boolean {
-  const deterministicBestCardId = deterministic.bestCardId ?? deterministic.card?.id
-  if (!deterministicBestCardId || !selectedBestCardId) return false
-  return deterministicBestCardId !== selectedBestCardId
-}
-
 function buildPolicyDiscards(input: {
   decisionReason?: string
   confidenceBand?: string
@@ -607,6 +599,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
 
     const supportSnap = await db.doc('system/supportKb').get()
     const supportData = supportSnap.data() ?? {}
+    const aiIntentEnabled = supportSnap.exists ? (supportData.aiIntentEnabled !== false) : true
     const aiReformatEnabled = supportSnap.exists ? (supportData.aiReformatEnabled !== false) : true
     const assistantTone: AssistantTone = normalizeAssistantTone(supportData.assistantTone)
 
@@ -651,7 +644,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
       : []
 
     const deterministicRetrieval = retrieveCard(message, kbLang, retrievableCards, supportContext)
-    const allowAiIntent = false
+    const allowAiIntent = hasGoogleGenAiApiKey() && aiIntentEnabled
     const allowAiReformat = hasGoogleGenAiApiKey() && aiReformatEnabled
 
     let result = await orchestrator({
@@ -671,7 +664,11 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
       },
     })
 
-    if (isBestCardMismatch(deterministicRetrieval, result.meta.bestCardId)) {
+    if (!canAcceptIntentSelection({
+      deterministic: deterministicRetrieval,
+      selectedBestCardId: result.meta.bestCardId,
+      decisionReason: result.meta.decisionReason,
+    })) {
       console.error('[bot] deterministic retrieval mismatch', {
         message: normalizeForHash(message),
         deterministicBestCardId: deterministicRetrieval.bestCardId ?? deterministicRetrieval.card?.id ?? null,
