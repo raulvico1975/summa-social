@@ -6,6 +6,7 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, ArrowRight, CalendarDays } from 'lucide-react';
+import { PublicSiteFooter } from '@/components/public/PublicSiteFooter';
 import { PublicSiteHeader } from '@/components/public/PublicSiteHeader';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -83,7 +84,7 @@ export default async function NovetatsPage({ params }: PageProps) {
 
   return (
     <main className={pageShellClass}>
-      <PublicSiteHeader locale={locale} />
+      <PublicSiteHeader locale={locale} currentSection="updates" />
 
       <section className="px-6 pb-12 pt-8 lg:pt-12">
         <div className="mx-auto max-w-6xl">
@@ -181,17 +182,7 @@ export default async function NovetatsPage({ params }: PageProps) {
         </div>
       </section>
 
-      <footer className="border-t py-6 px-4 mt-auto">
-        <div className="max-w-lg mx-auto flex items-center justify-center gap-6 text-sm text-muted-foreground">
-          <Link href={`/${locale}/privacy`} className="hover:underline">
-            {t.common.privacy}
-          </Link>
-          <span>·</span>
-          <Link href={`/${locale}/contact`} className="hover:underline">
-            {t.common.contact}
-          </Link>
-        </div>
-      </footer>
+      <PublicSiteFooter locale={locale} />
     </main>
   );
 }

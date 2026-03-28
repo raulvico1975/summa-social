@@ -400,7 +400,7 @@ const ca: PublicTranslations = {
     backToHome: "Tornar a l'inici",
     about: 'Qui som',
     blog: 'Blog',
-    menu: 'Menu',
+    menu: 'Menú',
     contact: 'Contacte',
     privacy: 'Privacitat',
     features: 'Funcionalitats',
@@ -410,7 +410,7 @@ const ca: PublicTranslations = {
     privacyContact: 'Contacte de privacitat',
   },
   cta: {
-    primary: 'Contacta amb nosaltres',
+    primary: 'Parlem del vostre cas',
     secondary: 'Explica’ns la teva entitat',
     supporting:
       'Ens agrada entendre primer la realitat de cada entitat abans de proposar res.',
@@ -671,7 +671,7 @@ const ca: PublicTranslations = {
       vision:
         "Visió clara i actualitzada: Dashboard amb mètriques en temps real. Ingressos, despeses, balanç i alertes, tot visible d'un cop d'ull. Informes automàtics per a junta o patronat.",
       control:
-        "Control absolut de cada euro: Trazabilitat completa des del comprovant fins al moviment bancari. Justificació de subvencions amb un clic: Excel + totes les factures en un ZIP.",
+        "Control absolut de cada euro: Traçabilitat completa des del comprovant fins al moviment bancari. Justificació de subvencions amb un clic: Excel + totes les factures en un ZIP.",
       result:
         "El resultat: més temps per a la missió de l'entitat, menys temps amb fulls de càlcul i tasques repetitives. Gestió econòmica professional, accessible i sense complicacions.",
     },
@@ -693,7 +693,7 @@ const ca: PublicTranslations = {
       },
       fiscalCertificates: {
         title:
-          'Elaboració i enviament en un click de models fiscals (182 i 347) i certificats de donació',
+          'Elaboració i enviament en un clic de models fiscals (182 i 347) i certificats de donació',
         description:
           "A mesura que la informació econòmica s'ha anat treballant amb criteri —ingressos, despeses, remeses i devolucions— la fiscalitat deixa de ser un exercici de reconstrucció. Summa Social permet generar els models fiscals i els certificats de donació a partir del que ja està ordenat i verificat dins del sistema.",
       },
@@ -819,11 +819,11 @@ const ca: PublicTranslations = {
       conciliation: {
         title: '1. Conciliació Bancària Automàtica',
         description:
-          "Importes l'extracte del banc i Summa Social trova automàticament els moviments duplicats i els enllaça amb les operacions que ja tens registrades. Tot queda traçable per compte bancari.",
+          "Importes l'extracte del banc i Summa Social troba automàticament els moviments duplicats i els enllaça amb les operacions que ja tens registrades. Tot queda traçable per compte bancari.",
         bullets: [
           "Importació d'extractes (CSV, Excel, OFX) de qualsevol banc",
           'Detecció automàtica de duplicats',
-          'Suport multi-compte amb trazabilitat completa',
+          'Suport multi-compte amb traçabilitat completa',
           "Visió clara de l'estat de cada compte",
         ],
       },
@@ -926,7 +926,7 @@ const ca: PublicTranslations = {
           'Separació donació vs comissió',
           'Matching per email',
           'Creació automàtica de donants',
-          'Trazabilitat completa',
+          'Traçabilitat completa',
         ],
       },
       projectsModule: {
@@ -1004,7 +1004,7 @@ const es: PublicTranslations = {
     privacyContact: 'Contacto de privacidad',
   },
   cta: {
-    primary: 'Contacta con nosotros',
+    primary: 'Hablemos de vuestro caso',
     secondary: 'Cuéntanos sobre tu entidad',
     supporting:
       'Nos gusta entender primero la realidad de cada entidad antes de proponer nada.',
@@ -1597,7 +1597,7 @@ const fr: PublicTranslations = {
     privacyContact: 'Contact vie privée',
   },
   cta: {
-    primary: 'Contactez-nous',
+    primary: 'Parlons de votre cas',
     secondary: 'Parlez-nous de votre organisation',
     supporting:
       'Nous préférons comprendre la réalité de chaque organisation avant de proposer quoi que ce soit.',
@@ -2191,7 +2191,7 @@ const pt: PublicTranslations = {
     privacyContact: 'Contacto de privacidade',
   },
   cta: {
-    primary: 'Fale connosco',
+    primary: 'Falemos do vosso caso',
     secondary: 'Conte-nos sobre a sua organização',
     supporting:
       'Preferimos compreender primeiro a realidade de cada entidade antes de propor seja o que for.',

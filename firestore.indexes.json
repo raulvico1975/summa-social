@@ -70,6 +70,20 @@
       "queryScope": "COLLECTION",
       "fields": [
         {
+          "fieldPath": "bankAccountId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "date",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "transactions",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
           "fieldPath": "remittanceId",
           "order": "ASCENDING"
         },
