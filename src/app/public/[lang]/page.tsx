@@ -1119,6 +1119,90 @@ export default async function HomePage({ params }: PageProps) {
   const homeFunctionsCopy = HOME_FUNCTIONS_COPY[locale];
   const homeExplorerCopy = HOME_EXPLORER_COPY[locale];
   const homeReadMoreLabel = trimTrailingArrow(t.home.readMore);
+  const BLOCK_ORDER = [
+    'conciliation',
+    'donorsMembers',
+    'payments',
+    'fiscal',
+    'projects',
+    'control',
+  ] as const;
+  type HomeBlockKey = (typeof BLOCK_ORDER)[number];
+  const BLOCK_CARDS: Record<HomeBlockKey, readonly string[]> = {
+    conciliation: ['importStatements', 'autoClassification', 'contactAssignment', 'multiBankAccount'],
+    donorsMembers: ['donorProfile', 'bulkImport', 'donorHistory', 'operationalStatus'],
+    payments: ['remittanceSplitter', 'bankReturns', 'sepaPayments', 'stripeDonations'],
+    fiscal: ['model182', 'model347', 'donationCertificates', 'cleanExcel'],
+    projects: ['budgetLines', 'expenseAssignment', 'fieldCapture', 'funderExport'],
+    control: ['dashboard', 'smartAlerts', 'boardReport', 'dataExport'],
+  };
+  const CARD_SCREENSHOTS: Record<string, string> = {
+    'conciliation.importStatements': '/visuals/web/features/block1_import_extractes.webp',
+    'conciliation.autoClassification': '/visuals/web/features/block1_classificacio_auto.webp',
+    'conciliation.contactAssignment': '/visuals/web/features/block1_assignacio_contactes.webp',
+    'conciliation.multiBankAccount': '/visuals/web/features/block1_multi_compte.webp',
+    'donorsMembers.donorProfile': '/visuals/web/features/block2_fitxa_donant.webp',
+    'donorsMembers.bulkImport': '/visuals/web/features/block2_importacio_massiva.webp',
+    'donorsMembers.donorHistory': '/visuals/web/features/block2_historic_donant.webp',
+    'donorsMembers.operationalStatus': '/visuals/web/features/block2_estats_donants.webp',
+    'payments.remittanceSplitter': '/visuals/web/features/block3_divisor_remeses.webp',
+    'payments.bankReturns': '/visuals/web/features/block3_devolucions.webp',
+    'payments.sepaPayments': '/visuals/web/features/block3_remeses_sepa.webp',
+    'payments.stripeDonations': '/visuals/web/features/block3_stripe.webp',
+    'fiscal.model182': '/visuals/web/features/block4_model182.webp',
+    'fiscal.model347': '/visuals/web/features/block4_model347.webp',
+    'fiscal.donationCertificates': '/visuals/web/features/block4_certificats.webp',
+    'fiscal.cleanExcel': '/visuals/web/features/block4_excel_gestoria.webp',
+    'projects.budgetLines': '/visuals/web/features/block5_pressupost_partides.webp',
+    'projects.expenseAssignment': '/visuals/web/features/block5_assignacio_despeses.webp',
+    'projects.fieldCapture': '/visuals/web/features/block5_captura_terreny.webp',
+    'projects.funderExport': '/visuals/web/features/block5_export_financador.webp',
+    'control.dashboard': '/visuals/web/features/block6_dashboard.webp',
+    'control.smartAlerts': '/visuals/web/features/block6_alertes.webp',
+    'control.boardReport': '/visuals/web/features/block6_informe_junta.webp',
+    'control.dataExport': '/visuals/web/features/block6_exportacio_dades.webp',
+  };
+  const BLOCK_ANCHORS: Record<PublicLocale, Record<HomeBlockKey, string>> = {
+    ca: {
+      conciliation: 'conciliacio-bancaria',
+      donorsMembers: 'socis-donants',
+      payments: 'cobraments-pagaments',
+      fiscal: 'fiscalitat',
+      projects: 'projectes',
+      control: 'control-visibilitat',
+    },
+    es: {
+      conciliation: 'conciliacion-bancaria',
+      donorsMembers: 'socios-donantes',
+      payments: 'cobros-pagos',
+      fiscal: 'fiscalidad',
+      projects: 'proyectos',
+      control: 'control-visibilidad',
+    },
+    fr: {
+      conciliation: 'rapprochement-bancaire',
+      donorsMembers: 'adherents-donateurs',
+      payments: 'encaissements-paiements',
+      fiscal: 'fiscalite',
+      projects: 'projets',
+      control: 'controle-visibilite',
+    },
+    pt: {
+      conciliation: 'reconciliacao-bancaria',
+      donorsMembers: 'socios-doadores',
+      payments: 'cobrancas-pagamentos',
+      fiscal: 'fiscalidade',
+      projects: 'projetos',
+      control: 'controlo-visibilidade',
+    },
+  };
+  const blockAnchors = BLOCK_ANCHORS[locale];
+  const blockReadMoreAnchors: Partial<Record<HomeBlockKey, string>> = {
+    conciliation: anchors.conciliation,
+    payments: anchors.remittances,
+    fiscal: anchors.fiscalCertificates,
+    projects: anchors.projects,
+  };
   let latestUpdate: Awaited<ReturnType<typeof getLatestPublicProductUpdate>> = null;
 
   try {
@@ -1607,6 +1691,7 @@ export default async function HomePage({ params }: PageProps) {
         </div>
       </section>
 
+      {/* D) FUNCIONALITATS — 6 BLOCS */}
       <section
         id="capabilities"
         className="scroll-mt-24 bg-[linear-gradient(180deg,#eef6ff_0%,#f8fbff_22%,#ffffff_100%)] px-6 py-20 lg:py-24"
@@ -1614,34 +1699,87 @@ export default async function HomePage({ params }: PageProps) {
         <div className="mx-auto max-w-6xl">
           <div className="mx-auto max-w-4xl text-center">
             <p className="text-sm font-semibold uppercase tracking-[0.18em] text-primary/85">
-              {homeFunctionsCopy.eyebrow}
+              {t.common.features}
             </p>
-            <h2 className="mt-3 text-3xl font-semibold tracking-tight text-slate-950 sm:text-[2.9rem]">
-              {homeFunctionsCopy.title}
+            <h2 className="mt-3 text-3xl font-semibold tracking-tight text-foreground sm:text-[2.9rem]">
+              {t.home.systemOverview.title}
             </h2>
-            <p className="mt-4 text-base leading-7 text-slate-600 sm:text-lg">
-              {homeFunctionsCopy.description}
+            <p className="mt-4 text-base leading-7 text-muted-foreground sm:text-lg">
+              {t.home.systemOverview.subtitle}
             </p>
-            <p className="mx-auto mt-4 max-w-3xl text-sm leading-6 text-slate-500 sm:text-base">
-              {homeExplorerCopy.helper}
-            </p>
-          </div>
-
-          <div className="mt-14 rounded-[2.4rem] border border-sky-100/90 bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(244,250,255,0.96))] p-5 shadow-[0_28px_90px_-60px_rgba(14,165,233,0.16)] sm:p-7 lg:p-9">
-            <PublicFeaturesExplorer
-              locale={locale}
-              sections={homeFeatureExplorerSections}
-              tabsAlign="center"
-              showSectionIntro={false}
-              resetItemOnSectionChange
-              layout="image-heavy"
-              compactCards
-              showItemBadges={false}
-            />
           </div>
         </div>
       </section>
 
+      {BLOCK_ORDER.map((blockKey, blockIndex) => {
+        const block = t.home.blocks[blockKey];
+        const cards = BLOCK_CARDS[blockKey];
+        const readMoreAnchor = blockReadMoreAnchors[blockKey];
+        const readMoreHref = readMoreAnchor ? `${featuresHref}#${readMoreAnchor}` : null;
+        const isEven = blockIndex % 2 === 0;
+
+        return (
+          <section
+            key={blockKey}
+            id={blockAnchors[blockKey]}
+            className={`scroll-mt-24 px-6 py-16 lg:py-20 ${isEven ? 'bg-muted/30' : ''}`}
+          >
+            <div className="mx-auto max-w-6xl">
+              <div className="mx-auto max-w-3xl text-center">
+                <h2 className="text-2xl font-semibold tracking-tight text-foreground sm:text-[2rem]">
+                  {block.title}
+                </h2>
+                <p className="mx-auto mt-2 max-w-2xl text-base leading-7 text-muted-foreground sm:text-lg">
+                  {block.subtitle}
+                </p>
+              </div>
+
+              <div className="mt-12 grid gap-6 md:grid-cols-2">
+                {cards.map((cardKey) => {
+                  const card = block.cards[cardKey];
+                  if (!card) {
+                    return null;
+                  }
+
+                  const screenshot = CARD_SCREENSHOTS[`${blockKey}.${cardKey}`];
+
+                  return (
+                    <article key={cardKey} className={frameClass}>
+                      <div className="aspect-video overflow-hidden bg-muted/20">
+                        <Image
+                          src={screenshot}
+                          alt={card.screenshotAlt}
+                          width={600}
+                          height={340}
+                          sizes="(min-width: 768px) 50vw, 100vw"
+                          className="h-full w-full object-cover"
+                        />
+                      </div>
+                      <div className="space-y-2 p-6">
+                        <h3 className="text-lg font-semibold tracking-tight text-foreground">
+                          {card.title}
+                        </h3>
+                        <p className="text-sm leading-6 text-muted-foreground">{card.description}</p>
+                        {readMoreHref ? (
+                          <Link
+                            href={readMoreHref}
+                            className="inline-flex items-center text-sm font-medium text-primary hover:underline"
+                          >
+                            {homeReadMoreLabel}
+                            <ArrowRight className="ml-2 h-4 w-4" />
+                          </Link>
+                        ) : null}
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
+            </div>
+          </section>
+        );
+      })}
+
+      {/* E) BLOCS "Per a qui és" */}
       <section className="px-6 py-16 lg:py-20">
         <div className="mx-auto max-w-6xl">
           <div className="mx-auto max-w-3xl text-center">

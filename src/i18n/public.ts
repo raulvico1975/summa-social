@@ -5,6 +5,18 @@
 
 import type { PublicLocale } from '@/lib/public-locale';
 
+type CardType = {
+  title: string;
+  description: string;
+  screenshotAlt: string;
+};
+
+type BlockType = {
+  title: string;
+  subtitle: string;
+  cards: Record<string, CardType>;
+};
+
 export interface PublicTranslations {
   common: {
     appName: string;
@@ -266,6 +278,14 @@ export interface PublicTranslations {
       donations: { title: string; description: string };
       fiscal: { title: string; description: string };
     };
+    blocks: {
+      conciliation: BlockType;
+      donorsMembers: BlockType;
+      payments: BlockType;
+      fiscal: BlockType;
+      projects: BlockType;
+      control: BlockType;
+    };
     profiles: {
       admin: { title: string; description: string };
       projects: { title: string; description: string };
@@ -390,6 +410,552 @@ export interface PublicTranslations {
     metaDescription: string;
   };
 }
+
+const createCard = (title: string, description: string, screenshotAlt = title): CardType => ({
+  title,
+  description,
+  screenshotAlt,
+});
+
+const HOME_BLOCKS_CA: PublicTranslations['home']['blocks'] = {
+  conciliation: {
+    title: 'Conciliació bancària',
+    subtitle: 'Saber exactament què ha passat al banc',
+    cards: {
+      importStatements: createCard(
+        "Importació d'extractes",
+        'Puges el fitxer del banc i en minuts tens tots els moviments dins el sistema.'
+      ),
+      autoClassification: createCard(
+        'Classificació automàtica',
+        'El sistema recorda com classifiques i ho aplica sol. Si no ho sap, la IA proposa.'
+      ),
+      contactAssignment: createCard(
+        'Assignació de contactes',
+        'Cada moviment queda vinculat al donant, proveïdor o treballador corresponent.'
+      ),
+      multiBankAccount: createCard(
+        'Multi-compte bancari',
+        "Si teniu més d'un compte, tot queda separat i traçable."
+      ),
+    },
+  },
+  donorsMembers: {
+    title: 'Socis i donants',
+    subtitle: "La base fiscal i relacional de l'entitat",
+    cards: {
+      donorProfile: createCard(
+        'Fitxa completa amb validació fiscal',
+        'DNI/CIF, codi postal, IBAN. El sistema avisa del que falta abans que sigui un problema.'
+      ),
+      bulkImport: createCard(
+        'Importació massiva',
+        "Tens un Excel amb 500 donants? Importa'ls d'un cop."
+      ),
+      donorHistory: createCard(
+        'Històric per donant',
+        'Totes les donacions, devolucions i certificats en una sola fitxa.'
+      ),
+      operationalStatus: createCard(
+        'Estats operatius',
+        'Actiu, baixa o arxivat. Llista neta sense perdre històric.'
+      ),
+    },
+  },
+  payments: {
+    title: 'Cobraments i pagaments',
+    subtitle: 'Quotes, remeses SEPA i donacions online',
+    cards: {
+      remittanceSplitter: createCard(
+        'Divisor de remeses',
+        "El banc t'envia un sol apunt per 200 quotes? Summa les separa automàticament."
+      ),
+      bankReturns: createCard(
+        'Devolucions bancàries',
+        'Importa les devolucions i el sistema les vincula al donant correcte.'
+      ),
+      sepaPayments: createCard(
+        'Remeses SEPA de pagament',
+        'Genera fitxers SEPA per pagar factures i nòmines des del banc.'
+      ),
+      stripeDonations: createCard(
+        'Donacions online (Stripe)',
+        'Les donacions web entren automàticament, separant donació i comissió.'
+      ),
+    },
+  },
+  fiscal: {
+    title: 'Fiscalitat',
+    subtitle: 'Hisenda a temps, sense errors',
+    cards: {
+      model182: createCard(
+        'Model 182',
+        'Donacions anuals llestes per enviar a la gestoria. Amb validació prèvia i alertes.'
+      ),
+      model347: createCard(
+        'Model 347',
+        'Proveïdors que superen el llindar, amb CIF validat.'
+      ),
+      donationCertificates: createCard(
+        'Certificats de donació',
+        'PDF individual o massiu, amb enviament per email automàtic.'
+      ),
+      cleanExcel: createCard(
+        'Excel net per a la gestoria',
+        'Tot en format estàndard, sense haver de retocar res.'
+      ),
+    },
+  },
+  projects: {
+    title: 'Projectes',
+    subtitle: 'Cada euro justificat',
+    cards: {
+      budgetLines: createCard(
+        'Pressupost per partides',
+        "Importa el pressupost des d'Excel i fes el seguiment executat vs previst."
+      ),
+      expenseAssignment: createCard(
+        'Assignació de despeses',
+        'Vincula despeses a partides, senceres o parcials. Amb suggerències intel·ligents.'
+      ),
+      fieldCapture: createCard(
+        'Captura de despeses de terreny',
+        'Tiquets, viatges i quilometratge des del mòbil.'
+      ),
+      funderExport: createCard(
+        'Exportació per al finançador',
+        'Excel de justificació + ZIP amb tots els comprovants, amb un clic.'
+      ),
+    },
+  },
+  control: {
+    title: 'Control i visibilitat',
+    subtitle: 'Dades netes, decisions informades',
+    cards: {
+      dashboard: createCard(
+        'Dashboard directiu',
+        "Ingressos, despeses, saldo, base social i obligacions fiscals d'un cop d'ull."
+      ),
+      smartAlerts: createCard(
+        'Alertes intel·ligents',
+        'Moviments pendents, dades incompletes, terminis fiscals. Tot prioritzat.'
+      ),
+      boardReport: createCard(
+        'Informe per a junta o patronat',
+        "Genera un informe amb l'estat de comptes, edita el text si cal, exporta a Excel o envia'l per email directament."
+      ),
+      dataExport: createCard(
+        'Exportació de dades',
+        'Excel, CSV, PDF. Per contacte, projecte o període.'
+      ),
+    },
+  },
+};
+
+const HOME_BLOCKS_ES: PublicTranslations['home']['blocks'] = {
+  conciliation: {
+    title: 'Conciliación bancaria',
+    subtitle: 'Saber exactamente qué ha pasado en el banco',
+    cards: {
+      importStatements: createCard(
+        'Importación de extractos',
+        'Subes el fichero del banco y en minutos tienes todos los movimientos dentro del sistema.'
+      ),
+      autoClassification: createCard(
+        'Clasificación automática',
+        'El sistema recuerda cómo clasificas y lo aplica solo. Si no lo sabe, la IA propone.'
+      ),
+      contactAssignment: createCard(
+        'Asignación de contactos',
+        'Cada movimiento queda vinculado al donante, proveedor o trabajador correspondiente.'
+      ),
+      multiBankAccount: createCard(
+        'Multicuenta bancaria',
+        'Si tenéis más de una cuenta, todo queda separado y trazable.'
+      ),
+    },
+  },
+  donorsMembers: {
+    title: 'Socios y donantes',
+    subtitle: 'La base fiscal y relacional de la entidad',
+    cards: {
+      donorProfile: createCard(
+        'Ficha completa con validación fiscal',
+        'DNI/CIF, código postal, IBAN. El sistema avisa de lo que falta antes de que sea un problema.'
+      ),
+      bulkImport: createCard(
+        'Importación masiva',
+        '¿Tienes un Excel con 500 donantes? Impórtalos de una vez.'
+      ),
+      donorHistory: createCard(
+        'Histórico por donante',
+        'Todas las donaciones, devoluciones y certificados en una sola ficha.'
+      ),
+      operationalStatus: createCard(
+        'Estados operativos',
+        'Activo, baja o archivado. Lista limpia sin perder histórico.'
+      ),
+    },
+  },
+  payments: {
+    title: 'Cobros y pagos',
+    subtitle: 'Cuotas, remesas SEPA y donaciones online',
+    cards: {
+      remittanceSplitter: createCard(
+        'Divisor de remesas',
+        '¿El banco te envía un solo apunte por 200 cuotas? Summa las separa automáticamente.'
+      ),
+      bankReturns: createCard(
+        'Devoluciones bancarias',
+        'Importa las devoluciones y el sistema las vincula al donante correcto.'
+      ),
+      sepaPayments: createCard(
+        'Remesas SEPA de pago',
+        'Genera ficheros SEPA para pagar facturas y nóminas desde el banco.'
+      ),
+      stripeDonations: createCard(
+        'Donaciones online (Stripe)',
+        'Las donaciones web entran automáticamente, separando donación y comisión.'
+      ),
+    },
+  },
+  fiscal: {
+    title: 'Fiscalidad',
+    subtitle: 'Hacienda a tiempo, sin errores',
+    cards: {
+      model182: createCard(
+        'Modelo 182',
+        'Donaciones anuales listas para enviar a la gestoría. Con validación previa y alertas.'
+      ),
+      model347: createCard(
+        'Modelo 347',
+        'Proveedores que superan el umbral, con CIF validado.'
+      ),
+      donationCertificates: createCard(
+        'Certificados de donación',
+        'PDF individual o masivo, con envío por email automático.'
+      ),
+      cleanExcel: createCard(
+        'Excel limpio para la gestoría',
+        'Todo en formato estándar, sin tener que retocar nada.'
+      ),
+    },
+  },
+  projects: {
+    title: 'Proyectos',
+    subtitle: 'Cada euro justificado',
+    cards: {
+      budgetLines: createCard(
+        'Presupuesto por partidas',
+        'Importa el presupuesto desde Excel y haz el seguimiento ejecutado vs previsto.'
+      ),
+      expenseAssignment: createCard(
+        'Asignación de gastos',
+        'Vincula gastos a partidas, enteros o parciales. Con sugerencias inteligentes.'
+      ),
+      fieldCapture: createCard(
+        'Captura de gastos de terreno',
+        'Tickets, viajes y kilometraje desde el móvil.'
+      ),
+      funderExport: createCard(
+        'Exportación para el financiador',
+        'Excel de justificación + ZIP con todos los comprobantes, con un clic.'
+      ),
+    },
+  },
+  control: {
+    title: 'Control y visibilidad',
+    subtitle: 'Datos limpios, decisiones informadas',
+    cards: {
+      dashboard: createCard(
+        'Dashboard directivo',
+        'Ingresos, gastos, saldo, base social y obligaciones fiscales de un vistazo.'
+      ),
+      smartAlerts: createCard(
+        'Alertas inteligentes',
+        'Movimientos pendientes, datos incompletos, plazos fiscales. Todo priorizado.'
+      ),
+      boardReport: createCard(
+        'Informe para junta o patronato',
+        'Genera un informe con el estado de cuentas, edita el texto si hace falta, exporta a Excel o envíalo por email directamente.'
+      ),
+      dataExport: createCard(
+        'Exportación de datos',
+        'Excel, CSV, PDF. Por contacto, proyecto o período.'
+      ),
+    },
+  },
+};
+
+const HOME_BLOCKS_FR: PublicTranslations['home']['blocks'] = {
+  conciliation: {
+    title: 'Rapprochement bancaire',
+    subtitle: "Savoir exactement ce qui s'est passé à la banque",
+    cards: {
+      importStatements: createCard(
+        'Importation de relevés',
+        'Téléchargez le fichier de la banque et en quelques minutes tous les mouvements sont dans le système.'
+      ),
+      autoClassification: createCard(
+        'Classification automatique',
+        "Le système retient comment vous classez et l'applique seul. S'il ne sait pas, l'IA propose."
+      ),
+      contactAssignment: createCard(
+        'Attribution de contacts',
+        'Chaque mouvement est lié au donateur, fournisseur ou salarié correspondant.'
+      ),
+      multiBankAccount: createCard(
+        'Multi-compte bancaire',
+        "Si vous avez plus d'un compte, tout reste séparé et traçable."
+      ),
+    },
+  },
+  donorsMembers: {
+    title: 'Adhérents et donateurs',
+    subtitle: "La base fiscale et relationnelle de l'entité",
+    cards: {
+      donorProfile: createCard(
+        'Fiche complète avec validation fiscale',
+        'NIF, code postal, IBAN. Le système signale ce qui manque avant que ce soit un problème.'
+      ),
+      bulkImport: createCard(
+        'Importation massive',
+        "Vous avez un Excel avec 500 donateurs ? Importez-les d'un coup."
+      ),
+      donorHistory: createCard(
+        'Historique par donateur',
+        'Tous les dons, rejets et certificats dans une seule fiche.'
+      ),
+      operationalStatus: createCard(
+        'États opérationnels',
+        "Actif, résilié ou archivé. Liste propre sans perdre l'historique."
+      ),
+    },
+  },
+  payments: {
+    title: 'Encaissements et paiements',
+    subtitle: 'Cotisations, prélèvements SEPA et dons en ligne',
+    cards: {
+      remittanceSplitter: createCard(
+        'Séparateur de prélèvements',
+        'La banque vous envoie une seule écriture pour 200 cotisations ? Summa les sépare automatiquement.'
+      ),
+      bankReturns: createCard(
+        'Rejets bancaires',
+        'Importez les rejets et le système les rattache au donateur concerné.'
+      ),
+      sepaPayments: createCard(
+        'Remises SEPA de paiement',
+        'Générez des fichiers SEPA pour payer factures et salaires depuis la banque.'
+      ),
+      stripeDonations: createCard(
+        'Dons en ligne (Stripe)',
+        'Les dons web entrent automatiquement, en séparant don et commission.'
+      ),
+    },
+  },
+  fiscal: {
+    title: 'Fiscalité',
+    subtitle: 'Le fisc à temps, sans erreurs',
+    cards: {
+      model182: createCard(
+        'Modèle 182',
+        'Dons annuels prêts à envoyer au cabinet comptable. Avec validation préalable et alertes.'
+      ),
+      model347: createCard(
+        'Modèle 347',
+        'Fournisseurs dépassant le seuil, avec NIF validé.'
+      ),
+      donationCertificates: createCard(
+        'Certificats de don',
+        'PDF individuel ou en lot, avec envoi par email automatique.'
+      ),
+      cleanExcel: createCard(
+        'Excel propre pour le comptable',
+        'Tout en format standard, sans avoir à retoucher.'
+      ),
+    },
+  },
+  projects: {
+    title: 'Projets',
+    subtitle: 'Chaque euro justifié',
+    cards: {
+      budgetLines: createCard(
+        'Budget par lignes',
+        "Importez le budget depuis Excel et suivez l'exécuté vs le prévu."
+      ),
+      expenseAssignment: createCard(
+        'Affectation de dépenses',
+        'Rattachez des dépenses aux lignes, en totalité ou partiellement. Avec suggestions intelligentes.'
+      ),
+      fieldCapture: createCard(
+        'Saisie de dépenses terrain',
+        'Tickets, déplacements et kilométrage depuis le mobile.'
+      ),
+      funderExport: createCard(
+        'Export pour le bailleur',
+        'Excel de justification + ZIP avec toutes les pièces, en un clic.'
+      ),
+    },
+  },
+  control: {
+    title: 'Contrôle et visibilité',
+    subtitle: 'Données propres, décisions éclairées',
+    cards: {
+      dashboard: createCard(
+        'Tableau de bord directif',
+        "Recettes, dépenses, solde, base sociale et obligations fiscales d'un coup d'œil."
+      ),
+      smartAlerts: createCard(
+        'Alertes intelligentes',
+        'Mouvements en attente, données incomplètes, échéances fiscales. Tout priorisé.'
+      ),
+      boardReport: createCard(
+        'Rapport pour le conseil',
+        "Générez un rapport avec l'état des comptes, modifiez le texte si besoin, exportez en Excel ou envoyez-le par email directement."
+      ),
+      dataExport: createCard(
+        'Export de données',
+        'Excel, CSV, PDF. Par contact, projet ou période.'
+      ),
+    },
+  },
+};
+
+const HOME_BLOCKS_PT: PublicTranslations['home']['blocks'] = {
+  conciliation: {
+    title: 'Reconciliação bancária',
+    subtitle: 'Saber exatamente o que aconteceu no banco',
+    cards: {
+      importStatements: createCard(
+        'Importação de extratos',
+        'Carrega o ficheiro do banco e em minutos tens todos os movimentos dentro do sistema.'
+      ),
+      autoClassification: createCard(
+        'Classificação automática',
+        'O sistema lembra como classificas e aplica sozinho. Se não souber, a IA propõe.'
+      ),
+      contactAssignment: createCard(
+        'Atribuição de contactos',
+        'Cada movimento fica ligado ao doador, fornecedor ou trabalhador correspondente.'
+      ),
+      multiBankAccount: createCard(
+        'Multiconta bancária',
+        'Se tiverem mais do que uma conta, tudo fica separado e rastreável.'
+      ),
+    },
+  },
+  donorsMembers: {
+    title: 'Sócios e doadores',
+    subtitle: 'A base fiscal e relacional da entidade',
+    cards: {
+      donorProfile: createCard(
+        'Ficha completa com validação fiscal',
+        'NIF, código postal, IBAN. O sistema avisa do que falta antes que seja um problema.'
+      ),
+      bulkImport: createCard(
+        'Importação massiva',
+        'Tens um Excel com 500 doadores? Importa-os de uma vez.'
+      ),
+      donorHistory: createCard(
+        'Histórico por doador',
+        'Todos os donativos, devoluções e certificados numa só ficha.'
+      ),
+      operationalStatus: createCard(
+        'Estados operacionais',
+        'Ativo, baixa ou arquivado. Lista limpa sem perder histórico.'
+      ),
+    },
+  },
+  payments: {
+    title: 'Cobranças e pagamentos',
+    subtitle: 'Quotas, remessas SEPA e doações online',
+    cards: {
+      remittanceSplitter: createCard(
+        'Separador de remessas',
+        'O banco envia-te um só lançamento por 200 quotas? Summa separa-as automaticamente.'
+      ),
+      bankReturns: createCard(
+        'Devoluções bancárias',
+        'Importa as devoluções e o sistema liga-as ao doador correto.'
+      ),
+      sepaPayments: createCard(
+        'Remessas SEPA de pagamento',
+        'Gera ficheiros SEPA para pagar faturas e ordenados a partir do banco.'
+      ),
+      stripeDonations: createCard(
+        'Doações online (Stripe)',
+        'As doações web entram automaticamente, separando doação e comissão.'
+      ),
+    },
+  },
+  fiscal: {
+    title: 'Fiscalidade',
+    subtitle: 'Finanças a tempo, sem erros',
+    cards: {
+      model182: createCard(
+        'Modelo 182',
+        'Doações anuais prontas para enviar ao contabilista. Com validação prévia e alertas.'
+      ),
+      model347: createCard(
+        'Modelo 347',
+        'Fornecedores que ultrapassam o limiar, com NIF validado.'
+      ),
+      donationCertificates: createCard(
+        'Certificados de doação',
+        'PDF individual ou em lote, com envio por email automático.'
+      ),
+      cleanExcel: createCard(
+        'Excel limpo para o contabilista',
+        'Tudo em formato padrão, sem ter de retocar nada.'
+      ),
+    },
+  },
+  projects: {
+    title: 'Projetos',
+    subtitle: 'Cada euro justificado',
+    cards: {
+      budgetLines: createCard(
+        'Orçamento por rubricas',
+        'Importa o orçamento desde Excel e faz o seguimento executado vs previsto.'
+      ),
+      expenseAssignment: createCard(
+        'Imputação de despesas',
+        'Liga despesas a rubricas, inteiras ou parciais. Com sugestões inteligentes.'
+      ),
+      fieldCapture: createCard(
+        'Captura de despesas de terreno',
+        'Tickets, deslocações e quilometragem a partir do telemóvel.'
+      ),
+      funderExport: createCard(
+        'Exportação para o financiador',
+        'Excel de justificação + ZIP com todos os comprovativos, com um clique.'
+      ),
+    },
+  },
+  control: {
+    title: 'Controlo e visibilidade',
+    subtitle: 'Dados limpos, decisões informadas',
+    cards: {
+      dashboard: createCard(
+        'Painel diretivo',
+        'Receitas, despesas, saldo, base social e obrigações fiscais de relance.'
+      ),
+      smartAlerts: createCard(
+        'Alertas inteligentes',
+        'Movimentos pendentes, dados incompletos, prazos fiscais. Tudo priorizado.'
+      ),
+      boardReport: createCard(
+        'Relatório para direção',
+        'Gera um relatório com o estado das contas, edita o texto se necessário, exporta para Excel ou envia por email diretamente.'
+      ),
+      dataExport: createCard(
+        'Exportação de dados',
+        'Excel, CSV, PDF. Por contacto, projeto ou período.'
+      ),
+    },
+  },
+};
 
 const ca: PublicTranslations = {
   common: {
@@ -746,8 +1312,9 @@ const ca: PublicTranslations = {
       },
     },
     systemOverview: {
-      title: "Com s'ordena la gestió amb Summa Social",
-      subtitle: 'Cada part de Summa resol una peça concreta del dia a dia, però totes treballen juntes.',
+      title: 'Què pots fer amb Summa Social',
+      subtitle:
+        "Summa Social porta ordre, control i tranquil·litat a la gestió econòmica de les entitats d'acció social i de cooperació.",
     },
     capabilities: {
       title: 'Què pots fer amb Summa Social',
@@ -768,6 +1335,7 @@ const ca: PublicTranslations = {
         description: 'Model 182, 347 i certificats de donació generats automàticament.',
       },
     },
+    blocks: HOME_BLOCKS_CA,
     profiles: {
       admin: {
         title: 'Per a administradors i tresoreria',
@@ -1340,8 +1908,9 @@ const es: PublicTranslations = {
       },
     },
     systemOverview: {
-      title: 'Cómo se ordena la gestión con Summa Social',
-      subtitle: 'Cada parte de Summa resuelve una pieza concreta del día a día, pero todas trabajan juntas.',
+      title: 'Qué puedes hacer con Summa Social',
+      subtitle:
+        'Summa Social aporta orden, control y tranquilidad a la gestión económica de las entidades de acción social y cooperación.',
     },
     capabilities: {
       title: 'Qué puedes hacer con Summa Social',
@@ -1362,6 +1931,7 @@ const es: PublicTranslations = {
         description: 'Modelo 182, 347 y certificados de donación generados automáticamente.',
       },
     },
+    blocks: HOME_BLOCKS_ES,
     profiles: {
       admin: {
         title: 'Para administradores y tesorería',
@@ -1934,8 +2504,9 @@ const fr: PublicTranslations = {
       },
     },
     systemOverview: {
-      title: "Comment la gestion s'organise avec Summa Social",
-      subtitle: 'Chaque partie de Summa résout une pièce concrète du quotidien, mais toutes travaillent ensemble.',
+      title: 'Ce que vous pouvez faire avec Summa Social',
+      subtitle:
+        "Summa Social apporte ordre, contrôle et sérénité à la gestion économique des associations d'action sociale et de coopération.",
     },
     capabilities: {
       title: 'Ce que vous pouvez faire avec Summa Social',
@@ -1956,6 +2527,7 @@ const fr: PublicTranslations = {
         description: 'Modèle 182, 347 et certificats de don générés automatiquement.',
       },
     },
+    blocks: HOME_BLOCKS_FR,
     profiles: {
       admin: {
         title: 'Pour administrateurs et trésorerie',
@@ -2527,8 +3099,9 @@ const pt: PublicTranslations = {
       },
     },
     systemOverview: {
-      title: 'Como se organiza a gestão com Summa Social',
-      subtitle: 'Cada parte do Summa resolve uma peça concreta do dia a dia, mas todas trabalham juntas.',
+      title: 'O que podes fazer com Summa Social',
+      subtitle:
+        'Summa Social traz ordem, controlo e tranquilidade à gestão económica das entidades de ação social e cooperação.',
     },
     capabilities: {
       title: 'O que podes fazer com Summa Social',
@@ -2549,6 +3122,7 @@ const pt: PublicTranslations = {
         description: 'Modelo 182, 347 e certificados de doação gerados automaticamente.',
       },
     },
+    blocks: HOME_BLOCKS_PT,
     profiles: {
       admin: {
         title: 'Para administradores e tesouraria',
