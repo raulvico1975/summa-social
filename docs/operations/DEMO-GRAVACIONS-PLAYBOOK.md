@@ -260,6 +260,75 @@ node scripts/demo/record-bank-reconciliation.mjs --quality commercial --reseed
 node scripts/demo/postproduce-demo-video.mjs --storyboard bank-reconciliation-intelligent --variant all
 ```
 
+### `donations-control-demo`
+
+- Script:
+  - `scripts/demo/record-donations-control.mjs`
+- Output:
+  - `output/playwright/donations-control-demo/`
+- Objectiu:
+  - mostrar el control de donants i aportacions des de la fitxa d un donant
+  - ensenyar resum anual, devolucions i historial fiscal unificat
+- Entorn:
+  - `npm run demo:up:work`
+  - org demo seeded
+- Cas demo:
+  - donant `Clara Soler Ribas`
+  - 3 donacions fiscals + 1 devolucio
+  - import net certificable `245,00 €`
+
+### Relat actual
+
+1. Login a `/demo/login`
+2. Entrada a `/demo/dashboard/donants`
+3. Cerca del donant demo
+4. Obertura de la fitxa lateral
+5. Pausa sobre resum, devolucions, historial i accions de certificat
+
+### Postproduccio landing
+
+- Storyboard executable:
+  - `scripts/demo/video-storyboards/donations-control-landing.mjs`
+- Guio llegible:
+  - `docs/operations/demo-storyboards/donations-control-landing.md`
+- Landing SEO:
+  - `control-donacions-ong`
+
+### `model-182-demo`
+
+- Script:
+  - `scripts/demo/record-model-182.mjs`
+- Output:
+  - `output/playwright/model-182-demo/`
+- Objectiu:
+  - mostrar que el Model 182 es genera sobre donacions reals
+  - ensenyar devolucions descomptades i validacio abans d exportar a l AEAT
+- Entorn:
+  - `npm run demo:up:work`
+  - org demo seeded
+- Cas demo:
+  - donant exclòs `Mireia Serra Vidal`
+  - 1 donacio de `90,00 €`
+  - `taxId` buit per provocar exclusio AEAT no bloquejant
+
+### Relat actual
+
+1. Login a `/demo/login`
+2. Entrada a `/demo/dashboard/informes`
+3. Generacio de l informe de donacions (Model 182)
+4. Pausa sobre totals nets, devolucions i fila del donant sense NIF
+5. Obertura de `Exportar per a AEAT`
+6. Pausa sobre el dialeg de validacio amb el donant exclòs
+
+### Postproduccio landing
+
+- Storyboard executable:
+  - `scripts/demo/video-storyboards/model-182-landing.mjs`
+- Guio llegible:
+  - `docs/operations/demo-storyboards/model-182-landing.md`
+- Landing SEO:
+  - `model-182`
+
 ## Regles de qualitat
 
 - Millor una peça curta i estable que una peça llarga i fràgil.

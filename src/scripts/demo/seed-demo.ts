@@ -94,6 +94,21 @@ const DEMO_WORK_STRIPE_PAYOUT_PARENT_ID = `${DEMO_ID_PREFIX}tx_stripe_payout_par
 const DEMO_WORK_STRIPE_DON_PREFIX = `${DEMO_ID_PREFIX}tx_stripe_don_`;
 const DEMO_WORK_STRIPE_FEE_ID = `${DEMO_ID_PREFIX}tx_stripe_fee_001`;
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Constants IDs per demo de control de donacions (mode 'work')
+// ─────────────────────────────────────────────────────────────────────────────
+const DEMO_WORK_DONATIONS_CONTROL_DONOR_ID = `${DEMO_ID_PREFIX}control_donor_001`;
+const DEMO_WORK_DONATIONS_CONTROL_BANK_DONATION_ID = `${DEMO_ID_PREFIX}control_donation_bank_001`;
+const DEMO_WORK_DONATIONS_CONTROL_REMITTANCE_DONATION_ID = `${DEMO_ID_PREFIX}control_donation_remittance_001`;
+const DEMO_WORK_DONATIONS_CONTROL_STRIPE_DONATION_ID = `${DEMO_ID_PREFIX}control_donation_stripe_001`;
+const DEMO_WORK_DONATIONS_CONTROL_RETURN_ID = `${DEMO_ID_PREFIX}control_return_001`;
+const DEMO_WORK_DONATIONS_CONTROL_EXPECTED_NET = 245;
+const DEMO_WORK_DONATIONS_CONTROL_NAME = 'Clara Soler Ribas';
+const DEMO_WORK_MODEL_182_EXCLUDED_DONOR_ID = `${DEMO_ID_PREFIX}model182_excluded_donor_001`;
+const DEMO_WORK_MODEL_182_EXCLUDED_DONATION_ID = `${DEMO_ID_PREFIX}model182_excluded_donation_001`;
+const DEMO_WORK_MODEL_182_EXCLUDED_NAME = 'Mireia Serra Vidal';
+const DEMO_WORK_MODEL_182_EXCLUDED_AMOUNT = 90;
+
 const VOLUMES = {
   donors: 50,
   suppliers: 20,
@@ -815,7 +830,126 @@ export async function runDemoSeed(
     console.log(`[seed-demo]   - Oracle fiscal: donació (120€) + no fiscal (45€) + pendent (35€) + devolució assignada (-20€)`);
 
     // ─────────────────────────────────────────────────────────────────────────
-    // Cas especial 2: Devolució pendent d'assignar (sense contacte)
+    // Cas especial 2: Donant demo fort per control de donacions
+    // Per vídeo curt de landing: resum coherent + historial de 3 donacions
+    // ─────────────────────────────────────────────────────────────────────────
+    const donationsControlDonor = {
+      id: DEMO_WORK_DONATIONS_CONTROL_DONOR_ID,
+      name: DEMO_WORK_DONATIONS_CONTROL_NAME,
+      type: 'donor' as const,
+      roles: { donor: true },
+      taxId: '45678912A',
+      email: 'clara.soler@example.demo',
+      phone: '623456781',
+      address: 'Carrer de la Pau, 42, 3r 2a',
+      city: 'Barcelona',
+      province: 'Barcelona',
+      zipCode: '08018',
+      donorType: 'individual' as const,
+      membershipType: 'recurring' as const,
+      monthlyAmount: 40,
+      memberSince: `${currentYear - 1}-09-01`,
+      status: 'active' as const,
+      createdAt: nowStr,
+      updatedAt: nowStr,
+      isDemoData: true as const,
+    };
+    allContacts.push(donationsControlDonor);
+
+    const model182ExcludedDonor = {
+      id: DEMO_WORK_MODEL_182_EXCLUDED_DONOR_ID,
+      name: DEMO_WORK_MODEL_182_EXCLUDED_NAME,
+      type: 'donor' as const,
+      roles: { donor: true },
+      taxId: '',
+      email: 'mireia.serra@example.demo',
+      phone: '612345678',
+      address: 'Carrer Major, 17',
+      city: 'Barcelona',
+      province: 'Barcelona',
+      zipCode: '08007',
+      donorType: 'individual' as const,
+      membershipType: 'one-time' as const,
+      status: 'active' as const,
+      createdAt: nowStr,
+      updatedAt: nowStr,
+      isDemoData: true as const,
+    };
+    allContacts.push(model182ExcludedDonor);
+
+    transactions.push(
+      {
+        id: DEMO_WORK_DONATIONS_CONTROL_BANK_DONATION_ID,
+        date: `${currentYear}-01-18`,
+        description: 'Donació campanya hivern Clara Soler',
+        amount: 120,
+        category: donationCategory.id,
+        contactId: DEMO_WORK_DONATIONS_CONTROL_DONOR_ID,
+        contactType: 'donor' as const,
+        source: 'bank' as const,
+        transactionType: 'donation' as const,
+        createdAt: nowStr,
+        isDemoData: true as const,
+      },
+      {
+        id: DEMO_WORK_DONATIONS_CONTROL_REMITTANCE_DONATION_ID,
+        date: `${currentYear}-03-18`,
+        description: 'Quota trimestral Clara Soler Ribas',
+        amount: 80,
+        category: membershipFeeCategory.id,
+        contactId: DEMO_WORK_DONATIONS_CONTROL_DONOR_ID,
+        contactType: 'donor' as const,
+        source: 'remittance' as const,
+        transactionType: 'donation' as const,
+        createdAt: nowStr,
+        isDemoData: true as const,
+      },
+      {
+        id: DEMO_WORK_DONATIONS_CONTROL_STRIPE_DONATION_ID,
+        date: `${currentYear}-06-01`,
+        description: 'Donació online Clara Soler Ribas',
+        amount: 65,
+        category: donationCategory.id,
+        contactId: DEMO_WORK_DONATIONS_CONTROL_DONOR_ID,
+        contactType: 'donor' as const,
+        source: 'stripe' as const,
+        transactionType: 'donation' as const,
+        createdAt: nowStr,
+        isDemoData: true as const,
+      },
+      {
+        id: DEMO_WORK_MODEL_182_EXCLUDED_DONATION_ID,
+        date: `${currentYear}-02-04`,
+        description: 'Donació puntual Mireia Serra Vidal',
+        amount: DEMO_WORK_MODEL_182_EXCLUDED_AMOUNT,
+        category: donationCategory.id,
+        contactId: DEMO_WORK_MODEL_182_EXCLUDED_DONOR_ID,
+        contactType: 'donor' as const,
+        source: 'bank' as const,
+        transactionType: 'donation' as const,
+        createdAt: nowStr,
+        isDemoData: true as const,
+      },
+      {
+        id: DEMO_WORK_DONATIONS_CONTROL_RETURN_ID,
+        date: `${currentYear}-06-19`,
+        description: 'DEVOLUCIÓN RECIBO - Clara Soler',
+        amount: -20,
+        category: donationCategory.id,
+        contactId: DEMO_WORK_DONATIONS_CONTROL_DONOR_ID,
+        contactType: 'donor' as const,
+        source: 'bank' as const,
+        transactionType: 'return' as const,
+        createdAt: nowStr,
+        isDemoData: true as const,
+      },
+    );
+
+    console.log('[seed-demo]   - Control donacions: 1 donant demo amb 3 donacions i 1 devolució');
+    console.log('[seed-demo]   - Model 182: 1 donant demo exclòs AEAT per NIF buit');
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Cas especial 3: Devolució pendent d'assignar (sense contacte)
     // Per demo de workflow de resolució de devolucions
     // ─────────────────────────────────────────────────────────────────────────
     const workReturnUnassignedTx = {
@@ -837,7 +971,7 @@ export async function runDemoSeed(
     console.log(`[seed-demo]   - Devolució pendent: 1 devolució (${FISCAL_ORACLE_AMOUNTS.returnWithoutDonor}€) sense contacte assignat`);
 
     // ─────────────────────────────────────────────────────────────────────────
-    // Cas especial 3: Remesa SEPA IN (1 pare + 8 línies assignades a donants)
+    // Cas especial 4: Remesa SEPA IN (1 pare + 8 línies assignades a donants)
     // ─────────────────────────────────────────────────────────────────────────
 
     // Seleccionar 8 donants deterministes (els primers 8 del seed)
@@ -893,7 +1027,7 @@ export async function runDemoSeed(
     console.log(`[seed-demo]   - Remesa SEPA IN: 1 pare (${sepaTotal}€) + 8 línies (totes assignades a donants)`);
 
     // ─────────────────────────────────────────────────────────────────────────
-    // Cas especial 3b: Ingrés agrupat pendent de dividir (per gravar el flux)
+    // Cas especial 4b: Ingrés agrupat pendent de dividir (per gravar el flux)
     // ─────────────────────────────────────────────────────────────────────────
     const pendingSplitDonors = selectDemoMemberRemittanceDonors(donors);
     const pendingSplitTotal = calculateDemoMemberRemittanceTotal(pendingSplitDonors);
@@ -921,7 +1055,7 @@ export async function runDemoSeed(
     );
 
     // ─────────────────────────────────────────────────────────────────────────
-    // Cas especial 4: Stripe payout (1 pare + 6 donacions + 1 fee)
+    // Cas especial 5: Stripe payout (1 pare + 6 donacions + 1 fee)
     // ─────────────────────────────────────────────────────────────────────────
 
     // Seleccionar 6 donants deterministes.
@@ -1110,9 +1244,10 @@ export async function runDemoSeed(
   } else {
     // Work: 100 base + 3 duplicats + 5 pendents + 3 traçabilitat
     //       + 5 casos oracle (donation/non_fiscal/pending + 2 returns)
+    //       + 5 control/fiscal (3 donacions + 1 devolució + 1 exclòs AEAT)
     //       + 9 SEPA IN (1 pare + 8 línies) + 1 pare pendent de dividir
-    //       + 8 Stripe (1 pare + 6 donacions + 1 fee) = 134
-    const expectedWorkTx = 100 + WORK_ANOMALIES.duplicates + WORK_ANOMALIES.pending + 3 + 5 + 9 + 1 + 8;
+    //       + 8 Stripe (1 pare + 6 donacions + 1 fee) = 139
+    const expectedWorkTx = 100 + WORK_ANOMALIES.duplicates + WORK_ANOMALIES.pending + 3 + 5 + 5 + 9 + 1 + 8;
     if (counts.transactions !== expectedWorkTx) {
       invariantErrors.push(`[work] transactions: esperats ${expectedWorkTx}, obtinguts ${counts.transactions}`);
     }
@@ -1177,7 +1312,69 @@ export async function runDemoSeed(
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    // 4. Invariants SEPA IN remesa
+    // 4. Invariants donant demo de control de donacions
+    // ─────────────────────────────────────────────────────────────────────────
+    const donationsControlDonorExists = allContacts.some(
+      (contact) => contact.id === DEMO_WORK_DONATIONS_CONTROL_DONOR_ID
+    );
+    if (!donationsControlDonorExists) {
+      invariantErrors.push('[work] control donacions: donant demo no existeix');
+    }
+
+    const donationsControlTransactions = transactions.filter(
+      (tx) => tx.contactId === DEMO_WORK_DONATIONS_CONTROL_DONOR_ID
+    );
+    const donationsControlDonationCount = donationsControlTransactions.filter(
+      (tx) => tx.transactionType === 'donation'
+    ).length;
+    if (donationsControlDonationCount !== 3) {
+      invariantErrors.push(
+        `[work] control donacions: esperades 3 donacions, obtingudes ${donationsControlDonationCount}`
+      );
+    }
+    const donationsControlReturnCount = donationsControlTransactions.filter(
+      (tx) => tx.transactionType === 'return'
+    ).length;
+    if (donationsControlReturnCount !== 1) {
+      invariantErrors.push(
+        `[work] control donacions: esperada 1 devolució, obtingudes ${donationsControlReturnCount}`
+      );
+    }
+    const donationsControlNet = donationsControlTransactions.reduce((sum, tx) => sum + tx.amount, 0);
+    if (Math.abs(donationsControlNet - DEMO_WORK_DONATIONS_CONTROL_EXPECTED_NET) > 0.01) {
+      invariantErrors.push(
+        `[work] control donacions: net esperat ${DEMO_WORK_DONATIONS_CONTROL_EXPECTED_NET}, obtingut ${donationsControlNet}`
+      );
+    }
+
+    // 4b. Invariant donant exclòs AEAT del Model 182
+    const model182ExcludedDonor = allContacts.find(
+      (contact) => contact.id === DEMO_WORK_MODEL_182_EXCLUDED_DONOR_ID
+    );
+    if (!model182ExcludedDonor) {
+      invariantErrors.push('[work] model 182: donant exclòs demo no existeix');
+    } else if (model182ExcludedDonor.taxId !== '') {
+      invariantErrors.push('[work] model 182: el donant exclòs ha de tenir taxId buit');
+    }
+
+    const model182ExcludedDonation = transactions.find(
+      (tx) => tx.id === DEMO_WORK_MODEL_182_EXCLUDED_DONATION_ID
+    );
+    if (!model182ExcludedDonation) {
+      invariantErrors.push('[work] model 182: falta la donació del donant exclòs');
+    } else {
+      if (model182ExcludedDonation.contactId !== DEMO_WORK_MODEL_182_EXCLUDED_DONOR_ID) {
+        invariantErrors.push('[work] model 182: la donació exclosa ha d apuntar al donant demo');
+      }
+      if (Math.abs(model182ExcludedDonation.amount - DEMO_WORK_MODEL_182_EXCLUDED_AMOUNT) > 0.01) {
+        invariantErrors.push(
+          `[work] model 182: import esperat ${DEMO_WORK_MODEL_182_EXCLUDED_AMOUNT}, obtingut ${model182ExcludedDonation.amount}`
+        );
+      }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // 5. Invariants SEPA IN remesa
     // ─────────────────────────────────────────────────────────────────────────
     const sepaParent = transactions.find((tx) => tx.id === DEMO_WORK_SEPA_PARENT_ID);
     if (!sepaParent) {
@@ -1213,7 +1410,7 @@ export async function runDemoSeed(
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    // 5. Invariants Stripe payout
+    // 6. Invariants Stripe payout
     // ─────────────────────────────────────────────────────────────────────────
     const stripePayoutParent = transactions.find((tx) => tx.id === DEMO_WORK_STRIPE_PAYOUT_PARENT_ID);
     if (!stripePayoutParent) {

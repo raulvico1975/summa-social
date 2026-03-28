@@ -159,6 +159,14 @@ export function PublicLandingVideo({
     }
 
     const syncCue = () => {
+      const isPosterFrame =
+        !video.autoplay && video.paused && !video.ended && video.currentTime < 0.05;
+
+      if (isPosterFrame) {
+        setActiveCue(null);
+        return;
+      }
+
       const nextCue = findActiveCue(cues, video.currentTime);
       setActiveCue((previousCue) => {
         if (previousCue?.id === nextCue?.id) {
