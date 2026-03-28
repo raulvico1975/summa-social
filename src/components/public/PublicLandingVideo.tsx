@@ -26,7 +26,7 @@ interface PublicLandingVideoProps {
   muted: boolean;
   loop: boolean;
   controls: boolean;
-  preload: 'auto' | 'metadata';
+  preload: 'auto' | 'metadata' | 'none';
   className: string;
   prefersMp4AsPrimary: boolean;
 }

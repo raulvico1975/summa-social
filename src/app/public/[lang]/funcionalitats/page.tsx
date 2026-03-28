@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, ArrowRight, CheckCircle2 } from 'lucide-react';
+import { PublicFeatureDemo } from '@/components/public/PublicFeatureDemo';
 import { PublicSiteFooter } from '@/components/public/PublicSiteFooter';
 import { PublicSiteHeader } from '@/components/public/PublicSiteHeader';
 import { Button } from '@/components/ui/button';
@@ -12,9 +13,8 @@ import {
   type PublicLocale,
 } from '@/lib/public-locale';
 import {
-  getPublicLandingBySlug,
-  getPublicLandingContent,
-  getPublicLandingMetadata,
+  getPublicLandingPreviewBySlug,
+  type PublicLandingHeroMedia,
 } from '@/lib/public-landings';
 import {
   getPublicDetailedGuidesLocale,
@@ -43,6 +43,7 @@ type FeatureDetailLink = {
   title: string;
   description: string;
   hasDemoVideo: boolean;
+  media: PublicLandingHeroMedia | null;
 };
 
 type FeatureSection = {
@@ -84,37 +85,54 @@ const DETAIL_PANEL_COPY: Record<
     demoReady: string;
     demoSoon: string;
     guideCta: string;
+    detailCta: string;
+    otherGuidesTitle: string;
   }
 > = {
   ca: {
     eyebrow: 'Aprofundir',
-    lead: 'Aquestes pàgines entren al detall del procés i quedaran preparades per incorporar-hi la demo en vídeo.',
-    demoReady: 'Demo visual disponible',
+    lead: 'Aquestes pàgines entren al detall del procés. Quan la funcionalitat ja té demo premium tancada, la pots veure aquí mateix abans d’entrar a la landing.',
+    demoReady: 'Demo disponible',
     demoSoon: 'Vídeo de demo aviat',
     guideCta: 'Explorar totes les pàgines detallades',
+    detailCta: 'Veure la pàgina detallada',
+    otherGuidesTitle: 'Altres pàgines del bloc',
   },
   es: {
     eyebrow: 'Profundizar',
-    lead: 'Estas páginas entran en el detalle del proceso y quedarán listas para incorporar la demo en vídeo.',
-    demoReady: 'Demo visual disponible',
+    lead: 'Estas páginas entran en el detalle del proceso. Cuando la funcionalidad ya tiene demo premium cerrada, puedes verla aquí antes de entrar en la landing.',
+    demoReady: 'Demo disponible',
     demoSoon: 'Vídeo demo próximamente',
     guideCta: 'Explorar todas las páginas detalladas',
+    detailCta: 'Ver la página detallada',
+    otherGuidesTitle: 'Otras páginas del bloque',
   },
   fr: {
     eyebrow: 'Approfondir',
-    lead: 'Ces pages détaillées sont déjà disponibles en espagnol et resteront prêtes à accueillir la démo vidéo.',
-    demoReady: 'Démo visuelle disponible',
+    lead: 'Ces pages détaillées sont disponibles en espagnol. Quand une démo premium existe déjà, vous pouvez la voir ici avant d’ouvrir la landing.',
+    demoReady: 'Démo disponible',
     demoSoon: 'Démo vidéo bientôt',
     guideCta: 'Explorer les pages détaillées en espagnol',
+    detailCta: 'Voir la page détaillée',
+    otherGuidesTitle: 'Autres pages du bloc',
   },
   pt: {
     eyebrow: 'Aprofundar',
-    lead: 'Estas páginas detalhadas já estão disponíveis em espanhol e ficam preparadas para receber a demo em vídeo.',
-    demoReady: 'Demo visual disponível',
+    lead: 'Estas páginas detalhadas estão disponíveis em espanhol. Quando já existe uma demo premium, pode vê-la aqui antes de abrir a landing.',
+    demoReady: 'Demo disponível',
     demoSoon: 'Vídeo demo em breve',
     guideCta: 'Explorar páginas detalhadas em espanhol',
+    detailCta: 'Ver a página detalhada',
+    otherGuidesTitle: 'Outras páginas do bloco',
   },
 };
+
+const PREMIUM_VIDEO_DETAIL_SLUGS = new Set([
+  'conciliacio-bancaria-ong',
+  'remeses-sepa',
+  'control-donacions-ong',
+  'model-182',
+]);
 
 // Section anchors per locale
 const SECTION_ANCHORS: Record<
@@ -328,21 +346,21 @@ function buildDetailLinks(locale: PublicLocale, slugs: string[]): FeatureDetailL
   const detailLocale = getPublicDetailedGuidesLocale(locale);
 
   return slugs.flatMap((slug) => {
-    const landing = getPublicLandingBySlug(slug);
-
-    if (!landing) {
+    const preview = getPublicLandingPreviewBySlug(slug, detailLocale);
+    if (!preview) {
       return [];
     }
-
-    const content = getPublicLandingContent(landing, detailLocale);
-    const metadata = getPublicLandingMetadata(landing, detailLocale);
 
     return [
       {
         href: `/${detailLocale}/${slug}`,
-        title: content.hero.title,
-        description: metadata.description,
-        hasDemoVideo: Boolean(content.hero.media),
+        title: preview.title,
+        description: preview.description,
+        hasDemoVideo: Boolean(preview.media),
+        media:
+          PREMIUM_VIDEO_DETAIL_SLUGS.has(slug) && preview.media?.type === 'video'
+            ? preview.media
+            : null,
       },
     ];
   });
@@ -374,12 +392,16 @@ function FeatureListCard({ card }: { card: FeatureCard }) {
 
 function SectionDetailLinks({
   locale,
+  previewLocale,
   links,
 }: {
   locale: PublicLocale;
+  previewLocale: 'ca' | 'es';
   links: FeatureDetailLink[];
 }) {
   const copy = DETAIL_PANEL_COPY[locale];
+  const demoLinks = links.filter((link) => link.media);
+  const guideLinks = links.filter((link) => !link.media);
 
   if (links.length === 0) {
     return null;
@@ -390,26 +412,63 @@ function SectionDetailLinks({
       <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary/85">{copy.eyebrow}</p>
       <p className="mt-3 text-sm leading-6 text-muted-foreground">{copy.lead}</p>
 
-      <div className="mt-5 space-y-3">
-        {links.map((link) => (
-          <Link
-            key={link.href}
-            href={link.href}
-            className="group block rounded-[1.2rem] border border-sky-100 bg-sky-50/60 p-4 transition-all hover:-translate-y-0.5 hover:border-sky-200 hover:bg-white"
-          >
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <p className="font-medium text-foreground">{link.title}</p>
-                <p className="mt-2 text-sm leading-6 text-muted-foreground">{link.description}</p>
+      {demoLinks.length > 0 ? (
+        <div className="mt-5 space-y-4">
+          {demoLinks.map((link) => (
+            <article
+              key={link.href}
+              className="rounded-[1.3rem] border border-sky-100 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(240,249,255,0.82))] p-4 shadow-[0_20px_55px_-46px_rgba(14,165,233,0.24)]"
+            >
+              {link.media ? (
+                <PublicFeatureDemo locale={previewLocale} media={link.media} className="border-white/80 bg-white/96 p-0 shadow-none" />
+              ) : null}
+
+              <div className="mt-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="font-medium text-foreground">{link.title}</p>
+                    <p className="mt-2 text-sm leading-6 text-muted-foreground">{link.description}</p>
+                  </div>
+                  <span className="inline-flex rounded-full border border-sky-200 bg-white/90 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-primary/90">
+                    {copy.demoReady}
+                  </span>
+                </div>
+
+                <Link href={link.href} className="mt-4 inline-flex items-center text-sm font-semibold text-primary">
+                  {copy.detailCta}
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Link>
               </div>
-              <ArrowRight className="mt-1 h-4 w-4 shrink-0 text-primary transition-transform group-hover:translate-x-0.5" />
-            </div>
-            <span className="mt-4 inline-flex rounded-full border border-sky-200 bg-white/90 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-primary/90">
-              {link.hasDemoVideo ? copy.demoReady : copy.demoSoon}
-            </span>
-          </Link>
-        ))}
-      </div>
+            </article>
+          ))}
+        </div>
+      ) : null}
+
+      {guideLinks.length > 0 ? (
+        <div className={demoLinks.length > 0 ? 'mt-5 border-t border-sky-100 pt-5' : 'mt-5'}>
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary/85">{copy.otherGuidesTitle}</p>
+          <div className="mt-3 space-y-3">
+            {guideLinks.map((link) => (
+              <Link
+                key={link.href}
+                href={link.href}
+                className="group block rounded-[1.2rem] border border-sky-100 bg-sky-50/60 p-4 transition-all hover:-translate-y-0.5 hover:border-sky-200 hover:bg-white"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="font-medium text-foreground">{link.title}</p>
+                    <p className="mt-2 text-sm leading-6 text-muted-foreground">{link.description}</p>
+                  </div>
+                  <ArrowRight className="mt-1 h-4 w-4 shrink-0 text-primary transition-transform group-hover:translate-x-0.5" />
+                </div>
+                <span className="mt-4 inline-flex rounded-full border border-sky-200 bg-white/90 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-primary/90">
+                  {link.hasDemoVideo ? copy.demoReady : copy.demoSoon}
+                </span>
+              </Link>
+            ))}
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -428,6 +487,7 @@ export default async function FeaturesPage({ params }: PageProps) {
   const f = t.features.list;
   const showDetailedGuides = hasPublicDetailedGuides(locale);
   const guideHref = getPublicEconomicGuideHref(locale);
+  const previewLocale = getPublicDetailedGuidesLocale(locale);
 
   const sections: FeatureSection[] = [
     {
@@ -668,7 +728,7 @@ export default async function FeaturesPage({ params }: PageProps) {
                     {section.description}
                   </p>
                   {section.detailLinks?.length ? (
-                    <SectionDetailLinks locale={locale} links={section.detailLinks} />
+                    <SectionDetailLinks locale={locale} previewLocale={previewLocale} links={section.detailLinks} />
                   ) : null}
                 </div>
 

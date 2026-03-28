@@ -86,13 +86,15 @@ export interface PublicLandingContent {
   relatedLandings?: PublicLandingRelatedSection;
 }
 
+export type PublicLandingHeroMedia = NonNullable<PublicLandingContent['hero']['media']>;
+
 interface PublicLandingDefinition {
   slug: string;
   metadata: Record<PublicLocale, PublicLandingMetadata>;
   content: Partial<Record<PublicLocale, PublicLandingContent>> & { ca: PublicLandingContent };
 }
 
-type PublicLandingSlug =
+export type PublicLandingSlug =
   | 'model-182'
   | 'certificats-donacio'
   | 'model-347-ong'
@@ -2703,4 +2705,23 @@ export function getPublicLandingMetadata(landing: PublicLandingDefinition, local
 
 export function getPublicLandingContent(landing: PublicLandingDefinition, locale: PublicLocale): PublicLandingContent {
   return landing.content[locale] ?? landing.content.ca;
+}
+
+export function getPublicLandingPreviewBySlug(slug: string, locale: PublicLocale) {
+  const landing = getPublicLandingBySlug(slug);
+
+  if (!landing) {
+    return null;
+  }
+
+  const content = getPublicLandingContent(landing, locale);
+  const metadata = getPublicLandingMetadata(landing, locale);
+
+  return {
+    slug: landing.slug,
+    title: content.hero.title,
+    subtitle: content.hero.subtitle,
+    description: metadata.description,
+    media: content.hero.media ?? null,
+  };
 }
