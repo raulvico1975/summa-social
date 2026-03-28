@@ -8,6 +8,7 @@ import { getBlogCopy } from '@/lib/blog/copy'
 import { formatBlogDate, listLocalizedBlogPosts } from '@/lib/blog/firestore'
 import { getBlogCategoryLabel } from '@/lib/blog/presentation'
 import type { PublicLocale } from '@/lib/public-locale'
+import { getPublicFeaturesHref } from '@/lib/public-site-paths'
 import { getPublicTranslations } from '@/i18n/public'
 import { cn } from '@/lib/utils'
 
@@ -33,6 +34,7 @@ export async function BlogIndexView({
 }: BlogIndexViewProps) {
   const copy = getBlogCopy(locale)
   const t = getPublicTranslations(locale)
+  const featuresHref = getPublicFeaturesHref(locale)
 
   if (!isBlogConfigured()) {
     return (
@@ -107,7 +109,7 @@ export async function BlogIndexView({
               </p>
               <div className="flex flex-wrap gap-3">
                 <Button asChild size="lg">
-                  <Link href={`/${locale}#capabilities`}>{copy.discoverFeatures}</Link>
+                  <Link href={featuresHref}>{copy.discoverFeatures}</Link>
                 </Button>
                 <Button asChild size="lg" variant="outline">
                   <Link href={`/${locale}/novetats`}>{copy.browseUpdates}</Link>

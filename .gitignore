@@ -28,10 +28,12 @@ dist/
 
 # caches
 .turbo/
+.playwright-cli/
 
 # misc
 .DS_Store
 *.pem
+.claude/
 
 # debug
 npm-debug.log*
@@ -64,6 +66,8 @@ firestore-debug.log
 
 # audit outputs (scripts)
 /tmp/
+/output/
+/octavi/summa/editorial/runtime/logs/
 
 # temporary migration scripts
 scripts/migrate-legacy-category.ts

@@ -213,7 +213,6 @@ test('validateBlogPost normalizes duplicated lead headings and markdown emphasis
     )
   }
 })
-
 test('validateBlogPost rejects unsupported translations locales', () => {
   const payload = {
     ...buildLocalizedPayload(),

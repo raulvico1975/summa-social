@@ -67,7 +67,6 @@ export default async function PublicBlogPostPage({ params }: PageProps) {
       locale={locale}
       slug={slug}
       blogBasePath={`/${locale}/blog`}
-      homeHref={`/${locale}`}
     />
   )
 }

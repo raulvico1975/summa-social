@@ -9,6 +9,7 @@ import { getBlogCopy } from '@/lib/blog/copy'
 import { formatBlogDate, getLocalizedBlogPostBySlug } from '@/lib/blog/firestore'
 import { getBlogCategoryLabel } from '@/lib/blog/presentation'
 import type { PublicLocale } from '@/lib/public-locale'
+import { getPublicFeaturesHref } from '@/lib/public-site-paths'
 import { getPublicTranslations } from '@/i18n/public'
 
 const pageShellClass =
@@ -43,14 +44,12 @@ interface BlogPostViewProps {
   locale: PublicLocale
   slug: string
   blogBasePath: string
-  homeHref: string
 }
 
 export async function BlogPostView({
   locale,
   slug,
   blogBasePath,
-  homeHref,
 }: BlogPostViewProps) {
   if (!isBlogConfigured()) {
     notFound()
@@ -65,6 +64,7 @@ export async function BlogPostView({
   const copy = getBlogCopy(locale)
   const t = getPublicTranslations(locale)
   const categoryLabel = getBlogCategoryLabel(post.category, locale)
+  const featuresHref = getPublicFeaturesHref(locale)
   const readingTime = formatReadingTime(
     estimateReadingTimeMinutes(post.contentHtml),
     locale
@@ -171,7 +171,7 @@ export async function BlogPostView({
               <Link href={blogBasePath}>{copy.browseBlog}</Link>
             </Button>
             <Button asChild>
-              <Link href={`${homeHref}#capabilities`}>
+              <Link href={featuresHref}>
                 {t.common.features}
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Link>

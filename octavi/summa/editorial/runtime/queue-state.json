@@ -1,0 +1,273 @@
+{
+  "version": 1,
+  "calendarId": "summa-editorial-2026",
+  "updatedAt": "2026-03-28T07:26:00.167Z",
+  "kbPath": "/mnt/data/KNOWLEDGE_BASE_Entitats.md",
+  "kbAvailable": false,
+  "warnings": [
+    "No s'ha trobat la KB sectorial obligatòria a /mnt/data/KNOWLEDGE_BASE_Entitats.md. El sistema continua amb lèxic base del repo."
+  ],
+  "items": [
+    {
+      "id": "hist-2025-11-criteri-model-182",
+      "title": "Criteri previ abans d'exportar el Model 182",
+      "kind": "historical",
+      "month": "2025-11",
+      "plannedDate": "2025-11-18",
+      "publishedAt": "2025-11-18T08:00:00.000Z",
+      "sectorPrimary": "fiscalitat",
+      "sectorSecondary": "donants",
+      "blogStatus": "published",
+      "linkedinStatus": "not_started",
+      "approvalStatus": "approved",
+      "sourceStatus": "inferred_from_missing_exact_yaml_block",
+      "artifactPaths": {},
+      "notes": [
+        "Calendari inferit perquè el bloc YAML exacte no ha arribat en aquest encàrrec."
+      ]
+    },
+    {
+      "id": "hist-2025-12-remeses-abans-banc",
+      "title": "Què revisar abans d'enviar una remesa al banc",
+      "kind": "historical",
+      "month": "2025-12",
+      "plannedDate": "2025-12-09",
+      "publishedAt": "2025-12-09T08:00:00.000Z",
+      "sectorPrimary": "remeses",
+      "sectorSecondary": "tresoreria",
+      "blogStatus": "published",
+      "linkedinStatus": "not_started",
+      "approvalStatus": "approved",
+      "sourceStatus": "inferred_from_missing_exact_yaml_block",
+      "artifactPaths": {},
+      "notes": [
+        "Calendari inferit perquè el bloc YAML exacte no ha arribat en aquest encàrrec."
+      ]
+    },
+    {
+      "id": "hist-2026-01-conciliacio-multi-compte",
+      "title": "Conciliació bancària amb més d'un compte sense perdre criteri",
+      "kind": "historical",
+      "month": "2026-01",
+      "plannedDate": "2026-01-14",
+      "publishedAt": "2026-01-14T08:00:00.000Z",
+      "sectorPrimary": "tresoreria",
+      "sectorSecondary": "conciliació bancària",
+      "blogStatus": "published",
+      "linkedinStatus": "not_started",
+      "approvalStatus": "approved",
+      "sourceStatus": "inferred_from_missing_exact_yaml_block",
+      "artifactPaths": {},
+      "notes": [
+        "Calendari inferit perquè el bloc YAML exacte no ha arribat en aquest encàrrec."
+      ]
+    },
+    {
+      "id": "hist-2026-02-projectes-justificacio",
+      "title": "La traçabilitat mínima que necessita una justificació de subvenció",
+      "kind": "historical",
+      "month": "2026-02",
+      "plannedDate": "2026-02-11",
+      "publishedAt": "2026-02-11T08:00:00.000Z",
+      "sectorPrimary": "subvencions",
+      "sectorSecondary": "projectes",
+      "blogStatus": "published",
+      "linkedinStatus": "not_started",
+      "approvalStatus": "approved",
+      "sourceStatus": "inferred_from_missing_exact_yaml_block",
+      "artifactPaths": {},
+      "notes": [
+        "Calendari inferit perquè el bloc YAML exacte no ha arribat en aquest encàrrec."
+      ]
+    },
+    {
+      "id": "hist-2026-03-devolucions-lectura-captacio",
+      "title": "Quan una devolució distorsiona la lectura de captació",
+      "kind": "historical",
+      "month": "2026-03",
+      "plannedDate": "2026-03-12",
+      "publishedAt": "2026-03-12T08:00:00.000Z",
+      "sectorPrimary": "fiscalitat",
+      "sectorSecondary": "devolucions",
+      "blogStatus": "published",
+      "linkedinStatus": "not_started",
+      "approvalStatus": "approved",
+      "sourceStatus": "inferred_from_missing_exact_yaml_block",
+      "artifactPaths": {},
+      "notes": [
+        "Calendari inferit perquè el bloc YAML exacte no ha arribat en aquest encàrrec."
+      ]
+    },
+    {
+      "id": "2026-04-control-model-347",
+      "title": "El control previ que convé fer abans del Model 347",
+      "kind": "monthly",
+      "month": "2026-04",
+      "plannedDate": "2026-04-08",
+      "publishedAt": "2026-04-08T08:00:00.000Z",
+      "sectorPrimary": "fiscalitat",
+      "sectorSecondary": "proveïdors",
+      "blogStatus": "pending_approval",
+      "linkedinStatus": "pending_approval",
+      "approvalStatus": "pending_telegram",
+      "sourceStatus": "inferred_from_missing_exact_yaml_block",
+      "artifactPaths": {
+        "draftJson": "octavi/summa/editorial/artifacts/blog/2026-04-control-model-347.json",
+        "draftMarkdown": "octavi/summa/editorial/artifacts/blog/2026-04-control-model-347.md",
+        "linkedinJson": "octavi/summa/editorial/artifacts/linkedin/2026-04-control-model-347.json",
+        "linkedinMarkdown": "octavi/summa/editorial/artifacts/linkedin/2026-04-control-model-347.md",
+        "approvalJson": "octavi/summa/editorial/runtime/approvals/2026-04-control-model-347.json"
+      },
+      "notes": [
+        "Calendari inferit perquè el bloc YAML exacte no ha arribat en aquest encàrrec.",
+        "No s'ha trobat la KB sectorial obligatòria a /mnt/data/KNOWLEDGE_BASE_Entitats.md. El sistema continua amb lèxic base del repo."
+      ],
+      "lastAction": "request_telegram_approval",
+      "lastActionAt": "2026-03-28T07:26:00.167Z"
+    },
+    {
+      "id": "2026-05-projectes-despesa-imputada",
+      "title": "Despesa imputada a projecte amb criteri suficient per justificar-la",
+      "kind": "monthly",
+      "month": "2026-05",
+      "plannedDate": "2026-05-13",
+      "publishedAt": "2026-05-13T08:00:00.000Z",
+      "sectorPrimary": "subvencions",
+      "sectorSecondary": "projectes",
+      "blogStatus": "planned",
+      "linkedinStatus": "not_started",
+      "approvalStatus": "not_requested",
+      "sourceStatus": "inferred_from_missing_exact_yaml_block",
+      "artifactPaths": {},
+      "notes": [
+        "Calendari inferit perquè el bloc YAML exacte no ha arribat en aquest encàrrec."
+      ]
+    },
+    {
+      "id": "2026-06-recorrencia-devolucions",
+      "title": "Quotes recurrents i devolucions sense contaminar el seguiment",
+      "kind": "monthly",
+      "month": "2026-06",
+      "plannedDate": "2026-06-10",
+      "publishedAt": "2026-06-10T08:00:00.000Z",
+      "sectorPrimary": "remeses",
+      "sectorSecondary": "donants",
+      "blogStatus": "planned",
+      "linkedinStatus": "not_started",
+      "approvalStatus": "not_requested",
+      "sourceStatus": "inferred_from_missing_exact_yaml_block",
+      "artifactPaths": {},
+      "notes": [
+        "Calendari inferit perquè el bloc YAML exacte no ha arribat en aquest encàrrec."
+      ]
+    },
+    {
+      "id": "2026-07-tancament-semestre",
+      "title": "Tancament de semestre amb una lectura útil per a junta i equip",
+      "kind": "monthly",
+      "month": "2026-07",
+      "plannedDate": "2026-07-08",
+      "publishedAt": "2026-07-08T08:00:00.000Z",
+      "sectorPrimary": "tresoreria",
+      "sectorSecondary": "govern",
+      "blogStatus": "planned",
+      "linkedinStatus": "not_started",
+      "approvalStatus": "not_requested",
+      "sourceStatus": "inferred_from_missing_exact_yaml_block",
+      "artifactPaths": {},
+      "notes": [
+        "Calendari inferit perquè el bloc YAML exacte no ha arribat en aquest encàrrec."
+      ]
+    },
+    {
+      "id": "2026-08-arxiu-documental",
+      "title": "Arxiu documental d'estiu per no improvisar la justificació a la tardor",
+      "kind": "monthly",
+      "month": "2026-08",
+      "plannedDate": "2026-08-12",
+      "publishedAt": "2026-08-12T08:00:00.000Z",
+      "sectorPrimary": "subvencions",
+      "sectorSecondary": "documents",
+      "blogStatus": "planned",
+      "linkedinStatus": "not_started",
+      "approvalStatus": "not_requested",
+      "sourceStatus": "inferred_from_missing_exact_yaml_block",
+      "artifactPaths": {},
+      "notes": [
+        "Calendari inferit perquè el bloc YAML exacte no ha arribat en aquest encàrrec."
+      ]
+    },
+    {
+      "id": "2026-09-donants-campanya",
+      "title": "Preparar una campanya sense deixar dades dèbils a la base de donants",
+      "kind": "monthly",
+      "month": "2026-09",
+      "plannedDate": "2026-09-09",
+      "publishedAt": "2026-09-09T08:00:00.000Z",
+      "sectorPrimary": "donants",
+      "sectorSecondary": "captació",
+      "blogStatus": "planned",
+      "linkedinStatus": "not_started",
+      "approvalStatus": "not_requested",
+      "sourceStatus": "inferred_from_missing_exact_yaml_block",
+      "artifactPaths": {},
+      "notes": [
+        "Calendari inferit perquè el bloc YAML exacte no ha arribat en aquest encàrrec."
+      ]
+    },
+    {
+      "id": "2026-10-junta-lectura-economica",
+      "title": "Quina lectura econòmica necessita de debò una junta d'entitat",
+      "kind": "monthly",
+      "month": "2026-10",
+      "plannedDate": "2026-10-14",
+      "publishedAt": "2026-10-14T08:00:00.000Z",
+      "sectorPrimary": "govern",
+      "sectorSecondary": "tresoreria",
+      "blogStatus": "planned",
+      "linkedinStatus": "not_started",
+      "approvalStatus": "not_requested",
+      "sourceStatus": "inferred_from_missing_exact_yaml_block",
+      "artifactPaths": {},
+      "notes": [
+        "Calendari inferit perquè el bloc YAML exacte no ha arribat en aquest encàrrec."
+      ]
+    },
+    {
+      "id": "2026-11-pre-tancament-fiscal",
+      "title": "Pre-tancament fiscal de novembre sense sobresalts al desembre",
+      "kind": "monthly",
+      "month": "2026-11",
+      "plannedDate": "2026-11-11",
+      "publishedAt": "2026-11-11T08:00:00.000Z",
+      "sectorPrimary": "fiscalitat",
+      "sectorSecondary": "tresoreria",
+      "blogStatus": "planned",
+      "linkedinStatus": "not_started",
+      "approvalStatus": "not_requested",
+      "sourceStatus": "inferred_from_missing_exact_yaml_block",
+      "artifactPaths": {},
+      "notes": [
+        "Calendari inferit perquè el bloc YAML exacte no ha arribat en aquest encàrrec."
+      ]
+    },
+    {
+      "id": "2026-12-preparar-182-347",
+      "title": "Preparar ara les dades que complicaran el 182 i el 347 de gener",
+      "kind": "monthly",
+      "month": "2026-12",
+      "plannedDate": "2026-12-09",
+      "publishedAt": "2026-12-09T08:00:00.000Z",
+      "sectorPrimary": "fiscalitat",
+      "sectorSecondary": "tancament",
+      "blogStatus": "planned",
+      "linkedinStatus": "not_started",
+      "approvalStatus": "not_requested",
+      "sourceStatus": "inferred_from_missing_exact_yaml_block",
+      "artifactPaths": {},
+      "notes": [
+        "Calendari inferit perquè el bloc YAML exacte no ha arribat en aquest encàrrec."
+      ]
+    }
+  ]
+}

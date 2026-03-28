@@ -1,0 +1,26 @@
+{
+  "id": "2026-04-control-model-347-linkedin",
+  "postId": "2026-04-control-model-347",
+  "sourceTitle": "El control previ que convé fer abans del Model 347",
+  "mode": "mock",
+  "variants": [
+    {
+      "id": "2026-04-control-model-347-li-1",
+      "angle": "observació operativa",
+      "body": "En entitats, revisió de tercers, imports agregats i traçabilitat documental abans de treballar el model 347.. El criteri útil no és \"publicar més\", sinó saber què s'ha de revisar perquè la traçabilitat aguanti quan arribi fiscalitat, tresoreria o justificació. Si el procés no es pot explicar amb claredat, encara no està prou resolt."
+    },
+    {
+      "id": "2026-04-control-model-347-li-2",
+      "angle": "checklist curt",
+      "body": "En entitats, tres comprovacions prèvies per a aquest tema:\n1. dades de base completes\n2. criteri documental compartit\n3. excepcions registrades\n\nSense això, la incidència acostuma a aparèixer més tard, quan el marge per corregir-la és pitjor."
+    },
+    {
+      "id": "2026-04-control-model-347-li-3",
+      "angle": "criteri de govern",
+      "body": "En entitats, una bona peça editorial per a Summa no ha de sonar a promesa tecnològica buida. Ha de sonar a criteri de gestió: menys promesa, més context operatiu, més precisió sobre què revisar ara i qui ha de poder entendre el cas després."
+    }
+  ],
+  "criteriaWarnings": [
+    "No s'ha trobat la KB sectorial obligatòria a /mnt/data/KNOWLEDGE_BASE_Entitats.md. El sistema continua amb lèxic base del repo."
+  ]
+}

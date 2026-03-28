@@ -116,7 +116,6 @@ function normalizeRequiredContentHtml(
   const normalized = normalizeRequiredString(value, field, errors)
   return normalized ? normalizeBlogContentHtml(normalized, title) : normalized
 }
-
 function normalizeEsTranslation(
   value: unknown,
   coverImageUrl: string | null | undefined,
