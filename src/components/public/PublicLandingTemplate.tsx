@@ -102,17 +102,15 @@ export function PublicLandingTemplate({ locale, content, labels }: PublicLanding
     <div className={headerShellClass}>
       {hasFeaturedDemo ? (
         <div className="mb-5 flex flex-wrap justify-end gap-2">
-          <span className="inline-flex rounded-full border border-sky-200 bg-white/90 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-primary/90">
-            Demo completa
-          </span>
           {heroMedia.durationLabel ? (
-            <span className="inline-flex rounded-full border border-slate-200 bg-white/90 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-700">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white/92 px-3 py-1 text-[12px] font-medium text-slate-700 shadow-[0_10px_24px_-18px_rgba(15,23,42,0.45)]">
+              <Clock3 className="h-3.5 w-3.5 text-slate-500" />
               {heroMedia.durationLabel}
             </span>
           ) : null}
           {heroMedia.captionsSrc ? (
-            <span className="inline-flex rounded-full border border-slate-200 bg-white/90 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-700">
-              Subtítols
+            <span className="inline-flex items-center rounded-full border border-slate-200 bg-white/92 px-3 py-1 text-[12px] font-semibold tracking-[0.08em] text-slate-700 shadow-[0_10px_24px_-18px_rgba(15,23,42,0.45)]">
+              CC
             </span>
           ) : null}
         </div>

@@ -1,5 +1,6 @@
 'use client';
 
+import { PlayCircle } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 
 type CaptionsDisplayMode = 'native' | 'overlay';
@@ -28,6 +29,10 @@ interface PublicLandingVideoProps {
   preload: 'auto' | 'metadata';
   className: string;
   prefersMp4AsPrimary: boolean;
+}
+
+function isVideoPosterFrame(video: HTMLVideoElement, autoPlay: boolean, hasStartedPlayback: boolean) {
+  return !autoPlay && !hasStartedPlayback && video.paused && !video.ended && video.currentTime < 0.35;
 }
 
 function parseVttTimestamp(value: string) {
@@ -119,6 +124,8 @@ export function PublicLandingVideo({
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const [cues, setCues] = useState<LandingCaptionCue[]>([]);
   const [activeCue, setActiveCue] = useState<LandingCaptionCue | null>(null);
+  const [hasStartedPlayback, setHasStartedPlayback] = useState(autoPlay);
+  const [showPosterOverlay, setShowPosterOverlay] = useState(!autoPlay);
 
   useEffect(() => {
     if (!captionsSrc || captionsDisplay !== 'overlay') {
@@ -159,6 +166,11 @@ export function PublicLandingVideo({
     }
 
     const syncCue = () => {
+      if (isVideoPosterFrame(video, autoPlay, hasStartedPlayback)) {
+        setActiveCue(null);
+        return;
+      }
+
       const nextCue = findActiveCue(cues, video.currentTime);
       setActiveCue((previousCue) => {
         if (previousCue?.id === nextCue?.id) {
@@ -181,9 +193,62 @@ export function PublicLandingVideo({
       video.removeEventListener('loadedmetadata', syncCue);
       video.removeEventListener('ended', syncCue);
     };
-  }, [captionsDisplay, cues]);
+  }, [autoPlay, captionsDisplay, cues, hasStartedPlayback]);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) {
+      setHasStartedPlayback(autoPlay);
+      setShowPosterOverlay(!autoPlay);
+      return;
+    }
+
+    const syncPlaybackState = () => {
+      const shouldMarkAsStarted =
+        !video.paused || video.ended || video.currentTime >= 0.35;
+
+      if (shouldMarkAsStarted) {
+        setHasStartedPlayback(true);
+      }
+
+      const isPosterFrame = isVideoPosterFrame(video, autoPlay, hasStartedPlayback);
+      setShowPosterOverlay(isPosterFrame);
+    };
+
+    syncPlaybackState();
+
+    video.addEventListener('play', syncPlaybackState);
+    video.addEventListener('pause', syncPlaybackState);
+    video.addEventListener('seeked', syncPlaybackState);
+    video.addEventListener('ended', syncPlaybackState);
+    video.addEventListener('loadedmetadata', syncPlaybackState);
+    video.addEventListener('timeupdate', syncPlaybackState);
+
+    return () => {
+      video.removeEventListener('play', syncPlaybackState);
+      video.removeEventListener('pause', syncPlaybackState);
+      video.removeEventListener('seeked', syncPlaybackState);
+      video.removeEventListener('ended', syncPlaybackState);
+      video.removeEventListener('loadedmetadata', syncPlaybackState);
+      video.removeEventListener('timeupdate', syncPlaybackState);
+    };
+  }, [autoPlay, hasStartedPlayback]);
 
   const shouldRenderOverlay = captionsDisplay === 'overlay' && cues.length > 0;
+  const shouldShowNativeControls = controls && (hasStartedPlayback || autoPlay);
+
+  const handlePlayClick = () => {
+    const video = videoRef.current;
+    if (!video) {
+      return;
+    }
+
+    setHasStartedPlayback(true);
+    setShowPosterOverlay(false);
+    void video.play().catch(() => {
+      setShowPosterOverlay(true);
+    });
+  };
 
   return (
     <div className="relative">
@@ -195,7 +260,7 @@ export function PublicLandingVideo({
         autoPlay={autoPlay}
         muted={muted}
         loop={loop}
-        controls={controls}
+        controls={shouldShowNativeControls}
         playsInline
         preload={preload}
       >
@@ -211,6 +276,27 @@ export function PublicLandingVideo({
           />
         )}
       </video>
+
+      {showPosterOverlay ? (
+        <button
+          type="button"
+          onClick={handlePlayClick}
+          aria-label={alt}
+          className="group absolute inset-0 flex items-center justify-center overflow-hidden rounded-[inherit]"
+        >
+          <div
+            aria-hidden="true"
+            className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.12),rgba(15,23,42,0.04)_48%,rgba(15,23,42,0.18)_100%)]"
+          />
+          <div
+            aria-hidden="true"
+            className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-slate-950/28 via-slate-950/8 to-transparent"
+          />
+          <div className="relative flex h-20 w-20 items-center justify-center rounded-full border border-white/80 bg-white/90 shadow-[0_22px_50px_-22px_rgba(15,23,42,0.7)] backdrop-blur-md transition duration-200 group-hover:scale-[1.03] group-hover:bg-white">
+            <PlayCircle className="h-10 w-10 text-slate-950" strokeWidth={1.8} />
+          </div>
+        </button>
+      ) : null}
 
       {shouldRenderOverlay ? (
         <>

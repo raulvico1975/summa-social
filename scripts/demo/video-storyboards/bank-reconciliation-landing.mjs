@@ -102,12 +102,12 @@ export default {
       start: 12.8,
       end: 18.8,
       subtitle: {
-        ca: 'La IA categoritza els moviments nous',
-        es: 'La IA categoriza los movimientos nuevos',
+        ca: 'La IA categoritza els moviments',
+        es: 'La IA categoriza los movimientos',
       },
       headline: {
-        ca: 'La IA categoritza els moviments nous',
-        es: 'La IA categoriza los movimientos nuevos',
+        ca: 'La IA categoritza els moviments',
+        es: 'La IA categoriza los movimientos',
       },
       body: {
         ca: 'Quotes, material d’oficina i dietes es classifiquen automàticament.',
@@ -118,12 +118,12 @@ export default {
       start: 18.8,
       end: 21.0,
       subtitle: {
-        ca: 'Tot queda classificat i llest per revisar',
-        es: 'Todo queda clasificado y listo para revisar',
+        ca: 'Tot queda a punt per revisar',
+        es: 'Todo queda listo para revisar',
       },
       headline: {
-        ca: 'Tot queda classificat i llest per revisar',
-        es: 'Todo queda clasificado y listo para revisar',
+        ca: 'Tot queda a punt per revisar',
+        es: 'Todo queda listo para revisar',
       },
       body: {
         ca: 'Els moviments acaben vinculats i ordenats dins del mateix llistat de treball.',
