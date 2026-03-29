@@ -446,10 +446,12 @@ function buildSubtitleBackdropFilters(caption, variant) {
   const veilHeight = variant === 'dual' ? 160 : 126;
   const softEdgeY = variant === 'dual' ? 'ih-236' : 'ih-192';
   const softEdgeHeight = variant === 'dual' ? 56 : 48;
+  const softEdgeColor = caption.surface === 'dark' ? '0x111827@0.06' : '0x111827@0.10';
+  const veilColor = caption.surface === 'dark' ? '0x111827@0.18' : '0x111827@0.30';
 
   return [
-    `drawbox=x=0:y=${softEdgeY}:w=iw:h=${softEdgeHeight}:color=0x111827@0.05:replace=1:t=fill:enable='${enable}*${alpha}'`,
-    `drawbox=x=0:y=${veilY}:w=iw:h=${veilHeight}:color=0x111827@0.18:replace=1:t=fill:enable='${enable}*${alpha}'`,
+    `drawbox=x=0:y=${softEdgeY}:w=iw:h=${softEdgeHeight}:color=${softEdgeColor}:replace=1:t=fill:enable='${enable}*${alpha}'`,
+    `drawbox=x=0:y=${veilY}:w=iw:h=${veilHeight}:color=${veilColor}:replace=1:t=fill:enable='${enable}*${alpha}'`,
   ];
 }
 
@@ -509,7 +511,7 @@ function buildSummaSubtitleSingleCaptionFilter(caption, fonts) {
   const palette = resolveSubtitlePalette(caption, 'single');
   return [
     ...buildSubtitleBackdropFilters(caption, 'single'),
-    `drawtext=fontfile='${escapeFilterPath(fonts.ui)}':textfile='${escapeFilterPath(caption.primarySubtitlePath)}':fontcolor=${palette.primaryColor}:alpha='${alpha}':fontsize=48:x=(w-text_w)/2:y=h-120:line_spacing=8:shadowcolor=${palette.primaryShadow}:shadowx=0:shadowy=5:fix_bounds=1:enable='${enable}'`,
+    `drawtext=fontfile='${escapeFilterPath(fonts.ui)}':textfile='${escapeFilterPath(caption.primarySubtitlePath)}':fontcolor=${palette.primaryColor}:alpha='${alpha}':fontsize=52:x=(w-text_w)/2:y=h-124:line_spacing=8:shadowcolor=${palette.primaryShadow}:shadowx=0:shadowy=5:fix_bounds=1:enable='${enable}'`,
   ];
 }
 
@@ -519,8 +521,8 @@ function buildSummaSubtitleDualCaptionFilter(caption, fonts) {
   const palette = resolveSubtitlePalette(caption, 'dual');
   return [
     ...buildSubtitleBackdropFilters(caption, 'dual'),
-    `drawtext=fontfile='${escapeFilterPath(fonts.ui)}':textfile='${escapeFilterPath(caption.primarySubtitlePath)}':fontcolor=${palette.primaryColor}:alpha='${alpha}':fontsize=46:x=(w-text_w)/2:y=h-148:line_spacing=8:shadowcolor=${palette.primaryShadow}:shadowx=0:shadowy=5:fix_bounds=1:enable='${enable}'`,
-    `drawtext=fontfile='${escapeFilterPath(fonts.ui)}':textfile='${escapeFilterPath(caption.secondarySubtitlePath)}':fontcolor=${palette.secondaryColor}:alpha='${alpha}':fontsize=36:x=(w-text_w)/2:y=h-96:line_spacing=7:shadowcolor=${palette.secondaryShadow}:shadowx=0:shadowy=5:fix_bounds=1:enable='${enable}'`,
+    `drawtext=fontfile='${escapeFilterPath(fonts.ui)}':textfile='${escapeFilterPath(caption.primarySubtitlePath)}':fontcolor=${palette.primaryColor}:alpha='${alpha}':fontsize=50:x=(w-text_w)/2:y=h-152:line_spacing=8:shadowcolor=${palette.primaryShadow}:shadowx=0:shadowy=5:fix_bounds=1:enable='${enable}'`,
+    `drawtext=fontfile='${escapeFilterPath(fonts.ui)}':textfile='${escapeFilterPath(caption.secondarySubtitlePath)}':fontcolor=${palette.secondaryColor}:alpha='${alpha}':fontsize=39:x=(w-text_w)/2:y=h-98:line_spacing=7:shadowcolor=${palette.secondaryShadow}:shadowx=0:shadowy=5:fix_bounds=1:enable='${enable}'`,
   ];
 }
 
