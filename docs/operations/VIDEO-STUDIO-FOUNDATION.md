@@ -159,3 +159,9 @@ Nomes si volem:
 - CLI `video:studio`
 
 Amb aixo ja tenim una base seriosa per continuar la feina sense improvisar.
+
+## Document complementari
+
+Per a la capa d us no tecnic:
+
+- `docs/operations/VIDEO-STUDIO-US-NO-TECNIC.md`

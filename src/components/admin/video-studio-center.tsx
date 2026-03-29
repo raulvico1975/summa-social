@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { useToast } from '@/hooks/use-toast'
-import { Copy, LayoutTemplate, Languages, Loader2, PanelsTopLeft, Sparkles, Video } from 'lucide-react'
+import { Copy, Languages, LayoutTemplate, Loader2, PanelsTopLeft, Sparkles, Video } from 'lucide-react'
 
 type VideoStudioSummary = {
   interfaceRecommendation: {
@@ -42,8 +42,38 @@ type VideoStudioSummary = {
     brand: string
     preset: string
     status: string
+    objective: string
+    audience: string
     locales: string[]
     targets: Array<{ surface: string; locale: string }>
+    workflow: {
+      hasBaseVideo: boolean
+      canRender: boolean
+      rendered: boolean
+      canPublish: boolean
+      published: boolean
+    }
+    nextAction: {
+      label: string
+      reason: string
+      codexPrompt: string
+    }
+    diagnostics: Array<{
+      level: 'ok' | 'warn' | 'error'
+      message: string
+    }>
+    paths: {
+      projectFile: string
+      inputPath: string | null
+      artifactDir: string | null
+      publicDir: string | null
+      posterPath: string | null
+    }
+    timestamps: {
+      lastRenderedAt: string | null
+      lastPublishedAt: string | null
+    }
+    publishedVariants: string[]
   }>
   starterPrompts: Array<{
     id: string
@@ -52,6 +82,7 @@ type VideoStudioSummary = {
   }>
   paths: {
     foundationDoc: string
+    nonTechnicalGuide: string
     studioRoot: string
   }
 }
@@ -61,6 +92,48 @@ function formatDuration(minSeconds: number | null, maxSeconds: number | null): s
   if (minSeconds != null && maxSeconds != null) return `${minSeconds}-${maxSeconds}s`
   if (minSeconds != null) return `${minSeconds}s+`
   return `fins ${maxSeconds}s`
+}
+
+function formatProjectStatus(status: string): string {
+  if (status === 'published') return 'Publicat'
+  if (status === 'rendered') return 'Renderitzat'
+  if (status === 'ready') return 'Preparat'
+  if (status === 'draft') return 'Draft'
+  return status
+}
+
+function getStatusVariant(status: string): 'default' | 'secondary' | 'outline' {
+  if (status === 'published') return 'default'
+  if (status === 'rendered' || status === 'ready') return 'secondary'
+  return 'outline'
+}
+
+function formatDateTime(value: string | null): string {
+  if (!value) return 'Encara no'
+
+  try {
+    return new Intl.DateTimeFormat('ca-ES', {
+      dateStyle: 'medium',
+      timeStyle: 'short',
+    }).format(new Date(value))
+  } catch {
+    return value
+  }
+}
+
+function getDiagnosticTone(level: 'ok' | 'warn' | 'error'): string {
+  if (level === 'ok') return 'border-emerald-200 bg-emerald-50 text-emerald-800'
+  if (level === 'error') return 'border-red-200 bg-red-50 text-red-800'
+  return 'border-amber-200 bg-amber-50 text-amber-900'
+}
+
+function WorkflowPill({ label, done }: { label: string; done: boolean }) {
+  return (
+    <div className={`rounded-lg border px-3 py-2 text-sm ${done ? 'border-emerald-200 bg-emerald-50' : 'bg-muted/30'}`}>
+      <p className="font-medium">{label}</p>
+      <p className="text-xs text-muted-foreground">{done ? 'A punt' : 'Pendent'}</p>
+    </div>
+  )
 }
 
 export function VideoStudioCenter() {
@@ -162,11 +235,11 @@ export function VideoStudioCenter() {
             </div>
             <p className="text-muted-foreground">{summary.interfaceRecommendation.reason}</p>
             <div className="rounded-lg border bg-muted/30 p-3">
-              <p className="font-medium">Per a tu, la logica ha de ser aquesta:</p>
+              <p className="font-medium">Per a tu, la logica bona es aquesta:</p>
               <ol className="mt-2 space-y-1 text-muted-foreground">
                 <li>1. Trio objectiu: landing, home o xarxes.</li>
-                <li>2. Copio un prompt base.</li>
-                <li>3. Demano la peça i el sistema resol la part tecnica.</li>
+                <li>2. Reviso quin projecte ja existeix o en copio un prompt base.</li>
+                <li>3. Li demano a Codex el seguent pas, sense pensar en scripts ni render.</li>
               </ol>
             </div>
           </CardContent>
@@ -228,7 +301,7 @@ export function VideoStudioCenter() {
           </CardHeader>
           <CardContent>
             <p className="text-3xl font-semibold">{summary.projects.length}</p>
-            <p className="text-sm text-muted-foreground">Drafts vius per executar o completar.</p>
+            <p className="text-sm text-muted-foreground">Peces amb seguiment i estat real.</p>
           </CardContent>
         </Card>
       </div>
@@ -256,6 +329,97 @@ export function VideoStudioCenter() {
         </CardContent>
       </Card>
 
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Projectes operables</CardTitle>
+          <CardDescription>El sistema t ha de dir que tenim, que falta i que m has de demanar a continuacio.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {summary.projects.length > 0 ? (
+            summary.projects.map((project) => (
+              <div key={project.slug} className="rounded-xl border p-4">
+                <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
+                  <div className="space-y-2">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="font-medium">{project.title}</p>
+                      <Badge variant={getStatusVariant(project.status)}>{formatProjectStatus(project.status)}</Badge>
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      {project.objective || 'Cal definir millor el relat comercial o funcional d aquesta peça.'}
+                    </p>
+                    <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+                      <Badge variant="outline">{project.brand}</Badge>
+                      <Badge variant="outline">{project.preset}</Badge>
+                      <Badge variant="outline">idiomes: {project.locales.join(', ') || 'ca'}</Badge>
+                      <Badge variant="outline">
+                        destins: {project.targets.map((target) => `${target.surface}-${target.locale}`).join(', ') || 'sense desti'}
+                      </Badge>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap gap-2">
+                    <Button size="sm" onClick={() => handleCopy(project.nextAction.codexPrompt, `prompt de ${project.title}`)}>
+                      <Copy className="mr-2 h-4 w-4" />
+                      Copiar prompt per Codex
+                    </Button>
+                    {project.paths.publicDir ? (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleCopy(project.paths.publicDir ?? '', `ruta publica de ${project.title}`)}
+                      >
+                        <Copy className="mr-2 h-4 w-4" />
+                        Copiar ruta publica
+                      </Button>
+                    ) : null}
+                  </div>
+                </div>
+
+                <div className="mt-4 grid gap-2 md:grid-cols-3">
+                  <WorkflowPill label="Base gravada" done={project.workflow.hasBaseVideo} />
+                  <WorkflowPill label="Render final" done={project.workflow.rendered} />
+                  <WorkflowPill label="Publicat web" done={project.workflow.published} />
+                </div>
+
+                <div className="mt-4 rounded-lg border bg-muted/30 p-4">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Seguent pas recomanat</p>
+                  <p className="mt-2 font-medium">{project.nextAction.label}</p>
+                  <p className="mt-1 text-sm text-muted-foreground">{project.nextAction.reason}</p>
+                </div>
+
+                <div className="mt-4 grid gap-4 xl:grid-cols-2">
+                  <div className="space-y-2 rounded-lg border p-3 text-sm">
+                    <p className="font-medium">Estat del projecte</p>
+                    <p className="text-muted-foreground">Audience: {project.audience}</p>
+                    <p className="text-muted-foreground">Fitxer: <code>{project.paths.projectFile}</code></p>
+                    <p className="text-muted-foreground">Video base: <code>{project.paths.inputPath ?? 'pendent'}</code></p>
+                    <p className="text-muted-foreground">Artefactes: <code>{project.paths.artifactDir ?? 'pendent'}</code></p>
+                    <p className="text-muted-foreground">Publicacio: <code>{project.paths.publicDir ?? 'pendent'}</code></p>
+                    <p className="text-muted-foreground">Poster: <code>{project.paths.posterPath ?? 'pendent'}</code></p>
+                    <p className="text-muted-foreground">Ultim render: {formatDateTime(project.timestamps.lastRenderedAt)}</p>
+                    <p className="text-muted-foreground">Ultima publicacio: {formatDateTime(project.timestamps.lastPublishedAt)}</p>
+                    <p className="text-muted-foreground">
+                      Variants publicades: {project.publishedVariants.length > 0 ? project.publishedVariants.join(', ') : 'cap encara'}
+                    </p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <p className="font-medium text-sm">Diagnosi rapida</p>
+                    {project.diagnostics.map((diagnostic, index) => (
+                      <div key={`${project.slug}-${index}`} className={`rounded-lg border p-3 text-sm ${getDiagnosticTone(diagnostic.level)}`}>
+                        {diagnostic.message}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            ))
+          ) : (
+            <p className="text-sm text-muted-foreground">Encara no hi ha projectes creats.</p>
+          )}
+        </CardContent>
+      </Card>
+
       <div className="grid gap-4 xl:grid-cols-2">
         <Card>
           <CardHeader>
@@ -272,7 +436,7 @@ export function VideoStudioCenter() {
                 <p className="mt-1 text-muted-foreground">{preset.goal}</p>
                 <p className="mt-2 text-xs text-muted-foreground">
                   {formatDuration(preset.minDurationSeconds, preset.maxDurationSeconds)} · {preset.captionsMode} ·
-                  superfícies: {preset.surfaces.join(', ')}
+                  superficies: {preset.surfaces.join(', ')}
                 </p>
               </div>
             ))}
@@ -281,55 +445,24 @@ export function VideoStudioCenter() {
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Marques i projectes</CardTitle>
-            <CardDescription>Configuracio viva del sistema.</CardDescription>
+            <CardTitle className="text-base">Base del sistema</CardTitle>
+            <CardDescription>Referencies internes per continuar creixent.</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-3">
+          <CardContent className="space-y-3 text-sm text-muted-foreground">
+            <p>Document fundacional: <code>{summary.paths.foundationDoc}</code></p>
+            <p>Guia no tecnica: <code>{summary.paths.nonTechnicalGuide}</code></p>
+            <p>Arrel de configuracio: <code>{summary.paths.studioRoot}</code></p>
+            <div className="space-y-2 rounded-lg border bg-muted/30 p-3">
               {summary.brands.map((brand) => (
-                <div key={brand.id} className="rounded-lg border p-3 text-sm">
-                  <div className="flex items-center justify-between gap-3">
-                    <p className="font-medium">{brand.name}</p>
-                    <Badge>{brand.id}</Badge>
-                  </div>
-                  <p className="mt-2 text-muted-foreground">
-                    Idiomes: {brand.defaultLocales.join(', ')} · captions: {brand.captionStyle} · doodles: {brand.doodlesCount}
-                  </p>
+                <div key={brand.id}>
+                  <p className="font-medium text-foreground">{brand.name}</p>
+                  <p>Idiomes: {brand.defaultLocales.join(', ')} · captions: {brand.captionStyle} · doodles: {brand.doodlesCount}</p>
                 </div>
               ))}
-            </div>
-
-            <div className="space-y-3">
-              {summary.projects.length > 0 ? (
-                summary.projects.map((project) => (
-                  <div key={project.slug} className="rounded-lg border p-3 text-sm">
-                    <div className="flex items-center justify-between gap-3">
-                      <p className="font-medium">{project.title}</p>
-                      <Badge variant="secondary">{project.status}</Badge>
-                    </div>
-                    <p className="mt-1 text-muted-foreground">
-                      {project.brand} · {project.preset} · idiomes: {project.locales.join(', ')}
-                    </p>
-                  </div>
-                ))
-              ) : (
-                <p className="text-sm text-muted-foreground">Encara no hi ha projectes creats.</p>
-              )}
             </div>
           </CardContent>
         </Card>
       </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Base del sistema</CardTitle>
-          <CardDescription>Referencies internes per continuar creixent.</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-2 text-sm text-muted-foreground">
-          <p>Document fundacional: <code>{summary.paths.foundationDoc}</code></p>
-          <p>Arrel de configuracio: <code>{summary.paths.studioRoot}</code></p>
-        </CardContent>
-      </Card>
     </div>
   )
 }
