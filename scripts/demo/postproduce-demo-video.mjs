@@ -275,18 +275,23 @@ function normalizeEditSegments(rawSegments, maxDurationSeconds) {
 
   return rawSegments.map((segment, index) => {
     const sourceStart = Number(segment?.sourceStart ?? segment?.start);
-    const sourceEnd = Number(segment?.sourceEnd ?? segment?.end);
+    const requestedSourceEnd = Number(segment?.sourceEnd ?? segment?.end);
 
-    if (!Number.isFinite(sourceStart) || !Number.isFinite(sourceEnd)) {
+    if (!Number.isFinite(sourceStart) || !Number.isFinite(requestedSourceEnd)) {
       fail(`Segment d edicio invalid a l index ${index}.`);
     }
 
-    if (sourceStart < 0 || sourceEnd <= sourceStart) {
+    if (sourceStart < 0 || requestedSourceEnd <= sourceStart) {
       fail(`Segment d edicio fora de rang a l index ${index}.`);
     }
 
-    if (sourceEnd > maxDurationSeconds + 0.01) {
-      fail(`Segment d edicio supera la durada del video a l index ${index}.`);
+    if (sourceStart >= maxDurationSeconds) {
+      fail(`Segment d edicio comenca fora de la durada del video a l index ${index}.`);
+    }
+
+    const sourceEnd = Math.min(requestedSourceEnd, maxDurationSeconds);
+    if (sourceEnd <= sourceStart + 0.05) {
+      fail(`Segment d edicio queda buit despres d ajustar-se a la durada del video a l index ${index}.`);
     }
 
     return {

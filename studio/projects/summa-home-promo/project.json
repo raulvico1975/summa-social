@@ -13,11 +13,23 @@
   "recording": {
     "script": "",
     "sourceScenario": "",
+    "sourceVideo": "",
+    "args": [],
     "notes": []
   },
   "storyboard": {
     "slug": "",
     "captionsMode": "overlay"
+  },
+  "render": {
+    "mode": "storyboard",
+    "storyboardSlug": "",
+    "captionStyle": "summa-subtitle",
+    "inputPath": "",
+    "variants": [
+      "ca",
+      "es"
+    ]
   },
   "targets": [
     {
@@ -36,6 +48,10 @@
   },
   "publish": {
     "publicDir": "",
-    "landingSlug": ""
+    "landingSlug": "",
+    "fileBase": "",
+    "copyCaptions": true,
+    "generatePoster": true,
+    "posterTimeSeconds": 2
   }
 }
