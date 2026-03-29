@@ -3,33 +3,41 @@
   "brand": "summa",
   "preset": "home-hero",
   "title": "Home hero comercial",
-  "status": "draft",
-  "objective": "",
+  "status": "published",
+  "objective": "Peca mare de captacio per explicar en menys de 20 segons que Summa resol tresoreria, quotes, donacions i fiscalitat dins d un sol sistema.",
   "audience": "web visitors",
   "locales": [
     "ca",
     "es"
   ],
   "recording": {
-    "script": "",
-    "sourceScenario": "",
-    "sourceVideo": "",
+    "script": "scripts/demo/record-summa-home-promo.mjs",
+    "sourceScenario": "summa-home-promo",
+    "sourceVideo": "output/playwright/summa-home-promo/summa-home-promo.mp4",
     "args": [],
-    "notes": []
+    "notes": [
+      "No cal demo server: la peça base es compon a partir de clips publicats de landings reals."
+    ]
   },
   "storyboard": {
-    "slug": "",
+    "slug": "summa-home-promo",
     "captionsMode": "overlay"
   },
   "render": {
     "mode": "storyboard",
-    "storyboardSlug": "",
+    "storyboardSlug": "summa-home-promo",
     "captionStyle": "summa-subtitle",
-    "inputPath": "",
+    "inputPath": "output/playwright/summa-home-promo/summa-home-promo.mp4",
     "variants": [
       "ca",
       "es"
-    ]
+    ],
+    "lastRenderedAt": "2026-03-29T08:08:16.329Z",
+    "renderedVariants": [
+      "ca",
+      "es"
+    ],
+    "renderedArtifactDir": "output/playwright/summa-home-promo"
   },
   "targets": [
     {
@@ -47,11 +55,17 @@
     "doodles": []
   },
   "publish": {
-    "publicDir": "",
+    "publicDir": "public/visuals/home",
     "landingSlug": "",
-    "fileBase": "",
+    "fileBase": "summa-home-promo",
     "copyCaptions": true,
     "generatePoster": true,
-    "posterTimeSeconds": 2
+    "posterTimeSeconds": 2,
+    "lastPublishedAt": "2026-03-29T08:08:16.639Z",
+    "publishedVariants": [
+      "ca",
+      "es"
+    ],
+    "lastPublicDir": "public/visuals/home"
   }
 }
