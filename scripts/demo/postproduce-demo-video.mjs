@@ -431,21 +431,29 @@ function buildFadeAlphaExpression(start, end, fadeInSeconds = 0.22, fadeOutSecon
 }
 
 function resolveSubtitlePalette(caption, variant) {
-  if (caption.surface === 'dark') {
-    return {
-      primaryColor: '0xf8fafc',
-      secondaryColor: variant === 'dual' ? '0xe2e8f0' : '0xf8fafc',
-      primaryShadow: '0x020617@0.48',
-      secondaryShadow: '0x020617@0.40',
-    };
-  }
-
   return {
-    primaryColor: '0x111827',
-    secondaryColor: variant === 'dual' ? '0x4b5563' : '0x111827',
-    primaryShadow: '0x0f172a@0.10',
-    secondaryShadow: '0x0f172a@0.08',
+    primaryColor: '0xf8fafc',
+    secondaryColor: variant === 'dual' ? '0xe5eef8' : '0xf8fafc',
+    primaryShadow: '0x020617@0.62',
+    secondaryShadow: '0x020617@0.54',
   };
+}
+
+function buildSubtitleBackdropFilters(caption, variant) {
+  const enable = `between(t\\,${caption.start.toFixed(2)}\\,${caption.end.toFixed(2)})`;
+  const alpha = buildFadeAlphaExpression(caption.start, caption.end, 0.18, 0.22);
+  const baseY = variant === 'dual' ? 'ih-240' : 'ih-210';
+  const midY = variant === 'dual' ? 'ih-180' : 'ih-160';
+  const bottomY = variant === 'dual' ? 'ih-120' : 'ih-110';
+  const baseHeight = variant === 'dual' ? 240 : 210;
+  const midHeight = variant === 'dual' ? 180 : 160;
+  const bottomHeight = variant === 'dual' ? 120 : 110;
+
+  return [
+    `drawbox=x=0:y=${baseY}:w=iw:h=${baseHeight}:color=0x020617@0.08:replace=1:t=fill:enable='${enable}*${alpha}'`,
+    `drawbox=x=0:y=${midY}:w=iw:h=${midHeight}:color=0x020617@0.16:replace=1:t=fill:enable='${enable}*${alpha}'`,
+    `drawbox=x=0:y=${bottomY}:w=iw:h=${bottomHeight}:color=0x020617@0.24:replace=1:t=fill:enable='${enable}*${alpha}'`,
+  ];
 }
 
 function buildLegacySingleCaptionFilter(caption, fonts) {
@@ -503,7 +511,8 @@ function buildSummaSubtitleSingleCaptionFilter(caption, fonts) {
   const alpha = buildFadeAlphaExpression(caption.start, caption.end);
   const palette = resolveSubtitlePalette(caption, 'single');
   return [
-    `drawtext=fontfile='${escapeFilterPath(fonts.ui)}':textfile='${escapeFilterPath(caption.primarySubtitlePath)}':fontcolor=${palette.primaryColor}:alpha='${alpha}':fontsize=44:x=(w-text_w)/2:y=h-122:line_spacing=8:shadowcolor=${palette.primaryShadow}:shadowx=0:shadowy=2:fix_bounds=1:enable='${enable}'`,
+    ...buildSubtitleBackdropFilters(caption, 'single'),
+    `drawtext=fontfile='${escapeFilterPath(fonts.ui)}':textfile='${escapeFilterPath(caption.primarySubtitlePath)}':fontcolor=${palette.primaryColor}:alpha='${alpha}':fontsize=50:x=(w-text_w)/2:y=h-126:line_spacing=8:shadowcolor=${palette.primaryShadow}:shadowx=0:shadowy=5:fix_bounds=1:enable='${enable}'`,
   ];
 }
 
@@ -512,8 +521,9 @@ function buildSummaSubtitleDualCaptionFilter(caption, fonts) {
   const alpha = buildFadeAlphaExpression(caption.start, caption.end);
   const palette = resolveSubtitlePalette(caption, 'dual');
   return [
-    `drawtext=fontfile='${escapeFilterPath(fonts.ui)}':textfile='${escapeFilterPath(caption.primarySubtitlePath)}':fontcolor=${palette.primaryColor}:alpha='${alpha}':fontsize=44:x=(w-text_w)/2:y=h-150:line_spacing=8:shadowcolor=${palette.primaryShadow}:shadowx=0:shadowy=2:fix_bounds=1:enable='${enable}'`,
-    `drawtext=fontfile='${escapeFilterPath(fonts.ui)}':textfile='${escapeFilterPath(caption.secondarySubtitlePath)}':fontcolor=${palette.secondaryColor}:alpha='${alpha}':fontsize=34:x=(w-text_w)/2:y=h-98:line_spacing=7:shadowcolor=${palette.secondaryShadow}:shadowx=0:shadowy=2:fix_bounds=1:enable='${enable}'`,
+    ...buildSubtitleBackdropFilters(caption, 'dual'),
+    `drawtext=fontfile='${escapeFilterPath(fonts.ui)}':textfile='${escapeFilterPath(caption.primarySubtitlePath)}':fontcolor=${palette.primaryColor}:alpha='${alpha}':fontsize=48:x=(w-text_w)/2:y=h-156:line_spacing=8:shadowcolor=${palette.primaryShadow}:shadowx=0:shadowy=5:fix_bounds=1:enable='${enable}'`,
+    `drawtext=fontfile='${escapeFilterPath(fonts.ui)}':textfile='${escapeFilterPath(caption.secondarySubtitlePath)}':fontcolor=${palette.secondaryColor}:alpha='${alpha}':fontsize=38:x=(w-text_w)/2:y=h-100:line_spacing=7:shadowcolor=${palette.secondaryShadow}:shadowx=0:shadowy=5:fix_bounds=1:enable='${enable}'`,
   ];
 }
 

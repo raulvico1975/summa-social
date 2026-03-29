@@ -21,8 +21,8 @@ export default {
       es: 'Video principal de la home',
     },
     subtitle: {
-      ca: 'Gestio economica i fiscal per a entitats socials.',
-      es: 'Gestion economica y fiscal para entidades sociales.',
+      ca: 'Gestió econòmica i fiscal per a entitats socials.',
+      es: 'Gestión económica y fiscal para entidades sociales.',
     },
   },
   outro: {
@@ -31,12 +31,12 @@ export default {
       es: 'Summa Social',
     },
     title: {
-      ca: 'Mes control. Menys feina manual.',
-      es: 'Mas control. Menos trabajo manual.',
+      ca: 'Més control. Menys feina manual.',
+      es: 'Más control. Menos trabajo manual.',
     },
     subtitle: {
       ca: 'Una sola operativa per a tresoreria, quotes, donacions i fiscalitat.',
-      es: 'Una sola operativa para tesoreria, cuotas, donaciones y fiscalidad.',
+      es: 'Una sola operativa para tesorería, cuotas, donaciones y fiscalidad.',
     },
   },
   captions: [
@@ -48,11 +48,11 @@ export default {
         es: 'Movimientos bancarios: importas, evitas duplicados y categorizas',
       },
       headline: {
-        ca: 'Moviments bancaris mes ordenats des del principi',
-        es: 'Movimientos bancarios mas ordenados desde el principio',
+        ca: 'Moviments bancaris més ordenats des del principi',
+        es: 'Movimientos bancarios más ordenados desde el principio',
       },
       body: {
-        ca: 'L extracte entra amb context: es detecten conflictes, s eviten repeticions i cada moviment queda preparat per revisar.',
+        ca: 'L’extracte entra amb context: es detecten conflictes, s’eviten repeticions i cada moviment queda a punt per revisar.',
         es: 'El extracto entra con contexto: se detectan conflictos, se evitan repeticiones y cada movimiento queda listo para revisar.',
       },
     },
@@ -60,7 +60,7 @@ export default {
       start: 9.0,
       end: 14.1,
       subtitle: {
-        ca: 'Remeses IN: divideixes l abonament i el vincules a cada quota',
+        ca: 'Remeses IN: divideixes l’abonament i el vincules a cada quota',
         es: 'Remesas IN: divides el abono y lo vinculas a cada cuota',
       },
       headline: {
@@ -68,8 +68,8 @@ export default {
         es: 'La remesa agrupada se resuelve dentro del mismo circuito',
       },
       body: {
-        ca: 'Obres l abonament bancari, revises el match i deixes cada quota vinculada sense fulls de calcul.',
-        es: 'Abres el abono bancario, revisas el match y dejas cada cuota vinculada sin hojas de calculo.',
+        ca: 'Obres l’abonament bancari, revises el match i deixes cada quota vinculada sense fulls de càlcul.',
+        es: 'Abres el abono bancario, revisas el match y dejas cada cuota vinculada sin hojas de cálculo.',
       },
     },
     {
@@ -80,12 +80,12 @@ export default {
         es: 'Devoluciones: asignas cada recibo devuelto al socio correcto',
       },
       headline: {
-        ca: 'Les incidencies queden resoltes sense perdre traçabilitat',
+        ca: 'Les incidències queden resoltes sense perdre traçabilitat',
         es: 'Las incidencias quedan resueltas sin perder trazabilidad',
       },
       body: {
-        ca: 'Des de Moviments obres la devolucio, identifiques el soci afectat i la deixes llesta pel circuit fiscal.',
-        es: 'Desde Movimientos abres la devolucion, identificas al socio afectado y la dejas lista para el circuito fiscal.',
+        ca: 'Des de Moviments obres la devolució, identifiques el soci afectat i la deixes llesta per al circuit fiscal.',
+        es: 'Desde Movimientos abres la devolución, identificas al socio afectado y la dejas lista para el circuito fiscal.',
       },
     },
     {
@@ -93,31 +93,31 @@ export default {
       end: 30.2,
       subtitle: {
         ca: 'Socis i donants: historial, devolucions i import net en una fitxa',
-        es: 'Socios y donantes: historico, devoluciones e importe neto en una ficha',
+        es: 'Socios y donantes: histórico, devoluciones e importe neto en una ficha',
       },
       headline: {
-        ca: 'Cada relacio economica queda contextualitzada',
-        es: 'Cada relacion economica queda contextualizada',
+        ca: 'Cada relació econòmica queda contextualitzada',
+        es: 'Cada relación económica queda contextualizada',
       },
       body: {
-        ca: 'A la fitxa veus import net, devolucions, certificat i historic sense reconstruir-ho manualment.',
-        es: 'En la ficha ves importe neto, devoluciones, certificado e historico sin reconstruirlo manualmente.',
+        ca: 'A la fitxa veus l’import net, les devolucions, el certificat i l’històric sense reconstruir-ho manualment.',
+        es: 'En la ficha ves el importe neto, las devoluciones, el certificado y el histórico sin reconstruirlo manualmente.',
       },
     },
     {
       start: 30.2,
       end: 38.2,
       subtitle: {
-        ca: 'Model 182: el tancament fiscal arriba molt mes preparat',
-        es: 'Modelo 182: el cierre fiscal llega mucho mas preparado',
+        ca: 'Model 182: el tancament fiscal arriba molt més preparat',
+        es: 'Modelo 182: el cierre fiscal llega mucho más preparado',
       },
       headline: {
-        ca: 'La fiscalitat arriba mes ordenada al tancament',
-        es: 'La fiscalidad llega mas ordenada al cierre',
+        ca: 'La fiscalitat arriba més ordenada al tancament',
+        es: 'La fiscalidad llega más ordenada al cierre',
       },
       body: {
-        ca: 'Les donacions, les devolucions i els imports nets queden estructurats per revisar, exportar i presentar amb mes confianca.',
-        es: 'Las donaciones, las devoluciones y los importes netos quedan estructurados para revisar, exportar y presentar con mas confianza.',
+        ca: 'Les donacions, les devolucions i els imports nets queden estructurats per revisar, exportar i presentar amb més confiança.',
+        es: 'Las donaciones, las devoluciones y los importes netos quedan estructurados para revisar, exportar y presentar con más confianza.',
       },
     },
   ],
