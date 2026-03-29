@@ -278,7 +278,7 @@ async function clickLink(page, pattern, scope = page) {
 }
 
 async function openMovementsPage(page) {
-  const movementLinks = page.getByRole('link', { name: /Moviments/i });
+  const movementLinks = page.getByRole('link', { name: /Moviments|Movimientos/i });
   if (await movementLinks.count()) {
     await moveAndClick(page, movementLinks.first());
     await page.waitForURL(/\/demo\/dashboard\/movimientos(?:$|\?)/, { timeout: 30000 });
@@ -286,7 +286,10 @@ async function openMovementsPage(page) {
     await page.goto(`${BASE_URL}/dashboard/movimientos`, { waitUntil: 'domcontentloaded' });
   }
 
-  await page.getByRole('heading', { name: /Moviments/i }).waitFor({ state: 'visible', timeout: 30000 });
+  await page.getByRole('heading', { name: /Moviments|Movimientos/i }).waitFor({
+    state: 'visible',
+    timeout: 30000,
+  });
   await waitForAppIdle(page);
 }
 
@@ -321,7 +324,7 @@ async function openProcessedRemittanceDetail(page, row, expectedCount) {
 }
 
 async function ensureWizardConfigReady(page, artifactDir) {
-  const nextButton = page.getByRole('button', { name: /Següent/i });
+  const nextButton = page.getByRole('button', { name: /Següent|Siguiente/i });
   const dateInput = page.locator('#collectionDate');
   const bankTrigger = page.locator('#bankAccount');
 
@@ -399,18 +402,24 @@ async function runFlow(page, csvPath, artifactDir) {
     await openSplitRemittanceFromRow(page, pendingRow);
 
     await page.getByRole('dialog').waitFor({ state: 'visible', timeout: 30000 });
-    await page.getByText(/Dividir Remesa/i).waitFor({ state: 'visible', timeout: 30000 });
+    await page.getByText(/Dividir Remesa|Dividir remesa/i).waitFor({ state: 'visible', timeout: 30000 });
     await waitForAppIdle(page);
     await sleep(1800);
 
     const dialog = page.getByRole('dialog');
     await dialog.locator('input[type="file"]').setInputFiles(csvPath);
-    await page.getByText(/Configuració del mapejat/i).waitFor({ state: 'visible', timeout: 30000 });
+    await page.getByText(/Configuració del mapejat|Configuración del mapeo/i).waitFor({
+      state: 'visible',
+      timeout: 30000,
+    });
     await waitForAppIdle(page);
     await sleep(1800);
 
     await clickButton(page, /Continuar/i, dialog);
-    await page.getByText(/Revisió de la Remesa/i).waitFor({ state: 'visible', timeout: 30000 });
+    await page.getByText(/Revisió de la Remesa|Revisión de la remesa/i).waitFor({
+      state: 'visible',
+      timeout: 30000,
+    });
     await waitForAppIdle(page);
     await sleep(1400);
 
@@ -423,15 +432,24 @@ async function runFlow(page, csvPath, artifactDir) {
       await sleep(700);
     }
 
-    await clickButton(page, /Processar/i, dialog);
-    await page.getByText(/Processant remesa/i).waitFor({ state: 'visible', timeout: 30000 });
+    await clickButton(page, /Processar|Procesar/i, dialog);
+    await page.getByText(/Processant remesa|Procesando remesa/i).waitFor({
+      state: 'visible',
+      timeout: 30000,
+    });
     await dialog.waitFor({ state: 'hidden', timeout: 30000 });
     await waitForAppIdle(page);
-    await page.getByText(/Remesa processada correctament/i).first().waitFor({ state: 'visible', timeout: 30000 });
+    await page.getByText(/Remesa processada correctament|Remesa procesada correctamente/i).first().waitFor({
+      state: 'visible',
+      timeout: 30000,
+    });
     await sleep(2200);
 
     await page.reload({ waitUntil: 'domcontentloaded' });
-    await page.getByRole('heading', { name: /Moviments/i }).waitFor({ state: 'visible', timeout: 30000 });
+    await page.getByRole('heading', { name: /Moviments|Movimientos/i }).waitFor({
+      state: 'visible',
+      timeout: 30000,
+    });
     await waitForAppIdle(page);
     await sleep(1600);
 
@@ -445,7 +463,7 @@ async function runFlow(page, csvPath, artifactDir) {
 
     const detailDialog = page.getByRole('dialog');
     await detailDialog.waitFor({ state: 'visible', timeout: 30000 });
-    await detailDialog.getByText(/Quotes \(/i).waitFor({ state: 'visible', timeout: 30000 });
+    await detailDialog.getByText(/Quotes \(|Cuotas \(/i).waitFor({ state: 'visible', timeout: 30000 });
     await waitForAppIdle(page);
     await sleep(1800);
 
@@ -467,13 +485,19 @@ async function runFlow(page, csvPath, artifactDir) {
     waitUntil: 'domcontentloaded',
   });
   await page.waitForURL(/\/demo\/dashboard\/donants\/remeses-cobrament/, { timeout: 30000 });
-  await page.getByText(/Configuració de la remesa/i).waitFor({ state: 'visible', timeout: 30000 });
+  await page.getByText(/Configuració de la remesa|Configuración de la remesa/i).waitFor({
+    state: 'visible',
+    timeout: 30000,
+  });
   await waitForAppIdle(page);
   await ensureWizardConfigReady(page, artifactDir);
   await sleep(2200);
 
-  await clickButton(page, /Següent/i);
-  await page.getByText(/Selecció de socis/i).waitFor({ state: 'visible', timeout: 30000 });
+  await clickButton(page, /Següent|Siguiente/i);
+  await page.getByText(/Selecció de socis|Selección de socios/i).waitFor({
+    state: 'visible',
+    timeout: 30000,
+  });
   await waitForAppIdle(page);
   await sleep(1500);
   await page.mouse.wheel(0, 520);
@@ -481,8 +505,11 @@ async function runFlow(page, csvPath, artifactDir) {
   await page.mouse.wheel(0, -520);
   await sleep(1100);
 
-  await clickButton(page, /Següent/i);
-  await page.getByText(/Revisió i exportació/i).waitFor({ state: 'visible', timeout: 30000 });
+  await clickButton(page, /Següent|Siguiente/i);
+  await page.getByText(/Revisió i exportació|Revisión y exportación/i).waitFor({
+    state: 'visible',
+    timeout: 30000,
+  });
   await waitForAppIdle(page);
   await sleep(2600);
   await sleep(1400);
@@ -498,18 +525,24 @@ async function runFlow(page, csvPath, artifactDir) {
     waitUntil: 'domcontentloaded',
   });
   await page.getByRole('dialog').waitFor({ state: 'visible', timeout: 30000 });
-  await page.getByText(/Dividir Remesa/i).waitFor({ state: 'visible', timeout: 30000 });
+  await page.getByText(/Dividir Remesa|Dividir remesa/i).waitFor({ state: 'visible', timeout: 30000 });
   await waitForAppIdle(page);
   await sleep(2200);
 
   const dialog = page.getByRole('dialog');
   await dialog.locator('input[type="file"]').setInputFiles(csvPath);
-  await page.getByText(/Configuració del mapejat/i).waitFor({ state: 'visible', timeout: 30000 });
+  await page.getByText(/Configuració del mapejat|Configuración del mapeo/i).waitFor({
+    state: 'visible',
+    timeout: 30000,
+  });
   await waitForAppIdle(page);
   await sleep(2500);
 
   await clickButton(page, /Continuar/i, dialog);
-  await page.getByText(/Revisió de la Remesa/i).waitFor({ state: 'visible', timeout: 30000 });
+  await page.getByText(/Revisió de la Remesa|Revisión de la remesa/i).waitFor({
+    state: 'visible',
+    timeout: 30000,
+  });
   await waitForAppIdle(page);
   await sleep(1800);
 
@@ -522,7 +555,7 @@ async function runFlow(page, csvPath, artifactDir) {
     await sleep(900);
   }
 
-  await clickButton(page, /Processar/i, dialog);
+  await clickButton(page, /Processar|Procesar/i, dialog);
   await page.getByText(/Processant remesa/i).waitFor({ state: 'visible', timeout: 30000 });
   await dialog.waitFor({ state: 'hidden', timeout: 30000 });
   await waitForAppIdle(page);
@@ -584,6 +617,12 @@ const QUALITY_MODE = (parseArg('--quality') || process.env.DEMO_RECORDING_QUALIT
 if (!['standard', 'commercial'].includes(QUALITY_MODE)) {
   fail(`Qualitat no suportada: ${QUALITY_MODE}`);
 }
+
+const UI_LANG = (parseArg('--ui-lang') || 'ca').trim().toLowerCase();
+if (!['ca', 'es'].includes(UI_LANG)) {
+  fail(`Idioma d UI no suportat: ${UI_LANG}`);
+}
+const UI_LOCALE = UI_LANG === 'es' ? 'es-ES' : 'ca-ES';
 const BASE_URL = parseArg('--base-url') || process.env.DEMO_BASE_URL || DEFAULT_BASE_URL;
 const OUTPUT_DIR = parseArg('--output') || DEFAULT_OUTPUT_DIR;
 const TMP_DIR = parseArg('--tmp') || DEFAULT_TMP_DIR;
@@ -636,7 +675,7 @@ async function main() {
       QUALITY_MODE === 'commercial'
         ? { width: COMMERCIAL_VIEWPORT.width, height: COMMERCIAL_VIEWPORT.height }
         : { width: 1440, height: 960 },
-    locale: 'ca-ES',
+    locale: UI_LOCALE,
     acceptDownloads: true,
   };
 

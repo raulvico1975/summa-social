@@ -43,10 +43,10 @@ const SCENARIO_ROWS = {
   },
 };
 
-const EXPECTED_CATEGORY_LABELS = {
-  donor: 'Quotes socis',
-  supplier: 'Material oficina',
-  employee: 'Viatges i dietes',
+const EXPECTED_CATEGORY_LABEL_PATTERNS = {
+  donor: /Quotes socis|Cuotas socios/i,
+  supplier: /Material oficina/i,
+  employee: /Viatges i dietes|Viajes y dietas/i,
 };
 
 function log(message) {
@@ -412,7 +412,10 @@ async function openMovementsPage(page, credentials, artifactDir) {
   ]);
 
   await page.goto(`${BASE_URL}/dashboard/movimientos`, { waitUntil: 'domcontentloaded' });
-  await page.getByRole('heading', { name: /Moviments/i }).waitFor({ state: 'visible', timeout: 30000 });
+  await page.getByRole('heading', { name: /Moviments|Movimientos/i }).waitFor({
+    state: 'visible',
+    timeout: 30000,
+  });
   await waitForAppIdle(page);
   await applyStablePresentation(page);
   await sleep(1400);
@@ -547,7 +550,7 @@ async function searchImportedRows(page, searchTerm) {
 
 async function runBatchCategorization(page) {
   const categorizeButton = page.getByRole('button', {
-    name: /Suggerir categories|Sugerir categorias|Sugerir categorias amb IA/i,
+    name: /Suggerir categories|Sugerir categor(?:i|í)as(?: amb IA| con IA)?/i,
   }).first();
 
   await categorizeButton.waitFor({ state: 'visible', timeout: 30000 });
@@ -628,21 +631,21 @@ async function refreshAndFocusScenario(page, searchTerm) {
 
 async function waitForCategoryLabels(page) {
   const expectations = [
-    { description: SCENARIO_ROWS.donor.description, label: EXPECTED_CATEGORY_LABELS.donor },
-    { description: SCENARIO_ROWS.supplier.description, label: EXPECTED_CATEGORY_LABELS.supplier },
-    { description: SCENARIO_ROWS.employee.description, label: EXPECTED_CATEGORY_LABELS.employee },
+    { description: SCENARIO_ROWS.donor.description, labelPattern: EXPECTED_CATEGORY_LABEL_PATTERNS.donor.source },
+    { description: SCENARIO_ROWS.supplier.description, labelPattern: EXPECTED_CATEGORY_LABEL_PATTERNS.supplier.source },
+    { description: SCENARIO_ROWS.employee.description, labelPattern: EXPECTED_CATEGORY_LABEL_PATTERNS.employee.source },
   ];
 
   for (const expectation of expectations) {
     await page.waitForFunction(
-      ({ description, label }) => {
+      ({ description, labelPattern }) => {
         const rows = Array.from(document.querySelectorAll('tbody tr'));
         return rows.some((row) => {
           const element = row;
           const isVisible = element instanceof HTMLElement && element.offsetParent !== null;
           if (!isVisible) return false;
           const text = element.innerText || '';
-          return text.includes(description) && text.includes(label);
+          return text.includes(description) && new RegExp(labelPattern, 'i').test(text);
         });
       },
       expectation,
@@ -739,6 +742,12 @@ if (!['standard', 'commercial'].includes(QUALITY_MODE)) {
   fail(`Qualitat no suportada: ${QUALITY_MODE}`);
 }
 
+const UI_LANG = (parseArg('--ui-lang') || 'ca').trim().toLowerCase();
+if (!['ca', 'es'].includes(UI_LANG)) {
+  fail(`Idioma d UI no suportat: ${UI_LANG}`);
+}
+const UI_LOCALE = UI_LANG === 'es' ? 'es-ES' : 'ca-ES';
+
 const BASE_URL = parseArg('--base-url') || process.env.DEMO_BASE_URL || DEFAULT_BASE_URL;
 const OUTPUT_DIR = parseArg('--output') || DEFAULT_OUTPUT_DIR;
 const TMP_DIR = parseArg('--tmp') || DEFAULT_TMP_DIR;
@@ -790,7 +799,7 @@ async function main() {
       QUALITY_MODE === 'commercial'
         ? { width: COMMERCIAL_VIEWPORT.width, height: COMMERCIAL_VIEWPORT.height }
         : { width: 1440, height: 960 },
-    locale: 'ca-ES',
+    locale: UI_LOCALE,
     acceptDownloads: true,
   };
 
@@ -807,6 +816,12 @@ async function main() {
   const context = await browser.newContext(contextOptions);
   context.setDefaultTimeout(30000);
   await setCollapsedSidebarCookie(context, BASE_URL);
+  await context.addInitScript((lang) => {
+    try {
+      window.localStorage.setItem('summa-lang', lang);
+      document.documentElement.lang = lang;
+    } catch {}
+  }, UI_LANG);
 
   const page = await context.newPage();
   const video = page.video();

@@ -4,10 +4,21 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 
+function parseArg(name) {
+  const index = process.argv.indexOf(name);
+  if (index === -1) return null;
+  return process.argv[index + 1] ?? null;
+}
+
 const ROOT_DIR = process.cwd();
-const OUTPUT_DIR = path.join(ROOT_DIR, 'output', 'playwright', 'summa-home-promo');
-const TMP_DIR = path.join(ROOT_DIR, 'tmp', 'summa-home-promo');
-const OUTPUT_VIDEO_PATH = path.join(OUTPUT_DIR, 'summa-home-promo.mp4');
+const OUTPUT_DIR = path.join(ROOT_DIR, 'output', 'playwright', 'summa-home-promo-base');
+const TMP_DIR = path.join(ROOT_DIR, 'tmp', 'summa-home-promo-base');
+const UI_LANG = (parseArg('--ui-lang') || 'ca').trim().toLowerCase();
+if (!['ca', 'es'].includes(UI_LANG)) {
+  console.error(`[summa-home-promo] ERROR: Idioma d UI no suportat: ${UI_LANG}`);
+  process.exit(1);
+}
+const OUTPUT_VIDEO_PATH = path.join(OUTPUT_DIR, `summa-home-promo.${UI_LANG}.mp4`);
 const SUMMARY_PATH = path.join(OUTPUT_DIR, 'recording-summary.json');
 const DEFAULT_FPS = 25;
 const DEFAULT_CRF = 12;
@@ -15,34 +26,42 @@ const DEFAULT_PRESET = 'slower';
 const DEFAULT_TRANSITION_SECONDS = 0.6;
 const OUTPUT_DIMENSIONS = { width: 1920, height: 1080 };
 
+function localizedScenarioDir(baseSlug) {
+  return UI_LANG === 'es' ? `${baseSlug}-es` : baseSlug;
+}
+
+function localizedScenarioSource(baseSlug) {
+  return `output/playwright/${localizedScenarioDir(baseSlug)}/${baseSlug}.mp4`;
+}
+
 const CLIPS = [
   {
     name: 'conciliacio',
-    source: 'output/playwright/bank-reconciliation-demo/bank-reconciliation-demo.mp4',
+    source: localizedScenarioSource('bank-reconciliation-demo'),
     sourceStart: 1.2,
     sourceEnd: 10.2,
   },
   {
     name: 'remeses-in',
-    source: 'output/playwright/member-remittance-split-demo/member-remittance-split-demo.mp4',
+    source: localizedScenarioSource('member-remittance-split-demo'),
     sourceStart: 28.4,
     sourceEnd: 34.0,
   },
   {
     name: 'devolucions',
-    source: 'output/playwright/returns-resolution-demo/returns-resolution-demo.mp4',
+    source: localizedScenarioSource('returns-resolution-demo'),
     sourceStart: 8.0,
     sourceEnd: 18.0,
   },
   {
     name: 'donants',
-    source: 'output/playwright/donations-control-demo/donations-control-demo.mp4',
+    source: localizedScenarioSource('donations-control-demo'),
     sourceStart: 8.0,
     sourceEnd: 15.2,
   },
   {
     name: 'fiscalitat',
-    source: 'output/playwright/model-182-demo/model-182-demo.mp4',
+    source: localizedScenarioSource('model-182-demo'),
     sourceStart: 5.2,
     sourceEnd: 13.8,
   },
@@ -286,6 +305,7 @@ function main() {
   const summary = {
     scenario: 'summa-home-promo',
     mode: 'montage',
+    uiLang: UI_LANG,
     outputVideoPath: path.relative(ROOT_DIR, OUTPUT_VIDEO_PATH),
     durationSeconds: Number(finalMeta.durationSeconds.toFixed(2)),
     dimensions: OUTPUT_DIMENSIONS,

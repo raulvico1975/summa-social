@@ -18,13 +18,13 @@ const DEFAULT_PASSWORD = 'DemoRecorder!2026';
 const SCENARIO_SLUG = 'returns-resolution-demo';
 const DEFAULT_OUTPUT_DIR = path.join(process.cwd(), 'output', 'playwright', SCENARIO_SLUG);
 const DEMO_RETURN_TX_ID = 'demo_oracle_tx_return_orphan_001';
-const DEMO_RETURN_DESCRIPTION = 'DEVOLUCIÓN RECIBO CUOTA SOCIO';
 const DEMO_DONOR_NAME = 'Maria García López';
 const COMMERCIAL_VIEWPORT = {
   width: 1920,
   height: 1080,
 };
 const DEMO_PRESENTATION_SCALE = 0.92;
+const RETURN_ROW_PATTERN = /DEVOLUCI[ÓO]N?\s+(REBUT|RECIBO)\s+(QUOTA|CUOTA)\s+(SOCI|SOCIO)/i;
 
 function log(message) {
   console.log(`[record-demo] ${message}`);
@@ -243,7 +243,7 @@ async function openMovementsPage(page, credentials, artifactDir) {
   ]);
 
   await page.goto(`${BASE_URL}/dashboard/movimientos`, { waitUntil: 'domcontentloaded' });
-  await page.getByRole('heading', { name: /Moviments/i }).waitFor({
+  await page.getByRole('heading', { name: /Moviments|Movimientos/i }).waitFor({
     state: 'visible',
     timeout: 30000,
   });
@@ -293,9 +293,9 @@ async function runFlow(page, artifactDir) {
   await sleep(1000);
 
   const searchInput = await getSearchInput(page);
-  await typeSearch(page, searchInput, 'cuota socio');
+  await typeSearch(page, searchInput, RETURN_SEARCH_TERM);
 
-  const row = page.locator('tr', { hasText: DEMO_RETURN_DESCRIPTION }).first();
+  const row = page.locator('tr').filter({ hasText: RETURN_ROW_PATTERN }).first();
   await row.waitFor({ state: 'visible', timeout: 30000 });
   await sleep(1700);
 
@@ -343,18 +343,18 @@ async function runFlow(page, artifactDir) {
   await moveAndClick(page, postSaveSearchInput);
   await postSaveSearchInput.fill('');
   await sleep(500);
-  await typeSearch(page, postSaveSearchInput, 'cuota socio');
+  await typeSearch(page, postSaveSearchInput, RETURN_SEARCH_TERM);
 
   await row.waitFor({ state: 'visible', timeout: 30000 });
   await page
     .waitForFunction(
-      ({ description, donorName }) => {
+      ({ donorName }) => {
         return Array.from(document.querySelectorAll('tr')).some((tableRow) => {
           const text = tableRow.textContent || '';
-          return text.includes(description) && text.includes(donorName);
+          return /DEVOLUCI[ÓO]N?\s+(REBUT|RECIBO)\s+(QUOTA|CUOTA)\s+(SOCI|SOCIO)/i.test(text) && text.includes(donorName);
         });
       },
-      { description: DEMO_RETURN_DESCRIPTION, donorName: DEMO_DONOR_NAME },
+      { donorName: DEMO_DONOR_NAME },
       { timeout: 12000 }
     )
     .catch(() => null);
@@ -414,6 +414,13 @@ if (!['standard', 'commercial'].includes(QUALITY_MODE)) {
   fail(`Qualitat no suportada: ${QUALITY_MODE}`);
 }
 
+const UI_LANG = (parseArg('--ui-lang') || 'ca').trim().toLowerCase();
+if (!['ca', 'es'].includes(UI_LANG)) {
+  fail(`Idioma d UI no suportat: ${UI_LANG}`);
+}
+const UI_LOCALE = UI_LANG === 'es' ? 'es-ES' : 'ca-ES';
+const RETURN_SEARCH_TERM = 'devolu';
+
 const BASE_URL = parseArg('--base-url') || process.env.DEMO_BASE_URL || DEFAULT_BASE_URL;
 const OUTPUT_DIR = parseArg('--output') || DEFAULT_OUTPUT_DIR;
 const TMP_DIR = parseArg('--tmp') || DEFAULT_TMP_DIR;
@@ -465,7 +472,7 @@ async function main() {
       QUALITY_MODE === 'commercial'
         ? { width: COMMERCIAL_VIEWPORT.width, height: COMMERCIAL_VIEWPORT.height }
         : { width: 1440, height: 960 },
-    locale: 'ca-ES',
+    locale: UI_LOCALE,
     acceptDownloads: true,
   };
 
@@ -482,6 +489,12 @@ async function main() {
   const context = await browser.newContext(contextOptions);
   context.setDefaultTimeout(30000);
   await setCollapsedSidebarCookie(context, BASE_URL);
+  await context.addInitScript((lang) => {
+    try {
+      window.localStorage.setItem('summa-lang', lang);
+      document.documentElement.lang = lang;
+    } catch {}
+  }, UI_LANG);
 
   const page = await context.newPage();
   const video = page.video();

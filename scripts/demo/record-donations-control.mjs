@@ -339,6 +339,12 @@ if (!['standard', 'commercial'].includes(QUALITY_MODE)) {
   fail(`Qualitat no suportada: ${QUALITY_MODE}`);
 }
 
+const UI_LANG = (parseArg('--ui-lang') || 'ca').trim().toLowerCase();
+if (!['ca', 'es'].includes(UI_LANG)) {
+  fail(`Idioma d UI no suportat: ${UI_LANG}`);
+}
+const UI_LOCALE = UI_LANG === 'es' ? 'es-ES' : 'ca-ES';
+
 const BASE_URL = parseArg('--base-url') || process.env.DEMO_BASE_URL || DEFAULT_BASE_URL;
 const OUTPUT_DIR = parseArg('--output') || DEFAULT_OUTPUT_DIR;
 const TMP_DIR = parseArg('--tmp') || DEFAULT_TMP_DIR;
@@ -390,7 +396,7 @@ async function main() {
       QUALITY_MODE === 'commercial'
         ? { width: COMMERCIAL_VIEWPORT.width, height: COMMERCIAL_VIEWPORT.height }
         : { width: 1440, height: 960 },
-    locale: 'ca-ES',
+    locale: UI_LOCALE,
     acceptDownloads: true,
   };
 
@@ -407,6 +413,12 @@ async function main() {
   const context = await browser.newContext(contextOptions);
   context.setDefaultTimeout(30000);
   await setCollapsedSidebarCookie(context, BASE_URL);
+  await context.addInitScript((lang) => {
+    try {
+      window.localStorage.setItem('summa-lang', lang);
+      document.documentElement.lang = lang;
+    } catch {}
+  }, UI_LANG);
 
   const page = await context.newPage();
   const video = page.video();

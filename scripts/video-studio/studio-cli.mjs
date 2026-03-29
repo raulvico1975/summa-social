@@ -205,7 +205,11 @@ function toVariantArg(variants) {
   fail(`No s ha pogut convertir la combinacio de variants: ${variants.join(', ')}`);
 }
 
-function resolveProjectInputPath(project) {
+function resolveProjectInputPath(project, variant = null) {
+  if (variant && project.render?.inputByVariant?.[variant]) {
+    return project.render.inputByVariant[variant];
+  }
+
   if (project.render?.inputPath) {
     return project.render.inputPath;
   }
@@ -326,6 +330,21 @@ function validateProject(project) {
     }
   } else {
     addFinding(findings, 'ok', `Video base disponible: ${inputPath}`);
+  }
+
+  if (project.render?.inputByVariant) {
+    for (const variant of variants) {
+      const variantInputPath = resolveProjectInputPath(project, variant);
+      if (!variantInputPath) {
+        readyForRender = false;
+        addFinding(findings, 'error', `Falta video base per la variant ${variant}`);
+      } else if (!fileExists(variantInputPath)) {
+        readyForRender = false;
+        addFinding(findings, 'warn', `Falta el video base de ${variant}: ${variantInputPath}`);
+      } else {
+        addFinding(findings, 'ok', `Video base de ${variant} disponible: ${variantInputPath}`);
+      }
+    }
   }
 
   if (project.recording?.script) {
@@ -673,30 +692,32 @@ function renderProjectCommand() {
 
   const storyboardSlug = validation.storyboardSlug;
   const variants = validation.variants;
-  const variantArg = toVariantArg(variants);
   const captionStyle = project.render?.captionStyle || findBrandById(project.brand)?.defaultCaptionStyle || 'summa-subtitle';
-  const args = [
-    POSTPRODUCE_SCRIPT,
-    '--storyboard',
-    storyboardSlug,
-    '--variant',
-    variantArg,
-    '--caption-style',
-    captionStyle,
-    '--input',
-    validation.inputPath,
-  ];
-
-  const renderEncoding = project.render?.encoding;
-  if (renderEncoding?.crf !== undefined) {
-    args.push('--crf', String(renderEncoding.crf));
-  }
-  if (renderEncoding?.preset) {
-    args.push('--preset', String(renderEncoding.preset));
-  }
 
   log(`Renderitzant projecte ${slug}...`);
-  runNodeScript(POSTPRODUCE_SCRIPT, args.slice(1));
+  for (const variant of variants) {
+    const args = [
+      POSTPRODUCE_SCRIPT,
+      '--storyboard',
+      storyboardSlug,
+      '--variant',
+      variant,
+      '--caption-style',
+      captionStyle,
+      '--input',
+      resolveProjectInputPath(project, variant),
+    ];
+
+    const renderEncoding = project.render?.encoding;
+    if (renderEncoding?.crf !== undefined) {
+      args.push('--crf', String(renderEncoding.crf));
+    }
+    if (renderEncoding?.preset) {
+      args.push('--preset', String(renderEncoding.preset));
+    }
+
+    runNodeScript(POSTPRODUCE_SCRIPT, args.slice(1));
+  }
 
   project.status = process.argv.includes('--publish') ? 'published' : 'rendered';
   project.render = {
