@@ -54,7 +54,7 @@ export function BackupsSettings() {
   const { firestore, user } = useFirebase();
   const { organizationId, orgSlug, userRole } = useCurrentOrganization();
   const { toast } = useToast();
-  const { t } = useTranslations();
+  const { t, tr } = useTranslations();
   const searchParams = useSearchParams();
 
   const canEdit = userRole === 'admin';
@@ -279,7 +279,7 @@ export function BackupsSettings() {
       toast({
         variant: 'destructive',
         title: t.common.error,
-        description: 'Provider not supported',
+        description: tr('settings.backups.errors.unsupportedProvider', 'Proveïdor no compatible'),
       });
       return;
     }
@@ -303,11 +303,11 @@ export function BackupsSettings() {
         // Mostrar missatges d'error diferenciats segons el codi
         let errorMessage = t.settings.backups.connectionFailed;
         if (errorData.code === 'ORG_NOT_FOUND') {
-          errorMessage = 'Organització no trobada';
+          errorMessage = tr('settings.backups.errors.orgNotFound', 'Organització no trobada');
         } else if (errorData.code === 'NOT_MEMBER') {
-          errorMessage = 'No ets membre d\'aquesta organització';
+          errorMessage = tr('settings.backups.errors.notMember', 'No ets membre d\'aquesta organització');
         } else if (errorData.code === 'NOT_ADMIN') {
-          errorMessage = 'Només els administradors poden connectar proveïdors de backup';
+          errorMessage = tr('settings.backups.errors.notAdmin', 'Només els administradors poden connectar proveïdors de backup');
         }
         throw new Error(errorMessage);
       }

@@ -23,6 +23,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Upload, FileSpreadsheet, AlertCircle, CheckCircle2, ArrowRightCircle, Ban, Download, AlertTriangle, Star } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useTranslations } from '@/i18n';
 import { useBankAccounts } from '@/hooks/use-bank-accounts';
 import {
   readBankAccountsExcel,
@@ -53,6 +54,7 @@ interface BankAccountImporterProps {
 export function BankAccountImporter({ open, onOpenChange, onComplete }: BankAccountImporterProps) {
   const { toast } = useToast();
   const { bankAccounts, allBankAccounts, create, update, setDefault } = useBankAccounts();
+  const { t, tr } = useTranslations();
 
   // State
   const [step, setStep] = React.useState<ImportStep>('upload');
@@ -98,8 +100,8 @@ export function BankAccountImporter({ open, onOpenChange, onComplete }: BankAcco
       if (rows.length === 0) {
         toast({
           variant: 'destructive',
-          title: 'Fitxer buit',
-          description: 'No s\'han trobat dades de comptes bancaris al fitxer.',
+          title: tr('bankAccountsImporter.emptyFileTitle', t.importers.common.emptyFile),
+          description: tr('bankAccountsImporter.emptyFileDescription', 'No s\'han trobat dades de comptes bancaris al fitxer.'),
         });
         setIsProcessing(false);
         return;
@@ -123,8 +125,8 @@ export function BankAccountImporter({ open, onOpenChange, onComplete }: BankAcco
       console.error('Error llegint fitxer:', error);
       toast({
         variant: 'destructive',
-        title: 'Error',
-        description: 'No s\'ha pogut llegir el fitxer Excel.',
+        title: t.common.error,
+        description: tr('bankAccountsImporter.readError', 'No s\'ha pogut llegir el fitxer Excel.'),
       });
     } finally {
       setIsProcessing(false);
@@ -194,8 +196,13 @@ export function BankAccountImporter({ open, onOpenChange, onComplete }: BankAcco
 
       setStep('done');
       toast({
-        title: 'Importació completada',
-        description: `${created} creats, ${updated} actualitzats.`,
+        title: t.importers.common.importComplete,
+        description: tr(
+          'bankAccountsImporter.importSummary',
+          '{created} creats, {updated} actualitzats.'
+        )
+          .replace('{created}', String(created))
+          .replace('{updated}', String(updated)),
       });
 
       onComplete?.();
@@ -203,8 +210,8 @@ export function BankAccountImporter({ open, onOpenChange, onComplete }: BankAcco
       console.error('Error important:', error);
       toast({
         variant: 'destructive',
-        title: 'Error',
-        description: 'S\'ha produït un error durant la importació. No s\'ha aplicat cap canvi.',
+        title: t.common.error,
+        description: tr('bankAccountsImporter.importError', 'S\'ha produït un error durant la importació. No s\'ha aplicat cap canvi.'),
       });
       setStep('preview');
     } finally {
@@ -219,21 +226,21 @@ export function BankAccountImporter({ open, onOpenChange, onComplete }: BankAcco
         return (
           <Badge variant="default" className="bg-green-100 text-green-800 hover:bg-green-100">
             <CheckCircle2 className="h-3 w-3 mr-1" />
-            Nou
+            {tr('bankAccountsImporter.actionCreate', 'Nou')}
           </Badge>
         );
       case 'update':
         return (
           <Badge variant="default" className="bg-blue-100 text-blue-800 hover:bg-blue-100">
             <ArrowRightCircle className="h-3 w-3 mr-1" />
-            Actualitzar
+            {tr('bankAccountsImporter.actionUpdate', 'Actualitzar')}
           </Badge>
         );
       case 'skip':
         return (
           <Badge variant="secondary" className="bg-gray-100 text-gray-600">
             <Ban className="h-3 w-3 mr-1" />
-            Ometre
+            {tr('bankAccountsImporter.actionSkip', 'Ometre')}
           </Badge>
         );
     }
@@ -245,10 +252,10 @@ export function BankAccountImporter({ open, onOpenChange, onComplete }: BankAcco
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <FileSpreadsheet className="h-5 w-5 text-blue-500" />
-            Importar comptes bancaris
+            {tr('bankAccountsImporter.title', 'Importar comptes bancaris')}
           </DialogTitle>
           <DialogDescription>
-            Importa comptes bancaris des d'un fitxer Excel (.xlsx)
+            {tr('bankAccountsImporter.description', "Importa comptes bancaris des d'un fitxer Excel (.xlsx)")}
           </DialogDescription>
         </DialogHeader>
 
@@ -259,9 +266,9 @@ export function BankAccountImporter({ open, onOpenChange, onComplete }: BankAcco
               <div className="mx-auto w-16 h-16 rounded-full bg-blue-50 flex items-center justify-center">
                 <Upload className="h-8 w-8 text-blue-500" />
               </div>
-              <h3 className="font-medium">Selecciona un fitxer Excel</h3>
+              <h3 className="font-medium">{tr('bankAccountsImporter.uploadTitle', 'Selecciona un fitxer Excel')}</h3>
               <p className="text-sm text-muted-foreground max-w-md">
-                El fitxer ha de contenir una capçalera amb columnes: Nom, IBAN, Banc, Per defecte, Actiu
+                {tr('bankAccountsImporter.uploadDescription', 'El fitxer ha de contenir una capçalera amb columnes: Nom, IBAN, Banc, Per defecte, Actiu')}
               </p>
             </div>
 
@@ -269,7 +276,7 @@ export function BankAccountImporter({ open, onOpenChange, onComplete }: BankAcco
             {parseErrors.length > 0 && (
               <Alert variant="destructive" className="max-w-md">
                 <AlertTriangle className="h-4 w-4" />
-                <AlertTitle>Errors al fitxer</AlertTitle>
+                <AlertTitle>{tr('bankAccountsImporter.fileErrorsTitle', 'Errors al fitxer')}</AlertTitle>
                 <AlertDescription>
                   <ul className="mt-2 space-y-1 text-sm">
                     {parseErrors.map((e, i) => (
@@ -287,7 +294,7 @@ export function BankAccountImporter({ open, onOpenChange, onComplete }: BankAcco
                 className="gap-2"
               >
                 <Download className="h-4 w-4" />
-                Descarregar plantilla
+                {t.importers.common.downloadTemplate}
               </Button>
 
               <Button
@@ -296,7 +303,7 @@ export function BankAccountImporter({ open, onOpenChange, onComplete }: BankAcco
                 className="gap-2"
               >
                 <FileSpreadsheet className="h-4 w-4" />
-                {isProcessing ? 'Processant...' : 'Seleccionar fitxer'}
+                {isProcessing ? t.importers.common.importing : tr('bankAccountsImporter.selectFile', 'Seleccionar fitxer')}
               </Button>
             </div>
 
@@ -312,9 +319,7 @@ export function BankAccountImporter({ open, onOpenChange, onComplete }: BankAcco
             <Alert className="max-w-md">
               <AlertCircle className="h-4 w-4" />
               <AlertDescription className="text-xs">
-                Els comptes bancaris es relacionen per <strong>IBAN</strong>.
-                Si l'IBAN coincideix, el compte s'actualitza; si no, se'n crea un de nou.
-                Només pot existir un compte per defecte.
+                {tr('bankAccountsImporter.matchingHelp', 'Els comptes bancaris es relacionen per IBAN. Si l\'IBAN coincideix, el compte s\'actualitza; si no, se\'n crea un de nou. Només pot existir un compte per defecte.')}
               </AlertDescription>
             </Alert>
           </div>
@@ -327,15 +332,15 @@ export function BankAccountImporter({ open, onOpenChange, onComplete }: BankAcco
             <div className="flex gap-4 text-sm">
               <div className="flex items-center gap-2">
                 <div className="w-3 h-3 rounded-full bg-green-500" />
-                <span>{importResult.summary.toCreate} nous</span>
+                <span>{tr('bankAccountsImporter.summaryNew', '{count} nous').replace('{count}', String(importResult.summary.toCreate))}</span>
               </div>
               <div className="flex items-center gap-2">
                 <div className="w-3 h-3 rounded-full bg-blue-500" />
-                <span>{importResult.summary.toUpdate} actualitzacions</span>
+                <span>{tr('bankAccountsImporter.summaryUpdated', '{count} actualitzacions').replace('{count}', String(importResult.summary.toUpdate))}</span>
               </div>
               <div className="flex items-center gap-2">
                 <div className="w-3 h-3 rounded-full bg-gray-400" />
-                <span>{importResult.summary.toSkip} omesos</span>
+                <span>{tr('bankAccountsImporter.summarySkipped', '{count} omesos').replace('{count}', String(importResult.summary.toSkip))}</span>
               </div>
             </div>
 
@@ -356,7 +361,7 @@ export function BankAccountImporter({ open, onOpenChange, onComplete }: BankAcco
                 <AlertDescription>
                   <details className="text-xs">
                     <summary className="cursor-pointer">
-                      {parseWarnings.length + importResult.warnings.length} avís(os)
+                      {tr('bankAccountsImporter.warningsCount', '{count} avís(os)').replace('{count}', String(parseWarnings.length + importResult.warnings.length))}
                     </summary>
                     <ul className="mt-2 space-y-1">
                       {[...parseWarnings, ...importResult.warnings].map((w, i) => (
@@ -373,11 +378,11 @@ export function BankAccountImporter({ open, onOpenChange, onComplete }: BankAcco
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-24">Acció</TableHead>
-                    <TableHead>Nom</TableHead>
+                    <TableHead className="w-24">{tr('bankAccountsImporter.table.action', 'Acció')}</TableHead>
+                    <TableHead>{t.importers.common.name}</TableHead>
                     <TableHead>IBAN</TableHead>
-                    <TableHead>Banc</TableHead>
-                    <TableHead className="w-48">Detalls</TableHead>
+                    <TableHead>{tr('bankAccountsImporter.table.bank', 'Banc')}</TableHead>
+                    <TableHead className="w-48">{tr('bankAccountsImporter.table.details', 'Detalls')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -392,7 +397,7 @@ export function BankAccountImporter({ open, onOpenChange, onComplete }: BankAcco
                         {preview.parsed.isDefault && (
                           <Badge variant="secondary" className="ml-2 text-xs">
                             <Star className="h-3 w-3 mr-1" />
-                            Default
+                            {tr('bankAccountsImporter.defaultBadge', 'Default')}
                           </Badge>
                         )}
                       </TableCell>
@@ -404,7 +409,7 @@ export function BankAccountImporter({ open, onOpenChange, onComplete }: BankAcco
                       </TableCell>
                       <TableCell className="text-xs text-muted-foreground">
                         {preview.action === 'update' && preview.changes && (
-                          <span>Canvis: {preview.changes.join(', ')}</span>
+                          <span>{tr('bankAccountsImporter.changesLabel', 'Canvis:')} {preview.changes.join(', ')}</span>
                         )}
                         {preview.action === 'skip' && preview.reason && (
                           <span>{preview.reason}</span>
@@ -425,8 +430,8 @@ export function BankAccountImporter({ open, onOpenChange, onComplete }: BankAcco
               <div className="mx-auto w-16 h-16 rounded-full bg-blue-50 flex items-center justify-center">
                 <FileSpreadsheet className="h-8 w-8 text-blue-500" />
               </div>
-              <h3 className="font-medium">Important comptes bancaris...</h3>
-              <p className="text-sm text-muted-foreground">Això pot trigar uns segons</p>
+              <h3 className="font-medium">{tr('bankAccountsImporter.importingTitle', 'Important comptes bancaris...')}</h3>
+              <p className="text-sm text-muted-foreground">{tr('bankAccountsImporter.importingDescription', 'Això pot trigar uns segons')}</p>
             </div>
           </div>
         )}
@@ -438,9 +443,9 @@ export function BankAccountImporter({ open, onOpenChange, onComplete }: BankAcco
               <div className="mx-auto w-16 h-16 rounded-full bg-green-50 flex items-center justify-center">
                 <CheckCircle2 className="h-8 w-8 text-green-500" />
               </div>
-              <h3 className="font-medium">Importació completada</h3>
+              <h3 className="font-medium">{t.importers.common.importComplete}</h3>
               <p className="text-sm text-muted-foreground">
-                Tots els comptes bancaris s'han processat correctament
+                {tr('bankAccountsImporter.doneDescription', "Tots els comptes bancaris s'han processat correctament")}
               </p>
             </div>
           </div>
@@ -450,14 +455,14 @@ export function BankAccountImporter({ open, onOpenChange, onComplete }: BankAcco
         <DialogFooter className="flex-shrink-0 pt-4 border-t">
           {step === 'upload' && (
             <Button variant="outline" onClick={() => onOpenChange(false)}>
-              Cancel·lar
+              {t.importers.common.close}
             </Button>
           )}
 
           {step === 'preview' && (
             <>
               <Button variant="outline" onClick={() => setStep('upload')}>
-                Tornar
+                {t.importers.common.back}
               </Button>
               <Button
                 onClick={handleApplyImport}
@@ -466,14 +471,14 @@ export function BankAccountImporter({ open, onOpenChange, onComplete }: BankAcco
                   (importResult?.summary.toCreate === 0 && importResult?.summary.toUpdate === 0)
                 }
               >
-                Aplicar importació
+                {tr('bankAccountsImporter.applyImport', 'Aplicar importació')}
               </Button>
             </>
           )}
 
           {step === 'done' && (
             <Button onClick={() => onOpenChange(false)}>
-              Tancar
+              {t.importers.common.close}
             </Button>
           )}
         </DialogFooter>

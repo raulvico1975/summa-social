@@ -1839,15 +1839,15 @@ export function DonorManager() {
           </CardContent>
         </Card>
 
-        <DialogContent className="w-[95vw] sm:max-w-4xl lg:max-w-5xl max-h-[90vh] p-0 flex flex-col">
+        <DialogContent className="flex max-h-[calc(100dvh-2rem)] w-[min(95vw,72rem)] flex-col overflow-hidden p-0 sm:max-w-4xl lg:max-w-5xl">
           {/* Header fix */}
-          <DialogHeader className="flex-shrink-0 px-6 py-5 border-b">
+          <DialogHeader className="flex-shrink-0 border-b px-4 py-5 pr-10 sm:px-6">
             <DialogTitle>{dialogTitle}</DialogTitle>
             <DialogDescription>{dialogDescription}</DialogDescription>
           </DialogHeader>
 
           {/* Cos amb scroll */}
-          <div className="flex-1 min-h-0 overflow-y-auto px-6 py-5">
+          <div className="flex-1 min-h-0 overflow-y-auto px-4 py-4 sm:px-6 sm:py-5">
             {/* Grid principal 2 columnes */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
 
@@ -1887,7 +1887,7 @@ export function DonorManager() {
                       </p>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-3 items-stretch">
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 items-stretch">
                       <div className="space-y-1.5 h-full">
                         <Label htmlFor="donorType">{t.donors.donorType}</Label>
                         <Select
@@ -1979,7 +1979,7 @@ export function DonorManager() {
                 <div className="rounded-lg border bg-background px-4 py-4">
                   <h4 className="text-sm font-semibold">{tr('donors.form.section.address', 'Adreça')}</h4>
                   <div className="mt-3 space-y-4">
-                    <div className="grid grid-cols-3 gap-3">
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
                       <div className="space-y-1.5">
                         <Label htmlFor="zipCode">
                           {t.donors.zipCode}
@@ -2168,7 +2168,7 @@ export function DonorManager() {
           </div>
 
           {/* Footer fix */}
-          <DialogFooter className="flex-shrink-0 px-6 py-4 border-t flex justify-end gap-2">
+          <DialogFooter className="flex-shrink-0 border-t bg-background px-4 py-4 sm:px-6">
             <DialogClose asChild>
               <Button variant="outline">{t.common.cancel}</Button>
             </DialogClose>

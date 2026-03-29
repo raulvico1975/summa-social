@@ -12,6 +12,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Loader2, PlayCircle, AlertCircle, CheckCircle2, FolderSearch } from 'lucide-react';
+import { useTranslations } from '@/i18n';
 
 interface MigrationDetail {
   orgId: string;
@@ -32,6 +33,7 @@ interface MigrationResult {
 export default function ProjectModuleAdminPage() {
   const { firebaseApp } = useFirebase();
   const { organizationId } = useCurrentOrganization();
+  const { t, tr } = useTranslations();
 
   const [isRunning, setIsRunning] = React.useState(false);
   const [result, setResult] = React.useState<MigrationResult | null>(null);
@@ -57,7 +59,7 @@ export default function ProjectModuleAdminPage() {
       setResult(response.data);
     } catch (err) {
       console.error('Error executing migration:', err);
-      setError(err instanceof Error ? err.message : 'Error desconegut');
+      setError(err instanceof Error ? err.message : tr('projectModule.admin.unknownError'));
     } finally {
       setIsRunning(false);
     }
@@ -66,9 +68,9 @@ export default function ProjectModuleAdminPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">Administració del Mòdul de Projectes</h1>
+        <h1 className="text-2xl font-bold">{tr('projectModule.admin.title')}</h1>
         <p className="text-muted-foreground">
-          Eines de manteniment i migracions
+          {tr('projectModule.admin.subtitle')}
         </p>
       </div>
 
@@ -76,11 +78,10 @@ export default function ProjectModuleAdminPage() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <FolderSearch className="h-5 w-5" />
-            Migració de Paths
+            {tr('projectModule.admin.migrationTitle')}
           </CardTitle>
           <CardDescription>
-            Migra els projectes del path antic (<code>projectModule/[projectId]</code>)
-            al nou path (<code>projectModule/_/projects/[projectId]</code>).
+            {tr('projectModule.admin.migrationDescription')}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -95,7 +96,7 @@ export default function ProjectModuleAdminPage() {
               ) : (
                 <PlayCircle className="h-4 w-4 mr-2" />
               )}
-              Dry Run (simulació)
+              {tr('projectModule.admin.dryRun')}
             </Button>
             <Button
               onClick={() => runMigration(false)}
@@ -107,14 +108,14 @@ export default function ProjectModuleAdminPage() {
               ) : (
                 <PlayCircle className="h-4 w-4 mr-2" />
               )}
-              Executar Migració Real
+              {tr('projectModule.admin.runMigration')}
             </Button>
           </div>
 
           {error && (
             <Alert variant="destructive">
               <AlertCircle className="h-4 w-4" />
-              <AlertTitle>Error</AlertTitle>
+              <AlertTitle>{t.common.error}</AlertTitle>
               <AlertDescription>{error}</AlertDescription>
             </Alert>
           )}
@@ -128,10 +129,12 @@ export default function ProjectModuleAdminPage() {
                   <AlertCircle className="h-4 w-4" />
                 )}
                 <AlertTitle>
-                  {result.success ? 'Migració completada' : 'Migració amb errors'}
+                  {result.success
+                    ? tr('projectModule.admin.migrationSuccess')
+                    : tr('projectModule.admin.migrationWithErrors')}
                 </AlertTitle>
                 <AlertDescription>
-                  Projectes processats: {result.migrated}
+                  {tr('projectModule.admin.processedProjects')}: {result.migrated}
                   {result.errors.length > 0 && (
                     <span className="text-destructive ml-2">
                       ({result.errors.length} errors)
@@ -142,7 +145,7 @@ export default function ProjectModuleAdminPage() {
 
               {result.details.length > 0 && (
                 <div className="rounded-md border p-4 space-y-2">
-                  <h4 className="font-medium">Detalls:</h4>
+                  <h4 className="font-medium">{tr('projectModule.admin.details')}</h4>
                   {result.details.map((detail, i) => (
                     <div
                       key={i}
@@ -172,7 +175,7 @@ export default function ProjectModuleAdminPage() {
 
               {result.details.length === 0 && result.migrated === 0 && (
                 <p className="text-muted-foreground text-sm">
-                  No s'han trobat projectes per migrar. Pot ser que ja estiguin al path correcte.
+                  {tr('projectModule.admin.noProjects')}
                 </p>
               )}
             </div>

@@ -55,7 +55,6 @@ import { persistStripeImputationWrites } from '@/lib/stripe/commitStripeImputati
 import {
   assertNoActiveStripeImputationByParentTransactionId,
   ERR_STRIPE_PARENT_ALREADY_IMPUTED,
-  getStripeParentAlreadyImputedMessage,
 } from '@/lib/stripe/activeStripeImputation';
 import {
   acquireProcessLock,
@@ -86,6 +85,7 @@ import {
   toLocalDonorFromStripeQuickPayload,
   type StripeQuickDonorKind,
 } from '@/lib/stripe/quick-donor';
+import { useTranslations, type TrFunction } from '@/i18n';
 
 interface BankTransactionSummary {
   id: string;
@@ -114,12 +114,12 @@ interface QuickCreateState {
   initialData?: Partial<QuickDonorFormData>;
 }
 
-function buildCsvWarning(parsedWarningCount: number, matchingCount: number): string | null {
+function buildCsvWarning(parsedWarningCount: number, matchingCount: number, tr: TrFunction): string | null {
   if (parsedWarningCount > 0) {
-    return "S'han exclòs pagaments reemborsats del CSV.";
+    return tr('dialogs.stripeImputation.refundedExcluded', "S'han exclòs pagaments reemborsats del CSV.");
   }
   if (matchingCount > 1) {
-    return 'Hi ha diversos payouts que quadren amb aquest abonament. Selecciona el correcte.';
+    return tr('dialogs.stripeImputation.multiplePayoutsWarning', 'Hi ha diversos payouts que quadren amb aquest abonament. Selecciona el correcte.');
   }
   return null;
 }
@@ -134,6 +134,7 @@ export function StripeImputationModal({
   const { firestore, user } = useFirebase();
   const { organizationId } = useCurrentOrganization();
   const { toast } = useToast();
+  const { t, tr } = useTranslations();
   const [isParsing, setIsParsing] = React.useState(false);
   const [isSaving, setIsSaving] = React.useState(false);
   const [isDifferenceConfirmed, setIsDifferenceConfirmed] = React.useState(false);
@@ -278,15 +279,15 @@ export function StripeImputationModal({
     const initialSelectedTransferId = resolveInitialSelectedTransferId(allMatches);
 
     if (allMatches.length === 0) {
-      throw new Error('No s\'ha trobat cap payout Stripe que quadri amb aquest abonament.');
+      throw new Error(tr('dialogs.stripeImputation.noMatchingPayout', 'No s\'ha trobat cap payout Stripe que quadri amb aquest abonament.'));
     }
 
     return {
       matchingGroups: allMatches,
       selectedTransferId: initialSelectedTransferId,
-      warning: buildCsvWarning(parsed.warnings.length, allMatches.length),
+      warning: buildCsvWarning(parsed.warnings.length, allMatches.length, tr),
     };
-  }, [bankTransaction.amount]);
+  }, [bankTransaction.amount, tr]);
 
   const handleFile = React.useCallback(async (file: File) => {
     setIsParsing(true);
@@ -302,10 +303,10 @@ export function StripeImputationModal({
 
       replaceLinesFromCsvState(nextState);
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Error processant el CSV';
+      const message = error instanceof Error ? error.message : t.common.unknownError;
       toast({
         variant: 'destructive',
-        title: 'No s\'ha pogut imputar Stripe',
+        title: tr('dialogs.stripeImputation.modalErrorTitle', 'Error a la imputació Stripe'),
         description: message,
       });
     } finally {
@@ -451,11 +452,13 @@ export function StripeImputationModal({
       const requestedIsMember = quickCreateState.kind === 'member';
 
       toast({
-        title: requestedIsMember ? 'Soci assignat' : 'Donant assignat',
+        title: requestedIsMember
+          ? tr('dialogs.stripeImputation.memberAssignedTitle', 'Soci assignat')
+          : tr('dialogs.stripeImputation.donorAssignedTitle', 'Donant assignat'),
         description:
           requestedIsMember && !existingIsMember
-            ? `${existingDonor.name} ja existia com a donant. L'he assignat sense canviar-lo a soci; si cal, revisa la seva fitxa.`
-            : `${existingDonor.name} ja existia i l'he assignat a la imputació.`,
+            ? tr('dialogs.stripeImputation.existingAssignedNeedsReview', '{name} ja existia com a donant. L\'he assignat sense canviar-lo a soci; si cal, revisa la seva fitxa.').replace('{name}', existingDonor.name)
+            : tr('dialogs.stripeImputation.existingAssignedSame', '{name} ja existia i l\'he assignat a la imputació.').replace('{name}', existingDonor.name),
       });
 
       return existingDonor.id;
@@ -485,15 +488,17 @@ export function StripeImputationModal({
       handleSetLineContact(quickCreateState.lineLocalId, localDonor.id);
 
       toast({
-        title: quickCreateState.kind === 'member' ? 'Soci creat i assignat' : 'Donant creat i assignat',
-        description: `${localDonor.name} ja queda vinculat a la donació Stripe i disponible a la seva fitxa.`,
+        title: quickCreateState.kind === 'member'
+          ? tr('dialogs.stripeImputation.memberAssignedTitle', 'Soci assignat')
+          : tr('dialogs.stripeImputation.donorAssignedTitle', 'Donant assignat'),
+        description: tr('dialogs.stripeImputation.successDescription', '{name} ja queda vinculat a la donació Stripe i disponible a la seva fitxa.').replace('{name}', localDonor.name),
       });
 
       if (!payload.taxId || !payload.zipCode) {
         setTimeout(() => {
           toast({
-            title: 'Falten dades fiscals',
-            description: 'Completa NIF i codi postal a la fitxa per tenir el 182 i els certificats perfectament preparats.',
+            title: tr('dialogs.stripeImputation.missingFiscalTitle', 'Falten dades fiscals'),
+            description: tr('dialogs.stripeImputation.missingFiscalDescription', 'Completa NIF i codi postal a la fitxa per tenir el 182 i els certificats perfectament preparats.'),
             duration: 5000,
           });
         }, 400);
@@ -501,10 +506,10 @@ export function StripeImputationModal({
 
       return localDonor.id;
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Error desconegut';
+      const message = error instanceof Error ? error.message : t.common.unknownError;
       toast({
         variant: 'destructive',
-        title: 'No s\'ha pogut crear el contacte',
+        title: tr('dialogs.stripeImputation.createContactErrorTitle', 'No s\'ha pogut crear el contacte'),
         description: message,
       });
       return null;
@@ -544,8 +549,11 @@ export function StripeImputationModal({
       if (!lockResult.ok) {
         toast({
           variant: 'destructive',
-          title: 'Error a la imputació Stripe',
-          description: getLockFailureMessage(lockResult),
+          title: tr('dialogs.stripeImputation.modalErrorTitle', 'Error a la imputació Stripe'),
+          description: getLockFailureMessage(lockResult, {
+            lockedByOther: tr('dialogs.stripeImputation.alreadyImputed', 'Aquest moviment ja té una imputació Stripe activa. Obre el detall i desfés-la abans de tornar-ho a provar.'),
+            processingError: t.common.actionError,
+          }),
         });
         return;
       }
@@ -586,27 +594,32 @@ export function StripeImputationModal({
       });
 
       toast({
-        title: 'Imputació Stripe completada',
-        description: `S'han creat ${donations.length} donacions Stripe${adjustment ? ' i 1 ajust' : ''}.`,
+        title: tr('dialogs.stripeImputation.completedTitle', 'Imputació Stripe completada'),
+        description: tr('dialogs.stripeImputation.completedDescription', 'S\'han creat {count} donacions Stripe{adjustment}.')
+          .replace('{count}', String(donations.length))
+          .replace(
+            '{adjustment}',
+            adjustment ? tr('dialogs.stripeImputation.completedDescriptionAdjustment', ' i 1 ajust') : ''
+          ),
       });
 
       onOpenChange(false);
       onComplete?.();
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Error desconegut';
+      const message = error instanceof Error ? error.message : t.common.unknownError;
       let description = message;
 
       if (message === ERR_STRIPE_DUPLICATE_PAYMENT) {
-        description = 'Aquest pagament Stripe ja ha estat imputat.';
+        description = tr('dialogs.stripeImputation.alreadyImputed', 'Aquest moviment ja té una imputació Stripe activa. Obre el detall i desfés-la abans de tornar-ho a provar.');
       } else if (message === ERR_STRIPE_PARENT_ALREADY_IMPUTED) {
-        description = getStripeParentAlreadyImputedMessage();
+        description = tr('dialogs.stripeImputation.alreadyImputed', 'Aquest moviment ja té una imputació Stripe activa. Obre el detall i desfés-la abans de tornar-ho a provar.');
       } else if (message === 'AUTH_REQUIRED') {
-        description = 'No s\'ha pogut validar la sessió. Torna-ho a provar.';
+        description = tr('dialogs.stripeImputation.authRequired', 'No s\'ha pogut validar la sessió. Torna-ho a provar.');
       }
 
       toast({
         variant: 'destructive',
-        title: 'Error a la imputació Stripe',
+        title: tr('dialogs.stripeImputation.modalErrorTitle', 'Error a la imputació Stripe'),
         description,
       });
     } finally {
@@ -619,25 +632,25 @@ export function StripeImputationModal({
       }
       setIsSaving(false);
     }
-  }, [bankTransaction.amount, bankTransaction.date, bankTransaction.id, canConfirm, csvImportState, editableLines, findDonationByStripePaymentId, firestore, onComplete, onOpenChange, organizationId, toast, user]);
+  }, [bankTransaction.amount, bankTransaction.date, bankTransaction.id, canConfirm, csvImportState, editableLines, findDonationByStripePaymentId, firestore, onComplete, onOpenChange, organizationId, t.common.actionError, t.common.unknownError, toast, tr, user]);
 
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-          <DialogContent className="flex h-[92vh] max-h-[92vh] w-[min(97vw,1240px)] max-w-[1240px] flex-col overflow-hidden p-0">
-          <DialogHeader className="shrink-0 border-b bg-background px-6 py-4 pr-12">
-            <DialogTitle>Imputar Stripe</DialogTitle>
-            <DialogDescription>
-              Pots carregar un CSV de Stripe o completar la imputació manualment. La taula final sempre és editable abans de confirmar.
+        <DialogContent className="flex max-h-[calc(100dvh-2rem)] w-[min(97vw,1240px)] max-w-[1240px] flex-col overflow-hidden p-0">
+          <DialogHeader className="shrink-0 border-b bg-background px-6 py-4 pr-10">
+            <DialogTitle>{tr('dialogs.stripeImputation.title', 'Imputar Stripe')}</DialogTitle>
+            <DialogDescription className="break-words leading-relaxed">
+              {tr('dialogs.stripeImputation.description', 'Pots carregar un CSV de Stripe o completar la imputació manualment. La taula final sempre és editable abans de confirmar.')}
             </DialogDescription>
           </DialogHeader>
 
           <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-6">
             <div className="min-h-0 flex-1 space-y-4 overflow-y-auto py-4">
               <Alert className="border-primary/20 bg-primary/5">
-                <AlertTitle>Abonament bancari</AlertTitle>
+                <AlertTitle>{tr('dialogs.stripeImputation.bankPaymentTitle', 'Abonament bancari')}</AlertTitle>
                 <AlertDescription>
-                  Moviment bancari: <span className="font-semibold">{bankTransaction.amount.toFixed(2)} €</span>
+                  {tr('dialogs.stripeImputation.bankPaymentLabel', 'Moviment bancari:')} <span className="font-semibold">{bankTransaction.amount.toFixed(2)} €</span>
                   <span className="text-muted-foreground"> · {bankTransaction.description}</span>
                 </AlertDescription>
               </Alert>
@@ -652,22 +665,22 @@ export function StripeImputationModal({
                 />
                 <Button type="button" variant="outline" onClick={() => inputRef.current?.click()} disabled={isParsing}>
                   {isParsing ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Upload className="h-4 w-4 mr-2" />}
-                  Carregar CSV
+                  {tr('dialogs.stripeImputation.uploadCsv', 'Carregar CSV')}
                 </Button>
                 <Button type="button" variant="outline" onClick={handleAddManualLine}>
                   <Plus className="h-4 w-4 mr-2" />
-                  Afegir línia
+                  {tr('dialogs.stripeImputation.addLine', 'Afegir línia')}
                 </Button>
                 {csvImportState && (
                   <Button type="button" variant="outline" onClick={handleResetFromCsv}>
                     <RotateCcw className="h-4 w-4 mr-2" />
-                    Reiniciar des del CSV
+                    {tr('dialogs.stripeImputation.resetFromCsv', 'Reiniciar des del CSV')}
                   </Button>
                 )}
                 {(editableLines.length > 0 || csvImportState) && (
                   <Button type="button" variant="outline" onClick={handleClearAll}>
                     <Trash2 className="h-4 w-4 mr-2" />
-                    Netejar tot
+                    {tr('dialogs.stripeImputation.clearAll', 'Netejar tot')}
                   </Button>
                 )}
               </div>
@@ -675,17 +688,17 @@ export function StripeImputationModal({
               {csvImportState?.warning && (
                 <Alert>
                   <AlertTriangle className="h-4 w-4" />
-                  <AlertTitle>Revisa aquest punt</AlertTitle>
+                  <AlertTitle>{tr('dialogs.stripeImputation.reviewWarningTitle', 'Revisa aquest punt')}</AlertTitle>
                   <AlertDescription>{csvImportState.warning}</AlertDescription>
                 </Alert>
               )}
 
               {csvImportState && csvImportState.matchingGroups.length > 1 && (
                 <div className="space-y-2">
-                  <Label>Payout detectat</Label>
+                  <Label>{tr('dialogs.stripeImputation.detectedPayoutLabel', 'Payout detectat')}</Label>
                   <Select value={csvImportState.selectedTransferId ?? undefined} onValueChange={handleSelectGroup}>
                     <SelectTrigger>
-                      <SelectValue placeholder="Selecciona el payout correcte" />
+                      <SelectValue placeholder={tr('dialogs.stripeImputation.detectedPayoutPlaceholder', 'Selecciona el payout correcte')} />
                     </SelectTrigger>
                     <SelectContent>
                       {csvImportState.matchingGroups.map((group) => (
@@ -701,9 +714,9 @@ export function StripeImputationModal({
               {!selectedGroup && csvImportState && csvImportState.matchingGroups.length > 1 && (
                 <Alert>
                   <AlertTriangle className="h-4 w-4" />
-                  <AlertTitle>Selecció pendent</AlertTitle>
+                  <AlertTitle>{tr('dialogs.stripeImputation.searchPendingTitle', 'Selecció pendent')}</AlertTitle>
                   <AlertDescription>
-                    Hi ha diversos payouts possibles. Selecciona el correcte.
+                    {tr('dialogs.stripeImputation.searchPendingDescription', 'Hi ha diversos payouts possibles. Selecciona el correcte.')}
                   </AlertDescription>
                 </Alert>
               )}
@@ -711,9 +724,9 @@ export function StripeImputationModal({
               {selectedGroup && csvImportState && csvImportState.matchingGroups.length === 1 && (
                 <Alert>
                   <CheckCircle2 className="h-4 w-4" />
-                  <AlertTitle>Payout detectat</AlertTitle>
+                  <AlertTitle>{tr('dialogs.stripeImputation.payoutDetectedTitle', 'Payout detectat')}</AlertTitle>
                   <AlertDescription>
-                    {selectedGroup.rows.length} pagaments · brut {selectedGroup.gross.toFixed(2)} € · comissions {selectedGroup.fees.toFixed(2)} € · net {selectedGroup.net.toFixed(2)} €
+                    {selectedGroup.rows.length} {tr('dialogs.stripeImputation.payoutSummaryPayments', 'pagaments')} · {tr('dialogs.stripeImputation.payoutSummaryGross', 'brut')} {selectedGroup.gross.toFixed(2)} € · {tr('dialogs.stripeImputation.payoutSummaryFees', 'comissions')} {selectedGroup.fees.toFixed(2)} € · {tr('dialogs.stripeImputation.payoutSummaryNet', 'net')} {selectedGroup.net.toFixed(2)} €
                   </AlertDescription>
                 </Alert>
               )}
@@ -721,45 +734,45 @@ export function StripeImputationModal({
               {selectedGroup && csvImportState && csvImportState.matchingGroups.length > 1 && (
                 <Alert>
                   <CheckCircle2 className="h-4 w-4" />
-                  <AlertTitle>Payout seleccionat</AlertTitle>
+                  <AlertTitle>{tr('dialogs.stripeImputation.payoutSelectedTitle', 'Payout seleccionat')}</AlertTitle>
                   <AlertDescription>
-                    {selectedGroup.rows.length} pagaments · brut {selectedGroup.gross.toFixed(2)} € · comissions {selectedGroup.fees.toFixed(2)} € · net {selectedGroup.net.toFixed(2)} €
+                    {selectedGroup.rows.length} {tr('dialogs.stripeImputation.payoutSummaryPayments', 'pagaments')} · {tr('dialogs.stripeImputation.payoutSummaryGross', 'brut')} {selectedGroup.gross.toFixed(2)} € · {tr('dialogs.stripeImputation.payoutSummaryFees', 'comissions')} {selectedGroup.fees.toFixed(2)} € · {tr('dialogs.stripeImputation.payoutSummaryNet', 'net')} {selectedGroup.net.toFixed(2)} €
                   </AlertDescription>
                 </Alert>
               )}
 
               <div className="min-h-0 overflow-x-auto overflow-y-visible rounded-md border">
-                <Table className="min-w-[820px]">
+                <Table className="w-full min-w-[720px] table-fixed lg:min-w-[820px]">
                   <TableHeader className="sticky top-0 z-10 bg-background">
                     <TableRow>
-                      <TableHead>Origen</TableHead>
-                      <TableHead>Referència</TableHead>
-                      <TableHead>Import brut</TableHead>
-                      <TableHead>Donant</TableHead>
-                      <TableHead className="w-[88px]">Accions</TableHead>
+                      <TableHead className="hidden sm:table-cell w-[92px]">{tr('dialogs.stripeImputation.tableOrigin', 'Origen')}</TableHead>
+                      <TableHead className="hidden md:table-cell w-[160px]">{tr('dialogs.stripeImputation.reference', 'Referència')}</TableHead>
+                      <TableHead className="w-[112px]">{tr('dialogs.stripeImputation.grossAmount', 'Import brut')}</TableHead>
+                      <TableHead className="w-[min(36vw,22rem)]">{tr('dialogs.stripeImputation.donor', 'Donant')}</TableHead>
+                      <TableHead className="w-[88px]">{tr('dialogs.stripeImputation.tableActions', 'Accions')}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {editableLines.length === 0 ? (
                       <TableRow>
                         <TableCell colSpan={5} className="py-8 text-center text-sm text-muted-foreground">
-                          Encara no hi ha línies d&apos;imputació. Pots començar manualment o carregar un CSV.
+                          {tr('dialogs.stripeImputation.empty', 'Encara no hi ha línies d\'imputació. Pots començar manualment o carregar un CSV.')}
                         </TableCell>
                       </TableRow>
                     ) : (
                       editableLines.map((line) => (
                         <TableRow key={line.localId}>
-                          <TableCell className="align-top">
-                            <span className="text-sm">{line.imputationOrigin === 'csv' ? 'CSV' : 'Manual'}</span>
+                          <TableCell className="hidden align-top sm:table-cell">
+                            <span className="text-sm">{line.imputationOrigin === 'csv' ? 'CSV' : tr('dialogs.stripeImputation.manualOrigin', 'Manual')}</span>
                           </TableCell>
-                          <TableCell className="align-top text-sm text-muted-foreground">
+                          <TableCell className="hidden align-top text-sm text-muted-foreground md:table-cell">
                             {line.stripePaymentId ? (
-                              <div className="space-y-1">
-                                <div>{line.stripePaymentId}</div>
-                                {line.customerEmail && <div>{line.customerEmail}</div>}
+                              <div className="space-y-1 break-words">
+                                <div className="break-all">{line.stripePaymentId}</div>
+                                {line.customerEmail && <div className="break-words">{line.customerEmail}</div>}
                               </div>
                             ) : (
-                              'Sense identificador Stripe'
+                              tr('dialogs.stripeImputation.noStripeIdentifier', 'Sense identificador Stripe')
                             )}
                           </TableCell>
                           <TableCell className="align-top">
@@ -773,23 +786,23 @@ export function StripeImputationModal({
                               placeholder="0.00"
                             />
                           </TableCell>
-                          <TableCell className="min-w-[320px] align-top">
+                          <TableCell className="min-w-0 align-top">
                             <DonorSearchCombobox
                               donors={sortedDonors}
                               value={line.contactId}
                               onSelect={(donorId) => handleSetLineContact(line.localId, donorId)}
-                              placeholder="Assigna donant"
+                              placeholder={tr('dialogs.stripeImputation.assignDonorPlaceholder', 'Assigna donant')}
                               presentation="dialog"
-                              dialogTitle="Selecciona donant o soci"
+                              dialogTitle={tr('dialogs.stripeImputation.donorDialogTitle', 'Selecciona donant o soci')}
                               createActions={[
                                 {
                                   key: `donor-${line.localId}`,
-                                  label: 'Donar d\'alta nou donant',
+                                  label: tr('dialogs.stripeImputation.createDonor', 'Donar d\'alta nou donant'),
                                   onSelect: () => handleOpenQuickCreate(line.localId, 'donor'),
                                 },
                                 {
                                   key: `member-${line.localId}`,
-                                  label: 'Donar d\'alta nou soci',
+                                  label: tr('dialogs.stripeImputation.createMember', 'Donar d\'alta nou soci'),
                                   onSelect: () => handleOpenQuickCreate(line.localId, 'member'),
                                 },
                               ]}
@@ -802,7 +815,7 @@ export function StripeImputationModal({
                               variant="ghost"
                               size="icon"
                               onClick={() => handleDeleteLine(line.localId)}
-                              aria-label="Eliminar línia"
+                              aria-label={tr('dialogs.stripeImputation.deleteLineAria', 'Eliminar línia')}
                             >
                               <Trash2 className="h-4 w-4" />
                             </Button>
@@ -816,19 +829,19 @@ export function StripeImputationModal({
 
               <div className="rounded-lg border bg-muted/30 p-5">
                 <div className="mb-4 text-sm font-medium text-muted-foreground">
-                  Repartiment de l&apos;abonament
+                  {tr('dialogs.stripeImputation.bankPaymentTitle', 'Abonament bancari')}
                 </div>
                 <div className="grid gap-3 md:grid-cols-3">
                   <div className="rounded-md border bg-background p-4">
-                    <div className="text-xs uppercase tracking-wide text-muted-foreground">Total imputat</div>
+                    <div className="text-xs uppercase tracking-wide text-muted-foreground">{tr('dialogs.stripeImputation.totalImputed', 'Total imputat')}</div>
                     <div className="mt-2 text-2xl font-semibold">{summary.totalImputed.toFixed(2)} €</div>
                   </div>
                   <div className="rounded-md border bg-background p-4">
-                    <div className="text-xs uppercase tracking-wide text-muted-foreground">Banc</div>
+                    <div className="text-xs uppercase tracking-wide text-muted-foreground">{tr('dialogs.stripeImputation.bank', 'Banc')}</div>
                     <div className="mt-2 text-2xl font-semibold">{bankTransaction.amount.toFixed(2)} €</div>
                   </div>
                   <div className="rounded-md border bg-background p-4">
-                    <div className="text-xs uppercase tracking-wide text-muted-foreground">Diferència</div>
+                    <div className="text-xs uppercase tracking-wide text-muted-foreground">{tr('dialogs.stripeImputation.difference', 'Diferència')}</div>
                     <div className="mt-2 text-2xl font-semibold">
                       {(summary.totalImputed - bankTransaction.amount >= 0 ? '+' : '')}
                       {(summary.totalImputed - bankTransaction.amount).toFixed(2)} €
@@ -836,16 +849,16 @@ export function StripeImputationModal({
                   </div>
                 </div>
                 <p className="mt-4 text-sm text-muted-foreground">
-                  La diferència pot deure&apos;s a comissions o ajustos de Stripe.
+                  {tr('dialogs.stripeImputation.differenceHint', 'La diferència pot deure\'s a comissions o ajustos de Stripe.')}
                 </p>
               </div>
 
               {summary.hasInvalidLines && (
                 <Alert>
                   <AlertTriangle className="h-4 w-4" />
-                  <AlertTitle>Falten dades per completar</AlertTitle>
+                  <AlertTitle>{tr('dialogs.stripeImputation.missingDataTitle', 'Falten dades per completar')}</AlertTitle>
                   <AlertDescription>
-                    Cada línia ha de tenir donant i un import brut vàlid abans de confirmar.
+                    {tr('dialogs.stripeImputation.missingDataDescription', 'Cada línia ha de tenir donant i un import brut vàlid abans de confirmar.')}
                   </AlertDescription>
                 </Alert>
               )}
@@ -853,9 +866,9 @@ export function StripeImputationModal({
               {summary.duplicateStripePaymentIds.length > 0 && (
                 <Alert variant="destructive">
                   <AlertTriangle className="h-4 w-4" />
-                  <AlertTitle>Pagaments Stripe duplicats</AlertTitle>
+                  <AlertTitle>{tr('dialogs.stripeImputation.duplicateTitle', 'Pagaments Stripe duplicats')}</AlertTitle>
                   <AlertDescription>
-                    No es pot confirmar mentre hi hagi `stripePaymentId` repetits dins la mateixa imputació.
+                    {tr('dialogs.stripeImputation.duplicateDescription', 'No es pot confirmar mentre hi hagi `stripePaymentId` repetits dins la mateixa imputació.')}
                   </AlertDescription>
                 </Alert>
               )}
@@ -864,9 +877,9 @@ export function StripeImputationModal({
                 <>
                   <Alert>
                     <AlertTriangle className="h-4 w-4" />
-                    <AlertTitle>La distribució no quadra exactament amb el banc</AlertTitle>
+                    <AlertTitle>{tr('dialogs.stripeImputation.differenceTitle', 'La distribució no quadra exactament amb el banc')}</AlertTitle>
                     <AlertDescription>
-                      La diferència pot deure&apos;s a comissions o ajustos de Stripe. Si el repartiment és correcte, confirma-ho explícitament.
+                      {tr('dialogs.stripeImputation.differenceDescription', 'La diferència pot deure\'s a comissions o ajustos de Stripe. Si el repartiment és correcte, confirma-ho explícitament.')}
                     </AlertDescription>
                   </Alert>
                   <div className="flex items-center gap-2 rounded-md border bg-background p-3">
@@ -876,7 +889,7 @@ export function StripeImputationModal({
                       onCheckedChange={(value) => setIsDifferenceConfirmed(value === true)}
                     />
                     <Label htmlFor="confirm-stripe-imputation-difference">
-                      Confirmo que la distribució és correcta
+                      {tr('dialogs.stripeImputation.differenceConfirm', 'Confirmo que la distribució és correcta')}
                     </Label>
                   </div>
                 </>
@@ -885,11 +898,11 @@ export function StripeImputationModal({
 
             <DialogFooter className="shrink-0 border-t bg-background py-4">
               <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isSaving}>
-                Cancel·lar
+                {t.common.cancel}
               </Button>
               <Button onClick={handleConfirm} disabled={isSaving || !canConfirm}>
                 {isSaving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
-                Confirmar imputació
+                {tr('dialogs.stripeImputation.confirmAction', 'Confirmar imputació')}
               </Button>
             </DialogFooter>
           </div>
@@ -899,15 +912,15 @@ export function StripeImputationModal({
       <AlertDialog open={isReplaceDialogOpen} onOpenChange={setIsReplaceDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Substituir la imputació actual?</AlertDialogTitle>
+            <AlertDialogTitle>{tr('dialogs.stripeImputation.replaceCsvTitle', 'Substituir la imputació actual?')}</AlertDialogTitle>
             <AlertDialogDescription>
-              Ja hi ha línies d&apos;imputació a la taula. Carregar aquest CSV substituirà completament les línies actuals.
+              {tr('dialogs.stripeImputation.replaceCsvDescription', 'Ja hi ha línies d\'imputació a la taula. Carregar aquest CSV substituirà completament les línies actuals.')}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={handleCancelReplaceCsv}>Cancel·lar</AlertDialogCancel>
+            <AlertDialogCancel onClick={handleCancelReplaceCsv}>{t.common.cancel}</AlertDialogCancel>
             <AlertDialogAction onClick={handleConfirmReplaceCsv}>
-              Substituir per les línies del CSV
+              {tr('dialogs.stripeImputation.replaceCsvAction', 'Substituir per les línies del CSV')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -918,14 +931,20 @@ export function StripeImputationModal({
         onOpenChange={handleQuickCreateOpenChange}
         onSave={handleCreateQuickDonor}
         initialData={quickCreateState?.initialData}
-        title={quickCreateState?.kind === 'member' ? 'Crear nou soci' : 'Crear nou donant'}
+        title={quickCreateState?.kind === 'member'
+          ? tr('dialogs.stripeImputation.createMemberTitle', 'Crear nou soci')
+          : tr('dialogs.stripeImputation.createDonorTitle', 'Crear nou donant')}
         description={
           quickCreateState?.kind === 'member'
-            ? 'Crea el soci des d\'aquí i l\'assignarem directament a la imputació Stripe.'
-            : 'Crea el donant des d\'aquí i l\'assignarem directament a la imputació Stripe.'
+            ? tr('dialogs.stripeImputation.createMemberDescription', 'Crea el soci des d\'aquí i l\'assignarem directament a la imputació Stripe.')
+            : tr('dialogs.stripeImputation.createDonorDescription', 'Crea el donant des d\'aquí i l\'assignarem directament a la imputació Stripe.')
         }
-        submitLabel={quickCreateState?.kind === 'member' ? 'Crear soci' : 'Crear donant'}
-        submittingLabel={quickCreateState?.kind === 'member' ? 'Creant soci...' : 'Creant donant...'}
+        submitLabel={quickCreateState?.kind === 'member'
+          ? tr('dialogs.stripeImputation.createMemberAction', 'Crear soci')
+          : tr('dialogs.stripeImputation.createDonorAction', 'Crear donant')}
+        submittingLabel={quickCreateState?.kind === 'member'
+          ? `${tr('dialogs.stripeImputation.createMemberAction', 'Crear soci')}...`
+          : `${tr('dialogs.stripeImputation.createDonorAction', 'Crear donant')}...`}
       />
     </>
   );

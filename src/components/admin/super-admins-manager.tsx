@@ -44,6 +44,13 @@ import {
   UserPlus,
 } from 'lucide-react';
 
+function interpolateMessage(template: string, values: Record<string, string | number>) {
+  return Object.entries(values).reduce(
+    (message, [key, value]) => message.replace(new RegExp(`\\{${key}\\}`, 'g'), String(value)),
+    template
+  );
+}
+
 // =============================================================================
 // TYPES
 // =============================================================================
@@ -61,7 +68,7 @@ interface SuperAdminDoc {
 
 export function SuperAdminsManager() {
   const { user, firestore } = useFirebase();
-  const { t } = useTranslations();
+  const { t, tr, language } = useTranslations();
   const { toast } = useToast();
 
   // State
@@ -81,13 +88,13 @@ export function SuperAdminsManager() {
   // Handlers
   const handleAdd = async () => {
     if (!newUid.trim()) {
-      toast({ variant: 'destructive', title: 'Error', description: 'L\'UID és obligatori.' });
+      toast({ variant: 'destructive', title: tr('admin.superAdmins.toast.errorTitle', 'Error'), description: tr('admin.superAdmins.toast.uidRequired', 'L’UID és obligatori.') });
       return;
     }
 
     // Validar format UID (alfanumèric, 20-30 chars típic de Firebase Auth)
     if (!/^[a-zA-Z0-9]{20,40}$/.test(newUid.trim())) {
-      toast({ variant: 'destructive', title: 'Error', description: 'Format d\'UID invàlid.' });
+      toast({ variant: 'destructive', title: tr('admin.superAdmins.toast.errorTitle', 'Error'), description: tr('admin.superAdmins.toast.invalidUid', 'Format d’UID invàlid.') });
       return;
     }
 
@@ -100,12 +107,18 @@ export function SuperAdminsManager() {
         createdBy: user?.uid,
       });
 
-      toast({ title: 'SuperAdmin afegit', description: `UID: ${newUid.trim()}` });
+      toast({
+        title: tr('admin.superAdmins.toast.addedTitle', 'SuperAdmin afegit'),
+        description: interpolateMessage(
+          tr('admin.superAdmins.toast.uidDescription', 'UID: {uid}'),
+          { uid: newUid.trim() }
+        ),
+      });
       setNewUid('');
       setNewEmail('');
     } catch (error) {
       console.error('Error adding superadmin:', error);
-      toast({ variant: 'destructive', title: 'Error', description: 'No s\'ha pogut afegir el superadmin.' });
+      toast({ variant: 'destructive', title: tr('admin.superAdmins.toast.errorTitle', 'Error'), description: tr('admin.superAdmins.toast.addError', 'No s’ha pogut afegir el superadmin.') });
     } finally {
       setIsAdding(false);
     }
@@ -118,8 +131,8 @@ export function SuperAdminsManager() {
     if (superAdmins && superAdmins.length === 1 && deleteTarget.id === user?.uid) {
       toast({
         variant: 'destructive',
-        title: 'No permès',
-        description: 'No pots eliminar l\'últim superadmin.',
+        title: tr('admin.superAdmins.toast.notAllowedTitle', 'No permès'),
+        description: tr('admin.superAdmins.toast.lastSuperAdmin', 'No pots eliminar l’últim superadmin.'),
       });
       setDeleteTarget(null);
       return;
@@ -128,10 +141,16 @@ export function SuperAdminsManager() {
     setIsDeleting(true);
     try {
       await deleteDoc(doc(firestore, 'systemSuperAdmins', deleteTarget.id));
-      toast({ title: 'SuperAdmin eliminat', description: `UID: ${deleteTarget.id}` });
+      toast({
+        title: tr('admin.superAdmins.toast.deletedTitle', 'SuperAdmin eliminat'),
+        description: interpolateMessage(
+          tr('admin.superAdmins.toast.uidDescription', 'UID: {uid}'),
+          { uid: deleteTarget.id }
+        ),
+      });
     } catch (error) {
       console.error('Error deleting superadmin:', error);
-      toast({ variant: 'destructive', title: 'Error', description: 'No s\'ha pogut eliminar el superadmin.' });
+      toast({ variant: 'destructive', title: tr('admin.superAdmins.toast.errorTitle', 'Error'), description: tr('admin.superAdmins.toast.deleteError', 'No s’ha pogut eliminar el superadmin.') });
     } finally {
       setIsDeleting(false);
       setDeleteTarget(null);
@@ -141,7 +160,8 @@ export function SuperAdminsManager() {
   const formatDate = (timestamp: SuperAdminDoc['createdAt']) => {
     if (!timestamp) return '-';
     const date = typeof timestamp === 'string' ? new Date(timestamp) : timestamp.toDate();
-    return date.toLocaleDateString('ca-ES', {
+    const locale = language === 'es' ? 'es-ES' : language === 'fr' ? 'fr-FR' : language === 'pt' ? 'pt-PT' : 'ca-ES';
+    return date.toLocaleDateString(locale, {
       day: '2-digit',
       month: '2-digit',
       year: 'numeric',
@@ -155,10 +175,10 @@ export function SuperAdminsManager() {
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-base">
           <Shield className="h-4 w-4" />
-          Gestionar SuperAdmins
+          {tr('admin.superAdmins.title', 'Gestionar SuperAdmins')}
         </CardTitle>
         <CardDescription>
-          Controla qui pot accedir a aquesta zona sensible. Si et quedes sense superadmins, perdràs accés.
+          {tr('admin.superAdmins.description', 'Controla qui pot accedir a aquesta zona sensible. Si et quedes sense superadmins, perdràs accés.')}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -166,14 +186,14 @@ export function SuperAdminsManager() {
         <div className="flex flex-col gap-3 p-4 border rounded-lg bg-muted/30">
           <div className="flex items-center gap-2 text-sm font-medium">
             <UserPlus className="h-4 w-4" />
-            Afegir SuperAdmin
+            {tr('admin.superAdmins.addSectionTitle', 'Afegir SuperAdmin')}
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div className="space-y-1">
-              <Label htmlFor="new-uid" className="text-xs">UID (obligatori)</Label>
+              <Label htmlFor="new-uid" className="text-xs">{tr('admin.superAdmins.uidLabel', 'UID (obligatori)')}</Label>
               <Input
                 id="new-uid"
-                placeholder="f2AHJqjXiOZkYajwkOnZ8RY6h2k2"
+                placeholder={tr('admin.superAdmins.uidPlaceholder', 'f2AHJqjXiOZkYajwkOnZ8RY6h2k2')}
                 value={newUid}
                 onChange={(e) => setNewUid(e.target.value)}
                 disabled={isAdding}
@@ -181,11 +201,11 @@ export function SuperAdminsManager() {
               />
             </div>
             <div className="space-y-1">
-              <Label htmlFor="new-email" className="text-xs">Email (opcional, per referència)</Label>
+              <Label htmlFor="new-email" className="text-xs">{tr('admin.superAdmins.emailLabel', 'Email (opcional, per referència)')}</Label>
               <Input
                 id="new-email"
                 type="email"
-                placeholder="admin@exemple.com"
+                placeholder={tr('admin.superAdmins.emailPlaceholder', 'admin@exemple.com')}
                 value={newEmail}
                 onChange={(e) => setNewEmail(e.target.value)}
                 disabled={isAdding}
@@ -203,7 +223,7 @@ export function SuperAdminsManager() {
               ) : (
                 <Plus className="mr-2 h-4 w-4" />
               )}
-              Afegir
+              {tr('admin.superAdmins.add', 'Afegir')}
             </Button>
           </div>
         </div>
@@ -212,20 +232,20 @@ export function SuperAdminsManager() {
         {isLoading ? (
           <div className="flex items-center gap-2 text-sm text-muted-foreground py-4">
             <Loader2 className="h-4 w-4 animate-spin" />
-            Carregant...
+            {tr('admin.superAdmins.loading', 'Carregant...')}
           </div>
         ) : !superAdmins || superAdmins.length === 0 ? (
           <div className="flex items-center gap-2 text-sm text-amber-600 py-4">
             <AlertTriangle className="h-4 w-4" />
-            Cap superadmin registrat. Afegeix-ne un per poder canviar a les noves rules.
+            {tr('admin.superAdmins.empty', 'Cap superadmin registrat. Afegeix-ne un per poder canviar a les noves rules.')}
           </div>
         ) : (
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>UID</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>Creat</TableHead>
+                <TableHead>{tr('admin.superAdmins.table.uid', 'UID')}</TableHead>
+                <TableHead>{tr('admin.superAdmins.table.email', 'Email')}</TableHead>
+                <TableHead>{tr('admin.superAdmins.table.created', 'Creat')}</TableHead>
                 <TableHead className="w-[60px]"></TableHead>
               </TableRow>
             </TableHeader>
@@ -235,7 +255,7 @@ export function SuperAdminsManager() {
                   <TableCell className="font-mono text-xs">
                     {sa.id}
                     {sa.id === user?.uid && (
-                      <span className="ml-2 text-xs text-muted-foreground">(tu)</span>
+                      <span className="ml-2 text-xs text-muted-foreground">{tr('admin.superAdmins.you', '(tu)')}</span>
                     )}
                   </TableCell>
                   <TableCell className="text-sm">{sa.email || '-'}</TableCell>
@@ -248,7 +268,9 @@ export function SuperAdminsManager() {
                       size="sm"
                       onClick={() => setDeleteTarget(sa)}
                       disabled={superAdmins.length === 1 && sa.id === user?.uid}
-                      title={superAdmins.length === 1 && sa.id === user?.uid ? 'No pots eliminar l\'últim superadmin' : 'Eliminar'}
+                      title={superAdmins.length === 1 && sa.id === user?.uid
+                        ? tr('admin.superAdmins.deleteDisabled', 'No pots eliminar l’últim superadmin')
+                        : tr('admin.superAdmins.delete', 'Eliminar')}
                     >
                       <Trash2 className="h-4 w-4 text-destructive" />
                     </Button>
@@ -264,12 +286,12 @@ export function SuperAdminsManager() {
       <AlertDialog open={!!deleteTarget} onOpenChange={() => setDeleteTarget(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>{t.admin.superAdmins.deleteTitle}</AlertDialogTitle>
+            <AlertDialogTitle>{tr('admin.superAdmins.deleteTitle', 'Eliminar superadmin?')}</AlertDialogTitle>
             <AlertDialogDescription>
-              L'usuari amb UID <code className="font-mono bg-muted px-1 rounded">{deleteTarget?.id}</code> {t.admin.superAdmins.deleteDescription}
+              {tr('admin.superAdmins.deletePromptPrefix', 'L’usuari amb UID')} <code className="font-mono bg-muted px-1 rounded">{deleteTarget?.id}</code> {tr('admin.superAdmins.deleteDescription', 'deixarà de tenir accés a aquesta zona sensible.')}
               {deleteTarget?.id === user?.uid && (
                 <span className="block mt-2 text-destructive font-medium">
-                  {t.admin.superAdmins.deleteSelfWarning}
+                  {tr('admin.superAdmins.deleteSelfWarning', 'Atenció: t’estàs eliminant a tu mateix com a superadmin.')}
                 </span>
               )}
             </AlertDialogDescription>

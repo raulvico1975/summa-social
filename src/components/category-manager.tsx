@@ -67,7 +67,7 @@ function CategoryTable({
   canEdit: boolean;
   isMobile: boolean;
 }) {
-  const { t } = useTranslations();
+  const { t, tr } = useTranslations();
   const categoryTranslations = t.categories as Record<string, string>;
 
   if (isMobile) {
@@ -89,14 +89,14 @@ function CategoryTable({
                   <DropdownMenuContent align="end">
                     <DropdownMenuItem onClick={() => onEdit(category)}>
                       <Edit className="mr-2 h-4 w-4" />
-                      Editar
+                      {t.common.edit}
                     </DropdownMenuItem>
                     <DropdownMenuItem
                       onClick={() => onDelete(category)}
                       className="text-amber-600"
                     >
                       <Archive className="mr-2 h-4 w-4" />
-                      {t.common?.archive ?? 'Eliminar'}
+                      {tr('common.archive')}
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
@@ -138,7 +138,7 @@ function CategoryTable({
                         size="icon"
                         className="text-amber-500 hover:text-amber-600"
                         onClick={() => onDelete(category)}
-                        title={t.common?.archive ?? 'Eliminar'}
+                        title={tr('common.archive')}
                       >
                         <Archive className="h-4 w-4" />
                       </Button>
@@ -164,7 +164,7 @@ function CategoryTable({
 export function CategoryManager() {
   const { firestore, auth, user } = useFirebase();
   const { organizationId, userRole } = useCurrentOrganization();
-  const { t } = useTranslations();
+  const { t, tr } = useTranslations();
   const categoryTranslations = t.categories as Record<string, string>;
   const isMobile = useIsMobile();
 
@@ -249,21 +249,21 @@ export function CategoryManager() {
         // Arxivat directe (no tenia moviments assignats)
         const categoryName = categoryTranslations[category.name] || category.name;
         toast({
-          title: t.settings?.categoryArchivedToast ?? 'Categoria arxivada',
-          description: t.settings?.categoryArchivedToastDescription?.(categoryName) ?? `La categoria "${categoryName}" ha estat arxivada.`,
+          title: t.settings.categoryArchivedToast,
+          description: t.settings.categoryArchivedToastDescription(categoryName),
         });
         setCategoryToArchive(null);
       } else {
         // Mapejar code de l'API → clau i18n
         const errorDescription =
           result.code === 'SYSTEM_CATEGORY_LOCKED'
-            ? (t.settings?.systemCategoryLocked ?? result.error)
+            ? t.settings.systemCategoryLocked
             : result.code === 'CATEGORY_IN_USE'
-              ? (t.settings?.categoryInUse ?? result.error)
-              : (t.settings?.archiveError ?? result.error ?? 'Error desconegut');
+              ? t.settings.categoryInUse
+              : t.settings.archiveError;
         toast({
           variant: 'destructive',
-          title: t.settings?.archiveError ?? "No s'ha pogut eliminar",
+          title: t.settings.archiveError,
           description: errorDescription,
         });
         setCategoryToArchive(null);
@@ -272,8 +272,8 @@ export function CategoryManager() {
       console.error('Error eliminant categoria:', error);
       toast({
         variant: 'destructive',
-        title: t.settings?.archiveError ?? "No s'ha pogut eliminar",
-        description: error instanceof Error ? error.message : 'Error desconegut',
+        title: t.settings.archiveError,
+        description: error instanceof Error ? error.message : t.common.unknownError,
       });
       setCategoryToArchive(null);
     } finally {
@@ -283,7 +283,7 @@ export function CategoryManager() {
 
   const handleReassignConfirm = async (toCategoryId: string): Promise<{ success: boolean; error?: string }> => {
     if (!categoryToArchive || !user) {
-      return { success: false, error: 'No hi ha categoria seleccionada' };
+      return { success: false, error: t.common.noSelection };
     }
 
     try {
@@ -306,16 +306,18 @@ export function CategoryManager() {
       if (result.success) {
         const categoryName = categoryTranslations[categoryToArchive.name] || categoryToArchive.name;
         toast({
-          title: t.settings?.categoryArchivedToast ?? 'Categoria arxivada',
-          description: `${result.reassignedCount ?? 0} moviments reassignats. "${categoryName}" arxivada.`,
+          title: t.settings.categoryArchivedToast,
+          description: tr('settings.categoryArchivedToastDescriptionReassigned')
+            .replace('{count}', String(result.reassignedCount ?? 0))
+            .replace('{name}', categoryName),
         });
         setCategoryToArchive(null);
         return { success: true };
       } else {
-        return { success: false, error: result.error || 'Error desconegut' };
+        return { success: false, error: result.error || t.common.unknownError };
       }
     } catch (error) {
-      return { success: false, error: error instanceof Error ? error.message : 'Error desconegut' };
+      return { success: false, error: error instanceof Error ? error.message : t.common.unknownError };
     }
   };
 
@@ -371,7 +373,7 @@ export function CategoryManager() {
         });
         toast({ title: t.settings.categoryUpdatedToast, description: t.settings.categoryUpdatedToastDescription(formData.name) });
       } catch (err) {
-        toast({ variant: 'destructive', title: t.common.error, description: err instanceof Error ? err.message : 'Error desconegut' });
+        toast({ variant: 'destructive', title: t.common.error, description: err instanceof Error ? err.message : t.common.unknownError });
         return;
       }
     } else {
@@ -410,7 +412,7 @@ export function CategoryManager() {
                   variant="outline"
                   size="icon"
                   onClick={() => setIsImporterOpen(true)}
-                  title="Importar categories"
+                  title={tr('settings.categoriesImport')}
                 >
                   <Upload className="h-4 w-4" />
                 </Button>
@@ -420,7 +422,7 @@ export function CategoryManager() {
                   size="icon"
                   onClick={() => categories && categories.length > 0 && exportCategoriesToExcel(categories, categoryTranslations)}
                   disabled={!categories || categories.length === 0}
-                  title="Exportar a Excel"
+                  title={tr('settings.categoriesExport')}
                 >
                   <Download className="h-4 w-4" />
                 </Button>

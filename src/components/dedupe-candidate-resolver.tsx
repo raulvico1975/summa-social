@@ -165,8 +165,8 @@ export function DedupeCandidateResolver({
         onCancel();
       }
     }}>
-      <DialogContent className="grid max-h-[90vh] max-w-3xl grid-rows-[auto_minmax(0,1fr)_auto] gap-0 overflow-hidden p-0">
-        <DialogHeader className="px-6 pb-4 pt-6">
+      <DialogContent className="grid max-h-[calc(100dvh-2rem)] w-[min(96vw,72rem)] max-w-5xl grid-rows-[auto_minmax(0,1fr)_auto] gap-0 overflow-hidden p-0">
+        <DialogHeader className="border-b px-4 pb-4 pt-5 pr-10 sm:px-6 sm:pt-6">
           <DialogTitle>
             {tr('importers.transaction.preImportSummaryTitle', 'Resum pre-importació')}
           </DialogTitle>
@@ -175,7 +175,7 @@ export function DedupeCandidateResolver({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex-1 space-y-4 overflow-y-auto px-6 pb-4">
+        <div className="flex-1 space-y-4 overflow-y-auto px-4 pb-4 pt-4 sm:px-6">
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             <div className="rounded-md border p-3">
               <p className="text-xs text-muted-foreground">{tr('importers.transaction.preview.movementsToImport', 'Moviments a importar')}</p>
@@ -286,6 +286,7 @@ export function DedupeCandidateResolver({
           {sampleRows.length > 0 && (
             <TooltipProvider>
               <ScrollArea className="max-h-[260px] rounded-md border">
+                <div className="min-w-[640px]">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -306,7 +307,7 @@ export function DedupeCandidateResolver({
                           <TableCell className="text-xs">{formatDate(row.operationDate)}</TableCell>
                           <TableCell className="text-xs">
                             <div className="flex items-center gap-2">
-                              <span>{row.description}</span>
+                              <span className="break-words">{row.description}</span>
                               {row.warnings.length > 0 && (
                                 <Tooltip>
                                   <TooltipTrigger asChild>
@@ -334,6 +335,7 @@ export function DedupeCandidateResolver({
                     })}
                   </TableBody>
                 </Table>
+                </div>
               </ScrollArea>
             </TooltipProvider>
           )}
@@ -381,6 +383,7 @@ export function DedupeCandidateResolver({
                   </div>
 
                   <ScrollArea className="max-h-[280px] rounded-md border">
+                    <div className="min-w-[720px]">
                     <Table>
                       <TableHeader>
                         <TableRow>
@@ -407,9 +410,9 @@ export function DedupeCandidateResolver({
                               <TableCell className="whitespace-nowrap text-right font-mono text-xs">
                                 {formatAmount(safeRow.tx.amount)}
                               </TableCell>
-                              <TableCell className="text-xs">
+                              <TableCell className="max-w-[320px] text-xs">
                                 <p className="font-medium">{tr(safeUi.mainKey, safeUi.mainFallback)}</p>
-                                <p className="text-muted-foreground">{safeRow.tx.description}</p>
+                                <p className="break-words text-muted-foreground">{safeRow.tx.description}</p>
                               </TableCell>
                               <TableCell className="text-xs">
                                 <details>
@@ -434,6 +437,7 @@ export function DedupeCandidateResolver({
                         })}
                       </TableBody>
                     </Table>
+                    </div>
                   </ScrollArea>
                 </CollapsibleContent>
               </Collapsible>
@@ -466,6 +470,7 @@ export function DedupeCandidateResolver({
               </div>
 
               <ScrollArea className="max-h-[380px] rounded-md border">
+                <div className="min-w-[760px]">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -502,18 +507,21 @@ export function DedupeCandidateResolver({
                           <TableCell className="whitespace-nowrap text-right font-mono text-xs">
                             {formatAmount(existing?.balanceAfter)}
                           </TableCell>
-                          <TableCell className="text-xs">{candidate.tx.description}</TableCell>
+                          <TableCell className="max-w-[320px] text-xs">
+                            <span className="break-words">{candidate.tx.description}</span>
+                          </TableCell>
                         </TableRow>
                       );
                     })}
                   </TableBody>
                 </Table>
+                </div>
               </ScrollArea>
             </>
           )}
         </div>
 
-        <DialogFooter className="sticky bottom-0 z-10 border-t bg-background px-6 py-4">
+        <DialogFooter className="sticky bottom-0 z-10 border-t bg-background px-4 py-4 sm:px-6">
           <Button variant="outline" onClick={onCancel}>
             {t.importers?.transaction?.cancel ?? 'Cancel·lar'}
           </Button>

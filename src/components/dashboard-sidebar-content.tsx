@@ -114,7 +114,7 @@ export function DashboardSidebarContent() {
       toast({
         variant: 'destructive',
         title: t.common.error,
-        description: tr('userMenu.changePasswordErrorNoEmail', "No hi ha cap correu associat a aquest compte."),
+        description: tr('userMenu.changePasswordErrorNoEmail'),
       });
       return;
     }
@@ -123,11 +123,8 @@ export function DashboardSidebarContent() {
       firebaseAuth.languageCode = resolveAuthLanguage(language);
       await sendPasswordResetEmail(firebaseAuth, email);
       toast({
-        title: tr('userMenu.changePasswordSentTitle', 'Correu enviat'),
-        description: tr(
-          'userMenu.changePasswordSentDescription',
-          "T'hem enviat un correu per restablir la contrasenya."
-        ),
+        title: tr('userMenu.changePasswordSentTitle'),
+        description: tr('userMenu.changePasswordSentDescription'),
       });
     } catch (error) {
       console.error('Error sending password reset email:', error);
@@ -157,13 +154,13 @@ export function DashboardSidebarContent() {
     if (can('projectes.manage')) {
       items.push({
         path: '/dashboard/project-module/projects',
-        label: t.sidebar.projectModuleManage ?? 'Gestió de projectes',
+        label: t.sidebar.projectModuleManage,
         icon: FolderKanban,
       });
     }
     items.push({
       path: '/dashboard/project-module/expenses',
-      label: t.sidebar.projectModuleExpenses ?? 'Assignació de despeses',
+      label: t.sidebar.projectModuleExpenses,
       icon: ClipboardList,
     });
 
@@ -361,12 +358,12 @@ export function DashboardSidebarContent() {
                     <SidebarMenuItem>
                       <SidebarMenuButton
                         asChild
-                        tooltip={{ children: t.sidebar.projectModule ?? 'Projectes' }}
+                        tooltip={{ children: t.sidebar.projectModule }}
                         isActive={isProjectModuleActive}
                       >
                         <Link href={projectModuleMainHref} onClick={handleNavClick}>
                           <FolderKanban className="text-emerald-600" />
-                          <span>{t.sidebar.projectModule ?? 'Projectes'}</span>
+                          <span>{t.sidebar.projectModule}</span>
                         </Link>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
@@ -380,11 +377,11 @@ export function DashboardSidebarContent() {
                       <SidebarMenuItem>
                         <CollapsibleTrigger asChild>
                           <SidebarMenuButton
-                            tooltip={{ children: t.sidebar.projectModule ?? 'Projectes' }}
+                            tooltip={{ children: t.sidebar.projectModule }}
                             isActive={isProjectModuleActive}
                           >
                             <FolderKanban className="text-emerald-600" />
-                            <span>{t.sidebar.projectModule ?? 'Projectes'}</span>
+                            <span>{t.sidebar.projectModule}</span>
                             <ChevronRight className="ml-auto h-4 w-4 transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
                           </SidebarMenuButton>
                         </CollapsibleTrigger>
@@ -480,7 +477,7 @@ export function DashboardSidebarContent() {
           </SidebarMenuItem>
           <SidebarMenuItem>
             <SidebarMenuButton onClick={handleChangePassword}>
-              <span>{tr('userMenu.changePassword', 'Canviar contrasenya')}</span>
+              <span>{tr('userMenu.changePassword')}</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
           <SidebarMenuItem>

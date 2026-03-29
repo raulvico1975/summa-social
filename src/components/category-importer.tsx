@@ -61,7 +61,7 @@ export function CategoryImporter({ open, onOpenChange, onComplete }: CategoryImp
   const { toast } = useToast();
   const { firestore } = useFirebase();
   const { organizationId } = useCurrentOrganization();
-  const { t } = useTranslations();
+  const { t, tr } = useTranslations();
 
   // Categories existents
   const categoriesCollection = useMemoFirebase(
@@ -116,8 +116,8 @@ export function CategoryImporter({ open, onOpenChange, onComplete }: CategoryImp
       if (rows.length === 0) {
         toast({
           variant: 'destructive',
-          title: 'Fitxer buit',
-          description: 'No s\'han trobat dades de categories al fitxer.',
+          title: tr('categoryImporter.emptyFileTitle', t.importers.common.emptyFile),
+          description: tr('categoryImporter.emptyFileDescription', "No s'han trobat dades de categories al fitxer."),
         });
         setIsProcessing(false);
         return;
@@ -138,8 +138,8 @@ export function CategoryImporter({ open, onOpenChange, onComplete }: CategoryImp
       console.error('Error llegint fitxer:', error);
       toast({
         variant: 'destructive',
-        title: 'Error',
-        description: 'No s\'ha pogut llegir el fitxer Excel.',
+        title: t.common.error,
+        description: tr('categoryImporter.readError', "No s'ha pogut llegir el fitxer Excel."),
       });
     } finally {
       setIsProcessing(false);
@@ -193,8 +193,10 @@ export function CategoryImporter({ open, onOpenChange, onComplete }: CategoryImp
 
       setStep('done');
       toast({
-        title: 'Importació completada',
-        description: `${created} creades, ${updated} actualitzades.`,
+        title: t.importers.common.importComplete,
+        description: tr('categoryImporter.importSummary', '{created} creades, {updated} actualitzades.')
+          .replace('{created}', String(created))
+          .replace('{updated}', String(updated)),
       });
 
       onComplete?.();
@@ -202,8 +204,8 @@ export function CategoryImporter({ open, onOpenChange, onComplete }: CategoryImp
       console.error('Error important:', error);
       toast({
         variant: 'destructive',
-        title: 'Error',
-        description: 'S\'ha produït un error durant la importació.',
+        title: t.common.error,
+        description: tr('categoryImporter.importError', "S'ha produït un error durant la importació."),
       });
       setStep('preview');
     } finally {
@@ -216,23 +218,23 @@ export function CategoryImporter({ open, onOpenChange, onComplete }: CategoryImp
     switch (action) {
       case 'create':
         return (
-          <Badge variant="default" className="bg-green-100 text-green-800 hover:bg-green-100">
+            <Badge variant="default" className="bg-green-100 text-green-800 hover:bg-green-100">
             <CheckCircle2 className="h-3 w-3 mr-1" />
-            Nova
+            {tr('categoryImporter.actionCreate', 'Nova')}
           </Badge>
         );
       case 'update':
         return (
-          <Badge variant="default" className="bg-blue-100 text-blue-800 hover:bg-blue-100">
+            <Badge variant="default" className="bg-blue-100 text-blue-800 hover:bg-blue-100">
             <ArrowRightCircle className="h-3 w-3 mr-1" />
-            Actualitzar
+            {tr('categoryImporter.actionUpdate', 'Actualitzar')}
           </Badge>
         );
       case 'skip':
         return (
-          <Badge variant="secondary" className="bg-gray-100 text-gray-600">
+            <Badge variant="secondary" className="bg-gray-100 text-gray-600">
             <Ban className="h-3 w-3 mr-1" />
-            Ometre
+            {tr('categoryImporter.actionSkip', 'Ometre')}
           </Badge>
         );
     }
@@ -252,10 +254,10 @@ export function CategoryImporter({ open, onOpenChange, onComplete }: CategoryImp
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <FileSpreadsheet className="h-5 w-5 text-blue-500" />
-            Importar categories
+            {tr('categoryImporter.title', 'Importar categories')}
           </DialogTitle>
           <DialogDescription>
-            Importa categories des d'un fitxer Excel (.xlsx)
+            {tr('categoryImporter.description', "Importa categories des d'un fitxer Excel (.xlsx)")}
           </DialogDescription>
         </DialogHeader>
 
@@ -266,9 +268,9 @@ export function CategoryImporter({ open, onOpenChange, onComplete }: CategoryImp
               <div className="mx-auto w-16 h-16 rounded-full bg-blue-50 flex items-center justify-center">
                 <Upload className="h-8 w-8 text-blue-500" />
               </div>
-              <h3 className="font-medium">Selecciona un fitxer Excel</h3>
+              <h3 className="font-medium">{tr('categoryImporter.uploadTitle', 'Selecciona un fitxer Excel')}</h3>
               <p className="text-sm text-muted-foreground max-w-md">
-                El fitxer ha de contenir columnes: Nom (obligatori), Tipus (income/expense)
+                {tr('categoryImporter.uploadDescription', 'El fitxer ha de contenir columnes: Nom (obligatori), Tipus (income/expense)')}
               </p>
             </div>
 
@@ -280,7 +282,7 @@ export function CategoryImporter({ open, onOpenChange, onComplete }: CategoryImp
                 onCheckedChange={(checked) => setUpdateExisting(checked === true)}
               />
               <Label htmlFor="updateExisting" className="text-sm">
-                Actualitzar categories existents
+                {tr('categoryImporter.updateExisting', 'Actualitzar categories existents')}
               </Label>
             </div>
 
@@ -288,7 +290,7 @@ export function CategoryImporter({ open, onOpenChange, onComplete }: CategoryImp
             {parseErrors.length > 0 && (
               <Alert variant="destructive" className="max-w-md">
                 <AlertTriangle className="h-4 w-4" />
-                <AlertTitle>Errors al fitxer</AlertTitle>
+                <AlertTitle>{tr('categoryImporter.fileErrorsTitle', 'Errors al fitxer')}</AlertTitle>
                 <AlertDescription>
                   <ul className="mt-2 space-y-1 text-sm">
                     {parseErrors.map((e, i) => (
@@ -307,7 +309,7 @@ export function CategoryImporter({ open, onOpenChange, onComplete }: CategoryImp
                   className="gap-2"
                 >
                   <Download className="h-4 w-4" />
-                  Descarregar plantilla oficial
+                  {t.importers.common.downloadTemplate}
                 </Button>
 
                 <Button
@@ -316,11 +318,11 @@ export function CategoryImporter({ open, onOpenChange, onComplete }: CategoryImp
                   className="gap-2"
                 >
                   <FileSpreadsheet className="h-4 w-4" />
-                  {isProcessing ? 'Processant...' : 'Seleccionar fitxer'}
+                  {isProcessing ? t.importers.common.importing : tr('categoryImporter.selectFile', 'Seleccionar fitxer')}
                 </Button>
               </div>
               <p className="text-xs text-muted-foreground">
-                Utilitza aquesta plantilla per importar categories.
+                {tr('categoryImporter.templateHint', 'Utilitza aquesta plantilla per importar categories.')}
               </p>
             </div>
 
@@ -336,8 +338,7 @@ export function CategoryImporter({ open, onOpenChange, onComplete }: CategoryImp
             <Alert className="max-w-md">
               <AlertCircle className="h-4 w-4" />
               <AlertDescription className="text-xs">
-                Les categories es relacionen per <strong>nom i tipus</strong>.
-                Si ja existeix una categoria amb el mateix nom i tipus, es pot actualitzar o ometre segons l'opció seleccionada.
+                {tr('categoryImporter.matchingHelp', "Les categories es relacionen per nom i tipus. Si ja existeix una categoria amb el mateix nom i tipus, es pot actualitzar o ometre segons l'opció seleccionada.")}
               </AlertDescription>
             </Alert>
           </div>
@@ -350,15 +351,15 @@ export function CategoryImporter({ open, onOpenChange, onComplete }: CategoryImp
             <div className="flex gap-4 text-sm">
               <div className="flex items-center gap-2">
                 <div className="w-3 h-3 rounded-full bg-green-500" />
-                <span>{importResult.summary.toCreate} noves</span>
+                <span>{tr('categoryImporter.summaryNew', '{count} noves').replace('{count}', String(importResult.summary.toCreate))}</span>
               </div>
               <div className="flex items-center gap-2">
                 <div className="w-3 h-3 rounded-full bg-blue-500" />
-                <span>{importResult.summary.toUpdate} actualitzacions</span>
+                <span>{tr('categoryImporter.summaryUpdated', '{count} actualitzacions').replace('{count}', String(importResult.summary.toUpdate))}</span>
               </div>
               <div className="flex items-center gap-2">
                 <div className="w-3 h-3 rounded-full bg-gray-400" />
-                <span>{importResult.summary.toSkip} omeses</span>
+                <span>{tr('categoryImporter.summarySkipped', '{count} omeses').replace('{count}', String(importResult.summary.toSkip))}</span>
               </div>
             </div>
 
@@ -370,7 +371,7 @@ export function CategoryImporter({ open, onOpenChange, onComplete }: CategoryImp
                 onCheckedChange={(checked) => handleUpdateExistingChange(checked === true)}
               />
               <Label htmlFor="updateExistingPreview" className="text-sm">
-                Actualitzar categories existents
+                {tr('categoryImporter.updateExisting', 'Actualitzar categories existents')}
               </Label>
             </div>
 
@@ -381,7 +382,7 @@ export function CategoryImporter({ open, onOpenChange, onComplete }: CategoryImp
                 <AlertDescription>
                   <details className="text-xs">
                     <summary className="cursor-pointer">
-                      {parseWarnings.length + importResult.warnings.length} avís(os)
+                      {tr('categoryImporter.warningsCount', '{count} avís(os)').replace('{count}', String(parseWarnings.length + importResult.warnings.length))}
                     </summary>
                     <ul className="mt-2 space-y-1">
                       {[...parseWarnings, ...importResult.warnings].map((w, i) => (
@@ -399,10 +400,10 @@ export function CategoryImporter({ open, onOpenChange, onComplete }: CategoryImp
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-28">Acció</TableHead>
-                    <TableHead>Nom</TableHead>
-                    <TableHead className="w-20">Tipus</TableHead>
-                    <TableHead className="w-16">Ordre</TableHead>
+                    <TableHead className="w-28">{tr('categoryImporter.table.action', 'Acció')}</TableHead>
+                    <TableHead>{t.importers.common.name}</TableHead>
+                    <TableHead className="w-20">{tr('categoryImporter.table.type', 'Tipus')}</TableHead>
+                    <TableHead className="w-16">{tr('categoryImporter.table.order', 'Ordre')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -453,8 +454,8 @@ export function CategoryImporter({ open, onOpenChange, onComplete }: CategoryImp
               <div className="mx-auto w-16 h-16 rounded-full bg-blue-50 flex items-center justify-center">
                 <FileSpreadsheet className="h-8 w-8 text-blue-500" />
               </div>
-              <h3 className="font-medium">Important categories...</h3>
-              <p className="text-sm text-muted-foreground">Això pot trigar uns segons</p>
+              <h3 className="font-medium">{tr('categoryImporter.importingTitle', 'Important categories...')}</h3>
+              <p className="text-sm text-muted-foreground">{tr('categoryImporter.importingDescription', 'Això pot trigar uns segons')}</p>
             </div>
           </div>
         )}
@@ -466,9 +467,9 @@ export function CategoryImporter({ open, onOpenChange, onComplete }: CategoryImp
               <div className="mx-auto w-16 h-16 rounded-full bg-green-50 flex items-center justify-center">
                 <CheckCircle2 className="h-8 w-8 text-green-500" />
               </div>
-              <h3 className="font-medium">Importació completada</h3>
+              <h3 className="font-medium">{t.importers.common.importComplete}</h3>
               <p className="text-sm text-muted-foreground">
-                Les categories s'han processat correctament
+                {tr('categoryImporter.doneDescription', "Les categories s'han processat correctament")}
               </p>
             </div>
           </div>
@@ -478,14 +479,14 @@ export function CategoryImporter({ open, onOpenChange, onComplete }: CategoryImp
         <DialogFooter className="flex-shrink-0 pt-4 border-t">
           {step === 'upload' && (
             <Button variant="outline" onClick={() => onOpenChange(false)}>
-              Cancel·lar
+              {t.importers.common.close}
             </Button>
           )}
 
           {step === 'preview' && (
             <>
               <Button variant="outline" onClick={() => setStep('upload')}>
-                Tornar
+                {t.importers.common.back}
               </Button>
               <Button
                 onClick={handleApplyImport}
@@ -494,14 +495,14 @@ export function CategoryImporter({ open, onOpenChange, onComplete }: CategoryImp
                   (importResult?.summary.toCreate === 0 && importResult?.summary.toUpdate === 0)
                 }
               >
-                Aplicar importació
+                {tr('categoryImporter.applyImport', 'Aplicar importació')}
               </Button>
             </>
           )}
 
           {step === 'done' && (
             <Button onClick={() => onOpenChange(false)}>
-              Tancar
+              {t.importers.common.close}
             </Button>
           )}
         </DialogFooter>

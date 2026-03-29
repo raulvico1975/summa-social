@@ -63,7 +63,7 @@ const EMPTY_FORM: FormData = {
 
 export function BankAccountsManager() {
   const { userRole, organizationId } = useCurrentOrganization();
-  const { t } = useTranslations();
+  const { t, tr } = useTranslations();
   const { toast } = useToast();
   const { user } = useFirebase();
   const isMobile = useIsMobile();
@@ -232,21 +232,20 @@ export function BankAccountsManager() {
         } else if (result.code === 'HAS_TRANSACTIONS') {
           toast({
             variant: 'destructive',
-            title: t.settings.bankAccounts.cannotDeactivate ?? 'No es pot eliminar',
-            description: t.settings.bankAccounts.hasTransactionsError?.(result.transactionCount)
-              ?? `No es pot eliminar perquè té ${result.transactionCount} moviments associats.`,
+            title: t.settings.bankAccounts.cannotDeactivate,
+            description: t.settings.bankAccounts.hasTransactionsError?.(result.transactionCount),
           });
         } else if (result.code === 'LAST_ACTIVE_ACCOUNT') {
           toast({
             variant: 'destructive',
-            title: t.settings.bankAccounts.cannotDeactivate ?? 'No es pot eliminar',
+            title: t.settings.bankAccounts.cannotDeactivate,
             description: t.settings.bankAccounts.cannotDeactivateLast,
           });
         } else {
           toast({
             variant: 'destructive',
             title: t.common.error,
-            description: result.error || 'Error desconegut',
+            description: result.error || t.common.unknownError,
           });
         }
       }
@@ -288,7 +287,7 @@ export function BankAccountsManager() {
                   variant="outline"
                   size="icon"
                   onClick={() => setIsImportOpen(true)}
-                  title="Importar des d'Excel"
+                  title={tr('settings.bankAccounts.importFromExcel')}
                 >
                   <Upload className="h-4 w-4" />
                 </Button>
@@ -297,7 +296,7 @@ export function BankAccountsManager() {
                   size="icon"
                   onClick={() => allBankAccounts.length > 0 && exportBankAccountsToExcel(allBankAccounts)}
                   disabled={allBankAccounts.length === 0}
-                  title="Exportar a Excel"
+                  title={tr('settings.bankAccounts.exportToExcel')}
                 >
                   <Download className="h-4 w-4" />
                 </Button>
@@ -560,7 +559,7 @@ export function BankAccountsManager() {
                 value={formData.iban}
                 onChange={handleFormChange}
                 className="col-span-3 font-mono"
-                placeholder="ES00 0000 0000 0000 0000 0000"
+                placeholder={tr('settings.bankAccounts.ibanPlaceholder')}
               />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
@@ -577,7 +576,7 @@ export function BankAccountsManager() {
             </div>
             <div className="grid grid-cols-4 items-start gap-4">
               <Label htmlFor="creditorId" className="text-right pt-2">
-                {t.sepaCollection?.creditorId?.label ?? 'Creditor ID'}
+                {tr('settings.bankAccounts.creditorIdLabel')}
               </Label>
               <div className="col-span-3 space-y-1">
                 <Input
@@ -585,10 +584,10 @@ export function BankAccountsManager() {
                   value={formData.creditorId}
                   onChange={handleFormChange}
                   className="font-mono"
-                  placeholder="ES21001G12345678"
+                  placeholder={tr('settings.bankAccounts.creditorIdPlaceholder')}
                 />
                 <p className="text-xs text-muted-foreground">
-                  {t.sepaCollection?.creditorId?.hint ?? ''}
+                  {tr('settings.bankAccounts.creditorIdHint')}
                 </p>
               </div>
             </div>

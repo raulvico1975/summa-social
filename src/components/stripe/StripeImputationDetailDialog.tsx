@@ -23,9 +23,9 @@ import {
 import { formatCurrencyEU, formatDateShort } from '@/lib/normalize';
 import type { Transaction } from '@/lib/data';
 import {
-  formatStripeImputationStatus,
   type StripeImputationSummary,
 } from '@/lib/stripe/activeStripeImputation';
+import { useTranslations } from '@/i18n';
 
 interface StripeImputationDetailDialogProps {
   open: boolean;
@@ -42,6 +42,7 @@ export function StripeImputationDetailDialog({
   summary,
   onUndo,
 }: StripeImputationDetailDialogProps) {
+  const { tr } = useTranslations();
   const handleUndo = React.useCallback(() => {
     if (!parentTransaction) return;
     onOpenChange(false);
@@ -52,11 +53,11 @@ export function StripeImputationDetailDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="flex max-h-[85vh] max-w-3xl flex-col overflow-hidden">
         <DialogHeader className="shrink-0 pr-6">
-          <DialogTitle>Detall imputació Stripe</DialogTitle>
+          <DialogTitle>{tr('dialogs.stripeImputationDetail.title', 'Detall imputació Stripe')}</DialogTitle>
           <DialogDescription>
             {summary
-              ? formatStripeImputationStatus(summary)
-              : 'No s’ha trobat cap imputació Stripe activa per aquest moviment.'}
+              ? tr('dialogs.stripeImputationDetail.status', 'Stripe imputat')
+              : tr('dialogs.stripeImputationDetail.descriptionEmpty', 'No s\'ha trobat cap imputació Stripe activa per aquest moviment.')}
           </DialogDescription>
         </DialogHeader>
 
@@ -64,7 +65,7 @@ export function StripeImputationDetailDialog({
           <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden">
             <div className="flex flex-wrap items-center gap-2">
               <Badge variant="outline" className="border-blue-300 bg-blue-50 text-blue-700">
-                Stripe imputat
+                {tr('dialogs.stripeImputationDetail.badgeImputed', 'Stripe imputat')}
               </Badge>
               <Badge variant="secondary">
                 {summary.donationCount} donaci{summary.donationCount === 1 ? 'o' : 'ons'}
@@ -87,11 +88,11 @@ export function StripeImputationDetailDialog({
             <div className="min-h-0 overflow-auto rounded-md border">
               <Table>
                 <TableHeader className="sticky top-0 z-10 bg-background">
-                  <TableRow>
-                    <TableHead>Data</TableHead>
-                    <TableHead>Donant</TableHead>
-                    <TableHead>Referència</TableHead>
-                    <TableHead className="text-right">Import</TableHead>
+                    <TableRow>
+                    <TableHead>{tr('dialogs.stripeImputationDetail.date', 'Data')}</TableHead>
+                    <TableHead>{tr('dialogs.stripeImputationDetail.donor', 'Donant')}</TableHead>
+                    <TableHead>{tr('dialogs.stripeImputationDetail.reference', 'Referència')}</TableHead>
+                    <TableHead className="text-right">{tr('dialogs.stripeImputationDetail.amount', 'Import')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -99,10 +100,10 @@ export function StripeImputationDetailDialog({
                     <TableRow key={line.id}>
                       <TableCell>{formatDateShort(line.date)}</TableCell>
                       <TableCell className="max-w-[220px] truncate">
-                        {line.donorDisplayName || line.customerEmail || 'Sense donant'}
+                        {line.donorDisplayName || line.customerEmail || tr('dialogs.stripeImputationDetail.noDonor', 'Sense donant')}
                       </TableCell>
                       <TableCell className="max-w-[220px] truncate text-muted-foreground">
-                        {line.stripePaymentId || line.description || 'Sense identificador Stripe'}
+                        {line.stripePaymentId || line.description || tr('dialogs.stripeImputationDetail.noStripeIdentifier', 'Sense identificador Stripe')}
                       </TableCell>
                       <TableCell className="text-right font-mono">
                         {formatCurrencyEU(line.amountGross)}
@@ -115,10 +116,10 @@ export function StripeImputationDetailDialog({
 
             <DialogFooter className="shrink-0 border-t bg-background pt-4">
               <Button variant="outline" onClick={() => onOpenChange(false)}>
-                Tancar
+                {tr('dialogs.stripeImputationDetail.close', 'Tancar')}
               </Button>
               <Button variant="destructive" onClick={handleUndo}>
-                Desfer imputació Stripe
+                {tr('dialogs.stripeImputationDetail.undo', 'Desfer imputació Stripe')}
               </Button>
             </DialogFooter>
           </div>

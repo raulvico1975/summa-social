@@ -5,6 +5,7 @@ import { signOut } from 'firebase/auth';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth, useUser } from '@/firebase/provider';
 import { toast } from '@/hooks/use-toast';
+import { useTranslations } from '@/i18n';
 import { broadcastLogoutSync } from '@/lib/session-sync';
 
 type Props = {
@@ -66,6 +67,7 @@ export function IdleLogoutProvider({
 }: Props) {
   const auth = useAuth();
   const { user, isUserLoading } = useUser();
+  const { tr } = useTranslations();
   const pathname = usePathname();
   const router = useRouter();
 
@@ -133,8 +135,8 @@ export function IdleLogoutProvider({
     if (warnMs > 0 && warnMs < effectiveIdleMs) {
       warnTimerRef.current = setTimeout(() => {
         toast({
-          title: 'Sessió a punt de caducar',
-          description: 'Per seguretat, es tancarà la sessió en 1 minut si no hi ha activitat.',
+          title: tr('idleLogout.warningTitle', 'Sessió a punt de caducar'),
+          description: tr('idleLogout.warningDescription', 'Per seguretat, es tancarà la sessió en 1 minut si no hi ha activitat.'),
         });
       }, effectiveIdleMs - warnMs);
     }
@@ -142,7 +144,7 @@ export function IdleLogoutProvider({
     idleTimerRef.current = setTimeout(() => {
       void doLogout('idle');
     }, effectiveIdleMs);
-  }, [clearIdleTimers, doLogout, effectiveIdleMs, warnMs]);
+  }, [clearIdleTimers, doLogout, effectiveIdleMs, tr, warnMs]);
 
   const onActivity = useCallback(() => {
     // Reseteja timers només si realment està actiu

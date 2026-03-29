@@ -47,7 +47,7 @@ function toTitleCase(segment: string): string {
 
 export function DashboardHeader() {
   const pathname = usePathname();
-  const { t } = useTranslations();
+  const { t, tr } = useTranslations();
   const { organization } = useCurrentOrganization();
 
   const getBreadcrumbs = () => {
@@ -110,7 +110,7 @@ export function DashboardHeader() {
 
       if (item.segment === '__org__') {
         // Usar nom de l'organització
-        label = organization?.name || 'Organització';
+        label = organization?.name || tr('common.organization');
       } else if (item.segment === '__detail__') {
         // Usar traducció de "Detall"
         label = t.breadcrumb.detail;
@@ -156,10 +156,9 @@ export function DashboardHeader() {
               </Badge>
             </TooltipTrigger>
             <TooltipContent side="bottom" className="max-w-xs">
-              <p className="font-medium">Dades sintètiques de demo</p>
+              <p className="font-medium">{tr('dashboard.demoLabel')}</p>
               <p className="text-xs text-muted-foreground mt-1">
-                Estàs navegant per un entorn de demostració amb dades generades automàticament.
-                Cap acció afectarà dades reals.
+                {tr('dashboard.demoDescription')}
               </p>
             </TooltipContent>
           </Tooltip>

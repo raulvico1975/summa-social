@@ -300,6 +300,7 @@ function AssignmentStatusPopover({
   isCategoryPending?: boolean;
   categoryPendingLabel?: string;
 }) {
+  const { tr } = useTranslations();
   const [open, setOpen] = React.useState(false);
 
   if (isCategoryPending) {
@@ -403,7 +404,7 @@ function AssignmentStatusPopover({
                       }
                     }}
                     disabled={isSaving}
-                    aria-label="Eliminar aquesta assignació"
+                    aria-label={tr('projectModule.removeAssignment', 'Eliminar assignació')}
                   >
                     <X className="h-3 w-3" />
                   </Button>
@@ -489,6 +490,7 @@ function QuickAssignPopover({
   isAssigning: boolean;
   assignTooltip: string;
 }) {
+  const { tr } = useTranslations();
   const [open, setOpen] = React.useState(false);
   const [search, setSearch] = React.useState('');
   const [selectedProject, setSelectedProject] = React.useState<Project | null>(null);
@@ -560,13 +562,13 @@ function QuickAssignPopover({
           // Pas 1: Seleccionar projecte
           <Command>
             <CommandInput
-              placeholder="Cerca projecte..."
+              placeholder={tr('projectModule.expenses.bulkAssignSearchPlaceholder', 'Cerca projecte...')}
               value={search}
               onValueChange={setSearch}
             />
             <CommandList>
-              <CommandEmpty>No s'han trobat projectes</CommandEmpty>
-              <CommandGroup heading="Assignar 100%">
+              <CommandEmpty>{tr('projectModule.expenses.bulkAssignEmpty', 'No s\'han trobat projectes')}</CommandEmpty>
+              <CommandGroup heading={tr('projectModule.expenses.bulkAssignHeading', 'Assignar 100% a totes')}>
                 {filteredProjects.map((project) => (
                   <CommandItem
                     key={project.id}
@@ -593,7 +595,7 @@ function QuickAssignPopover({
                   className="cursor-pointer"
                 >
                   <Split className="mr-2 h-4 w-4" />
-                  Assignació múltiple...
+                  {tr('projectModule.expenses.bulkAssignTitle', 'Assignació múltiple')}...
                 </CommandItem>
               </CommandGroup>
             </CommandList>
@@ -691,6 +693,7 @@ function DroppableExpenseRow({
   isUploading,
   isSelected,
 }: DroppableExpenseRowProps) {
+  const { tr } = useTranslations();
   const [isDragging, setIsDragging] = React.useState(false);
 
   const handleDragOver = React.useCallback((e: React.DragEvent) => {
@@ -736,7 +739,7 @@ function DroppableExpenseRow({
         <td className="absolute inset-0 flex items-center justify-center bg-primary/5 pointer-events-none z-10">
           <div className="flex items-center gap-2 text-primary font-medium">
             <Upload className="h-5 w-5" />
-            <span>Deixa anar per pujar</span>
+            <span>{tr('projectModule.expensesPage.dropToUpload', 'Deixa anar per pujar')}</span>
           </div>
         </td>
       )}
@@ -1181,12 +1184,12 @@ export default function ExpensesInboxPage() {
       setDeleteConfirmExpense(null);
       await refresh();
       trackUX('expenses.offBank.hardDelete', { expenseId: expense.txId });
-      toast({ title: 'Despesa eliminada definitivament' });
+      toast({ title: tr('projectModule.expensesPage.hardDeleteSuccess', 'Despesa eliminada definitivament') });
     } catch (err) {
       toast({
         variant: 'destructive',
         title: ep.toastError,
-        description: err instanceof Error ? err.message : 'Error eliminant despesa',
+        description: err instanceof Error ? err.message : tr('projectModule.expensesPage.hardDeleteError', 'Error eliminant despesa'),
       });
     }
   };
@@ -1212,13 +1215,13 @@ export default function ExpensesInboxPage() {
       await refresh();
       trackUX('expenses.deleteDocument', { txId, source: expense.expense.source });
       toast({
-        title: t.movements?.table?.documentDeleted ?? 'Document eliminat',
+        title: t.movements?.table?.documentDeleted ?? tr('projectModule.expensesPage.documentDeleted', 'Document eliminat'),
       });
     } catch (err) {
       toast({
         variant: 'destructive',
         title: ep.toastError,
-        description: err instanceof Error ? err.message : 'Error eliminant document',
+        description: err instanceof Error ? err.message : tr('projectModule.expensesPage.documentDeleteError', 'Error eliminant document'),
       });
     } finally {
       setDeletingDocTxId(null);
@@ -1281,14 +1284,14 @@ export default function ExpensesInboxPage() {
       await refresh();
       trackUX('expenses.uploadDocument', { txId, source: expense.expense.source });
       toast({
-        title: 'Document pujat',
+        title: tr('projectModule.expensesPage.documentUploaded', 'Document pujat'),
         description: file.name,
       });
     } catch (err) {
       toast({
         variant: 'destructive',
         title: ep.toastError,
-        description: err instanceof Error ? err.message : 'Error pujant document',
+        description: err instanceof Error ? err.message : tr('projectModule.expensesPage.documentUploadError', 'Error pujant document'),
       });
     } finally {
       setUploadingDocTxId(null);
@@ -1710,7 +1713,7 @@ export default function ExpensesInboxPage() {
                         ? <span className="font-mono font-medium text-red-600">{expense.originalAmount.toLocaleString('ca-ES')} {expense.originalCurrency}</span>
                         : expense.amountEUR !== 0
                           ? <span className="font-mono font-medium text-red-600">{formatAmount(expense.amountEUR)}</span>
-                          : <span className="text-amber-600">Import pendent</span>
+                          : <span className="text-amber-600">{tr('projectModule.expensesPage.pendingAmount', 'Import pendent')}</span>
                     },
                     expense.counterpartyName && { value: expense.counterpartyName },
                   ].filter(Boolean) as { label?: string; value: React.ReactNode }[]}
@@ -2081,10 +2084,10 @@ export default function ExpensesInboxPage() {
               </PopoverTrigger>
               <PopoverContent className="w-64 p-0" align="end">
                 <Command>
-                  <CommandInput placeholder="Cerca projecte..." />
+                  <CommandInput placeholder={tr('projectModule.expenses.bulkAssignSearchPlaceholder', 'Cerca projecte...')} />
                   <CommandList>
-                    <CommandEmpty>No s'han trobat projectes</CommandEmpty>
-                    <CommandGroup heading="Assignar 100% a totes">
+                    <CommandEmpty>{tr('projectModule.expenses.bulkAssignEmpty', 'No s\'han trobat projectes')}</CommandEmpty>
+                    <CommandGroup heading={tr('projectModule.expenses.bulkAssignHeading', 'Assignar 100% a totes')}>
                       {projects.map((project) => (
                         <CommandItem
                           key={project.id}
@@ -2113,9 +2116,9 @@ export default function ExpensesInboxPage() {
       <Dialog open={!!splitModalExpense} onOpenChange={(open) => !open && setSplitModalExpense(null)}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>Assignació múltiple</DialogTitle>
+            <DialogTitle>{tr('projectModule.expenses.bulkAssignTitle', 'Assignació múltiple')}</DialogTitle>
             <DialogDescription>
-              Distribueix la despesa entre diversos projectes
+              {tr('projectModule.expenses.bulkAssignDescription', 'Distribueix la despesa entre diversos projectes')}
             </DialogDescription>
           </DialogHeader>
           {splitModalExpense && (() => {
@@ -2124,7 +2127,7 @@ export default function ExpensesInboxPage() {
               <div className="space-y-4">
                 <div className="p-3 bg-muted rounded-lg">
                   <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Import total</span>
+                    <span className="text-muted-foreground">{tr('projectModule.expenses.totalAmount', 'Import total')}</span>
                     <span className="font-mono font-medium text-red-600">
                       {isFx
                         ? `${splitModalExpense.expense.originalAmount?.toLocaleString('ca-ES')} ${splitModalExpense.expense.originalCurrency}`
@@ -2208,19 +2211,21 @@ export default function ExpensesInboxPage() {
       <AlertDialog open={!!deleteConfirmExpense} onOpenChange={() => setDeleteConfirmExpense(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Eliminar despesa definitivament?</AlertDialogTitle>
+            <AlertDialogTitle>{tr('projectModule.expenses.deleteConfirmTitle', 'Eliminar despesa definitivament?')}</AlertDialogTitle>
             <AlertDialogDescription>
-              Aquesta acció és irreversible. S&apos;eliminaran la despesa, les assignacions a projectes i els documents adjunts.
+              {tr('projectModule.expenses.deleteConfirmDescription', 'Aquesta acció és irreversible. S\'eliminaran la despesa, les assignacions a projectes i els documents adjunts.')}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isDeletingOffBank}>Cancel·lar</AlertDialogCancel>
+            <AlertDialogCancel disabled={isDeletingOffBank}>{t.common?.cancel ?? 'Cancel·lar'}</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleConfirmDeleteOffBank}
               disabled={isDeletingOffBank}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              {isDeletingOffBank ? 'Eliminant…' : 'Eliminar definitivament'}
+              {isDeletingOffBank
+                ? tr('projectModule.expenses.deleteConfirming', 'Eliminant…')
+                : tr('projectModule.expenses.deletePermanent', 'Eliminar definitivament')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

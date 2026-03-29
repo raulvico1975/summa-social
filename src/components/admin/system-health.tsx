@@ -105,64 +105,64 @@ interface Sentinel {
   isQuery?: boolean; // Només consulta, sense incidents automàtics
 }
 
-const SENTINELS: Sentinel[] = [
+const SENTINEL_CONFIG = [
   {
     id: 'S1',
     name: 'Permisos',
-    description: 'Errors de permisos Firestore',
+    description: 'Errors de permisos detectats',
     icon: <Lock className="h-4 w-4" />,
     incidentTypes: ['PERMISSIONS'],
   },
   {
     id: 'S2',
-    name: 'Moviments',
-    description: 'Errors a la pantalla de moviments',
+    name: 'Crashes client',
+    description: 'Errors greus al navegador dels usuaris',
     icon: <MonitorX className="h-4 w-4" />,
     incidentTypes: ['CLIENT_CRASH'], // Filtrem per ruta movimientos
   },
   {
     id: 'S3',
-    name: 'Importadors',
-    description: "Errors d'importació de dades",
+    name: 'Importacions',
+    description: 'Fallades en càrregues de fitxers',
     icon: <Upload className="h-4 w-4" />,
     incidentTypes: ['IMPORT_FAILURE'],
   },
   {
     id: 'S4',
-    name: 'Exports',
-    description: "Errors d'exportació (Excel, PDF, SEPA)",
+    name: 'Exportacions',
+    description: 'Problemes generant exports',
     icon: <Download className="h-4 w-4" />,
     incidentTypes: ['EXPORT_FAILURE'],
   },
   {
     id: 'S5',
-    name: 'Remeses OUT',
-    description: 'Invariants de remeses (deltaCents, isValid)',
+    name: 'Invariants',
+    description: 'Errors de coherència interna',
     icon: <Scale className="h-4 w-4" />,
     incidentTypes: ['INVARIANT_BROKEN'],
   },
   {
     id: 'S6',
-    name: 'Encallaments',
-    description: 'Transaccions sense classificar > 30 dies',
+    name: 'Temps de resposta',
+    description: 'Revisió de latència i frescor',
     icon: <Clock className="h-4 w-4" />,
     isQuery: true,
   },
   {
     id: 'S7',
-    name: 'Fiscal 182',
-    description: 'Donants sense dades fiscals completes',
+    name: 'Fitxers crítics',
+    description: 'Comprovació de documents i artefactes',
     icon: <FileText className="h-4 w-4" />,
     isQuery: true,
   },
   {
     id: 'S8',
     name: 'Activitat',
-    description: 'Organitzacions inactives > 60 dies',
+    description: 'Visió general d’activitat recent',
     icon: <Activity className="h-4 w-4" />,
     isQuery: true,
   },
-];
+ ] satisfies Sentinel[];
 
 // ═══════════════════════════════════════════════════════════════════════════
 // SEMÀFOR DE PRODUCCIÓ - Tipus i constants
@@ -185,81 +185,81 @@ interface HealthCheck {
 const INITIAL_CHECKS: HealthCheck[] = [
   {
     id: 'superadmin-status',
-    name: 'Accés administració',
-    description: 'Comprova accés al panell',
-    humanExplanation: 'Confirma que el teu usuari pot gestionar el sistema. Si falla, no podràs usar el panell de control.',
+    name: 'Superadmins',
+    description: 'Verifica que la zona crítica té administradors operatius',
+    humanExplanation: 'Si no hi ha superadmins vàlids, es pot perdre accés a la consola d’administració.',
     status: 'pending',
   },
   {
     id: 'firestore-i18n',
-    name: 'Textos centrals',
-    description: 'Dades de traduccions disponibles',
-    humanExplanation: 'Valida que la base de textos està accessible. Si falla, poden aparèixer textos trencats o inconsistents.',
+    name: 'Firestore i18n',
+    description: 'Comprova la configuració d’i18n a Firestore',
+    humanExplanation: 'Valida que la configuració base de traduccions i versió es pugui llegir.',
     status: 'pending',
     actionable: 'goToI18n',
   },
   {
     id: 'firestore-updates',
-    name: 'Novetats publicades',
-    description: 'Historial de novetats',
-    humanExplanation: 'És informatiu. Si falla, no afecta l’operativa del dia a dia.',
+    name: 'Novetats',
+    description: 'Revisa si les novetats estan disponibles a Firestore',
+    humanExplanation: 'Aquest control comprova si el feed de novetats és accessible. És informatiu, no crític.',
     status: 'pending',
     isNonCritical: true, // No contribueix al ❌ global
   },
   {
     id: 'storage-ca',
-    name: 'Traduccions català',
-    description: 'Fitxer de traduccions disponible',
-    humanExplanation: 'Comprova que els usuaris en català veuran textos correctes.',
+    name: 'Storage ca',
+    description: 'Comprova el bundle català a Storage',
+    humanExplanation: 'Assegura que el fitxer de traduccions en català és accessible.',
     status: 'pending',
     actionable: 'goToI18n',
   },
   {
     id: 'storage-es',
-    name: 'Traduccions castellà',
-    description: 'Fitxer de traduccions disponible',
-    humanExplanation: 'Comprova que els usuaris en castellà veuran textos correctes.',
+    name: 'Storage es',
+    description: 'Comprova el bundle castellà a Storage',
+    humanExplanation: 'Assegura que el fitxer de traduccions en castellà és accessible.',
     status: 'pending',
     actionable: 'goToI18n',
   },
   {
     id: 'storage-fr',
-    name: 'Traduccions francès',
-    description: 'Fitxer de traduccions disponible',
-    humanExplanation: 'Comprova que els usuaris en francès veuran textos correctes.',
+    name: 'Storage fr',
+    description: 'Comprova el bundle francès a Storage',
+    humanExplanation: 'Assegura que el fitxer de traduccions en francès és accessible.',
     status: 'pending',
     actionable: 'goToI18n',
   },
   {
     id: 'storage-pt',
-    name: 'Traduccions portuguès',
-    description: 'Fitxer de traduccions disponible',
-    humanExplanation: 'Comprova que els usuaris en portuguès veuran textos correctes.',
+    name: 'Storage pt',
+    description: 'Comprova el bundle portuguès a Storage',
+    humanExplanation: 'Assegura que el fitxer de traduccions en portuguès és accessible.',
     status: 'pending',
     actionable: 'goToI18n',
   },
   {
     id: 'firestore-transactions',
-    name: 'Llistat de moviments',
-    description: 'Lectura de dades operatives',
-    humanExplanation: 'Si falla, els usuaris no podran veure ni revisar els moviments.',
+    name: 'Transaccions',
+    description: 'Consulta bàsica de transaccions de l’organització',
+    humanExplanation: 'Verifica que es puguin consultar moviments reals de l’organització seleccionada.',
     status: 'pending',
     requiresOrg: true,
   },
   {
     id: 'storage-upload',
-    name: 'Pujada de documents',
-    description: 'Pujada de factures i nòmines',
-    humanExplanation: 'Confirma que es poden pujar documents. Si falla, l’equip es queda aturat en la gestió diària.',
+    name: 'Pujada Storage',
+    description: 'Prova de pujada real a Storage',
+    humanExplanation: 'Comprova que l’organització pugui pujar fitxers i que el flux de documents no estigui bloquejat.',
     status: 'pending',
     requiresOrg: true,
     actionable: 'testRealUpload', // Quan OK: botó test real.
   },
   {
     id: 'legacy-redirect',
-    name: 'Entrada ràpida despeses',
-    description: 'Comprovació d’accés a la ruta',
-    humanExplanation: 'Comprova que l’entrada ràpida de despeses obre correctament per als usuaris.',
+    name: 'Redirect legacy',
+    description: 'Comprova la ruta de redirecció antiga',
+    humanExplanation: 'Assegura que rutes històriques encara redirigeixin correctament i no deixin usuaris encallats.',
     status: 'pending',
     requiresOrg: true,
     actionable: 'openRoute',
@@ -547,6 +547,105 @@ function localeForLanguage(language: Language): string {
   return 'ca-ES';
 }
 
+function buildSentinels(tr: TrFunction): Sentinel[] {
+  return SENTINEL_CONFIG.map((sentinel) => ({
+    ...sentinel,
+    name: tr(`admin.health.sentinels.${sentinel.id}.name`, sentinel.id),
+    description: tr(`admin.health.sentinels.${sentinel.id}.description`, sentinel.id),
+  }));
+}
+
+function buildInitialChecks(tr: TrFunction): HealthCheck[] {
+  return INITIAL_CHECKS.map((check) => ({
+    ...check,
+    name: tr(`admin.health.checks.${check.id}.name`, check.id),
+    description: tr(`admin.health.checks.${check.id}.description`, check.id),
+    humanExplanation: tr(`admin.health.checks.${check.id}.humanExplanation`, check.id),
+  }));
+}
+
+function buildImpactLabels(tr: TrFunction) {
+  return {
+    blocker: {
+      ...IMPACT_LABELS.blocker,
+      label: tr('admin.health.impacts.blocker.label', IMPACT_LABELS.blocker.label),
+      short: tr('admin.health.impacts.blocker.short', IMPACT_LABELS.blocker.short),
+      description: tr('admin.health.impacts.blocker.description', IMPACT_LABELS.blocker.description),
+    },
+    functional: {
+      ...IMPACT_LABELS.functional,
+      label: tr('admin.health.impacts.functional.label', IMPACT_LABELS.functional.label),
+      short: tr('admin.health.impacts.functional.short', IMPACT_LABELS.functional.short),
+      description: tr('admin.health.impacts.functional.description', IMPACT_LABELS.functional.description),
+    },
+    cosmetic: {
+      ...IMPACT_LABELS.cosmetic,
+      label: tr('admin.health.impacts.cosmetic.label', IMPACT_LABELS.cosmetic.label),
+      short: tr('admin.health.impacts.cosmetic.short', IMPACT_LABELS.cosmetic.short),
+      description: tr('admin.health.impacts.cosmetic.description', IMPACT_LABELS.cosmetic.description),
+    },
+  } as typeof IMPACT_LABELS;
+}
+
+function buildActionLabels(tr: TrFunction) {
+  return {
+    permissions: {
+      ...ACTION_LABELS.permissions,
+      label: tr('admin.health.actions.permissions.label', ACTION_LABELS.permissions.label),
+      buttonText: tr('admin.health.actions.permissions.buttonText', ACTION_LABELS.permissions.buttonText),
+      instruction: tr('admin.health.actions.permissions.instruction', ACTION_LABELS.permissions.instruction),
+    },
+    storage: {
+      ...ACTION_LABELS.storage,
+      label: tr('admin.health.actions.storage.label', ACTION_LABELS.storage.label),
+      buttonText: tr('admin.health.actions.storage.buttonText', ACTION_LABELS.storage.buttonText),
+      instruction: tr('admin.health.actions.storage.instruction', ACTION_LABELS.storage.instruction),
+    },
+    reload: {
+      ...ACTION_LABELS.reload,
+      label: tr('admin.health.actions.reload.label', ACTION_LABELS.reload.label),
+      buttonText: tr('admin.health.actions.reload.buttonText', ACTION_LABELS.reload.buttonText),
+      instruction: tr('admin.health.actions.reload.instruction', ACTION_LABELS.reload.instruction),
+    },
+    claude: {
+      ...ACTION_LABELS.claude,
+      label: tr('admin.health.actions.claude.label', ACTION_LABELS.claude.label),
+      buttonText: tr('admin.health.actions.claude.buttonText', ACTION_LABELS.claude.buttonText),
+      instruction: tr('admin.health.actions.claude.instruction', ACTION_LABELS.claude.instruction),
+    },
+  } as typeof ACTION_LABELS;
+}
+
+function buildIncidentHelpCopy(tr: TrFunction) {
+  return {
+    CLIENT_CRASH: {
+      whatItMeans: tr('admin.health.incidentHelp.CLIENT_CRASH.whatItMeans', INCIDENT_HELP.CLIENT_CRASH.whatItMeans),
+      whyCritical: tr('admin.health.incidentHelp.CLIENT_CRASH.whyCritical', INCIDENT_HELP.CLIENT_CRASH.whyCritical),
+      nextSteps: tr('admin.health.incidentHelp.CLIENT_CRASH.nextSteps', INCIDENT_HELP.CLIENT_CRASH.nextSteps),
+    },
+    PERMISSIONS: {
+      whatItMeans: tr('admin.health.incidentHelp.PERMISSIONS.whatItMeans', INCIDENT_HELP.PERMISSIONS.whatItMeans),
+      whyCritical: tr('admin.health.incidentHelp.PERMISSIONS.whyCritical', INCIDENT_HELP.PERMISSIONS.whyCritical),
+      nextSteps: tr('admin.health.incidentHelp.PERMISSIONS.nextSteps', INCIDENT_HELP.PERMISSIONS.nextSteps),
+    },
+    IMPORT_FAILURE: {
+      whatItMeans: tr('admin.health.incidentHelp.IMPORT_FAILURE.whatItMeans', INCIDENT_HELP.IMPORT_FAILURE.whatItMeans),
+      whyCritical: tr('admin.health.incidentHelp.IMPORT_FAILURE.whyCritical', INCIDENT_HELP.IMPORT_FAILURE.whyCritical),
+      nextSteps: tr('admin.health.incidentHelp.IMPORT_FAILURE.nextSteps', INCIDENT_HELP.IMPORT_FAILURE.nextSteps),
+    },
+    EXPORT_FAILURE: {
+      whatItMeans: tr('admin.health.incidentHelp.EXPORT_FAILURE.whatItMeans', INCIDENT_HELP.EXPORT_FAILURE.whatItMeans),
+      whyCritical: tr('admin.health.incidentHelp.EXPORT_FAILURE.whyCritical', INCIDENT_HELP.EXPORT_FAILURE.whyCritical),
+      nextSteps: tr('admin.health.incidentHelp.EXPORT_FAILURE.nextSteps', INCIDENT_HELP.EXPORT_FAILURE.nextSteps),
+    },
+    INVARIANT_BROKEN: {
+      whatItMeans: tr('admin.health.incidentHelp.INVARIANT_BROKEN.whatItMeans', INCIDENT_HELP.INVARIANT_BROKEN.whatItMeans),
+      whyCritical: tr('admin.health.incidentHelp.INVARIANT_BROKEN.whyCritical', INCIDENT_HELP.INVARIANT_BROKEN.whyCritical),
+      nextSteps: tr('admin.health.incidentHelp.INVARIANT_BROKEN.nextSteps', INCIDENT_HELP.INVARIANT_BROKEN.nextSteps),
+    },
+  } as typeof INCIDENT_HELP;
+}
+
 function buildNightlyCheckPresentation(tr: TrFunction): Record<NightlyHealthCode, NightlyCheckPresentation> {
   return Object.fromEntries(
     Object.entries(NIGHTLY_CHECK_PRESENTATION_CONFIG).map(([code, config]) => [
@@ -660,6 +759,11 @@ export function SystemHealth() {
   const { firestore, user } = useFirebase();
   const { toast } = useToast();
   const isMobile = useIsMobile();
+  const sentinels = React.useMemo(() => buildSentinels(tr), [tr]);
+  const initialChecks = React.useMemo(() => buildInitialChecks(tr), [tr]);
+  const impactLabels = React.useMemo(() => buildImpactLabels(tr), [tr]);
+  const actionLabels = React.useMemo(() => buildActionLabels(tr), [tr]);
+  const incidentHelpCopy = React.useMemo(() => buildIncidentHelpCopy(tr), [tr]);
   const [incidents, setIncidents] = React.useState<SystemIncident[]>([]);
   const [incidentCounts, setIncidentCounts] = React.useState<Record<IncidentType, number>>({
     CLIENT_CRASH: 0,
@@ -685,7 +789,7 @@ export function SystemHealth() {
   const [resolveError, setResolveError] = React.useState<string | null>(null);
 
   // Semàfor de producció state
-  const [healthChecks, setHealthChecks] = React.useState<HealthCheck[]>(INITIAL_CHECKS);
+  const [healthChecks, setHealthChecks] = React.useState<HealthCheck[]>(initialChecks);
   const [isRunningChecks, setIsRunningChecks] = React.useState(false);
   const [selectedOrgId, setSelectedOrgId] = React.useState<string>('');
 
@@ -696,6 +800,10 @@ export function SystemHealth() {
     [firestore]
   );
   const { data: organizations } = useCollection<Organization>(orgsQuery);
+
+  React.useEffect(() => {
+    setHealthChecks(initialChecks);
+  }, [initialChecks]);
 
   // Carregar org seleccionada de localStorage
   React.useEffect(() => {
@@ -734,9 +842,45 @@ export function SystemHealth() {
   }, [loadIncidents]);
 
   const uiLocale = React.useMemo(() => localeForLanguage(language), [language]);
+  const selectOrgMessage = tr('admin.health.messages.selectOrg', 'Cal seleccionar org');
+  const resolveValidationErrorMessage = tr(
+    'admin.health.validation.commitRequired',
+    'Has d’indicar el commit que ho resol o marcar "No hi ha commit".'
+  );
 
   const nightlyCheckPresentation = React.useMemo(
     () => buildNightlyCheckPresentation(tr),
+    [tr]
+  );
+
+  const handleRecommendedAction = React.useCallback((incident: SystemIncident) => {
+    const action = getRecommendedAction(incident);
+    if (action === 'permissions') {
+      window.open('https://console.firebase.google.com/project/summa-social/firestore/rules', '_blank');
+      return;
+    }
+    if (action === 'storage') {
+      window.open('https://console.firebase.google.com/project/summa-social/storage/rules', '_blank');
+      return;
+    }
+    if (action === 'reload') {
+      toast({
+        title: tr('admin.health.toasts.chunkErrorTitle', 'Chunk error'),
+        description: tr(
+          'admin.health.toasts.chunkErrorDescription',
+          'Demana a l’usuari que recarregui la pàgina en mode incògnit.'
+        ),
+      });
+      return;
+    }
+    handleCopyPrompt(incident);
+  }, [toast, tr]);
+
+  const incidentStatusLabel = React.useCallback(
+    (status: SystemIncident['status']) =>
+      status === 'ACK'
+        ? tr('admin.health.status.ack', 'ACK')
+        : tr('admin.health.status.open', 'Obert'),
     [tr]
   );
 
@@ -824,7 +968,11 @@ export function SystemHealth() {
     // Validar
     const validation = validateResolution(resolveCommit, resolveNoCommit);
     if (!validation.valid) {
-      setResolveError(validation.error || 'Error de validació');
+      setResolveError(
+        validation.error === 'Has d\'indicar el commit que ho resol o marcar "No hi ha commit".'
+          ? resolveValidationErrorMessage
+          : validation.error || tr('admin.health.validation.genericError', 'Error de validació')
+      );
       return;
     }
 
@@ -843,14 +991,14 @@ export function SystemHealth() {
       setResolveDialogOpen(false);
       setIncidentToResolve(null);
       toast({
-        title: 'Incident tancat',
+        title: tr('admin.health.toasts.incidentClosedTitle', 'Incident tancat'),
         description: resolveNoCommit
-          ? 'Marcat com resolt sense commit.'
-          : `Resolt amb commit: ${resolveCommit}`,
+          ? tr('admin.health.toasts.incidentClosedNoCommit', 'Marcat com resolt sense commit.')
+          : tr('admin.health.toasts.incidentClosedWithCommit', 'Resolt amb commit: {commit}').replace('{commit}', resolveCommit),
       });
     } catch (err) {
 
-      setResolveError('No s\'ha pogut tancar l\'incident.');
+      setResolveError(tr('admin.health.toasts.closeIncidentError', 'No s’ha pogut tancar l’incident.'));
     } finally {
       setIsProcessing(false);
     }
@@ -880,8 +1028,8 @@ export function SystemHealth() {
             }),
           });
           toast({
-            title: 'Alerta enviada',
-            description: 'S\'ha enviat un email d\'alerta per aquest incident crític.',
+            title: tr('admin.health.toasts.alertSentTitle', 'Alerta enviada'),
+            description: tr('admin.health.toasts.alertSentDescription', 'S’ha enviat un email d’alerta per aquest incident crític.'),
           });
         } catch (emailErr) {
 
@@ -914,14 +1062,14 @@ export function SystemHealth() {
     try {
       await navigator.clipboard.writeText(promptText);
       toast({
-        title: 'Prompt copiat',
-        description: 'Enganxa el text a Claude Code per reparar l\'error.',
+        title: tr('admin.health.toasts.promptCopiedTitle', 'Prompt copiat'),
+        description: tr('admin.health.toasts.promptCopiedDescription', 'Enganxa el text a Claude Code per reparar l’error.'),
       });
     } catch (err) {
 
       toast({
-        title: 'Error copiant',
-        description: 'No s\'ha pogut copiar al portapapers.',
+        title: tr('admin.health.toasts.copyErrorTitle', 'Error copiant'),
+        description: tr('admin.health.toasts.copyErrorDescription', 'No s’ha pogut copiar al portapapers.'),
         variant: 'destructive',
       });
     }
@@ -942,7 +1090,7 @@ export function SystemHealth() {
 
     setIsRunningChecks(true);
     // Reset all checks to running
-    setHealthChecks(INITIAL_CHECKS.map((c) => ({ ...c, status: 'running' as CheckStatus })));
+    setHealthChecks(initialChecks.map((c) => ({ ...c, status: 'running' as CheckStatus })));
 
     const storage = getStorage();
     const selectedOrg = organizations?.find((o) => o.id === selectedOrgId);
@@ -955,12 +1103,12 @@ export function SystemHealth() {
           const data = superAdminDoc.data();
           updateCheck('superadmin-status', {
             status: 'ok',
-            message: data?.email ? `✓ ${data.email}` : '✓ Registrat',
+            message: data?.email ? `✓ ${data.email}` : tr('admin.health.messages.registered', '✓ Registrat'),
           });
         } else {
           updateCheck('superadmin-status', {
             status: 'error',
-            message: 'No ets SuperAdmin',
+            message: tr('admin.health.messages.notSuperAdmin', 'No ets SuperAdmin'),
           });
         }
       } catch (err) {
@@ -969,14 +1117,14 @@ export function SystemHealth() {
         if (error.code === 'permission-denied') {
           updateCheck('superadmin-status', {
             status: 'error',
-            message: 'Sense permisos (no ets SuperAdmin)',
+            message: tr('admin.health.messages.noPermissionsNotSuperAdmin', 'Sense permisos (no ets SuperAdmin)'),
           });
         } else {
           updateCheck('superadmin-status', { status: 'error', message: (err as Error).message });
         }
       }
     } else {
-      updateCheck('superadmin-status', { status: 'warning', message: 'No autenticat' });
+      updateCheck('superadmin-status', { status: 'warning', message: tr('admin.health.messages.notAuthenticated', 'No autenticat') });
     }
 
     // 1. Check system/i18n (Firestore)
@@ -985,7 +1133,7 @@ export function SystemHealth() {
       if (i18nDoc.exists()) {
         updateCheck('firestore-i18n', { status: 'ok', message: `v${i18nDoc.data()?.version || '?'}` });
       } else {
-        updateCheck('firestore-i18n', { status: 'warning', message: 'No existeix' });
+        updateCheck('firestore-i18n', { status: 'warning', message: tr('admin.health.messages.notFound', 'No existeix') });
       }
     } catch (err) {
       updateCheck('firestore-i18n', { status: 'error', message: (err as Error).message });
@@ -995,10 +1143,10 @@ export function SystemHealth() {
     try {
       const updatesDoc = await getDoc(doc(firestore, 'system', 'productUpdates'));
       if (updatesDoc.exists()) {
-        updateCheck('firestore-updates', { status: 'ok', message: 'Configurat' });
+        updateCheck('firestore-updates', { status: 'ok', message: tr('admin.health.messages.configured', 'Configurat') });
       } else {
         // No existeix és normal si no s'han publicat novetats
-        updateCheck('firestore-updates', { status: 'ok', message: 'Normal (cap novetat publicada)' });
+        updateCheck('firestore-updates', { status: 'ok', message: tr('admin.health.messages.noPublishedUpdates', 'Normal (cap novetat publicada)') });
       }
     } catch (err) {
       // Error d'accés sí que és problema
@@ -1011,13 +1159,13 @@ export function SystemHealth() {
       try {
         const fileRef = ref(storage, `i18n/${lang}.json`);
         await getDownloadURL(fileRef);
-        updateCheck(`storage-${lang}`, { status: 'ok', message: 'Existeix' });
+        updateCheck(`storage-${lang}`, { status: 'ok', message: tr('admin.health.messages.exists', 'Existeix') });
       } catch (err) {
         const error = err as { code?: string };
         if (error.code === 'storage/object-not-found') {
-          updateCheck(`storage-${lang}`, { status: 'error', message: 'No existeix' });
+          updateCheck(`storage-${lang}`, { status: 'error', message: tr('admin.health.messages.notFound', 'No existeix') });
         } else if (error.code === 'storage/unauthorized') {
-          updateCheck(`storage-${lang}`, { status: 'error', message: 'Sense permisos' });
+          updateCheck(`storage-${lang}`, { status: 'error', message: tr('admin.health.messages.noPermissions', 'Sense permisos') });
         } else {
           updateCheck(`storage-${lang}`, { status: 'error', message: (err as Error).message });
         }
@@ -1032,17 +1180,17 @@ export function SystemHealth() {
           limit(1)
         );
         await getDocs(txQuery);
-        updateCheck('firestore-transactions', { status: 'ok', message: 'Accessible' });
+        updateCheck('firestore-transactions', { status: 'ok', message: tr('admin.health.messages.accessible', 'Accessible') });
       } catch (err) {
         const error = err as { code?: string };
         if (error.code === 'permission-denied') {
-          updateCheck('firestore-transactions', { status: 'error', message: 'Sense permisos' });
+          updateCheck('firestore-transactions', { status: 'error', message: tr('admin.health.messages.noPermissions', 'Sense permisos') });
         } else {
           updateCheck('firestore-transactions', { status: 'error', message: (err as Error).message });
         }
       }
     } else {
-      updateCheck('firestore-transactions', { status: 'warning', message: 'Cal seleccionar org' });
+      updateCheck('firestore-transactions', { status: 'warning', message: tr('admin.health.messages.selectOrg', 'Cal seleccionar org') });
     }
 
     // 8. Check pendingDocuments upload (requires org)
@@ -1064,7 +1212,7 @@ export function SystemHealth() {
           // Amb la política temporal, si falla és problema de rules
           updateCheck('storage-upload', {
             status: 'error',
-            message: 'Rules Storage incorrectes',
+            message: tr('admin.health.messages.badStorageRules', 'Rules Storage incorrectes'),
           });
 
         } else {
@@ -1072,9 +1220,9 @@ export function SystemHealth() {
         }
       }
     } else if (!user) {
-      updateCheck('storage-upload', { status: 'warning', message: 'No autenticat' });
+      updateCheck('storage-upload', { status: 'warning', message: tr('admin.health.messages.notAuthenticated', 'No autenticat') });
     } else {
-      updateCheck('storage-upload', { status: 'warning', message: 'Cal seleccionar org' });
+      updateCheck('storage-upload', { status: 'warning', message: tr('admin.health.messages.selectOrg', 'Cal seleccionar org') });
     }
 
     // 9. Check legacy quick-expense redirect
@@ -1086,7 +1234,7 @@ export function SystemHealth() {
         });
         // 308 o 200 = OK (redirect o pàgina existent)
         if (response.status === 200 || response.status === 308 || response.type === 'opaqueredirect') {
-          updateCheck('legacy-redirect', { status: 'ok', message: 'Ruta operativa' });
+          updateCheck('legacy-redirect', { status: 'ok', message: tr('admin.health.messages.routeOperational', 'Ruta operativa') });
         } else if (response.status === 404) {
           updateCheck('legacy-redirect', { status: 'error', message: '404 Not Found' });
         } else {
@@ -1094,10 +1242,10 @@ export function SystemHealth() {
         }
       } catch {
         // fetch error usually means CORS or network issue, but route likely exists
-        updateCheck('legacy-redirect', { status: 'ok', message: 'Ruta existeix (CORS)' });
+        updateCheck('legacy-redirect', { status: 'ok', message: tr('admin.health.messages.routeExistsCors', 'Ruta existeix (CORS)') });
       }
     } else {
-      updateCheck('legacy-redirect', { status: 'warning', message: 'Cal seleccionar org' });
+      updateCheck('legacy-redirect', { status: 'warning', message: tr('admin.health.messages.selectOrg', 'Cal seleccionar org') });
     }
 
     setIsRunningChecks(false);
@@ -1108,20 +1256,20 @@ export function SystemHealth() {
     const selectedOrg = organizations?.find((o) => o.id === selectedOrgId);
     const timestamp = new Date().toISOString();
     const lines = [
-      `# Informe Semàfor de Producció`,
-      `Data: ${timestamp}`,
-      selectedOrg ? `Org: ${selectedOrg.name} (${selectedOrg.slug})` : 'Org: No seleccionada',
+      `# ${tr('admin.health.report.title', 'Informe Semàfor de Producció')}`,
+      `${tr('admin.health.report.date', 'Data')}: ${timestamp}`,
+      selectedOrg ? `${tr('admin.health.report.org', 'Org')}: ${selectedOrg.name} (${selectedOrg.slug})` : `${tr('admin.health.report.org', 'Org')}: ${tr('admin.health.report.noOrgSelected', 'No seleccionada')}`,
       '',
-      '## Checks',
+      `## ${tr('admin.health.report.checks', 'Checks')}`,
       ...healthChecks.map((check) => {
         const icon = check.status === 'ok' ? '✅' : check.status === 'warning' ? '⚠️' : check.status === 'error' ? '❌' : '⏳';
         return `${icon} ${check.name}: ${check.message || check.status}`;
       }),
       '',
-      `## Resum`,
+      `## ${tr('admin.health.report.summary', 'Resum')}`,
       `- OK: ${healthChecks.filter((c) => c.status === 'ok').length}`,
-      `- Warning: ${healthChecks.filter((c) => c.status === 'warning').length}`,
-      `- Error: ${healthChecks.filter((c) => c.status === 'error').length}`,
+      `- ${tr('admin.health.report.warning', 'Warning')}: ${healthChecks.filter((c) => c.status === 'warning').length}`,
+      `- ${tr('admin.health.report.error', 'Error')}: ${healthChecks.filter((c) => c.status === 'error').length}`,
     ];
     return lines.join('\n');
   };
@@ -1130,14 +1278,14 @@ export function SystemHealth() {
     try {
       await navigator.clipboard.writeText(generateReport());
       toast({
-        title: 'Informe copiat',
-        description: 'Pots enganxar-lo on vulguis.',
+        title: tr('admin.health.toasts.reportCopiedTitle', 'Informe copiat'),
+        description: tr('admin.health.toasts.reportCopiedDescription', 'Pots enganxar-lo on vulguis.'),
       });
     } catch (err) {
 
       toast({
-        title: 'Error copiant',
-        description: 'No s\'ha pogut copiar al portapapers.',
+        title: tr('admin.health.toasts.copyErrorTitle', 'Error copiant'),
+        description: tr('admin.health.toasts.copyErrorDescription', 'No s’ha pogut copiar al portapapers.'),
         variant: 'destructive',
       });
     }
@@ -1156,7 +1304,7 @@ export function SystemHealth() {
 
     // Filtrar warnings que NO són "Cal seleccionar org" (aquests no penalitzen)
     const hasRealWarning = healthChecks.some(
-      (c) => c.status === 'warning' && c.message !== 'Cal seleccionar org'
+      (c) => c.status === 'warning' && c.message !== selectOrgMessage
     );
 
     if (hasCriticalError) return 'error';
@@ -1175,13 +1323,16 @@ export function SystemHealth() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
             <Shield className="h-4 w-4" />
-            Salut del sistema
+            {tr('admin.health.title', 'Salut del sistema')}
           </CardTitle>
           <CardDescription>
-            Sentinelles que detecten problemes abans que els usuaris els reportin.
+            {tr(
+              'admin.health.description',
+              'Sentinelles que detecten problemes abans que els usuaris els reportin.'
+            )}
             <span className="flex items-center gap-1 text-xs mt-1 opacity-70">
               <Mail className="h-3 w-3" />
-              Contacte/suport: <span className="font-mono">{SUPPORT_EMAIL}</span>
+              {tr('admin.health.supportLabel', 'Contacte/suport:')} <span className="font-mono">{SUPPORT_EMAIL}</span>
             </span>
           </CardDescription>
         </CardHeader>
@@ -1189,13 +1340,13 @@ export function SystemHealth() {
           {isLoading ? (
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <Loader2 className="h-4 w-4 animate-spin" />
-              Carregant...
+              {tr('admin.health.loading', 'Carregant...')}
             </div>
           ) : (
             <>
               {/* Grid de sentinelles */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                {SENTINELS.map((sentinel) => {
+                {sentinels.map((sentinel) => {
                   const status = getSentinelStatus(sentinel);
                   return (
                     <TooltipProvider key={sentinel.id} delayDuration={200}>
@@ -1286,7 +1437,7 @@ export function SystemHealth() {
                               </p>
                             </div>
                             <Badge variant={incident.status === 'ACK' ? 'secondary' : 'destructive'}>
-                              {incident.status}
+                              {incidentStatusLabel(incident.status)}
                             </Badge>
                           </div>
                         </div>
@@ -1475,27 +1626,27 @@ export function SystemHealth() {
               {/* ═══════════════════════════════════════════════════════════════════ */}
               <div className="pt-4 mt-4 border-t space-y-3">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <h4 className="text-sm font-medium">Semàfor de producció</h4>
+                    <div className="flex items-center gap-2">
+                    <h4 className="text-sm font-medium">{tr('admin.health.semaphore.title', 'Semàfor de producció')}</h4>
                     {/* Indicador global */}
                     {semaphoreStatus === 'ok' && (
-                      <span className="text-lg" title="Tot OK">✅</span>
+                      <span className="text-lg" title={tr('admin.health.semaphore.ok', 'Tot OK')}>✅</span>
                     )}
                     {semaphoreStatus === 'warning' && (
-                      <span className="text-lg" title="Alguns warnings">⚠️</span>
+                      <span className="text-lg" title={tr('admin.health.semaphore.warning', 'Alguns warnings')}>⚠️</span>
                     )}
                     {semaphoreStatus === 'error' && (
-                      <span className="text-lg" title="Errors detectats">❌</span>
+                      <span className="text-lg" title={tr('admin.health.semaphore.error', 'Errors detectats')}>❌</span>
                     )}
                     {semaphoreStatus === 'pending' && (
-                      <span className="text-lg" title="Pendent d'executar">⏳</span>
+                      <span className="text-lg" title={tr('admin.health.semaphore.pending', "Pendent d'executar")}>⏳</span>
                     )}
                   </div>
                   <div className="flex items-center gap-2">
                     {/* Selector d'organització */}
                     <Select value={selectedOrgId} onValueChange={handleOrgChange}>
                       <SelectTrigger className="w-[180px] h-8 text-xs">
-                        <SelectValue placeholder="Selecciona org..." />
+                        <SelectValue placeholder={tr('admin.health.selectOrg', 'Selecciona org...')} />
                       </SelectTrigger>
                       <SelectContent>
                         {organizations?.map((org) => (
@@ -1517,7 +1668,7 @@ export function SystemHealth() {
                       ) : (
                         <Play className="h-4 w-4 mr-1" />
                       )}
-                      Executar
+                      {tr('admin.health.run', 'Executar')}
                     </Button>
                     {/* Botó copiar informe */}
                     <Button
@@ -1525,7 +1676,7 @@ export function SystemHealth() {
                       size="sm"
                       onClick={handleCopyReport}
                       disabled={semaphoreStatus === 'pending'}
-                      title="Copiar informe"
+                      title={tr('admin.health.copyReport', 'Copiar informe')}
                     >
                       <Copy className="h-4 w-4" />
                     </Button>
@@ -1582,7 +1733,7 @@ export function SystemHealth() {
                                       <TooltipTrigger asChild>
                                         <Database className="h-3 w-3 text-muted-foreground flex-shrink-0" />
                                       </TooltipTrigger>
-                                      <TooltipContent side="top">Requereix org</TooltipContent>
+                                      <TooltipContent side="top">{tr('admin.health.requiresOrg', 'Requereix org')}</TooltipContent>
                                     </Tooltip>
                                   </TooltipProvider>
                                 )}
@@ -1608,10 +1759,10 @@ export function SystemHealth() {
                                       );
                                     }}
                                   >
-                                    Anar a Traduccions
+                                    {tr('admin.health.actions.goToTranslations', 'Anar a Traduccions')}
                                   </Button>
                                   <p className="text-[9px] text-muted-foreground leading-tight">
-                                    Això arregla els textos i elimina els errors de traducció.
+                                    {tr('admin.health.actions.goToTranslationsHint', 'Això arregla els textos i elimina els errors de traducció.')}
                                   </p>
                                 </div>
                               )}
@@ -1627,10 +1778,10 @@ export function SystemHealth() {
                                       window.open(`/${selectedOrg.slug}/quick-expense`, '_blank');
                                     }}
                                   >
-                                    Obrir ruta
+                                    {tr('admin.health.actions.openRoute', 'Obrir ruta')}
                                   </Button>
                                   <p className="text-[9px] text-muted-foreground leading-tight">
-                                    Comprova que l&apos;entrada ràpida de despeses funciona.
+                                    {tr('admin.health.actions.openRouteHint', "Comprova que l'entrada ràpida de despeses funciona.")}
                                   </p>
                                 </div>
                               )}
@@ -1649,10 +1800,10 @@ export function SystemHealth() {
                                     }}
                                   >
                                     <ExternalLink className="h-3 w-3 mr-1" />
-                                    Provar pujada real
+                                    {tr('admin.health.actions.testRealUpload', 'Provar pujada real')}
                                   </Button>
                                   <p className="text-[9px] text-muted-foreground leading-tight">
-                                    Obre la pantalla real de pujada per confirmar que funciona.
+                                    {tr('admin.health.actions.testRealUploadHint', 'Obre la pantalla real de pujada per confirmar que funciona.')}
                                   </p>
                                 </div>
                               )}
@@ -1699,9 +1850,9 @@ export function SystemHealth() {
             <div className="space-y-3">
               {realIncidents.map((incident) => {
                 const currentImpact = incident.impact || getDefaultImpact(incident);
-                const impactConfig = IMPACT_LABELS[currentImpact];
+                const impactConfig = impactLabels[currentImpact];
                 const action = getRecommendedAction(incident);
-                const actionConfig = ACTION_LABELS[action];
+                const actionConfig = actionLabels[action];
                 return (
                   <div
                     key={incident.id}
@@ -1717,9 +1868,9 @@ export function SystemHealth() {
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          {(Object.keys(IMPACT_LABELS) as IncidentImpact[]).map((key) => (
+                          {(Object.keys(impactLabels) as IncidentImpact[]).map((key) => (
                             <SelectItem key={key} value={key} className="text-xs">
-                              <span className={IMPACT_LABELS[key].color}>{IMPACT_LABELS[key].short}</span>
+                              <span className={impactLabels[key].color}>{impactLabels[key].short}</span>
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -1727,7 +1878,7 @@ export function SystemHealth() {
                       <Badge variant="secondary" className="text-[10px]">{incident.type}</Badge>
                       <Badge variant="outline" className="text-[10px]">{incident.count}x</Badge>
                       <span className="text-[10px] text-muted-foreground ml-auto">
-                        {incident.lastSeenAt?.toDate?.()?.toLocaleDateString('ca-ES', {
+                        {incident.lastSeenAt?.toDate?.()?.toLocaleDateString(uiLocale, {
                           day: '2-digit',
                           month: '2-digit',
                           hour: '2-digit',
@@ -1750,12 +1901,12 @@ export function SystemHealth() {
                         <div className="flex items-center gap-2">
                           {incident.firstSeenBuildId && (
                             <span className="font-mono bg-muted px-1 rounded">
-                              1r: {incident.firstSeenBuildId}
+                              {tr('admin.health.build.firstShort', '1r')}: {incident.firstSeenBuildId}
                             </span>
                           )}
                           {incident.lastSeenBuildId && incident.lastSeenBuildId !== incident.firstSeenBuildId && (
                             <span className="font-mono bg-muted px-1 rounded">
-                              últ: {incident.lastSeenBuildId}
+                              {tr('admin.health.build.lastShort', 'últ')}: {incident.lastSeenBuildId}
                             </span>
                           )}
                         </div>
@@ -1764,25 +1915,12 @@ export function SystemHealth() {
 
                     {/* Fila 4: Acció recomanada */}
                     <div className="p-2 bg-muted rounded-md">
-                      <div className="text-[10px] text-muted-foreground mb-1">Què fer ara?</div>
+                      <div className="text-[10px] text-muted-foreground mb-1">{tr('admin.health.whatToDoNow', 'Què fer ara?')}</div>
                       <Button
                         variant="secondary"
                         size="sm"
                         className="h-6 text-xs"
-                        onClick={() => {
-                          if (action === 'permissions') {
-                            window.open('https://console.firebase.google.com/project/summa-social/firestore/rules', '_blank');
-                          } else if (action === 'storage') {
-                            window.open('https://console.firebase.google.com/project/summa-social/storage/rules', '_blank');
-                          } else if (action === 'reload') {
-                            toast({
-                              title: 'Chunk error',
-                              description: 'Demana a l\'usuari que recarregui la pàgina en mode incògnit.',
-                            });
-                          } else {
-                            handleCopyPrompt(incident);
-                          }
-                        }}
+                        onClick={() => handleRecommendedAction(incident)}
                       >
                         {actionConfig.label}
                       </Button>
@@ -1797,7 +1935,7 @@ export function SystemHealth() {
                         onClick={() => handleCopyPrompt(incident)}
                       >
                         <Copy className="h-3 w-3 mr-1" />
-                        Copiar
+                        {tr('admin.health.copy', 'Copiar')}
                       </Button>
                       <Button
                         variant="ghost"
@@ -1806,7 +1944,7 @@ export function SystemHealth() {
                         onClick={() => setSelectedIncident(incident)}
                       >
                         <HelpCircle className="h-3 w-3 mr-1" />
-                        Ajuda
+                        {tr('admin.health.help', 'Ajuda')}
                       </Button>
                       <div className="flex-1" />
                       {incident.status === 'OPEN' && (
@@ -1818,7 +1956,7 @@ export function SystemHealth() {
                             onClick={() => handleAck(incident)}
                             disabled={isProcessing}
                           >
-                            ACK
+                            {tr('admin.health.ack', 'ACK')}
                           </Button>
                           <Button
                             variant="default"
@@ -1828,7 +1966,7 @@ export function SystemHealth() {
                             disabled={isProcessing}
                           >
                             <Check className="h-3 w-3 mr-1" />
-                            Tancar
+                            {tr('admin.health.close', 'Tancar')}
                           </Button>
                         </>
                       )}
@@ -1841,7 +1979,7 @@ export function SystemHealth() {
                           disabled={isProcessing}
                         >
                           <Check className="h-3 w-3 mr-1" />
-                          Tancar
+                          {tr('admin.health.close', 'Tancar')}
                         </Button>
                       )}
                     </div>
@@ -1854,13 +1992,13 @@ export function SystemHealth() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-[80px]">Impacte</TableHead>
-                  <TableHead className="w-[100px]">Tipus</TableHead>
-                  <TableHead>Què passa</TableHead>
-                  <TableHead className="w-[120px]">Ruta / Org</TableHead>
-                  <TableHead className="w-[60px]">Cops</TableHead>
-                  <TableHead className="w-[100px]">Últim</TableHead>
-                  <TableHead className="w-[180px]">Accions</TableHead>
+                  <TableHead className="w-[80px]">{tr('admin.health.table.impact', 'Impacte')}</TableHead>
+                  <TableHead className="w-[100px]">{tr('admin.health.table.type', 'Tipus')}</TableHead>
+                  <TableHead>{tr('admin.health.table.whatHappens', 'Què passa')}</TableHead>
+                  <TableHead className="w-[120px]">{tr('admin.health.table.routeOrg', 'Ruta / Org')}</TableHead>
+                  <TableHead className="w-[60px]">{tr('admin.health.table.count', 'Cops')}</TableHead>
+                  <TableHead className="w-[100px]">{tr('admin.health.table.last', 'Últim')}</TableHead>
+                  <TableHead className="w-[180px]">{tr('admin.health.table.actions', 'Accions')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -1872,7 +2010,7 @@ export function SystemHealth() {
                     <TableCell>
                       {(() => {
                         const currentImpact = incident.impact || getDefaultImpact(incident);
-                        const impactConfig = IMPACT_LABELS[currentImpact];
+                        const impactConfig = impactLabels[currentImpact];
                         return (
                           <Select
                             value={currentImpact}
@@ -1882,9 +2020,9 @@ export function SystemHealth() {
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
-                              {(Object.keys(IMPACT_LABELS) as IncidentImpact[]).map((key) => (
+                              {(Object.keys(impactLabels) as IncidentImpact[]).map((key) => (
                                 <SelectItem key={key} value={key} className="text-xs">
-                                  <span className={IMPACT_LABELS[key].color}>{IMPACT_LABELS[key].short}</span>
+                                  <span className={impactLabels[key].color}>{impactLabels[key].short}</span>
                                 </SelectItem>
                               ))}
                             </SelectContent>
@@ -1908,28 +2046,15 @@ export function SystemHealth() {
                         {/* Acció recomanada */}
                         {(() => {
                           const action = getRecommendedAction(incident);
-                          const actionConfig = ACTION_LABELS[action];
+                          const actionConfig = actionLabels[action];
                           return (
                             <div className="mt-2 p-2 bg-muted rounded-md">
-                              <div className="text-[10px] text-muted-foreground mb-1">Què fer ara?</div>
+                              <div className="text-[10px] text-muted-foreground mb-1">{tr('admin.health.whatToDoNow', 'Què fer ara?')}</div>
                               <Button
                                 variant="secondary"
                                 size="sm"
                                 className="h-6 text-xs"
-                                onClick={() => {
-                                  if (action === 'permissions') {
-                                    window.open('https://console.firebase.google.com/project/summa-social/firestore/rules', '_blank');
-                                  } else if (action === 'storage') {
-                                    window.open('https://console.firebase.google.com/project/summa-social/storage/rules', '_blank');
-                                  } else if (action === 'reload') {
-                                    toast({
-                                      title: 'Chunk error',
-                                      description: 'Demana a l\'usuari que recarregui la pàgina en mode incògnit.',
-                                    });
-                                  } else {
-                                    handleCopyPrompt(incident);
-                                  }
-                                }}
+                                onClick={() => handleRecommendedAction(incident)}
                               >
                                 {actionConfig.label}
                               </Button>
@@ -1963,7 +2088,7 @@ export function SystemHealth() {
                     </TableCell>
                     <TableCell>
                       <span className="text-xs text-muted-foreground">
-                        {incident.lastSeenAt?.toDate?.()?.toLocaleDateString('ca-ES', {
+                        {incident.lastSeenAt?.toDate?.()?.toLocaleDateString(uiLocale, {
                           day: '2-digit',
                           month: '2-digit',
                           hour: '2-digit',
@@ -1986,7 +2111,7 @@ export function SystemHealth() {
                                 <Copy className="h-4 w-4" />
                               </Button>
                             </TooltipTrigger>
-                            <TooltipContent>Copiar prompt de reparació</TooltipContent>
+                            <TooltipContent>{tr('admin.health.copyRepairPrompt', 'Copiar prompt de reparació')}</TooltipContent>
                           </Tooltip>
                         </TooltipProvider>
 
@@ -2003,7 +2128,7 @@ export function SystemHealth() {
                                 <HelpCircle className="h-4 w-4" />
                               </Button>
                             </TooltipTrigger>
-                            <TooltipContent>Què fer?</TooltipContent>
+                            <TooltipContent>{tr('admin.health.whatToDo', 'Què fer?')}</TooltipContent>
                           </Tooltip>
                         </TooltipProvider>
 
@@ -2017,7 +2142,7 @@ export function SystemHealth() {
                               onClick={() => handleAck(incident)}
                               disabled={isProcessing}
                             >
-                              ACK
+                              {tr('admin.health.ack', 'ACK')}
                             </Button>
                             <Button
                               variant="default"
@@ -2027,7 +2152,7 @@ export function SystemHealth() {
                               disabled={isProcessing}
                             >
                               <Check className="h-3 w-3 mr-1" />
-                              Tancar
+                              {tr('admin.health.close', 'Tancar')}
                             </Button>
                           </>
                         )}
@@ -2040,7 +2165,7 @@ export function SystemHealth() {
                             disabled={isProcessing}
                           >
                             <Check className="h-3 w-3 mr-1" />
-                            Tancar
+                            {tr('admin.health.close', 'Tancar')}
                           </Button>
                         )}
                       </div>
@@ -2059,28 +2184,28 @@ export function SystemHealth() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <HelpCircle className="h-5 w-5" />
-              Què fer amb aquest incident?
+              {tr('admin.health.helpDialogTitle', 'Què fer amb aquest incident?')}
             </DialogTitle>
           </DialogHeader>
 
-          {selectedIncident && INCIDENT_HELP[selectedIncident.type] && (
+          {selectedIncident && incidentHelpCopy[selectedIncident.type] && (
             <div className="space-y-4">
               <div>
-                <h4 className="font-medium text-sm mb-1">Què vol dir</h4>
+                <h4 className="font-medium text-sm mb-1">{tr('admin.health.help.meaning', 'Què vol dir')}</h4>
                 <p className="text-sm text-muted-foreground">
-                  {INCIDENT_HELP[selectedIncident.type].whatItMeans}
+                  {incidentHelpCopy[selectedIncident.type].whatItMeans}
                 </p>
               </div>
               <div>
-                <h4 className="font-medium text-sm mb-1">Per què és important</h4>
+                <h4 className="font-medium text-sm mb-1">{tr('admin.health.help.whyImportant', 'Per què és important')}</h4>
                 <p className="text-sm text-muted-foreground">
-                  {INCIDENT_HELP[selectedIncident.type].whyCritical}
+                  {incidentHelpCopy[selectedIncident.type].whyCritical}
                 </p>
               </div>
               <div>
-                <h4 className="font-medium text-sm mb-1">Primers passos</h4>
+                <h4 className="font-medium text-sm mb-1">{tr('admin.health.help.firstSteps', 'Primers passos')}</h4>
                 <p className="text-sm text-muted-foreground whitespace-pre-line">
-                  {INCIDENT_HELP[selectedIncident.type].nextSteps}
+                  {incidentHelpCopy[selectedIncident.type].nextSteps}
                 </p>
               </div>
 
@@ -2092,32 +2217,32 @@ export function SystemHealth() {
                   onClick={() => handleCopyPrompt(selectedIncident)}
                 >
                   <Copy className="h-4 w-4 mr-2" />
-                  Copiar prompt de reparació per Claude Code
+                  {tr('admin.health.help.copyPromptForClaude', 'Copiar prompt de reparació per Claude Code')}
                 </Button>
               </div>
 
               <div className="pt-4 border-t">
-                <h4 className="font-medium text-sm mb-2">Detalls per suport tècnic (opcional)</h4>
+                <h4 className="font-medium text-sm mb-2">{tr('admin.health.help.technicalDetails', 'Detalls per suport tècnic (opcional)')}</h4>
                 <div className="bg-muted p-3 rounded text-xs font-mono space-y-1">
                   <div>
-                    <span className="text-muted-foreground">Signatura:</span>{' '}
+                    <span className="text-muted-foreground">{tr('admin.health.help.signature', 'Signatura:')}</span>{' '}
                     {selectedIncident.signature}
                   </div>
                   <div>
-                    <span className="text-muted-foreground">Ruta:</span>{' '}
+                    <span className="text-muted-foreground">{tr('admin.health.help.route', 'Ruta:')}</span>{' '}
                     {selectedIncident.route || '-'}
                   </div>
                   <div>
-                    <span className="text-muted-foreground">Org:</span>{' '}
+                    <span className="text-muted-foreground">{tr('admin.health.help.org', 'Org:')}</span>{' '}
                     {selectedIncident.orgSlug || selectedIncident.orgId || '-'}
                   </div>
                   <div className="pt-2">
-                    <span className="text-muted-foreground">Missatge:</span>
+                    <span className="text-muted-foreground">{tr('admin.health.help.message', 'Missatge:')}</span>
                     <pre className="whitespace-pre-wrap mt-1">{selectedIncident.message}</pre>
                   </div>
                   {selectedIncident.topStack && (
                     <div className="pt-2">
-                      <span className="text-muted-foreground">Stack:</span>
+                      <span className="text-muted-foreground">{tr('admin.health.help.stack', 'Stack:')}</span>
                       <pre className="whitespace-pre-wrap mt-1">{selectedIncident.topStack}</pre>
                     </div>
                   )}
@@ -2215,10 +2340,10 @@ export function SystemHealth() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Check className="h-5 w-5 text-green-600" />
-              Tancar incident
+              {tr('admin.health.resolveDialogTitle', 'Tancar incident')}
             </DialogTitle>
             <DialogDescription>
-              Indica com s&apos;ha resolt per futurs incidents similars.
+              {tr('admin.health.resolveDialogDescription', "Indica com s'ha resolt per futurs incidents similars.")}
             </DialogDescription>
           </DialogHeader>
 
@@ -2228,13 +2353,19 @@ export function SystemHealth() {
               <div className="p-3 bg-muted rounded text-sm">
                 <div className="font-medium line-clamp-2">{incidentToResolve.message}</div>
                 <div className="text-xs text-muted-foreground mt-1">
-                  {incidentToResolve.type} · {incidentToResolve.count} cop{incidentToResolve.count > 1 ? 's' : ''}
+                  {incidentToResolve.type} · {interpolateMessage(
+                    tr('admin.health.resolveCount', '{count} cop{plural}'),
+                    {
+                      count: incidentToResolve.count,
+                      plural: incidentToResolve.count > 1 ? 's' : '',
+                    }
+                  )}
                 </div>
               </div>
 
               {/* Selector d'impacte */}
               <div className="space-y-2">
-                <Label htmlFor="resolve-impact">Impacte real</Label>
+                <Label htmlFor="resolve-impact">{tr('admin.health.resolveImpact', 'Impacte real')}</Label>
                 <Select
                   value={resolveImpact}
                   onValueChange={(val) => setResolveImpact(val as IncidentImpact)}
@@ -2243,9 +2374,9 @@ export function SystemHealth() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {(Object.keys(IMPACT_LABELS) as IncidentImpact[]).map((key) => (
+                    {(Object.keys(impactLabels) as IncidentImpact[]).map((key) => (
                       <SelectItem key={key} value={key}>
-                        {IMPACT_LABELS[key].label}
+                        {impactLabels[key].label}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -2254,10 +2385,10 @@ export function SystemHealth() {
 
               {/* Commit */}
               <div className="space-y-2">
-                <Label htmlFor="resolve-commit">Commit que ho ha arreglat</Label>
+                <Label htmlFor="resolve-commit">{tr('admin.health.resolveCommit', 'Commit que ho ha arreglat')}</Label>
                 <Input
                   id="resolve-commit"
-                  placeholder="abc1234 o URL del commit"
+                  placeholder={tr('admin.health.resolveCommitPlaceholder', 'abc1234 o URL del commit')}
                   value={resolveCommit}
                   onChange={(e) => setResolveCommit(e.target.value)}
                   disabled={resolveNoCommit}
@@ -2275,16 +2406,16 @@ export function SystemHealth() {
                   }}
                 />
                 <Label htmlFor="resolve-no-commit" className="text-sm font-normal">
-                  No hi ha commit (configuració, permisos, etc.)
+                  {tr('admin.health.resolveNoCommit', 'No hi ha commit (configuració, permisos, etc.)')}
                 </Label>
               </div>
 
               {/* Nota opcional */}
               <div className="space-y-2">
-                <Label htmlFor="resolve-note">Nota (opcional)</Label>
+                <Label htmlFor="resolve-note">{tr('admin.health.resolveNote', 'Nota (opcional)')}</Label>
                 <Input
                   id="resolve-note"
-                  placeholder="Descripció breu del fix..."
+                  placeholder={tr('admin.health.resolveNotePlaceholder', 'Descripció breu del fix...')}
                   value={resolveNote}
                   onChange={(e) => setResolveNote(e.target.value)}
                 />
@@ -2304,7 +2435,7 @@ export function SystemHealth() {
                   onClick={() => setResolveDialogOpen(false)}
                   disabled={isProcessing}
                 >
-                  Cancel·lar
+                  {tr('admin.health.cancel', 'Cancel·lar')}
                 </Button>
                 <Button
                   onClick={handleConfirmResolve}
@@ -2315,7 +2446,7 @@ export function SystemHealth() {
                   ) : (
                     <Check className="h-4 w-4 mr-2" />
                   )}
-                  Tancar incident
+                  {tr('admin.health.resolveDialogTitle', 'Tancar incident')}
                 </Button>
               </div>
             </div>

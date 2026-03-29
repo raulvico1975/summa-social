@@ -207,7 +207,7 @@ export default function CaptureExpensesPage() {
       <div className="flex min-h-[400px] items-center justify-center">
         <div className="flex flex-col items-center gap-4">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          <p className="text-muted-foreground">{c?.loading ?? 'Carregant...'}</p>
+          <p className="text-muted-foreground">{c?.loading}</p>
         </div>
       </div>
     );
@@ -219,10 +219,10 @@ export default function CaptureExpensesPage() {
       <div className="flex min-h-[400px] items-center justify-center">
         <div className="flex flex-col items-center gap-4 text-center px-4">
           <AlertCircle className="h-12 w-12 text-destructive" />
-          <p className="text-destructive font-semibold">{c?.errorLoadFailed ?? "No s'ha pogut carregar"}</p>
+          <p className="text-destructive font-semibold">{c?.errorLoadFailed}</p>
           <p className="text-muted-foreground text-sm">{error.message}</p>
           <Button onClick={() => loadExpenses()} variant="outline">
-            {c?.retry ?? 'Reintentar'}
+            {c?.retry}
           </Button>
         </div>
       </div>
@@ -235,14 +235,14 @@ export default function CaptureExpensesPage() {
       <div className="flex min-h-[400px] items-center justify-center">
         <div className="flex flex-col items-center gap-4 text-center px-4">
           <AlertCircle className="h-12 w-12 text-muted-foreground" />
-          <p className="font-semibold">{c?.restrictedTitle ?? 'Accés restringit'}</p>
+          <p className="font-semibold">{c?.restrictedTitle}</p>
           <p className="text-muted-foreground text-sm">
-            {c?.restrictedBody ?? "Demana accés a l'administració de l'entitat."}
+            {c?.restrictedBody}
           </p>
           <Link href={buildUrl('/project-module/expenses')}>
             <Button variant="outline">
               <ArrowLeft className="h-4 w-4 mr-2" />
-              {c?.navBack ?? 'Tornar'}
+              {c?.navBack}
             </Button>
           </Link>
         </div>
@@ -259,19 +259,19 @@ export default function CaptureExpensesPage() {
             <Link href={buildUrl('/project-module/expenses')}>
               <Button variant="ghost" size="sm" className="gap-1">
                 <ArrowLeft className="h-4 w-4" />
-                {c?.navBack ?? 'Tornar'}
+                {c?.navBack}
               </Button>
             </Link>
             <h1 className="text-xl md:text-2xl font-bold">
               {isAdmin
-                ? (c?.titleAdmin ?? 'Captura (Terreny)')
-                : (c?.titleEditor ?? 'Pujar comprovants')}
+                ? c?.titleAdmin
+                : c?.titleEditor}
             </h1>
           </div>
           <p className="text-muted-foreground text-sm">
             {isAdmin
-              ? (c?.subtitleAdmin ?? 'Pujades pendents de revisió per classificar i assignar.')
-              : (c?.subtitleEditor ?? "Fes una foto i envia. L'oficina ho revisarà.")}
+              ? c?.subtitleAdmin
+              : c?.subtitleEditor}
           </p>
         </div>
 
@@ -283,8 +283,8 @@ export default function CaptureExpensesPage() {
         >
           <Camera className="h-5 w-5 mr-2" />
           {isEditor
-            ? (c?.ctaTakePhoto ?? 'Fer foto i enviar')
-            : (c?.ctaNewExpense ?? 'Nova despesa')}
+            ? c?.ctaTakePhoto
+            : c?.ctaNewExpense}
         </Button>
       </div>
 
@@ -294,12 +294,12 @@ export default function CaptureExpensesPage() {
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-4">
               <Badge variant="outline" className="text-sm">
-                {c?.counterTotal ?? 'Total'}: {totalCount}
+                {c?.counterTotal}: {totalCount}
               </Badge>
               {needsReviewCount > 0 && (
                 <Badge variant="secondary" className="text-sm bg-amber-100 text-amber-800">
                   <AlertCircle className="h-3 w-3 mr-1" />
-                  {c?.counterPending ?? 'Pendents'}: {needsReviewCount}
+                  {c?.counterPending}: {needsReviewCount}
                 </Badge>
               )}
             </div>
@@ -313,8 +313,8 @@ export default function CaptureExpensesPage() {
               />
               <Label htmlFor="showOnlyNeedsReview" className="text-sm cursor-pointer">
                 {showOnlyNeedsReview
-                  ? (c?.togglePending ?? 'Pendents')
-                  : (c?.toggleAll ?? 'Totes')}
+                  ? c?.togglePending
+                  : c?.toggleAll}
               </Label>
             </div>
           </div>
@@ -328,15 +328,15 @@ export default function CaptureExpensesPage() {
                   <CheckCircle2 className="h-12 w-12 text-green-500 mb-4" />
                   <p className="text-lg font-medium">
                     {isEditor
-                      ? (c?.emptyNoPending ?? 'No tens pendents.')
-                      : (c?.emptyNoPendingAdmin ?? 'No hi ha pendents de revisió')}
+                      ? c?.emptyNoPending
+                      : c?.emptyNoPendingAdmin}
                   </p>
                   <button
                     type="button"
                     onClick={() => setShowOnlyNeedsReview(false)}
                     className="text-primary text-sm mt-2 hover:underline"
                   >
-                    {c?.linkViewAll ?? 'Veure totes'}
+                    {c?.linkViewAll}
                   </button>
                 </>
               ) : (
@@ -346,18 +346,18 @@ export default function CaptureExpensesPage() {
                   </div>
                   <p className="text-lg font-medium">
                     {isEditor
-                      ? (c?.emptyNoneYetTitle ?? 'Encara no has pujat cap comprovant')
-                      : (c?.emptyNoExpenses ?? 'No hi ha despeses registrades')}
+                      ? c?.emptyNoneYetTitle
+                      : c?.emptyNoExpenses}
                   </p>
                   <p className="text-muted-foreground text-sm mt-1 max-w-xs">
                     {isEditor
-                      ? (c?.emptyNoneYetBody ?? "Prem 'Fer foto i enviar' quan tinguis un tiquet o factura.")
-                      : (c?.emptyNoExpensesBody ?? 'Les despeses de terreny apareixeran aquí.')}
+                      ? c?.emptyNoneYetBody
+                      : c?.emptyNoExpensesBody}
                   </p>
                   {isEditor && (
                     <Button onClick={() => setModalOpen(true)} className="mt-4">
                       <Camera className="h-4 w-4 mr-2" />
-                      {c?.ctaTakePhoto ?? 'Fer foto i enviar'}
+                      {c?.ctaTakePhoto}
                     </Button>
                   )}
                 </>
@@ -369,7 +369,7 @@ export default function CaptureExpensesPage() {
               {isEditor && (
                 <div className="px-4 pt-3 pb-2 border-b">
                   <p className="text-sm font-medium text-muted-foreground">
-                    {c?.sectionMyUploads ?? 'Les meves pujades'}
+                    {c?.sectionMyUploads}
                   </p>
                 </div>
               )}
@@ -383,7 +383,7 @@ export default function CaptureExpensesPage() {
                     return (
                       <MobileListItem
                         key={expense.id}
-                        title={expense.concept || (c?.noNote ?? '(sense nota)')}
+                        title={expense.concept || c?.noNote || ''}
                         leadingIcon={
                           expense.needsReview ? (
                             <AlertCircle className="h-4 w-4 text-amber-500" />
@@ -401,7 +401,7 @@ export default function CaptureExpensesPage() {
                           {
                             value: expense.amountEUR !== null
                               ? formatAmount(expense.amountEUR)
-                              : <span className="text-amber-600 italic">Pendent</span>
+                              : <span className="text-amber-600 italic">{c?.statusPending}</span>
                           },
                           ...(expense.originalCurrency && expense.originalCurrency !== 'EUR' && expense.originalAmount
                             ? [{ value: `${expense.originalAmount.toLocaleString('ca-ES')} ${expense.originalCurrency}` }]
@@ -416,7 +416,7 @@ export default function CaptureExpensesPage() {
                                 window.open(documentUrl, '_blank', 'noopener,noreferrer');
                               }}
                               className="p-2"
-                              title={c?.docOpen ?? 'Obrir comprovant'}
+                              title={c?.docOpen}
                             >
                               <FileText className="h-4 w-4 text-green-600" />
                             </button>
@@ -431,11 +431,11 @@ export default function CaptureExpensesPage() {
                   <TableHeader>
                     <TableRow>
                       <TableHead className="w-[40px]"></TableHead>
-                      <TableHead className="w-[100px]">Data</TableHead>
-                      <TableHead>Concepte</TableHead>
-                      <TableHead className="hidden md:table-cell">Categoria</TableHead>
-                      <TableHead className="text-right">Import</TableHead>
-                      <TableHead className="w-[60px] text-center">Doc.</TableHead>
+                      <TableHead className="w-[100px]">{tr('projectModule.capture.date')}</TableHead>
+                      <TableHead>{tr('projectModule.capture.concept')}</TableHead>
+                      <TableHead className="hidden md:table-cell">{tr('projectModule.capture.category')}</TableHead>
+                      <TableHead className="text-right">{tr('projectModule.capture.amount')}</TableHead>
+                      <TableHead className="w-[60px] text-center">{tr('projectModule.capture.documentShort')}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -448,11 +448,11 @@ export default function CaptureExpensesPage() {
                           {/* Indicador revisió amb tooltip */}
                           <TableCell className="text-center">
                             {expense.needsReview ? (
-                              <span title={c?.statusPending ?? 'Pendent'}>
+                              <span title={c?.statusPending}>
                                 <AlertCircle className="h-4 w-4 text-amber-500" />
                               </span>
                             ) : (
-                              <span title={c?.statusReviewed ?? 'Revisat'}>
+                              <span title={c?.statusReviewed}>
                                 <CheckCircle2 className="h-4 w-4 text-green-500" />
                               </span>
                             )}
@@ -465,7 +465,7 @@ export default function CaptureExpensesPage() {
 
                           {/* Concepte */}
                           <TableCell className="max-w-[200px] truncate">
-                            {expense.concept || <span className="text-muted-foreground">{c?.noNote ?? '(sense nota)'}</span>}
+                            {expense.concept || <span className="text-muted-foreground">{c?.noNote || ''}</span>}
                           </TableCell>
 
                           {/* Categoria - hidden on mobile */}
@@ -484,7 +484,7 @@ export default function CaptureExpensesPage() {
                             {expense.amountEUR !== null ? (
                               formatAmount(expense.amountEUR)
                             ) : (
-                              <span className="text-amber-600 italic text-xs">Pendent</span>
+                              <span className="text-amber-600 italic text-xs">{c?.statusPending}</span>
                             )}
                             {expense.originalCurrency && expense.originalCurrency !== 'EUR' && expense.originalAmount && (
                               <div className="text-xs text-muted-foreground">
@@ -500,13 +500,13 @@ export default function CaptureExpensesPage() {
                                 type="button"
                                 onClick={() => window.open(documentUrl, '_blank', 'noopener,noreferrer')}
                                 className="cursor-pointer hover:scale-110 transition-transform"
-                                title={c?.docOpen ?? 'Obrir comprovant'}
-                                aria-label={c?.docOpen ?? 'Obrir comprovant'}
+                                title={c?.docOpen}
+                                aria-label={c?.docOpen}
                               >
                                 <Circle className="h-2.5 w-2.5 fill-green-500 text-green-500 inline-block" />
                               </button>
                             ) : (
-                              <span title={c?.docNone ?? 'Sense comprovant'}>
+                              <span title={c?.docNone}>
                                 <Circle className="h-2.5 w-2.5 text-muted-foreground/30 inline-block" />
                               </span>
                             )}
@@ -526,13 +526,13 @@ export default function CaptureExpensesPage() {
                     onClick={() => loadExpenses(true)}
                     disabled={isLoadingMore}
                   >
-                    {isLoadingMore ? (
+                        {isLoadingMore ? (
                       <>
                         <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        {c?.loading ?? 'Carregant...'}
+                        {c?.loading}
                       </>
                     ) : (
-                      c?.loadMore ?? 'Carregar més'
+                      c?.loadMore
                     )}
                   </Button>
                 </div>

@@ -100,7 +100,7 @@ export function ProjectForm({ project, mode }: ProjectFormProps) {
       {/* Header amb navegació */}
       <div className="flex items-center gap-4">
         <Link href={buildUrl('/dashboard/project-module/projects')}>
-          <Button type="button" variant="ghost" size="icon" title={t.projectModule?.backToProjects ?? 'Tornar a projectes'}>
+          <Button type="button" variant="ghost" size="icon" title={tr('projectModule.backToProjects', 'Tornar a projectes')}>
             <ArrowLeft className="h-4 w-4" />
           </Button>
         </Link>

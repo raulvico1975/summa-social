@@ -84,7 +84,7 @@ export function ReturnImporter({
   isSuperAdmin = false,
   parentTransaction = null,
 }: ReturnImporterProps) {
-  const { t } = useTranslations();
+  const { t, tr } = useTranslations();
   const { toast } = useToast();
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const [selectedRows, setSelectedRows] = React.useState<Set<number>>(new Set());
@@ -239,8 +239,8 @@ export function ReturnImporter({
     // Si forceRecreateChildren està activat, requerir confirmació
     if (forceRecreateChildren && !confirmForceRecreate) {
       toast({
-        title: t.returnImporter?.confirmRequired || 'Confirmació requerida',
-        description: t.returnImporter?.confirmRequiredDesc || 'Has de marcar la casella de confirmació per forçar la recreació.',
+        title: tr('returnImporter.confirmRequired', 'Confirmació requerida'),
+        description: tr('returnImporter.confirmRequiredDesc', 'Has de marcar la casella de confirmació per forçar la recreació.'),
         variant: 'destructive',
       });
       return;
@@ -302,14 +302,14 @@ export function ReturnImporter({
 
   const dialogContentClassName =
     step === 'mapping' || step === 'preview'
-      ? 'max-h-[85vh] w-full max-w-5xl flex flex-col overflow-hidden p-0'
-      : 'w-[calc(100vw-2rem)] max-w-lg';
+      ? 'max-h-[calc(100dvh-2rem)] w-[min(96vw,64rem)] flex flex-col overflow-hidden p-0'
+      : 'max-h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] max-w-lg overflow-y-auto';
 
   const mappingMissingMessage =
     mapping.ibanColumn === null
-      ? "Falta assignar l'IBAN."
+      ? tr('returnImporter.errors.missingIbanMapping', "Falta assignar l'IBAN.")
       : mapping.amountColumn === null
-        ? "Falta assignar l'import."
+        ? tr('returnImporter.errors.missingAmountMapping', "Falta assignar l'import.")
         : null;
 
   const bulkAutoProcessCount = bulkReturnGroups.filter((group) => group.status === 'auto').length;
@@ -317,18 +317,18 @@ export function ReturnImporter({
   const previewActionMessage = bulkReturnGroups.length > 0
     ? (
       bulkAutoProcessCount === 0
-        ? 'No hi ha cap liquidacio llesta per processar.'
+        ? tr('returnImporter.errors.noAutoProcessReady', 'No hi ha cap liquidació llesta per processar.')
         : forceRecreateChildren && !confirmForceRecreate
-          ? (t.returnImporter?.confirmRequiredDesc || 'Confirma la recreacio forçada per continuar.')
+          ? tr('returnImporter.confirmRequiredDesc', 'Has de marcar la casella de confirmació per forçar la recreació.')
           : null
     )
     : (
       partialRemittanceStats.allPending
-        ? (t.returnImporter?.identifyAtLeastOne || 'Identifica almenys un donant per continuar')
+        ? tr('returnImporter.identifyAtLeastOne', 'Identifica almenys un donant per continuar')
         : selectedRows.size === 0
-          ? 'Selecciona almenys una devolucio per continuar.'
+          ? tr('returnImporter.errors.selectAtLeastOne', 'Selecciona almenys una devolució per continuar.')
           : forceRecreateChildren && !confirmForceRecreate
-            ? (t.returnImporter?.confirmRequiredDesc || 'Confirma la recreacio forçada per continuar.')
+            ? tr('returnImporter.confirmRequiredDesc', 'Has de marcar la casella de confirmació per forçar la recreació.')
             : null
     );
 
@@ -351,7 +351,7 @@ export function ReturnImporter({
                 {t.returnImporter?.title || "Importar devolucions del banc"}
               </DialogTitle>
               <DialogDescription>
-                {t.returnImporter?.description || "Puja el fitxer amb el detall de devolucions que et facilita el banc. El sistema farà matching per IBAN amb els teus donants."}
+                {tr('returnImporter.description', "Puja el fitxer amb el detall de devolucions que et facilita el banc. El sistema farà matching per IBAN amb els teus donants.")}
               </DialogDescription>
             </DialogHeader>
 
@@ -379,7 +379,7 @@ export function ReturnImporter({
 
               <FileUp className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
               <p className="text-sm font-medium mb-1">
-                {t.returnImporter?.dropzone || "Arrossega fitxers aquí o clica per seleccionar"}
+                {tr('returnImporter.dropzone', 'Arrossega fitxers aquí o clica per seleccionar')}
               </p>
               <p className="text-xs text-muted-foreground">
                 {t.returnImporter?.dropzoneFormats || "CSV, Excel (.xlsx, .xls)"}
@@ -577,16 +577,16 @@ export function ReturnImporter({
                 </Collapsible>
 
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">{(t.returnImporter?.previewLabel || 'Vista previa (primeres {n} files):').replace('{n}', String(previewRows.length))}</label>
+                  <label className="text-sm font-medium">{tr('returnImporter.previewLabel', 'Vista prèvia (primeres {n} files):').replace('{n}', String(previewRows.length))}</label>
                   <div className="max-h-[240px] overflow-auto rounded-md border">
-                    <Table>
+                    <Table className="w-full table-fixed">
                       <TableHeader>
                         <TableRow>
                           <TableHead className="w-12 text-xs">#</TableHead>
                           {Array.from({ length: numColumns }, (_, i) => (
                             <TableHead
                               key={i}
-                              className={`text-xs min-w-[100px] ${
+                              className={`w-[120px] text-xs ${
                                 i === mapping.ibanColumn ? 'bg-green-100 dark:bg-green-900/30' :
                                 i === mapping.amountColumn ? 'bg-blue-100 dark:bg-blue-900/30' :
                                 i === mapping.dateColumn ? 'bg-purple-100 dark:bg-purple-900/30' :
@@ -608,7 +608,7 @@ export function ReturnImporter({
                             {Array.from({ length: numColumns }, (_, colIdx) => (
                               <TableCell
                                 key={colIdx}
-                                className={`text-xs truncate max-w-[150px] ${
+                                className={`max-w-0 truncate text-xs ${
                                   colIdx === mapping.ibanColumn ? 'bg-green-50 dark:bg-green-900/20' :
                                   colIdx === mapping.amountColumn ? 'bg-blue-50 dark:bg-blue-900/20' :
                                   colIdx === mapping.dateColumn ? 'bg-purple-50 dark:bg-purple-900/20' :
@@ -768,14 +768,14 @@ export function ReturnImporter({
 
                 {bulkReturnGroups.length > 0 ? (
                   <div className="max-h-[320px] overflow-auto rounded-md border">
-                    <Table>
+                    <Table className="w-full table-fixed">
                       <TableHeader>
                         <TableRow>
-                          <TableHead>{t.returnImporter?.settlementDate || 'Data Liquidacio'}</TableHead>
-                          <TableHead>{t.returnImporter?.settlementNumber || 'Num. Liquidacio'}</TableHead>
-                          <TableHead className="text-right">{t.returnImporter?.amount || 'Import'}</TableHead>
-                          <TableHead className="text-center">{t.returnImporter?.returnsCount || 'Devolucions'}</TableHead>
-                          <TableHead>{t.returnImporter?.status || 'Estat'}</TableHead>
+                          <TableHead className="w-[112px]">{t.returnImporter?.settlementDate || 'Data Liquidacio'}</TableHead>
+                          <TableHead className="w-[116px]">{t.returnImporter?.settlementNumber || 'Num. Liquidacio'}</TableHead>
+                          <TableHead className="w-[112px] text-right">{t.returnImporter?.amount || 'Import'}</TableHead>
+                          <TableHead className="w-[104px] text-center">{t.returnImporter?.returnsCount || 'Devolucions'}</TableHead>
+                          <TableHead className="w-[136px]">{t.returnImporter?.status || 'Estat'}</TableHead>
                           <TableHead>{t.returnImporter?.parentTransaction || 'Transaccio Pare'}</TableHead>
                         </TableRow>
                       </TableHeader>
@@ -789,19 +789,19 @@ export function ReturnImporter({
                               'bg-red-50/30'
                             }
                           >
-                            <TableCell className="text-sm font-mono">
+                            <TableCell className="text-sm font-mono break-all">
                               {group.liquidationDateISO}
                             </TableCell>
-                            <TableCell className="text-sm font-mono">
+                            <TableCell className="text-sm font-mono break-all">
                               {group.liquidationNumber}
                             </TableCell>
-                            <TableCell className="text-right font-mono text-sm">
+                            <TableCell className="text-right font-mono text-sm break-all">
                               {formatCurrencyEU(group.totalAmount)}
                             </TableCell>
-                            <TableCell className="text-center text-sm">
+                            <TableCell className="text-center text-sm break-words">
                               {group.rows.length}
                             </TableCell>
-                            <TableCell>
+                            <TableCell className="break-words">
                               {group.status === 'auto' ? (
                                 <Badge variant="outline" className="bg-green-100 text-green-800 border-green-300">
                                   <CheckCircle2 className="mr-1 h-3 w-3" />
@@ -831,26 +831,26 @@ export function ReturnImporter({
                                 </Badge>
                               )}
                             </TableCell>
-                            <TableCell className="text-sm">
+                            <TableCell className="text-sm min-w-0">
                               {group.matchedParent ? (
-                                <div className="flex flex-col gap-0.5">
+                                <div className="flex min-w-0 flex-col gap-0.5">
                                   <span className="text-green-700 font-medium">
                                     {group.matchedParent.date?.split('T')[0] || '-'}
                                   </span>
-                                  <span className="text-xs text-muted-foreground truncate max-w-[200px]">
+                                  <span className="max-w-full break-words text-xs text-muted-foreground">
                                     {group.matchedParent.description || '-'}
                                   </span>
                                 </div>
                               ) : group.candidatesInWindow.length > 0 ? (
-                                <span className="text-orange-600 text-xs">
+                                <span className="break-words text-orange-600 text-xs">
                                   {(t.returnImporter?.candidatesAvailable || '{n} candidats disponibles').replace('{n}', String(group.candidatesInWindow.length))}
                                 </span>
                               ) : group.candidatesOutsideWindow.length > 0 ? (
-                                <span className="text-orange-600 text-xs">
+                                <span className="break-words text-orange-600 text-xs">
                                   {(t.returnImporter?.outsideWindowLabel || '{n} fora finestra').replace('{n}', String(group.candidatesOutsideWindow.length))}
                                 </span>
                               ) : (
-                                <span className="text-red-500 text-xs">{t.returnImporter?.noCandidate || 'Cap candidat'}</span>
+                                <span className="break-words text-red-500 text-xs">{tr('returnImporter.noCandidate', 'Cap candidat')}</span>
                               )}
                             </TableCell>
                           </TableRow>
@@ -860,7 +860,7 @@ export function ReturnImporter({
                   </div>
                 ) : (
                   <div className="max-h-[320px] overflow-auto rounded-md border">
-                    <Table>
+                    <Table className="w-full table-fixed">
                       <TableHeader>
                         <TableRow>
                           <TableHead className="w-12">
@@ -870,11 +870,11 @@ export function ReturnImporter({
                               disabled={selectableCount === 0 || partialRemittanceStats.allPending}
                             />
                           </TableHead>
-                          <TableHead>Data</TableHead>
-                          <TableHead className="text-right">Import</TableHead>
-                          <TableHead>IBAN</TableHead>
-                          <TableHead>Donant</TableHead>
-                          {hasAnyTypeBadge && <TableHead>Tipus</TableHead>}
+                          <TableHead className="w-[112px]">{tr('returnImporter.columns.date', 'Data')}</TableHead>
+                          <TableHead className="w-[112px] text-right">Import</TableHead>
+                          <TableHead className="w-[160px]">{tr('returnImporter.columns.iban', 'IBAN')}</TableHead>
+                          <TableHead>{tr('returnImporter.columns.donor', 'Donant')}</TableHead>
+                          {hasAnyTypeBadge && <TableHead className="w-[112px]">{tr('returnImporter.columns.type', 'Tipus')}</TableHead>}
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -895,40 +895,49 @@ export function ReturnImporter({
                                 disabled={item.status === 'not_found' || (item.matchType === 'grouped' && !item.matchedDonor)}
                               />
                             </TableCell>
-                            <TableCell className="text-sm">
+                            <TableCell className="break-words text-sm">
                               {item.date ? item.date.toISOString().split('T')[0] : '-'}
                             </TableCell>
-                            <TableCell className="text-right font-mono text-sm">
+                            <TableCell className="break-all text-right font-mono text-sm">
                               {formatCurrencyEU(item.amount)}
                             </TableCell>
-                            <TableCell className="font-mono text-xs">
+                            <TableCell className="break-all font-mono text-xs">
                               {truncateIban(item.iban)}
                             </TableCell>
-                            <TableCell>
+                            <TableCell className="min-w-0">
                               {item.matchedDonor ? (
-                                <div className="flex flex-col gap-0.5">
+                                <div className="flex min-w-0 flex-col gap-0.5">
                                   <span className="text-sm text-green-700 font-medium">
                                     {item.matchedDonor.name}
                                   </span>
                                   <span className="text-xs text-muted-foreground">
-                                    via {item.matchedBy === 'iban' ? 'IBAN' : item.matchedBy === 'dni' ? 'DNI' : item.matchedBy === 'manual' ? 'Manual' : 'Nom'}
+                                    {item.matchedBy === 'iban'
+                                      ? tr('returnImporter.matchBy.iban', 'IBAN')
+                                      : item.matchedBy === 'dni'
+                                        ? tr('returnImporter.matchBy.dni', 'DNI')
+                                        : item.matchedBy === 'manual'
+                                          ? tr('returnImporter.matchBy.manual', 'Manual')
+                                          : tr('returnImporter.matchBy.name', 'Nom')}
                                   </span>
                                 </div>
                               ) : item.matchType === 'grouped' ? (
-                                <div className="flex flex-col gap-1">
+                                <div className="flex min-w-0 flex-col gap-1">
                                   <Badge variant="outline" className="bg-orange-100 text-orange-800 border-orange-300 w-fit">
                                     <UserRoundX className="mr-1 h-3 w-3" />
                                     {t.returnImporter?.pendingIdentify || "Pendent d'identificar"}
                                   </Badge>
-                                  <div className="flex gap-1">
+                                  <div className="flex flex-wrap gap-1">
                                     <Button
                                       variant="ghost"
                                       size="sm"
                                       className="h-6 px-2 text-xs text-orange-700 hover:text-orange-900 hover:bg-orange-100"
-                                      onClick={() => toast({ title: t.returnImporter?.featurePending || 'Funcionalitat pendent', description: t.returnImporter?.searchDonorSoon || 'Buscar donant existent - proximament' })}
+                                      onClick={() => toast({
+                                        title: tr('returnImporter.featurePending', 'Funcionalitat pendent'),
+                                        description: tr('returnImporter.searchDonorSoon', 'Buscar donant existent - pròximament'),
+                                      })}
                                     >
                                       <Search className="mr-1 h-3 w-3" />
-                                      {t.returnImporter?.searchButton || 'Buscar'}
+                                      {tr('returnImporter.searchButton', 'Buscar')}
                                     </Button>
                                     <Button
                                       variant="ghost"
@@ -941,32 +950,30 @@ export function ReturnImporter({
                                     </Button>
                                   </div>
                                   {item.originalName && (
-                                    <span className="text-xs text-muted-foreground">
+                                    <span className="text-xs text-muted-foreground break-words">
                                       {item.originalName}
                                     </span>
                                   )}
                                 </div>
                               ) : (
-                                <div className="flex flex-col gap-0.5">
+                                <div className="flex min-w-0 flex-col gap-0.5">
                                   <Badge variant="outline" className="bg-red-100 text-red-800 border-red-300 w-fit">
                                     <AlertTriangle className="mr-1 h-3 w-3" />
                                     {t.returnImporter?.notFoundLabel || 'No trobat'}
                                   </Badge>
                                   {item.dni && (
-                                    <span className="text-xs text-muted-foreground">
+                                    <span className="break-all text-xs text-muted-foreground">
                                       DNI: {item.dni}
                                     </span>
                                   )}
                                   {!item.dni && item.originalName && (
-                                    <span className="text-xs text-muted-foreground">
-                                      Nom: {item.originalName}
-                                    </span>
+                                    <span className="text-xs text-muted-foreground break-words">{item.originalName}</span>
                                   )}
                                 </div>
                               )}
                             </TableCell>
                             {hasAnyTypeBadge && (
-                              <TableCell>
+                              <TableCell className="break-words">
                                 {item.matchType === 'grouped' ? (
                                   <Tooltip>
                                     <TooltipTrigger asChild>
@@ -1229,10 +1236,10 @@ function CreateDonorForReturnDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
+      <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto sm:max-w-md">
+        <DialogHeader className="pr-10">
           <DialogTitle>{t.returnImporter.createDonor.title}</DialogTitle>
-          <DialogDescription>
+          <DialogDescription className="break-words leading-relaxed">
             {t.returnImporter.createDonor.description}
           </DialogDescription>
         </DialogHeader>
@@ -1277,7 +1284,7 @@ function CreateDonorForReturnDialog({
           {error && (
             <p className="text-sm text-destructive">{error}</p>
           )}
-          <DialogFooter>
+          <DialogFooter className="flex-col gap-2 sm:flex-row sm:justify-end">
             <Button
               type="button"
               variant="outline"

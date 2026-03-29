@@ -18,6 +18,25 @@ Aquest checklist assegura que els fluxos fiscals crítics no tenen regressions a
 
 ## 2. Checklist de verificació (PASS/FAIL)
 
+### Registre manual 2026-03-29
+
+**Context:**
+Ronda de verificació visual i funcional prèvia a deploy per canvis en modals fiscals, imports i fitxes relacionades.
+
+**Comprovacions aplicades:**
+1. Model 182: modal de donants exclosos revisat en `ca` i `es`, desktop i mòbil.
+2. Certificats: previsualització de certificat oberta i validada en demo.
+3. Import bancari: selector de compte i pas de mapeig revisats en mòbil, amb CTA visibles i sense overflow horitzontal rellevant.
+4. Fitxa de donant / drawer: revisió visual de dades, resums i CTA en mòbil.
+5. Model 347 i conciliació: revisió de layout, scroll intern i visibilitat de botons sobre el codi actualitzat.
+6. Split detail / devolucions / importadors: revisió estructural de modal i validació tècnica amb `npm run typecheck` i `npm run build`.
+
+**Resultat:**
+- [x] Els modals crítics mostren el text complet i els CTA queden visibles.
+- [x] El scroll vertical queda contingut dins del modal.
+- [x] No s'ha reproduït truncament horitzontal crític als casos revisats.
+- [x] Build de producció correcta sobre `main` net abans del deploy.
+
 ### VF-1 Remesa IN amb IBAN ambigu
 
 **Passos:**

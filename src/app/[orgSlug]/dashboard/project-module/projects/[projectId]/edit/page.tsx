@@ -12,11 +12,13 @@ import { AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { useOrgUrl } from '@/hooks/organization-provider';
+import { useTranslations } from '@/i18n';
 
 export default function EditProjectPage() {
   const params = useParams();
   const projectId = params.projectId as string;
   const { buildUrl } = useOrgUrl();
+  const { t, tr } = useTranslations();
 
   const { project, isLoading, error } = useProjectDetail(projectId);
 
@@ -43,12 +45,12 @@ export default function EditProjectPage() {
     return (
       <div className="flex flex-col items-center justify-center py-12 gap-4">
         <AlertCircle className="h-12 w-12 text-destructive" />
-        <p className="text-destructive font-medium">Error carregant projecte</p>
+        <p className="text-destructive font-medium">{tr('projectModule.projects.edit.errorLoading')}</p>
         <p className="text-muted-foreground text-sm">
-          {error?.message ?? 'Projecte no trobat'}
+          {error?.message ?? tr('projectModule.projects.edit.notFound')}
         </p>
         <Link href={buildUrl('/dashboard/project-module/projects')}>
-          <Button variant="outline">Tornar a projectes</Button>
+          <Button variant="outline">{t.common.back}</Button>
         </Link>
       </div>
     );

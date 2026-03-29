@@ -17,6 +17,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Loader2, Save, Send, AlertCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useTranslations } from '@/i18n';
 import { getStorage, ref, getDownloadURL, uploadBytes } from 'firebase/storage';
 import { getFirestore, doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
 
@@ -32,13 +33,6 @@ import { REQUIRED_HELP_LOCALES, type HelpLocale } from '@/lib/help/help-audit';
 
 type JsonMessages = Record<string, string>;
 
-const languageLabels: Record<HelpLocale, string> = {
-  ca: 'Català',
-  es: 'Español',
-  fr: 'Français',
-  pt: 'Português',
-};
-
 type Props = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -52,6 +46,7 @@ type Props = {
  */
 export function HelpEditorDialog({ open, onOpenChange, routeKey, onPublished }: Props) {
   const { toast } = useToast();
+  const { tr } = useTranslations();
   const [activeLocale, setActiveLocale] = React.useState<HelpLocale>('ca');
   const [isLoading, setIsLoading] = React.useState(false);
   const [isSaving, setIsSaving] = React.useState(false);
@@ -166,8 +161,8 @@ export function HelpEditorDialog({ open, onOpenChange, routeKey, onPublished }: 
       }));
       toast({
         variant: 'destructive',
-        title: 'Formulari incomplet',
-        description: 'Omple els camps obligatoris (títol i introducció).',
+        title: tr('admin.helpEditor.toast.invalidTitle', 'Formulari incomplet'),
+        description: tr('admin.helpEditor.toast.invalidDescription', 'Omple els camps obligatoris (títol i introducció).'),
       });
       return;
     }
@@ -192,15 +187,15 @@ export function HelpEditorDialog({ open, onOpenChange, routeKey, onPublished }: 
       }));
 
       toast({
-        title: 'Guardat a Storage',
-        description: `${languageLabels[activeLocale]} guardat. Recorda publicar per activar els canvis.`,
+        title: tr('admin.helpEditor.toast.savedTitle', 'Guardat a Storage'),
+        description: tr('admin.helpEditor.toast.savedDescription', '{language} guardat. Recorda publicar per activar els canvis.').replace('{language}', languageLabels[activeLocale]),
       });
     } catch (error) {
       console.error('[HelpEditor] Save error:', error);
       toast({
         variant: 'destructive',
-        title: 'Error guardant',
-        description: 'No s\'ha pogut guardar. Verifica els permisos.',
+        title: tr('admin.helpEditor.toast.saveErrorTitle', 'Error guardant'),
+        description: tr('admin.helpEditor.toast.saveErrorDescription', 'No s’ha pogut guardar. Verifica els permisos.'),
       });
     } finally {
       setIsSaving(false);
@@ -219,8 +214,8 @@ export function HelpEditorDialog({ open, onOpenChange, routeKey, onPublished }: 
       }));
       toast({
         variant: 'destructive',
-        title: 'Formulari incomplet',
-        description: 'Omple els camps obligatoris (títol i introducció).',
+        title: tr('admin.helpEditor.toast.invalidTitle', 'Formulari incomplet'),
+        description: tr('admin.helpEditor.toast.invalidDescription', 'Omple els camps obligatoris (títol i introducció).'),
       });
       return;
     }
@@ -258,8 +253,10 @@ export function HelpEditorDialog({ open, onOpenChange, routeKey, onPublished }: 
       }));
 
       toast({
-        title: 'Publicat',
-        description: `${languageLabels[activeLocale]} publicat (v${newVersion}). Els usuaris veuran els canvis.`,
+        title: tr('admin.helpEditor.toast.publishedTitle', 'Publicat'),
+        description: tr('admin.helpEditor.toast.publishedDescription', '{language} publicat (v{version}). Els usuaris veuran els canvis.')
+          .replace('{language}', languageLabels[activeLocale])
+          .replace('{version}', String(newVersion)),
       });
 
       onPublished?.();
@@ -267,8 +264,8 @@ export function HelpEditorDialog({ open, onOpenChange, routeKey, onPublished }: 
       console.error('[HelpEditor] Publish error:', error);
       toast({
         variant: 'destructive',
-        title: 'Error publicant',
-        description: 'No s\'ha pogut publicar. Verifica els permisos.',
+        title: tr('admin.helpEditor.toast.publishErrorTitle', 'Error publicant'),
+        description: tr('admin.helpEditor.toast.publishErrorDescription', 'No s’ha pogut publicar. Verifica els permisos.'),
       });
     } finally {
       setIsPublishing(false);
@@ -278,23 +275,33 @@ export function HelpEditorDialog({ open, onOpenChange, routeKey, onPublished }: 
   const currentForm = forms[activeLocale];
   const currentErrors = errors[activeLocale];
   const isProcessing = isSaving || isPublishing;
+  const languageLabels: Record<HelpLocale, string> = {
+    ca: tr('admin.helpEditor.languages.ca', 'Català'),
+    es: tr('admin.helpEditor.languages.es', 'Español'),
+    fr: tr('admin.helpEditor.languages.fr', 'Français'),
+    pt: tr('admin.helpEditor.languages.pt', 'Português'),
+  };
+  const translatedErrors: Partial<Record<keyof HelpFormState, string>> = {
+    title: currentErrors.title ? tr('admin.helpEditor.validation.titleRequired', 'El títol és obligatori') : undefined,
+    intro: currentErrors.intro ? tr('admin.helpEditor.validation.introRequired', 'La introducció és obligatòria') : undefined,
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            Editar ajuda: <code className="text-sm bg-muted px-2 py-0.5 rounded">{routeKey}</code>
+            {tr('admin.helpEditor.dialogTitle', 'Editar ajuda:')} <code className="text-sm bg-muted px-2 py-0.5 rounded">{routeKey}</code>
           </DialogTitle>
           <DialogDescription>
-            Edita el contingut de l&apos;ajuda per cada idioma. Guarda per pujar a Storage i Publica per activar els canvis.
+            {tr('admin.helpEditor.dialogDescription', 'Edita el contingut de l’ajuda per cada idioma. Guarda per pujar a Storage i publica per activar els canvis.')}
           </DialogDescription>
         </DialogHeader>
 
         {isLoading ? (
           <div className="flex items-center justify-center py-12">
             <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-            <span className="ml-2 text-muted-foreground">Carregant...</span>
+            <span className="ml-2 text-muted-foreground">{tr('admin.helpEditor.loading', 'Carregant...')}</span>
           </div>
         ) : (
           <>
@@ -317,41 +324,41 @@ export function HelpEditorDialog({ open, onOpenChange, routeKey, onPublished }: 
                 <div className="space-y-3">
                   <div>
                     <Label htmlFor="title" className="flex items-center gap-1">
-                      Títol <span className="text-muted-foreground">*</span>
+                      {tr('admin.helpEditor.fields.title', 'Títol')} <span className="text-muted-foreground">*</span>
                     </Label>
                     <Input
                       id="title"
                       value={currentForm.title}
                       onChange={(e) => handleFieldChange('title', e.target.value)}
-                      placeholder="Ex: Com gestionar moviments pendents"
-                      className={currentErrors.title ? 'border-destructive' : ''}
+                      placeholder={tr('admin.helpEditor.placeholders.title', 'Ex: Com gestionar moviments pendents')}
+                      className={translatedErrors.title ? 'border-destructive' : ''}
                       disabled={isProcessing}
                     />
-                    {currentErrors.title && (
+                    {translatedErrors.title && (
                       <p className="text-xs text-destructive mt-1 flex items-center gap-1">
                         <AlertCircle className="h-3 w-3" />
-                        {currentErrors.title}
+                        {translatedErrors.title}
                       </p>
                     )}
                   </div>
 
                   <div>
                     <Label htmlFor="intro" className="flex items-center gap-1">
-                      Introducció <span className="text-muted-foreground">*</span>
+                      {tr('admin.helpEditor.fields.intro', 'Introducció')} <span className="text-muted-foreground">*</span>
                     </Label>
                     <Textarea
                       id="intro"
                       value={currentForm.intro}
                       onChange={(e) => handleFieldChange('intro', e.target.value)}
-                      placeholder="Breu descripció de la funcionalitat..."
+                      placeholder={tr('admin.helpEditor.placeholders.intro', 'Breu descripció de la funcionalitat...')}
                       rows={2}
-                      className={currentErrors.intro ? 'border-destructive' : ''}
+                      className={translatedErrors.intro ? 'border-destructive' : ''}
                       disabled={isProcessing}
                     />
-                    {currentErrors.intro && (
+                    {translatedErrors.intro && (
                       <p className="text-xs text-destructive mt-1 flex items-center gap-1">
                         <AlertCircle className="h-3 w-3" />
-                        {currentErrors.intro}
+                        {translatedErrors.intro}
                       </p>
                     )}
                   </div>
@@ -359,65 +366,65 @@ export function HelpEditorDialog({ open, onOpenChange, routeKey, onPublished }: 
 
                 {/* Camps opcionals - Arrays */}
                 <div className="space-y-3 pt-2 border-t">
-                  <p className="text-xs text-muted-foreground">Camps opcionals (1 línia = 1 element)</p>
+                  <p className="text-xs text-muted-foreground">{tr('admin.helpEditor.optionalFields', 'Camps opcionals (1 línia = 1 element)')}</p>
 
                   <div>
-                    <Label htmlFor="steps">Passos</Label>
+                    <Label htmlFor="steps">{tr('admin.helpEditor.fields.steps', 'Passos')}</Label>
                     <Textarea
                       id="steps"
                       value={currentForm.steps}
                       onChange={(e) => handleFieldChange('steps', e.target.value)}
-                      placeholder="Pas 1: Selecciona el moviment&#10;Pas 2: Clica 'Assignar'"
+                      placeholder={tr('admin.helpEditor.placeholders.steps', 'Pas 1: Selecciona el moviment\nPas 2: Clica "Assignar"')}
                       rows={3}
                       disabled={isProcessing}
                     />
                   </div>
 
                   <div>
-                    <Label htmlFor="tips">Consells</Label>
+                    <Label htmlFor="tips">{tr('admin.helpEditor.fields.tips', 'Consells')}</Label>
                     <Textarea
                       id="tips"
                       value={currentForm.tips}
                       onChange={(e) => handleFieldChange('tips', e.target.value)}
-                      placeholder="Pots usar filtres per trobar moviments&#10;Els moviments assignats es marquen en verd"
+                      placeholder={tr('admin.helpEditor.placeholders.tips', 'Pots usar filtres per trobar moviments\nEls moviments assignats es marquen en verd')}
                       rows={2}
                       disabled={isProcessing}
                     />
                   </div>
 
                   <div>
-                    <Label htmlFor="keywords">Paraules clau (per cerques)</Label>
+                    <Label htmlFor="keywords">{tr('admin.helpEditor.fields.keywords', 'Paraules clau (per cerques)')}</Label>
                     <Input
                       id="keywords"
                       value={currentForm.keywords}
                       onChange={(e) => handleFieldChange('keywords', e.target.value)}
-                      placeholder="moviments, pendents, assignar, conciliar"
+                      placeholder={tr('admin.helpEditor.placeholders.keywords', 'moviments, pendents, assignar, conciliar')}
                       disabled={isProcessing}
                     />
-                    <p className="text-xs text-muted-foreground mt-1">Separa amb comes o salts de línia</p>
+                    <p className="text-xs text-muted-foreground mt-1">{tr('admin.helpEditor.keywordsHint', 'Separa amb comes o salts de línia')}</p>
                   </div>
                 </div>
 
                 {/* Extra: Flow */}
                 <div className="space-y-2 pt-2 border-t">
-                  <p className="text-xs text-muted-foreground font-medium">Extra: Flux de treball</p>
+                  <p className="text-xs text-muted-foreground font-medium">{tr('admin.helpEditor.sections.flow', 'Extra: Flux de treball')}</p>
                   <div>
-                    <Label htmlFor="extraFlowTitle">Títol del flux</Label>
+                    <Label htmlFor="extraFlowTitle">{tr('admin.helpEditor.fields.extraFlowTitle', 'Títol del flux')}</Label>
                     <Input
                       id="extraFlowTitle"
                       value={currentForm.extraFlowTitle}
                       onChange={(e) => handleFieldChange('extraFlowTitle', e.target.value)}
-                      placeholder="Flux recomanat"
+                      placeholder={tr('admin.helpEditor.placeholders.extraFlowTitle', 'Flux recomanat')}
                       disabled={isProcessing}
                     />
                   </div>
                   <div>
-                    <Label htmlFor="extraFlowItems">Passos del flux</Label>
+                    <Label htmlFor="extraFlowItems">{tr('admin.helpEditor.fields.extraFlowItems', 'Passos del flux')}</Label>
                     <Textarea
                       id="extraFlowItems"
                       value={currentForm.extraFlowItems}
                       onChange={(e) => handleFieldChange('extraFlowItems', e.target.value)}
-                      placeholder="1. Revisa pendents&#10;2. Assigna partida&#10;3. Valida"
+                      placeholder={tr('admin.helpEditor.placeholders.extraFlowItems', '1. Revisa pendents\n2. Assigna partida\n3. Valida')}
                       rows={2}
                       disabled={isProcessing}
                     />
@@ -426,24 +433,24 @@ export function HelpEditorDialog({ open, onOpenChange, routeKey, onPublished }: 
 
                 {/* Extra: Pitfalls */}
                 <div className="space-y-2 pt-2 border-t">
-                  <p className="text-xs text-muted-foreground font-medium">Extra: Errors comuns</p>
+                  <p className="text-xs text-muted-foreground font-medium">{tr('admin.helpEditor.sections.pitfalls', 'Extra: Errors comuns')}</p>
                   <div>
-                    <Label htmlFor="extraPitfallsTitle">Títol</Label>
+                    <Label htmlFor="extraPitfallsTitle">{tr('admin.helpEditor.fields.extraPitfallsTitle', 'Títol')}</Label>
                     <Input
                       id="extraPitfallsTitle"
                       value={currentForm.extraPitfallsTitle}
                       onChange={(e) => handleFieldChange('extraPitfallsTitle', e.target.value)}
-                      placeholder="Evita aquests errors"
+                      placeholder={tr('admin.helpEditor.placeholders.extraPitfallsTitle', 'Evita aquests errors')}
                       disabled={isProcessing}
                     />
                   </div>
                   <div>
-                    <Label htmlFor="extraPitfallsItems">Errors a evitar</Label>
+                    <Label htmlFor="extraPitfallsItems">{tr('admin.helpEditor.fields.extraPitfallsItems', 'Errors a evitar')}</Label>
                     <Textarea
                       id="extraPitfallsItems"
                       value={currentForm.extraPitfallsItems}
                       onChange={(e) => handleFieldChange('extraPitfallsItems', e.target.value)}
-                      placeholder="No assignis sense revisar l'import&#10;Verifica sempre la data"
+                      placeholder={tr('admin.helpEditor.placeholders.extraPitfallsItems', 'No assignis sense revisar l’import\nVerifica sempre la data')}
                       rows={2}
                       disabled={isProcessing}
                     />
@@ -452,36 +459,36 @@ export function HelpEditorDialog({ open, onOpenChange, routeKey, onPublished }: 
 
                 {/* Extra: Manual i Video */}
                 <div className="space-y-2 pt-2 border-t">
-                  <p className="text-xs text-muted-foreground font-medium">Extra: Recursos</p>
+                  <p className="text-xs text-muted-foreground font-medium">{tr('admin.helpEditor.sections.resources', 'Extra: Recursos')}</p>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <Label htmlFor="extraManualLabel">Etiqueta manual</Label>
+                      <Label htmlFor="extraManualLabel">{tr('admin.helpEditor.fields.extraManualLabel', 'Etiqueta manual')}</Label>
                       <Input
                         id="extraManualLabel"
                         value={currentForm.extraManualLabel}
                         onChange={(e) => handleFieldChange('extraManualLabel', e.target.value)}
-                        placeholder="Veure manual complet"
+                        placeholder={tr('admin.helpEditor.placeholders.extraManualLabel', 'Veure manual complet')}
                         disabled={isProcessing}
                       />
                     </div>
                     <div>
-                      <Label htmlFor="extraVideoLabel">Etiqueta vídeo</Label>
+                      <Label htmlFor="extraVideoLabel">{tr('admin.helpEditor.fields.extraVideoLabel', 'Etiqueta vídeo')}</Label>
                       <Input
                         id="extraVideoLabel"
                         value={currentForm.extraVideoLabel}
                         onChange={(e) => handleFieldChange('extraVideoLabel', e.target.value)}
-                        placeholder="Veure vídeo tutorial"
+                        placeholder={tr('admin.helpEditor.placeholders.extraVideoLabel', 'Veure vídeo tutorial')}
                         disabled={isProcessing}
                       />
                     </div>
                   </div>
                   <div>
-                    <Label htmlFor="extraVideoNote">Nota del vídeo</Label>
+                    <Label htmlFor="extraVideoNote">{tr('admin.helpEditor.fields.extraVideoNote', 'Nota del vídeo')}</Label>
                     <Input
                       id="extraVideoNote"
                       value={currentForm.extraVideoNote}
                       onChange={(e) => handleFieldChange('extraVideoNote', e.target.value)}
-                      placeholder="Durada: 3 minuts"
+                      placeholder={tr('admin.helpEditor.placeholders.extraVideoNote', 'Durada: 3 minuts')}
                       disabled={isProcessing}
                     />
                   </div>
@@ -491,7 +498,7 @@ export function HelpEditorDialog({ open, onOpenChange, routeKey, onPublished }: 
 
             <DialogFooter className="flex-col sm:flex-row gap-2 pt-4 border-t">
               <div className="flex-1 text-xs text-muted-foreground">
-                Editant: <strong>{languageLabels[activeLocale]}</strong>
+                {tr('admin.helpEditor.editing', 'Editant:')} <strong>{languageLabels[activeLocale]}</strong>
               </div>
               <div className="flex gap-2">
                 <Button
@@ -499,7 +506,7 @@ export function HelpEditorDialog({ open, onOpenChange, routeKey, onPublished }: 
                   onClick={() => onOpenChange(false)}
                   disabled={isProcessing}
                 >
-                  Cancel·lar
+                  {tr('admin.helpEditor.cancel', 'Cancel·lar')}
                 </Button>
                 <Button
                   variant="secondary"
@@ -511,7 +518,7 @@ export function HelpEditorDialog({ open, onOpenChange, routeKey, onPublished }: 
                   ) : (
                     <Save className="h-4 w-4 mr-1" />
                   )}
-                  Guardar
+                  {tr('admin.helpEditor.save', 'Guardar')}
                 </Button>
                 <Button
                   onClick={handlePublish}
@@ -522,7 +529,7 @@ export function HelpEditorDialog({ open, onOpenChange, routeKey, onPublished }: 
                   ) : (
                     <Send className="h-4 w-4 mr-1" />
                   )}
-                  Publicar
+                  {tr('admin.helpEditor.publish', 'Publicar')}
                 </Button>
               </div>
             </DialogFooter>

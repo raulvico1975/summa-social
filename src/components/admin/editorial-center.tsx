@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useToast } from '@/hooks/use-toast'
+import { useTranslations } from '@/i18n'
 
 type Lang = 'ca' | 'es' | 'fr' | 'pt'
 
@@ -184,12 +185,6 @@ function toPublishPayload(lang: Lang, form: SimpleGuideForm): GuidePatchPayload 
   }
 }
 
-function sourceLabel(source: SourceStatus): string {
-  if (source === 'published') return 'Publicada'
-  if (source === 'draft') return 'Esborrany'
-  return 'Buita'
-}
-
 function getInitialGuideId(rows: CoverageRow[]): string {
   const firstPending = rows.find(row => !row.publishedCompleteAllLangs)
   if (firstPending) return firstPending.guideId
@@ -198,6 +193,7 @@ function getInitialGuideId(rows: CoverageRow[]): string {
 
 export function EditorialCenter() {
   const { toast } = useToast()
+  const { tr } = useTranslations()
   const [isMounted, setIsMounted] = React.useState(false)
   const [isLoadingCoverage, setIsLoadingCoverage] = React.useState(false)
   const [coverageRows, setCoverageRows] = React.useState<CoverageRow[]>([])
@@ -261,8 +257,8 @@ export function EditorialCenter() {
       console.error('[EditorialCenter] coverage error:', error)
       toast({
         variant: 'destructive',
-        title: 'Error carregant guies',
-        description: (error as Error).message || 'No s ha pogut carregar',
+        title: tr('admin.editorial.toasts.coverageErrorTitle', 'Error carregant guies'),
+        description: (error as Error).message || tr('admin.editorial.toasts.loadFailed', 'No s’ha pogut carregar'),
       })
     } finally {
       setIsLoadingCoverage(false)
@@ -294,8 +290,8 @@ export function EditorialCenter() {
         console.error('[EditorialCenter] draft load error:', error)
         toast({
           variant: 'destructive',
-          title: 'Error editor',
-          description: (error as Error).message || 'No s ha pogut carregar la guia',
+          title: tr('admin.editorial.toasts.editorErrorTitle', 'Error editor'),
+          description: (error as Error).message || tr('admin.editorial.toasts.guideLoadFailed', 'No s’ha pogut carregar la guia'),
         })
       } finally {
         setIsLoadingDraft(false)
@@ -327,8 +323,8 @@ export function EditorialCenter() {
   const handleCreateNewGuide = React.useCallback(() => {
     if (pendingRows.length === 0) {
       toast({
-        title: 'No hi ha guies noves pendents',
-        description: 'Pots editar una guia publicada des del llistat de sota.',
+        title: tr('admin.editorial.toasts.noPendingGuidesTitle', 'No hi ha guies noves pendents'),
+        description: tr('admin.editorial.toasts.noPendingGuidesDescription', 'Pots editar una guia publicada des del llistat de sota.'),
       })
       if (coverageRows.length > 0) {
         setSelectedGuideId(coverageRows[0].guideId)
@@ -369,8 +365,8 @@ export function EditorialCenter() {
       }
 
       toast({
-        title: 'Esborrany guardat',
-        description: 'La guia ha quedat guardada i encara no està publicada.',
+        title: tr('admin.editorial.toasts.draftSavedTitle', 'Esborrany guardat'),
+        description: tr('admin.editorial.toasts.draftSavedDescription', 'La guia ha quedat guardada i encara no està publicada.'),
       })
 
       await Promise.all([loadCoverage(), loadDraft(selectedGuideId)])
@@ -378,8 +374,8 @@ export function EditorialCenter() {
       console.error('[EditorialCenter] save draft error:', error)
       toast({
         variant: 'destructive',
-        title: 'Error guardant',
-        description: (error as Error).message || 'No s ha pogut guardar',
+        title: tr('admin.editorial.toasts.saveErrorTitle', 'Error guardant'),
+        description: (error as Error).message || tr('admin.editorial.toasts.saveErrorDescription', 'No s’ha pogut guardar'),
       })
     } finally {
       setIsSavingDraft(false)
@@ -419,8 +415,8 @@ export function EditorialCenter() {
       }
 
       toast({
-        title: 'Guia publicada',
-        description: `La guia ${selectedGuideId} ja està activa a l'app i al bot.`,
+        title: tr('admin.editorial.toasts.guidePublishedTitle', 'Guia publicada'),
+        description: tr('admin.editorial.toasts.guidePublishedDescription', 'La guia {guideId} ja està activa a l’app i al bot.').replace('{guideId}', selectedGuideId),
       })
 
       await Promise.all([loadCoverage(), loadDraft(selectedGuideId)])
@@ -428,8 +424,8 @@ export function EditorialCenter() {
       console.error('[EditorialCenter] publish error:', error)
       toast({
         variant: 'destructive',
-        title: 'Error publicant',
-        description: (error as Error).message || 'No s ha pogut publicar',
+        title: tr('admin.editorial.toasts.publishErrorTitle', 'Error publicant'),
+        description: (error as Error).message || tr('admin.editorial.toasts.publishErrorDescription', 'No s’ha pogut publicar'),
       })
     } finally {
       setIsPublishing(false)
@@ -456,8 +452,8 @@ export function EditorialCenter() {
     if (!Ctor) {
       toast({
         variant: 'destructive',
-        title: 'Dictat no disponible',
-        description: 'El navegador no suporta reconeixement de veu.',
+        title: tr('admin.editorial.toasts.dictationUnavailableTitle', 'Dictat no disponible'),
+        description: tr('admin.editorial.toasts.dictationUnavailableDescription', 'El navegador no suporta reconeixement de veu.'),
       })
       return
     }
@@ -516,22 +512,24 @@ export function EditorialCenter() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
             <BookOpen className="h-4 w-4" />
-            Guies
+            {tr('admin.editorial.title', 'Guies')}
           </CardTitle>
           <CardDescription>
-            Crea o actualitza guies de forma simple. Quan publiques, els canvis passen a la secció de guies, a les ajudes (icona ?) i al bot.
+            {tr('admin.editorial.description', 'Crea o actualitza guies de forma simple. Quan publiques, els canvis passen a la secció de guies, a les ajudes (icona ?) i al bot.')}
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-wrap items-center gap-2">
           <Button onClick={handleCreateNewGuide} disabled={isLoadingCoverage || isLoadingDraft || isSavingDraft || isPublishing}>
-            Afegir nova guia
+            {tr('admin.editorial.addGuide', 'Afegir nova guia')}
           </Button>
           <Button variant="outline" onClick={loadCoverage} disabled={isLoadingCoverage || isLoadingDraft || isSavingDraft || isPublishing}>
             {(isLoadingCoverage || isLoadingDraft) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Actualitzar llistat
+            {tr('admin.editorial.refreshList', 'Actualitzar llistat')}
           </Button>
           {selectedGuideId && (
-            <span className="text-sm text-muted-foreground">Guia oberta: <strong>{selectedGuideId}</strong></span>
+            <span className="text-sm text-muted-foreground">
+              {tr('admin.editorial.openGuideLabel', 'Guia oberta:')} <strong>{selectedGuideId}</strong>
+            </span>
           )}
         </CardContent>
       </Card>
@@ -539,12 +537,12 @@ export function EditorialCenter() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Guies pendents</CardTitle>
-            <CardDescription>Guies que encara no estan completes i publicades en tots els idiomes.</CardDescription>
+            <CardTitle className="text-base">{tr('admin.editorial.pendingTitle', 'Guies pendents')}</CardTitle>
+            <CardDescription>{tr('admin.editorial.pendingDescription', 'Guies que encara no estan completes i publicades en tots els idiomes.')}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-2 max-h-[280px] overflow-auto">
             {pendingRows.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No hi ha guies pendents.</p>
+              <p className="text-sm text-muted-foreground">{tr('admin.editorial.pendingEmpty', 'No hi ha guies pendents.')}</p>
             ) : (
               pendingRows.map(row => (
                 <div key={row.guideId} className="flex items-center justify-between gap-2 rounded border p-2">
@@ -553,7 +551,7 @@ export function EditorialCenter() {
                     <p className="text-xs text-muted-foreground">{row.domain}</p>
                   </div>
                   <Button size="sm" variant="outline" onClick={() => { setSelectedGuideId(row.guideId); setActiveLang('ca') }}>
-                    Obrir
+                    {tr('admin.editorial.open', 'Obrir')}
                   </Button>
                 </div>
               ))
@@ -563,12 +561,12 @@ export function EditorialCenter() {
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Guies publicades</CardTitle>
-            <CardDescription>Llistat de guies ja publicades. Pots editar qualsevol guia i tornar-la a publicar.</CardDescription>
+            <CardTitle className="text-base">{tr('admin.editorial.publishedTitle', 'Guies publicades')}</CardTitle>
+            <CardDescription>{tr('admin.editorial.publishedDescription', 'Llistat de guies ja publicades. Pots editar qualsevol guia i tornar-la a publicar.')}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-2 max-h-[280px] overflow-auto">
             {publishedRows.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Encara no hi ha guies publicades.</p>
+              <p className="text-sm text-muted-foreground">{tr('admin.editorial.publishedEmpty', 'Encara no hi ha guies publicades.')}</p>
             ) : (
               publishedRows.map(row => (
                 <div key={row.guideId} className="flex items-center justify-between gap-2 rounded border p-2">
@@ -577,7 +575,7 @@ export function EditorialCenter() {
                     <p className="text-xs text-muted-foreground">{row.domain}</p>
                   </div>
                   <Button size="sm" variant="outline" onClick={() => { setSelectedGuideId(row.guideId); setActiveLang('ca') }}>
-                    Editar
+                    {tr('admin.editorial.edit', 'Editar')}
                   </Button>
                 </div>
               ))
@@ -588,12 +586,12 @@ export function EditorialCenter() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Editor guiat</CardTitle>
-          <CardDescription>Omple cada idioma amb 3 camps: titol, mini-intro i pas a pas.</CardDescription>
+          <CardTitle className="text-base">{tr('admin.editorial.guidedEditorTitle', 'Editor guiat')}</CardTitle>
+          <CardDescription>{tr('admin.editorial.guidedEditorDescription', 'Omple cada idioma amb 3 camps: títol, mini-intro i pas a pas.')}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {!selectedGuideId ? (
-            <p className="text-sm text-muted-foreground">Selecciona una guia del llistat o fes clic a <strong>Afegir nova guia</strong>.</p>
+            <p className="text-sm text-muted-foreground">{tr('admin.editorial.selectGuideHint', 'Selecciona una guia del llistat o fes clic a Afegir nova guia.')}</p>
           ) : (
             <>
               <Tabs value={activeLang} onValueChange={(value) => setActiveLang(value as Lang)}>
@@ -607,10 +605,17 @@ export function EditorialCenter() {
 
                 {LANGS.map(lang => (
                   <TabsContent key={lang.id} value={lang.id} className="space-y-3 pt-3">
-                    <p className="text-xs text-muted-foreground">Estat actual: {sourceLabel(sourceByLang[lang.id])}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {tr('admin.editorial.currentStatus', 'Estat actual:')} {' '}
+                      {sourceByLang[lang.id] === 'published'
+                        ? tr('admin.editorial.source.published', 'Publicada')
+                        : sourceByLang[lang.id] === 'draft'
+                          ? tr('admin.editorial.source.draft', 'Esborrany')
+                          : tr('admin.editorial.source.empty', 'Buita')}
+                    </p>
 
                     <FieldWithMic
-                      label="Títol"
+                      label={tr('admin.editorial.fields.title', 'Títol')}
                       value={formByLang[lang.id].title}
                       onChange={value => updateFormField(lang.id, 'title', value)}
                       onMic={() => handleToggleDictation(lang.id, 'title')}
@@ -618,7 +623,7 @@ export function EditorialCenter() {
                     />
 
                     <FieldWithMic
-                      label="Mini-intro (explica-ho com ho diries a un client)"
+                      label={tr('admin.editorial.fields.intro', 'Mini-intro (explica-ho com ho diries a un client)')}
                       value={formByLang[lang.id].intro}
                       onChange={value => updateFormField(lang.id, 'intro', value)}
                       onMic={() => handleToggleDictation(lang.id, 'intro')}
@@ -627,7 +632,7 @@ export function EditorialCenter() {
                     />
 
                     <FieldWithMic
-                      label="Pas a pas (1 línia = 1 pas)"
+                      label={tr('admin.editorial.fields.steps', 'Pas a pas (1 línia = 1 pas)')}
                       value={formByLang[lang.id].steps}
                       onChange={value => updateFormField(lang.id, 'steps', value)}
                       onMic={() => handleToggleDictation(lang.id, 'steps')}
@@ -636,7 +641,7 @@ export function EditorialCenter() {
                     />
 
                     <div className="space-y-1">
-                      <Label className="text-sm">Final (fix i empàtic)</Label>
+                      <Label className="text-sm">{tr('admin.editorial.fields.fixedEnding', 'Final (fix i empàtic)')}</Label>
                       <Textarea value={FIXED_ENDING[lang.id]} readOnly rows={2} />
                     </div>
                   </TabsContent>
@@ -646,11 +651,11 @@ export function EditorialCenter() {
               <div className="flex flex-wrap items-center gap-2 pt-2">
                 <Button variant="outline" onClick={handleSaveDraft} disabled={isSavingDraft || isPublishing || isLoadingDraft || !selectedGuideId}>
                   {isSavingDraft && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Guardar Esborrany
+                  {tr('admin.editorial.saveDraft', 'Guardar esborrany')}
                 </Button>
                 <Button onClick={handlePublish} disabled={isPublishing || isSavingDraft || isLoadingDraft || !selectedGuideId}>
                   {isPublishing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Publicar
+                  {tr('admin.editorial.publish', 'Publicar')}
                 </Button>
               </div>
             </>
@@ -670,6 +675,7 @@ function FieldWithMic(props: {
   multiline?: boolean
 }) {
   const { label, value, onChange, onMic, recording, multiline = false } = props
+  const { tr } = useTranslations()
 
   return (
     <div className="space-y-1">
@@ -677,7 +683,11 @@ function FieldWithMic(props: {
         <Label className="text-sm">{label}</Label>
         <Button type="button" variant="ghost" size="sm" onClick={onMic}>
           {recording ? <MicOff className="h-4 w-4 text-red-600" /> : <Mic className="h-4 w-4" />}
-          <span className="ml-1 text-xs">{recording ? 'Atura' : 'Dictar'}</span>
+          <span className="ml-1 text-xs">
+            {recording
+              ? tr('admin.editorial.mic.stop', 'Atura')
+              : tr('admin.editorial.mic.start', 'Dictar')}
+          </span>
         </Button>
       </div>
       {multiline ? (

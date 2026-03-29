@@ -122,10 +122,10 @@ function combineStatuses(...statuses: Array<ControlStatus | null | undefined>): 
   return 'ok'
 }
 
-function humanStatusLabel(status: ControlStatus): string {
-  if (status === 'critical') return 'Requereix atencio ara'
-  if (status === 'warning') return 'Conve revisar-ho'
-  return 'Tot en ordre'
+function humanStatusLabel(status: ControlStatus, trFn: (key: string, fallback?: string) => string): string {
+  if (status === 'critical') return trFn('admin.status.critical', 'Requereix atencio ara')
+  if (status === 'warning') return trFn('admin.status.warning', 'Conve revisar-ho')
+  return trFn('admin.status.ok', 'Tot en ordre')
 }
 
 function AreaSectionHeader({
@@ -372,7 +372,7 @@ function AdminPageContent() {
       await signInWithEmailAndPassword(auth, loginEmail.trim(), loginPassword);
     } catch (error: unknown) {
       console.error('Login error:', error);
-      setLoginError(t.admin?.shell?.loginError ?? 'Credencials incorrectes');
+      setLoginError(tr('admin.shell.loginError', 'Credencials incorrectes'));
     } finally {
       setIsLoggingIn(false);
     }
@@ -388,15 +388,15 @@ function AdminPageContent() {
       const base = typeof window !== 'undefined' ? window.location.origin : 'https://summasocial.app'
       await navigator.clipboard.writeText(`${base}/${org.slug}`)
       toast({
-        title: 'Enllaç copiat',
-        description: `S\'ha copiat /${org.slug}`,
+        title: tr('admin.copy.orgLinkCopied', 'Enllaç copiat'),
+        description: tr('admin.copy.orgLinkCopiedDesc', 'S\'ha copiat /{slug}').replace('{slug}', org.slug),
       })
     } catch (error) {
       console.error('Copy error:', error)
       toast({
         variant: 'destructive',
-        title: t.common?.error ?? 'Error',
-        description: 'No s\'ha pogut copiar l\'enllaç',
+        title: tr('common.error', 'Error'),
+        description: tr('admin.copy.orgLinkCopyError', 'No s\'ha pogut copiar l\'enllaç'),
       })
     }
   }
@@ -420,17 +420,17 @@ function AdminPageContent() {
 
       toast({
         title: newStatus === 'suspended'
-          ? (t.admin?.shell?.orgSuspended ?? 'Organització suspesa')
-          : (t.admin?.shell?.orgReactivated ?? 'Organització reactivada'),
+          ? tr('admin.shell.orgSuspended', 'Organització suspesa')
+          : tr('admin.shell.orgReactivated', 'Organització reactivada'),
         description: newStatus === 'suspended'
-          ? t.admin?.shell?.orgNowSuspended?.({ org: org.name }) ?? `${org.name} ara està suspesa.`
-          : t.admin?.shell?.orgNowActive?.({ org: org.name }) ?? `${org.name} ara està activa.`,
+          ? tr('admin.shell.orgNowSuspended', '{org} ara està suspesa.').replace('{org}', org.name)
+          : tr('admin.shell.orgNowActive', '{org} ara està activa.').replace('{org}', org.name),
       });
 
       refreshSummary()
     } catch (error) {
       console.error('Error updating organization:', error);
-      toast({ variant: 'destructive', title: t.common?.error ?? 'Error', description: t.admin?.shell?.updateError ?? 'No s\'ha pogut actualitzar l\'organització.' });
+      toast({ variant: 'destructive', title: tr('common.error', 'Error'), description: tr('admin.shell.updateError', 'No s\'ha pogut actualitzar l\'organització.') });
     } finally {
       setIsProcessing(false);
       setSuspendDialogOrg(null);
@@ -442,8 +442,8 @@ function AdminPageContent() {
     try {
       const result = await migrateExistingSlugs(firestore);
       toast({
-        title: t.admin?.migrations?.completed ?? 'Migració completada',
-        description: `${t.admin?.migrations?.migrated?.({ count: result.migrated }) ?? `${result.migrated} organitzacions migrades`}. ${result.errors.length > 0 ? (t.admin?.migrations?.errors?.({ count: result.errors.length }) ?? `Errors: ${result.errors.length}`) : ''}`,
+        title: tr('admin.migrations.completed', 'Migració completada'),
+        description: `${tr('admin.migrations.migrated', '{count} organitzacions migrades').replace('{count}', String(result.migrated))}. ${result.errors.length > 0 ? tr('admin.migrations.errors', 'Errors: {count}').replace('{count}', String(result.errors.length)) : ''}`,
       });
       if (result.errors.length > 0) {
         console.error('Errors de migració:', result.errors);
@@ -453,8 +453,8 @@ function AdminPageContent() {
       console.error('Error durant la migració:', error);
       toast({
         variant: 'destructive',
-        title: t.common?.error ?? 'Error',
-        description: t.admin?.migrations?.failed ?? 'No s\'ha pogut completar la migració.',
+        title: tr('common.error', 'Error'),
+        description: tr('admin.migrations.failed', 'No s\'ha pogut completar la migració.'),
       });
     } finally {
       setIsMigrating(false);
@@ -473,8 +473,8 @@ function AdminPageContent() {
       console.error('Password reset error (silenced):', error);
     } finally {
       toast({
-        title: t.admin?.resetPassword?.sent ?? 'Correu enviat',
-        description: t.admin?.resetPassword?.sentDescription ?? 'Si l\'adreça existeix, rebrà un correu per restablir la contrasenya.',
+        title: tr('admin.resetPassword.sent', 'Correu enviat'),
+        description: tr('admin.resetPassword.sentDescription', 'Si l\'adreça existeix, rebrà un correu per restablir la contrasenya.'),
       });
       setResetEmail('');
       setIsResetting(false);
@@ -505,15 +505,17 @@ function AdminPageContent() {
         setSeedResult({ ok: true, demoMode: data.demoMode, counts: data.counts });
         const countsStr = Object.entries(data.counts || {}).map(([k, v]) => `${k}: ${v}`).join(', ');
         toast({
-          title: t.admin?.health?.demoRegenerated ?? 'Demo regenerada',
-          description: t.admin?.health?.demoRegeneratedDesc?.({ mode: data.demoMode, counts: countsStr }) ?? `Mode: ${data.demoMode}. Dades creades: ${countsStr}`,
+          title: tr('admin.health.demoRegenerated', 'Demo regenerada'),
+          description: tr('admin.health.demoRegeneratedDesc', 'Mode: {mode}. Dades creades: {counts}')
+            .replace('{mode}', data.demoMode)
+            .replace('{counts}', countsStr),
         });
       } else {
-        setSeedResult({ ok: false, error: data.error || (t.common?.unknownError ?? 'Error desconegut') });
+        setSeedResult({ ok: false, error: data.error || tr('common.unknownError', 'Error desconegut') });
         toast({
           variant: 'destructive',
-          title: t.common?.error ?? 'Error',
-          description: data.error || (t.admin?.health?.demoError ?? 'No s\'ha pogut regenerar la demo'),
+          title: tr('common.error', 'Error'),
+          description: data.error || tr('admin.health.demoError', 'No s\'ha pogut regenerar la demo'),
         });
       }
       refreshSummary()
@@ -522,8 +524,8 @@ function AdminPageContent() {
       setSeedResult({ ok: false, error: (error as Error).message });
       toast({
         variant: 'destructive',
-        title: t.common?.error ?? 'Error',
-        description: t.admin?.health?.demoConnectionError ?? 'Error de connexió regenerant la demo',
+        title: tr('common.error', 'Error'),
+        description: tr('admin.health.demoConnectionError', 'Error de connexió regenerant la demo'),
       });
     } finally {
       setIsSeedingDemo(false);
@@ -568,15 +570,15 @@ function AdminPageContent() {
       document.body.removeChild(a);
 
       toast({
-        title: t.admin?.shell?.backupDownloaded ?? 'Backup descarregat',
-        description: t.admin?.shell?.backupDownloadedDesc?.({ org: orgName }) ?? `S'ha descarregat el backup de ${orgName}.`,
+        title: tr('admin.shell.backupDownloaded', 'Backup descarregat'),
+        description: tr('admin.shell.backupDownloadedDesc', "S'ha descarregat el backup de {org}.").replace('{org}', orgName),
       });
     } catch (error) {
       console.error('Error descarregant backup:', error);
       toast({
         variant: 'destructive',
-        title: t.common?.error ?? 'Error',
-        description: (error as Error).message || (t.admin?.shell?.backupError ?? 'No s\'ha pogut descarregar el backup.'),
+        title: tr('common.error', 'Error'),
+        description: (error as Error).message || tr('admin.shell.backupError', 'No s\'ha pogut descarregar el backup.'),
       });
     } finally {
       setBackupOrgId(null);
@@ -621,15 +623,15 @@ function AdminPageContent() {
       }
 
       toast({
-        title: tr('admin.s9.notifyOrgSent', 'Avís enviat a l\'entitat'),
+        title: tr('admin.s9.notifyOrgSent', "Avís enviat a l'entitat"),
       });
       refreshSummary();
     } catch (error) {
       console.error('[admin] notify org fiscal alert error:', error);
       toast({
         variant: 'destructive',
-        title: t.common?.error ?? 'Error',
-        description: (error as Error).message || 'No s\'ha pogut enviar l\'avís',
+        title: tr('common.error', 'Error'),
+        description: (error as Error).message || tr('admin.s9.notifyOrgError', 'No s\'ha pogut enviar l\'avís'),
       });
     } finally {
       setNotifyingOrgId(null);
@@ -639,11 +641,11 @@ function AdminPageContent() {
   const getStatusBadge = (status: AdminControlTowerSummary['entities'][number]['status']) => {
     switch (status) {
       case 'active':
-        return <Badge className="bg-green-100 text-green-800 border-green-300">{t.admin?.orgStatus?.active ?? 'Activa'}</Badge>;
+        return <Badge className="bg-green-100 text-green-800 border-green-300">{tr('admin.orgStatus.active', 'Activa')}</Badge>;
       case 'suspended':
-        return <Badge variant="destructive">{t.admin?.orgStatus?.suspended ?? 'Suspesa'}</Badge>;
+        return <Badge variant="destructive">{tr('admin.orgStatus.suspended', 'Suspesa')}</Badge>;
       case 'pending':
-        return <Badge variant="secondary">{t.admin?.orgStatus?.pending ?? 'Pendent'}</Badge>;
+        return <Badge variant="secondary">{tr('admin.orgStatus.pending', 'Pendent')}</Badge>;
       default:
         return <Badge variant="outline">{status}</Badge>;
     }
@@ -651,13 +653,13 @@ function AdminPageContent() {
 
   const getAlertStatusBadge = (status: 'open' | 'read' | 'expired' | null) => {
     if (status === 'open') {
-      return <Badge className="bg-green-100 text-green-800 border-green-300">open</Badge>;
+      return <Badge className="bg-green-100 text-green-800 border-green-300">{tr('admin.alertStatus.open', 'Obert')}</Badge>;
     }
     if (status === 'read') {
-      return <Badge variant="secondary">read</Badge>;
+      return <Badge variant="secondary">{tr('admin.alertStatus.read', 'Llegit')}</Badge>;
     }
     if (status === 'expired') {
-      return <Badge variant="outline">expired</Badge>;
+      return <Badge variant="outline">{tr('admin.alertStatus.expired', 'Caducat')}</Badge>;
     }
     return <span className="text-xs text-muted-foreground">—</span>;
   };
@@ -699,20 +701,32 @@ function AdminPageContent() {
   const overviewStatus: ControlStatus = combineStatuses(contentAreaStatus, entitiesAreaStatus)
 
   const overviewHeadline = !summaryIsReady && isSummaryLoading
-    ? 'Carregant visio general'
+    ? tr('admin.overview.loadingHeadline', 'Carregant visió general')
     : overviewStatus === 'warning'
-        ? 'Hi ha alguns punts que conve revisar'
+        ? tr('admin.overview.warningHeadline', 'Hi ha alguns punts que convé revisar')
         : openIncidentCount > 0
-          ? 'La part visible esta estable'
-        : 'Tot esta estable'
+          ? tr('admin.overview.stableWithIncidentsHeadline', 'La part visible està estable')
+        : tr('admin.overview.stableHeadline', 'Tot està estable')
 
   const overviewDescription = !summaryIsReady && isSummaryLoading
-    ? 'Estic preparant el resum del panell.'
+    ? tr('admin.overview.loadingDescription', 'Estic preparant el resum del panell.')
     : overviewStatus === 'ok' && openIncidentCount > 0
-      ? `No hi ha cap bloqueig visible important. A banda, hi ha ${openIncidentCount} avís${openIncidentCount === 1 ? '' : 'os'} tecnic${openIncidentCount === 1 ? '' : 's'} intern${openIncidentCount === 1 ? '' : 's'} per revisar, però no els estic tractant com una urgencia des d aquest resum.`
+      ? tr('admin.overview.okWithIncidentsDescription', 'No hi ha cap bloqueig visible important. A banda, hi ha {count} avís{countPlural} tècnic{techPlural} intern{internalPlural} per revisar, però no els estic tractant com una urgència des d’aquest resum.')
+        .replace('{count}', String(openIncidentCount))
+        .replace('{countPlural}', openIncidentCount === 1 ? '' : 'os')
+        .replace('{techPlural}', openIncidentCount === 1 ? '' : 's')
+        .replace('{internalPlural}', openIncidentCount === 1 ? '' : 's')
       : overviewStatus === 'ok'
-        ? 'No hi ha cap bloqueig greu ni cap revisio urgent. Si vols, pots fer una repassada tranquila de contingut o entitats.'
-      : `${contentPendingCount} punt${contentPendingCount === 1 ? '' : 's'} de contingut pendent${contentPendingCount === 1 ? '' : 's'}, ${pendingEntitiesCount} entitat${pendingEntitiesCount === 1 ? '' : 's'} pendent${pendingEntitiesCount === 1 ? '' : 's'} i ${suspendedEntitiesCount} aturada${suspendedEntitiesCount === 1 ? '' : 's'} per revisar.`
+        ? tr('admin.overview.okDescription', 'No hi ha cap bloqueig greu ni cap revisió urgent. Si vols, pots fer una repassada tranquil·la de contingut o entitats.')
+      : tr('admin.overview.warningDescription', '{contentCount} punt{contentPlural} de contingut pendent{contentPendingPlural}, {entityCount} entitat{entityPlural} pendent{entityPendingPlural} i {suspendedCount} aturada{suspendedPlural} per revisar.')
+        .replace('{contentCount}', String(contentPendingCount))
+        .replace('{contentPlural}', contentPendingCount === 1 ? '' : 's')
+        .replace('{contentPendingPlural}', contentPendingCount === 1 ? '' : 's')
+        .replace('{entityCount}', String(pendingEntitiesCount))
+        .replace('{entityPlural}', pendingEntitiesCount === 1 ? '' : 's')
+        .replace('{entityPendingPlural}', pendingEntitiesCount === 1 ? '' : 's')
+        .replace('{suspendedCount}', String(suspendedEntitiesCount))
+        .replace('{suspendedPlural}', suspendedEntitiesCount === 1 ? '' : 's')
 
   const pendingReviewCount =
     contentPendingCount +
@@ -720,16 +734,16 @@ function AdminPageContent() {
     suspendedEntitiesCount
 
   const latestPublishedEntry = communication?.latestPublished?.[0] ?? null
-  const latestPublishedLabel = latestPublishedEntry?.title ?? 'Cap novetat recent'
+  const latestPublishedLabel = latestPublishedEntry?.title ?? tr('admin.overview.noRecentUpdate', 'Cap novetat recent')
 
   const overviewActions: OverviewAction[] = []
 
   if (contentPendingCount > 0) {
     overviewActions.push({
       id: 'content-pending',
-      title: 'Revisar contingut visible',
-      description: 'Hi ha novetats o peces de contingut pendents que encara no estan tancades.',
-      cta: 'Obrir contingut',
+      title: tr('admin.overview.actions.contentPending.title', 'Revisar contingut visible'),
+      description: tr('admin.overview.actions.contentPending.description', 'Hi ha novetats o peces de contingut pendents que encara no estan tancades.'),
+      cta: tr('admin.overview.actions.contentPending.cta', 'Obrir contingut'),
       area: 'content',
       tone: contentAreaStatus,
       contentModule: 'updates',
@@ -739,9 +753,9 @@ function AdminPageContent() {
   if (translationsCard?.status && translationsCard.status !== 'ok') {
     overviewActions.push({
       id: 'translations',
-      title: 'Revisar traduccions visibles',
-      description: 'Alguns textos o idiomes poden necessitar una repassada abans de donar-los per bons.',
-      cta: 'Obrir traduccions',
+      title: tr('admin.overview.actions.translations.title', 'Revisar traduccions visibles'),
+      description: tr('admin.overview.actions.translations.description', 'Alguns textos o idiomes poden necessitar una repassada abans de donar-los per bons.'),
+      cta: tr('admin.overview.actions.translations.cta', 'Obrir traduccions'),
       area: 'content',
       tone: translationsCard.status,
       contentModule: 'translations',
@@ -752,9 +766,9 @@ function AdminPageContent() {
   if (pendingEntitiesCount > 0 || suspendedEntitiesCount > 0) {
     overviewActions.push({
       id: 'entities-followup',
-      title: 'Revisar entitats',
-      description: 'Hi ha entitats pendents o aturades que poden requerir una decisio teva.',
-      cta: 'Obrir entitats',
+      title: tr('admin.overview.actions.entities.title', 'Revisar entitats'),
+      description: tr('admin.overview.actions.entities.description', 'Hi ha entitats pendents o aturades que poden requerir una decisió teva.'),
+      cta: tr('admin.overview.actions.entities.cta', 'Obrir entitats'),
       area: 'entities',
       tone: entitiesAreaStatus,
     })
@@ -763,9 +777,9 @@ function AdminPageContent() {
   if (openIncidentCount > 0) {
     overviewActions.push({
       id: 'open-incidents',
-      title: 'Revisar avisos tecnics',
-      description: 'Hi ha avisos interns o de manteniment. Revisa ls quan et vagi be, sense barrejar-los amb la part visible.',
-      cta: 'Obrir incidencies i manteniment',
+      title: tr('admin.overview.actions.incidents.title', 'Revisar avisos tècnics'),
+      description: tr('admin.overview.actions.incidents.description', 'Hi ha avisos interns o de manteniment. Revisa’ls quan et vagi bé, sense barrejar-los amb la part visible.'),
+      cta: tr('admin.overview.actions.incidents.cta', 'Obrir incidències i manteniment'),
       area: 'technical',
       tone: 'warning',
       section: 'incidents',
@@ -775,9 +789,9 @@ function AdminPageContent() {
   if (overviewActions.length === 0) {
     overviewActions.push({
       id: 'all-good',
-      title: 'No hi ha cap punt urgent',
-      description: 'Pots entrar a contingut o entitats si vols fer una revisio tranquila.',
-      cta: 'Veure contingut',
+      title: tr('admin.overview.actions.allGood.title', 'No hi ha cap punt urgent'),
+      description: tr('admin.overview.actions.allGood.description', 'Pots entrar a contingut o entitats si vols fer una revisió tranquil·la.'),
+      cta: tr('admin.overview.actions.allGood.cta', 'Veure contingut'),
       area: 'content',
       tone: 'ok',
       contentModule: 'updates',
@@ -792,14 +806,14 @@ function AdminPageContent() {
   }> = [
     {
       id: 'updates',
-      title: 'Novetats',
-      summary: latestPublishedEntry ? latestPublishedEntry.title : 'Historial visible per als usuaris',
+      title: tr('admin.content.updatesTitle', 'Novetats'),
+      summary: latestPublishedEntry ? latestPublishedEntry.title : tr('admin.content.updatesSummary', 'Historial visible per als usuaris'),
       icon: <Megaphone className="h-4 w-4" />,
     },
     {
       id: 'translations',
-      title: 'Traduccions',
-      summary: translationsCard?.headline ?? 'Textos per idioma',
+      title: tr('admin.content.translationsTitle', 'Traduccions'),
+      summary: translationsCard?.headline ?? tr('admin.content.translationsSummary', 'Textos per idioma'),
       icon: <Languages className="h-4 w-4" />,
     },
   ]
@@ -815,34 +829,34 @@ function AdminPageContent() {
   }> = [
     {
       id: 'guided-translations',
-      title: 'Vull revisar textos per idioma',
-      description: 'Si un idioma sona estrany o hi ha un text mal traduït, la via bona es aquesta.',
-      cta: 'Obrir traduccions',
+      title: tr('admin.guided.translations.title', 'Vull revisar textos per idioma'),
+      description: tr('admin.guided.translations.description', 'Si un idioma sona estrany o hi ha un text mal traduït, la via bona és aquesta.'),
+      cta: tr('admin.guided.translations.cta', 'Obrir traduccions'),
       area: 'content',
       contentModule: 'translations',
       section: 'i18n',
     },
     {
       id: 'guided-bot',
-      title: 'El bot no respon be',
-      description: 'Aqui pots veure si hi ha consultes repetides o si el bot esta mostrant mancances d ajuda.',
-      cta: 'Obrir bot i manteniment',
+      title: tr('admin.guided.bot.title', 'El bot no respon bé'),
+      description: tr('admin.guided.bot.description', 'Aquí pots veure si hi ha consultes repetides o si el bot està mostrant mancances d’ajuda.'),
+      cta: tr('admin.guided.bot.cta', 'Obrir bot i manteniment'),
       area: 'technical',
       section: 'bot-support',
     },
     {
       id: 'guided-incidents',
-      title: 'Tinc un problema tecnic',
-      description: 'Entra nomes si hi ha una incidencia real o un bloqueig que cal seguir.',
-      cta: 'Obrir incidencies',
+      title: tr('admin.guided.incidents.title', 'Tinc un problema tècnic'),
+      description: tr('admin.guided.incidents.description', 'Entra només si hi ha una incidència real o un bloqueig que cal seguir.'),
+      cta: tr('admin.guided.incidents.cta', 'Obrir incidències'),
       area: 'technical',
       section: 'incidents',
     },
     {
       id: 'guided-updates',
-      title: 'Vull revisar una novetat',
-      description: 'Primer mira quines novetats ja son visibles. La part manual queda separada per no confondre.',
-      cta: 'Veure novetats',
+      title: tr('admin.guided.updates.title', 'Vull revisar una novetat'),
+      description: tr('admin.guided.updates.description', 'Primer mira quines novetats ja són visibles. La part manual queda separada per no confondre.'),
+      cta: tr('admin.guided.updates.cta', 'Veure novetats'),
       area: 'content',
       contentModule: 'updates',
     },
@@ -857,7 +871,7 @@ function AdminPageContent() {
       <DropdownMenuContent align="end">
         <DropdownMenuItem onClick={() => handleCopyOrganization(org)}>
           <Copy className="mr-2 h-4 w-4" />
-          Copiar URL pública
+          {tr('admin.entities.copyPublicUrl', 'Copiar URL pública')}
         </DropdownMenuItem>
         <DropdownMenuItem
           onClick={() => handleDownloadBackup(org.id, org.name)}
@@ -868,7 +882,7 @@ function AdminPageContent() {
           ) : (
             <Download className="mr-2 h-4 w-4" />
           )}
-          Backup local JSON
+          {tr('admin.entities.localBackup', 'Backup local JSON')}
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem
@@ -878,12 +892,12 @@ function AdminPageContent() {
           {org.status === 'suspended' ? (
             <>
               <Play className="mr-2 h-4 w-4" />
-              Reactivar
+              {tr('admin.shell.reactivate', 'Reactivar')}
             </>
           ) : (
             <>
               <Pause className="mr-2 h-4 w-4" />
-              Suspendre
+              {tr('admin.shell.suspend', 'Suspendre')}
             </>
           )}
         </DropdownMenuItem>
@@ -907,27 +921,27 @@ function AdminPageContent() {
             <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
               <Shield className="h-6 w-6 text-primary" />
             </div>
-            <CardTitle>{t.admin?.shell?.loginTitle ?? 'Panell SuperAdmin'}</CardTitle>
-            <CardDescription>{t.admin?.access?.restricted ?? 'Accés restringit'}</CardDescription>
+            <CardTitle>{tr('admin.shell.loginTitle', 'Panell SuperAdmin')}</CardTitle>
+            <CardDescription>{tr('admin.access.restricted', 'Accés restringit')}</CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleLogin} className="space-y-4">
               {reason === 'idle' && (
                 <p className="text-sm rounded-md px-3 py-2 bg-amber-50 text-amber-700 border border-amber-200">
-                  Sessió tancada per inactivitat. Torna a iniciar sessió.
+                  {tr('admin.access.idleMessage', 'Sessió tancada per inactivitat. Torna a iniciar sessió.')}
                 </p>
               )}
               {reason === 'max_session' && (
                 <p className="text-sm rounded-md px-3 py-2 bg-amber-50 text-amber-700 border border-amber-200">
-                  Per seguretat, cal tornar a iniciar sessió cada 12 hores.
+                  {tr('admin.access.maxSessionMessage', 'Per seguretat, cal tornar a iniciar sessió cada 12 hores.')}
                 </p>
               )}
               <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email">{tr('admin.shell.emailLabel', 'Email')}</Label>
                 <Input
                   id="email"
                   type="email"
-                  placeholder="admin@exemple.com"
+                  placeholder={tr('admin.shell.emailPlaceholder', 'admin@exemple.com')}
                   value={loginEmail}
                   onChange={(e) => setLoginEmail(e.target.value)}
                   disabled={isLoggingIn}
@@ -935,7 +949,7 @@ function AdminPageContent() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="password">Contrasenya</Label>
+                <Label htmlFor="password">{tr('admin.shell.passwordLabel', 'Contrasenya')}</Label>
                 <Input
                   id="password"
                   type="password"
@@ -958,7 +972,7 @@ function AdminPageContent() {
                 ) : (
                   <Lock className="mr-2 h-4 w-4" />
                 )}
-                Entrar
+                {tr('admin.shell.loginButton', 'Entrar')}
               </Button>
             </form>
           </CardContent>
@@ -979,15 +993,15 @@ function AdminPageContent() {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen gap-4">
         <AlertCircle className="h-12 w-12 text-destructive" />
-        <h1 className="text-xl font-semibold">{t.admin?.access?.deniedTitle ?? 'Accés denegat'}</h1>
-        <p className="text-muted-foreground">{t.admin?.access?.deniedDescription ?? 'No tens permisos per accedir al panell d\'administració.'}</p>
+        <h1 className="text-xl font-semibold">{tr('admin.access.deniedTitle', 'Accés denegat')}</h1>
+        <p className="text-muted-foreground">{tr('admin.access.deniedDescription', 'No tens permisos per accedir al panell d\'administració.')}</p>
         <div className="flex gap-2">
           <Button variant="outline" onClick={handleLogout}>
-            {t.admin?.access?.logout ?? 'Tancar sessió'}
+            {tr('admin.access.logout', 'Tancar sessió')}
           </Button>
           <Button onClick={() => router.push('/dashboard')}>
             <ArrowLeft className="mr-2 h-4 w-4" />
-            {t.admin?.access?.backToDashboard ?? 'Tornar al dashboard'}
+            {tr('admin.access.backToDashboard', 'Tornar al dashboard')}
           </Button>
         </div>
       </div>
@@ -1003,7 +1017,7 @@ function AdminPageContent() {
             <div>
               <span className="font-semibold">{t.admin?.health?.registryWarning ?? 'Atenció'}</span>
               <span className="ml-2 text-amber-100">
-                {t.admin?.health?.reloadIfNeeded?.({ error: registryError }) ?? `${registryError}. Recarrega la pàgina si cal.`}
+                {tr('admin.health.reloadIfNeeded', '{error}. Recarrega la pàgina si cal.').replace('{error}', registryError)}
               </span>
             </div>
           </div>
@@ -1019,16 +1033,16 @@ function AdminPageContent() {
                   <Shield className="h-5 w-5 text-foreground" />
                 </div>
                 <div>
-                  <h1 className="text-3xl font-semibold tracking-tight">Panell d&apos;admin</h1>
-                  <p className="text-sm text-muted-foreground">Que esta passant, que cal fer i on entrar.</p>
+                  <h1 className="text-3xl font-semibold tracking-tight">{tr('admin.shell.pageTitle', "Panell d'admin")}</h1>
+                  <p className="text-sm text-muted-foreground">{tr('admin.shell.pageSubtitle', 'Què està passant, què cal fer i on entrar.')}</p>
                 </div>
               </div>
               <p className="max-w-2xl text-sm text-muted-foreground">
-                Aquest panell esta pensat per donar-te una visio clara del dia, sense haver d entendre la part tecnica del sistema.
+                {tr('admin.shell.pageDescription', 'Aquest panell està pensat per donar-te una visió clara del dia, sense haver d’entendre la part tècnica del sistema.')}
               </p>
             </div>
             <p className="text-sm text-muted-foreground">
-              Fes servir el menu de sota per moure t entre les 4 parts principals del panell.
+              {tr('admin.shell.pageHint', 'Fes servir el menú de sota per moure’t entre les 4 parts principals del panell.')}
             </p>
           </div>
         </div>
@@ -1050,16 +1064,16 @@ function AdminPageContent() {
         >
           <TabsList className="grid h-auto w-full grid-cols-2 gap-2 rounded-xl bg-muted/70 p-1 md:grid-cols-4">
             <TabsTrigger value="overview" className="rounded-lg px-4 py-3 text-sm font-semibold">
-              Vista general
+              {tr('admin.nav.overview', 'Vista general')}
             </TabsTrigger>
             <TabsTrigger value="content" className="rounded-lg px-4 py-3 text-sm font-semibold">
-              Contingut visible
+              {tr('admin.nav.content', 'Contingut visible')}
             </TabsTrigger>
             <TabsTrigger value="entities" className="rounded-lg px-4 py-3 text-sm font-semibold">
-              Entitats
+              {tr('admin.nav.entities', 'Entitats')}
             </TabsTrigger>
             <TabsTrigger value="technical" className="rounded-lg px-4 py-3 text-sm font-semibold">
-              Incidencies i manteniment
+              {tr('admin.nav.technical', 'Incidències i manteniment')}
             </TabsTrigger>
           </TabsList>
 
@@ -1069,8 +1083,8 @@ function AdminPageContent() {
                 <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                   <div className="space-y-2">
                     <div className="flex items-center gap-2">
-                      <Badge variant={statusBadgeVariant(overviewStatus)}>{humanStatusLabel(overviewStatus)}</Badge>
-                      <span className="text-xs uppercase tracking-wide text-muted-foreground">Resum d avui</span>
+                      <Badge variant={statusBadgeVariant(overviewStatus)}>{humanStatusLabel(overviewStatus, tr)}</Badge>
+                      <span className="text-xs uppercase tracking-wide text-muted-foreground">{tr('admin.overview.todaySummary', 'Resum d’avui')}</span>
                     </div>
                     <CardTitle className="text-2xl">{overviewHeadline}</CardTitle>
                     <CardDescription className="max-w-3xl text-sm text-foreground/75">
@@ -1084,27 +1098,27 @@ function AdminPageContent() {
             <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
               <Card>
                 <CardHeader className="pb-3">
-                  <CardDescription>Entitats actives</CardDescription>
+                  <CardDescription>{tr('admin.overview.activeEntitiesCard', 'Entitats actives')}</CardDescription>
                   <CardTitle className="text-2xl">{activeEntitiesCount}</CardTitle>
                 </CardHeader>
                 <CardContent className="pt-0 text-sm text-muted-foreground">
-                  {entities.length} registrades en total.
+                  {tr('admin.overview.activeEntitiesCardDesc', '{count} registrades en total.').replace('{count}', String(entities.length))}
                 </CardContent>
               </Card>
 
               <Card>
                 <CardHeader className="pb-3">
-                  <CardDescription>Pendents visibles</CardDescription>
+                  <CardDescription>{tr('admin.overview.pendingCard', 'Pendents visibles')}</CardDescription>
                   <CardTitle className="text-2xl">{pendingReviewCount}</CardTitle>
                 </CardHeader>
                 <CardContent className="pt-0 text-sm text-muted-foreground">
-                  Contingut i entitats que conve revisar.
+                  {tr('admin.overview.pendingCardDesc', 'Contingut i entitats que convé revisar.')}
                 </CardContent>
               </Card>
 
               <Card>
                 <CardHeader className="pb-3">
-                  <CardDescription>Ultima novetat publicada</CardDescription>
+                  <CardDescription>{tr('admin.overview.latestUpdateCard', 'Última novetat publicada')}</CardDescription>
                   <CardTitle className="text-xl leading-tight">{latestPublishedLabel}</CardTitle>
                 </CardHeader>
                 <CardContent className="pt-0 text-sm text-muted-foreground">
@@ -1114,19 +1128,19 @@ function AdminPageContent() {
 
               <Card>
                 <CardHeader className="pb-3">
-                  <CardDescription>Avisos tecnics</CardDescription>
+                  <CardDescription>{tr('admin.overview.incidentsCard', 'Avisos tècnics')}</CardDescription>
                   <CardTitle className="text-2xl">{openIncidentCount}</CardTitle>
                 </CardHeader>
                 <CardContent className="pt-0 text-sm text-muted-foreground">
-                  Revisio interna. No sempre implica un problema real.
+                  {tr('admin.overview.incidentsCardDesc', 'Revisió interna. No sempre implica un problema real.')}
                 </CardContent>
               </Card>
             </div>
 
             <div className="space-y-4">
               <AreaSectionHeader
-                title="Que cal fer ara"
-                description="Accions prioritzades per evitar que hagis d'interpretar tot el panell."
+                title={tr('admin.overview.actionsSectionTitle', 'Què cal fer ara')}
+                description={tr('admin.overview.actionsSectionDescription', 'Accions prioritzades per evitar que hagis d’interpretar tot el panell.')}
               />
               <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
                 {overviewActions.map((action) => (
@@ -1160,8 +1174,8 @@ function AdminPageContent() {
             <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1.2fr_0.8fr]">
               <div className="space-y-4">
                 <AreaSectionHeader
-                  title="On haig d entrar?"
-                  description="Accessos directes per quan tens un dubte concret i no vols pensar on toca anar."
+                  title={tr('admin.overview.guidedSectionTitle', 'On haig d’entrar?')}
+                  description={tr('admin.overview.guidedSectionDescription', 'Accessos directes per quan tens un dubte concret i no vols pensar on toca anar.')}
                 />
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                   {guidedEntries.map((entry) => (
@@ -1192,8 +1206,8 @@ function AdminPageContent() {
 
               <div className="space-y-4">
                 <AreaSectionHeader
-                  title="Ultims canvis visibles"
-                  description="El que ja esta publicat o visible per als usuaris."
+                  title={tr('admin.content.latestChangesTitle', 'Últims canvis visibles')}
+                  description={tr('admin.content.latestChangesDescription', 'El que ja està publicat o visible per als usuaris.')}
                 />
                 <Card>
                   <CardContent className="space-y-3 pt-6">
@@ -1219,24 +1233,27 @@ function AdminPageContent() {
 
           <TabsContent value="entities" className="space-y-8">
             <AreaSectionHeader
-              title="Entitats"
-              description="Aqui veus quines entitats requereixen una accio teva i pots entrar-hi sense voltar per opcions tecniques."
-              action={<Button onClick={() => setIsCreateDialogOpen(true)}>Nova entitat</Button>}
+              title={tr('admin.entities.title', 'Entitats')}
+              description={tr('admin.entities.description', 'Aquí veus quines entitats requereixen una acció teva i pots entrar-hi sense voltar per opcions tècniques.')}
+              action={<Button onClick={() => setIsCreateDialogOpen(true)}>{tr('admin.entities.new', 'Nova entitat')}</Button>}
             />
 
             <Card>
               <CardContent className="flex flex-col gap-4 pt-6 lg:flex-row lg:items-center lg:justify-between">
                 <div className="space-y-1">
-                  <p className="text-lg font-semibold">{entities.length} entitat{entities.length === 1 ? '' : 's'} registrades</p>
+                  <p className="text-lg font-semibold">{tr('admin.entities.registeredCount', '{count} entitat{plural} registrades').replace('{count}', String(entities.length)).replace('{plural}', entities.length === 1 ? '' : 's')}</p>
                   <p className="text-sm text-muted-foreground">
-                    {activeEntitiesCount} actives · {suspendedEntitiesCount} suspeses · {pendingEntitiesCount} pendents
+                    {tr('admin.entities.statusSummary', '{active} actives · {suspended} suspeses · {pending} pendents')
+                      .replace('{active}', String(activeEntitiesCount))
+                      .replace('{suspended}', String(suspendedEntitiesCount))
+                      .replace('{pending}', String(pendingEntitiesCount))}
                   </p>
                 </div>
                 <div className="w-full lg:max-w-sm">
                   <Input
                     value={entitySearch}
                     onChange={(e) => setEntitySearch(e.target.value)}
-                    placeholder="Cerca per nom, slug o CIF"
+                    placeholder={tr('admin.entities.searchPlaceholder', 'Cerca per nom, slug o CIF')}
                   />
                 </div>
               </CardContent>
@@ -1254,8 +1271,8 @@ function AdminPageContent() {
                           leadingIcon={<Building2 className="h-4 w-4" />}
                           badges={[getStatusBadge(org.status)]}
                           meta={[
-                            { label: 'Alta', value: formatDateForAdmin(org.createdAt) },
-                            { label: 'Activitat', value: formatRelativeActivity(org.lastActivityAt) },
+                            { label: tr('admin.entities.createdLabel', 'Alta'), value: formatDateForAdmin(org.createdAt) },
+                            { label: tr('admin.entities.activityLabel', 'Activitat'), value: formatRelativeActivity(org.lastActivityAt) },
                           ]}
                           actions={renderEntityMoreMenu(
                             org,
@@ -1268,7 +1285,7 @@ function AdminPageContent() {
                       ))
                     ) : (
                       <p className="py-12 text-center text-muted-foreground">
-                        {entitySearch.trim() ? 'No hi ha cap entitat que coincideixi amb la cerca.' : 'Sense entitats disponibles.'}
+                        {entitySearch.trim() ? tr('admin.entities.noSearchResults', 'No hi ha cap entitat que coincideixi amb la cerca.') : tr('admin.entities.empty', 'Sense entitats disponibles.')}
                       </p>
                     )}
                   </div>
@@ -1276,11 +1293,11 @@ function AdminPageContent() {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Nom</TableHead>
-                        <TableHead>Estat</TableHead>
-                        <TableHead>Alta</TableHead>
-                        <TableHead>Última activitat</TableHead>
-                        <TableHead>Accions</TableHead>
+                        <TableHead>{tr('admin.entities.table.name', 'Nom')}</TableHead>
+                        <TableHead>{tr('admin.entities.table.status', 'Estat')}</TableHead>
+                        <TableHead>{tr('admin.entities.table.created', 'Alta')}</TableHead>
+                        <TableHead>{tr('admin.entities.table.lastActivity', 'Última activitat')}</TableHead>
+                        <TableHead>{tr('admin.entities.table.actions', 'Accions')}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -1302,7 +1319,7 @@ function AdminPageContent() {
                             <TableCell>
                               <div className="flex flex-wrap items-center gap-1">
                                 <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={() => handleEnterOrganization(org)}>
-                                  Entrar
+                                  {tr('admin.entities.enter', 'Entrar')}
                                 </Button>
                                 <Button
                                   variant="ghost"
@@ -1313,7 +1330,7 @@ function AdminPageContent() {
                                     router.push(`/${org.slug}/dashboard/movimientos`);
                                   }}
                                 >
-                                  Moviments
+                                  {tr('admin.entities.movements', 'Moviments')}
                                 </Button>
                                 <Button
                                   variant="ghost"
@@ -1324,13 +1341,13 @@ function AdminPageContent() {
                                     router.push(`/${org.slug}/dashboard/configuracion`);
                                   }}
                                 >
-                                  Configuració
+                                  {tr('admin.entities.config', 'Configuració')}
                                 </Button>
                                 {renderEntityMoreMenu(
                                   org,
                                   <Button variant="outline" size="sm" className="h-7 px-2 text-xs">
                                     <MoreHorizontal className="mr-1 h-3.5 w-3.5" />
-                                    Més
+                                    {tr('admin.entities.more', 'Més')}
                                   </Button>
                                 )}
                               </div>
@@ -1340,7 +1357,7 @@ function AdminPageContent() {
                       ) : (
                         <TableRow>
                           <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
-                            {entitySearch.trim() ? 'No hi ha cap entitat que coincideixi amb la cerca.' : 'Sense entitats disponibles.'}
+                            {entitySearch.trim() ? tr('admin.entities.noSearchResults', 'No hi ha cap entitat que coincideixi amb la cerca.') : tr('admin.entities.empty', 'Sense entitats disponibles.')}
                           </TableCell>
                         </TableRow>
                       )}
@@ -1354,8 +1371,8 @@ function AdminPageContent() {
 
             <div className="space-y-4">
               <AreaSectionHeader
-                title="Revisions fiscals per entitat"
-                description="Ingressos assignats que no estan comptant fiscalment aquest any."
+                title={tr('admin.s9.title', 'Coherència fiscal real (S9)')}
+                description={tr('admin.s9.description', 'Ingressos assignats que no estan comptant fiscalment aquest any.')}
               />
               <Card>
                 <CardContent className="pt-6">
@@ -1383,7 +1400,7 @@ function AdminPageContent() {
                                 </div>
                                 <p className="text-sm font-medium">{pendingSummary}</p>
                                 <div className="space-y-1">
-                                  <p className="text-sm">{s9?.diagnosisTextCa ?? 'Sense diagnòstic'}</p>
+                                  <p className="text-sm">{s9?.diagnosisTextCa ?? tr('admin.s9.noDiagnosis', 'Sense diagnòstic')}</p>
                                   <p className="text-xs text-muted-foreground">{s9?.actionTextCa ?? ''}</p>
                                 </div>
                                 <div className="flex flex-wrap gap-2">
@@ -1415,18 +1432,18 @@ function AdminPageContent() {
                           );
                         })
                       ) : (
-                        <p className="py-12 text-center text-muted-foreground">Sense entitats disponibles.</p>
+                        <p className="py-12 text-center text-muted-foreground">{tr('admin.entities.empty', 'Sense entitats disponibles.')}</p>
                       )}
                     </div>
                   ) : (
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead>Entitat</TableHead>
-                          <TableHead>Pendents fiscals</TableHead>
-                          <TableHead>Diagnòstic</TableHead>
-                          <TableHead>Accions</TableHead>
-                          <TableHead>Avís</TableHead>
+                          <TableHead>{tr('admin.s9.table.entity', 'Entitat')}</TableHead>
+                          <TableHead>{tr('admin.s9.table.pending', 'Pendents fiscals')}</TableHead>
+                          <TableHead>{tr('admin.s9.table.diagnosis', 'Diagnòstic')}</TableHead>
+                          <TableHead>{tr('admin.s9.table.actions', 'Accions')}</TableHead>
+                          <TableHead>{tr('admin.s9.table.alert', 'Avís')}</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -1453,7 +1470,7 @@ function AdminPageContent() {
                                 </TableCell>
                                 <TableCell className="font-medium">{pendingSummary}</TableCell>
                                 <TableCell>
-                                  <p className="text-sm">{s9?.diagnosisTextCa ?? 'Sense diagnòstic'}</p>
+                                  <p className="text-sm">{s9?.diagnosisTextCa ?? tr('admin.s9.noDiagnosis', 'Sense diagnòstic')}</p>
                                   <p className="mt-1 text-xs text-muted-foreground">{s9?.actionTextCa ?? ''}</p>
                                 </TableCell>
                                 <TableCell>
@@ -1488,7 +1505,7 @@ function AdminPageContent() {
                         ) : (
                           <TableRow>
                             <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
-                              Sense entitats disponibles.
+                              {tr('admin.entities.empty', 'Sense entitats disponibles.')}
                             </TableCell>
                           </TableRow>
                         )}
@@ -1502,8 +1519,8 @@ function AdminPageContent() {
 
           <TabsContent value="content" className="space-y-8">
                 <AreaSectionHeader
-                  title="Contingut visible"
-              description="Aqui gestiones allo que els usuaris poden llegir o percebre directament."
+                  title={tr('admin.content.title', 'Contingut visible')}
+              description={tr('admin.content.description', 'Aquí gestiones allò que els usuaris poden llegir o percebre directament.')}
             />
 
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -1522,7 +1539,7 @@ function AdminPageContent() {
                   </CardHeader>
                   <CardContent className="pt-0">
                     <Button variant="ghost" className="px-0 text-sm" onClick={() => openContentModule(card.id)}>
-                      Obrir
+                      {tr('admin.content.open', 'Obrir')}
                     </Button>
                   </CardContent>
                 </Card>
@@ -1532,18 +1549,18 @@ function AdminPageContent() {
             {activeContentModule === 'updates' && (
               <div className="space-y-6">
                 <AreaSectionHeader
-                  title="Novetats"
-                  description="Vista de les novetats visibles per als usuaris. La publicacio manual ha de ser excepcional si el flux real ja es automatic."
+                  title={tr('admin.content.updatesHeaderTitle', 'Novetats')}
+                  description={tr('admin.content.updatesHeaderDescription', 'Vista de les novetats visibles per als usuaris. La publicació manual ha de ser excepcional si el flux real ja és automàtic.')}
                 />
                 <Card>
                   <CardContent className="pt-6 text-sm text-muted-foreground">
-                    Utilitza aquest espai per entendre que esta publicat i revisar casos especials. Si el flux principal ja publica de manera automatica, evita convertir aquest bloc en un ritual manual.
+                    {tr('admin.content.updatesHint', 'Utilitza aquest espai per entendre què està publicat i revisar casos especials. Si el flux principal ja publica de manera automàtica, evita convertir aquest bloc en un ritual manual.')}
                   </CardContent>
                 </Card>
                 <Card>
                   <CardHeader>
-                    <CardTitle className="text-base">Novetats visibles ara mateix</CardTitle>
-                    <CardDescription>El que ja s esta mostrant als usuaris o s ha publicat fa poc.</CardDescription>
+                    <CardTitle className="text-base">{tr('admin.content.updatesVisibleNowTitle', 'Novetats visibles ara mateix')}</CardTitle>
+                    <CardDescription>{tr('admin.content.updatesVisibleNowDescription', 'El que ja s’està mostrant als usuaris o s’ha publicat fa poc.')}</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-3">
                     {(communication?.latestPublished ?? []).length > 0 ? (
@@ -1551,20 +1568,20 @@ function AdminPageContent() {
                         <div key={item.id} className="rounded-lg border px-4 py-3">
                           <p className="font-medium">{item.title}</p>
                           <p className="text-sm text-muted-foreground">
-                            Publicada el {formatDateForAdmin(item.publishedAt)}
+                            {tr('admin.content.publishedOn', 'Publicada el {date}').replace('{date}', formatDateForAdmin(item.publishedAt))}
                           </p>
                         </div>
                       ))
                     ) : (
                       <p className="text-sm text-muted-foreground">
-                        Encara no hi ha novetats publicades.
+                        {tr('admin.content.noPublishedUpdates', 'Encara no hi ha novetats publicades.')}
                       </p>
                     )}
                   </CardContent>
                 </Card>
                 <Card>
                   <CardContent className="pt-6 text-sm text-muted-foreground">
-                    Aquest espai es queda nomes com a lectura del que ja es veu publicat. La part manual avancada no apareix en aquest panell simplificat per evitar duplicitats.
+                    {tr('admin.content.updatesFooter', 'Aquest espai es queda només com a lectura del que ja es veu publicat. La part manual avançada no apareix en aquest panell simplificat per evitar duplicitats.')}
                   </CardContent>
                 </Card>
               </div>
@@ -1573,8 +1590,8 @@ function AdminPageContent() {
             {activeContentModule === 'translations' && (
               <div className="space-y-6">
                 <AreaSectionHeader
-                  title="Traduccions"
-                  description="Textos de l’aplicació per idioma."
+                  title={tr('admin.content.translationsHeaderTitle', 'Traduccions')}
+                  description={tr('admin.content.translationsHeaderDescription', 'Textos de l’aplicació per idioma.')}
                 />
                 <div data-section="i18n">
                   <I18nManager />
@@ -1585,8 +1602,8 @@ function AdminPageContent() {
 
           <TabsContent value="technical" className="space-y-8">
             <AreaSectionHeader
-              title="Incidencies i manteniment"
-              description="Aquesta part es nomes per problemes tecnics, comprovacions i accions sensibles. No cal entrar hi si la vista general no t ho demana."
+              title={tr('admin.technical.title', 'Incidències i manteniment')}
+              description={tr('admin.technical.description', 'Aquesta part és només per problemes tècnics, comprovacions i accions sensibles. No cal entrar-hi si la vista general no t’ho demana.')}
               action={
                 <Button variant="outline" onClick={refreshSummary} disabled={isSummaryLoading}>
                   {isSummaryLoading ? (
@@ -1594,41 +1611,41 @@ function AdminPageContent() {
                   ) : (
                     <RefreshCw className="mr-2 h-4 w-4" />
                   )}
-                  Actualitzar dades
+                  {tr('admin.technical.refresh', 'Actualitzar dades')}
                 </Button>
               }
             />
 
             <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-              Entra aqui nomes quan hi ha un bloqueig real, un dubte amb el bot o una operacio sensible.
+              {tr('admin.technical.warningBanner', 'Entra aquí només quan hi ha un bloqueig real, un dubte amb el bot o una operació sensible.')}
             </div>
 
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
               <Card className={statusClasses(incidentsCard?.status ?? 'ok')} data-section="incidents">
                 <CardHeader>
-                  <CardTitle className="text-base">Avisos tecnics</CardTitle>
-                  <CardDescription>Aquests avisos poden ser interns o de manteniment, no sempre incidencies reals.</CardDescription>
+                  <CardTitle className="text-base">{tr('admin.technical.incidentsTitle', 'Avisos tècnics')}</CardTitle>
+                  <CardDescription>{tr('admin.technical.incidentsDescription', 'Aquests avisos poden ser interns o de manteniment, no sempre incidències reals.')}</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-2">
                   <p className="text-lg font-semibold">
-                    {openIncidentCount} avís{openIncidentCount === 1 ? '' : 'os'}
+                    {tr('admin.technical.incidentsCount', '{count} avís{plural}').replace('{count}', String(openIncidentCount)).replace('{plural}', openIncidentCount === 1 ? '' : 'os')}
                   </p>
                   <Badge variant={statusBadgeVariant(incidentsCard?.status ?? 'ok')}>
-                    {humanStatusLabel(incidentsCard?.status ?? 'ok')}
+                    {humanStatusLabel(incidentsCard?.status ?? 'ok', tr)}
                   </Badge>
                 </CardContent>
               </Card>
 
               <Card data-section="bot-support">
                 <CardHeader>
-                  <CardTitle className="text-base">Bot</CardTitle>
-                  <CardDescription>Activitat i temes que poden indicar mancances d ajuda.</CardDescription>
+                  <CardTitle className="text-base">{tr('admin.technical.botTitle', 'Bot')}</CardTitle>
+                  <CardDescription>{tr('admin.technical.botDescription', 'Activitat i temes que poden indicar mancances d’ajuda.')}</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-2">
-                  <p className="text-lg font-semibold">{kbSummary?.botTotalQuestions ?? 0} preguntes totals</p>
-                  <p className="text-sm text-muted-foreground">{kbSummary?.botTodayQuestions ?? 0} avui</p>
+                  <p className="text-lg font-semibold">{tr('admin.technical.botTotal', '{count} preguntes totals').replace('{count}', String(kbSummary?.botTotalQuestions ?? 0))}</p>
+                  <p className="text-sm text-muted-foreground">{tr('admin.technical.botToday', '{count} avui').replace('{count}', String(kbSummary?.botTodayQuestions ?? 0))}</p>
                   <p className="text-xs text-muted-foreground">
-                    Darrera actualitzacio coneguda: {formatDateForAdmin(kbSummary?.kbUpdatedAt ?? null)}
+                    {tr('admin.technical.kbUpdatedAt', 'Darrera actualització coneguda: {date}').replace('{date}', formatDateForAdmin(kbSummary?.kbUpdatedAt ?? null))}
                   </p>
                 </CardContent>
               </Card>
@@ -1636,31 +1653,31 @@ function AdminPageContent() {
 
             <div className="space-y-4">
               <AreaSectionHeader
-                title="Bot i consultes"
-                description="Quan sospites que el bot no ajuda prou, mira primer l activitat i els temes repetits abans d anar al detall intern."
+                title={tr('admin.technical.botQueriesTitle', 'Bot i consultes')}
+                description={tr('admin.technical.botQueriesDescription', 'Quan sospites que el bot no ajuda prou, mira primer l’activitat i els temes repetits abans d’anar al detall intern.')}
               />
               <Card>
                 <CardContent className="grid grid-cols-1 gap-4 pt-6 md:grid-cols-3">
                   <div>
-                    <p className="text-xs uppercase tracking-wide text-muted-foreground">Activitat recent</p>
-                    <p className="mt-1 text-sm font-semibold">{kbSummary?.botTodayQuestions ?? 0} consultes avui</p>
+                    <p className="text-xs uppercase tracking-wide text-muted-foreground">{tr('admin.technical.recentActivityLabel', 'Activitat recent')}</p>
+                    <p className="mt-1 text-sm font-semibold">{tr('admin.technical.todayQuestions', '{count} consultes avui').replace('{count}', String(kbSummary?.botTodayQuestions ?? 0))}</p>
                   </div>
                   <div>
-                    <p className="text-xs uppercase tracking-wide text-muted-foreground">Temes frequents</p>
+                    <p className="text-xs uppercase tracking-wide text-muted-foreground">{tr('admin.technical.frequentTopicsLabel', 'Temes freqüents')}</p>
                     <ul className="mt-1 space-y-1 text-sm">
                       {(kbSummary?.topTopics ?? []).length > 0 ? (
                         (kbSummary?.topTopics ?? []).map((topic) => (
                           <li key={topic.topic}>• {topic.topic}</li>
                         ))
                       ) : (
-                        <li className="text-muted-foreground">Sense dades</li>
+                        <li className="text-muted-foreground">{tr('admin.technical.noData', 'Sense dades')}</li>
                       )}
                     </ul>
                   </div>
                   <div>
-                    <p className="text-xs uppercase tracking-wide text-muted-foreground">Contracte intern</p>
+                    <p className="text-xs uppercase tracking-wide text-muted-foreground">{tr('admin.technical.internalContractLabel', 'Contracte intern')}</p>
                     <p className="mt-1 text-sm text-muted-foreground">
-                      El bot opera amb la KB versionada del repositori. Aquest detall es manté aqui per no contaminar la vista principal.
+                      {tr('admin.technical.internalContractDescription', 'El bot opera amb la KB versionada del repositori. Aquest detall es manté aquí per no contaminar la vista principal.')}
                     </p>
                   </div>
                 </CardContent>
@@ -1669,31 +1686,31 @@ function AdminPageContent() {
 
             <div className="space-y-4">
               <AreaSectionHeader
-                title="Administracio interna"
-                description="Accessos i operacions internes que poden tenir impacte estructural."
+                title={tr('admin.technical.internalAdminTitle', 'Administració interna')}
+                description={tr('admin.technical.internalAdminDescription', 'Accessos i operacions internes que poden tenir impacte estructural.')}
               />
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-base">
                     <Mail className="h-4 w-4" />
-                    Reset contrasenya
+                    {tr('admin.resetPassword.title', 'Reset contrasenya')}
                   </CardTitle>
                   <CardDescription>
-                    Envia un correu per restablir la contrasenya d&apos;un usuari.
+                    {tr('admin.resetPassword.description', "Envia un correu per restablir la contrasenya d'un usuari")}
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="flex flex-col gap-2 sm:flex-row">
                     <Input
                       type="email"
-                      placeholder={t.admin?.resetPassword?.placeholder ?? 'email@exemple.com'}
+                      placeholder={tr('admin.resetPassword.placeholder', 'email@exemple.com')}
                       value={resetEmail}
                       onChange={(e) => setResetEmail(e.target.value)}
                       disabled={isResetting}
                     />
                     <Button onClick={handlePasswordReset} disabled={isResetting || !resetEmail.trim()}>
                       {isResetting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                      {t.admin?.resetPassword?.send ?? 'Enviar correu'}
+                      {tr('admin.resetPassword.send', 'Enviar correu')}
                     </Button>
                   </div>
                 </CardContent>
@@ -1704,7 +1721,7 @@ function AdminPageContent() {
                   <div className="flex flex-wrap gap-2">
                     <Button variant="outline" onClick={handleMigrateSlugs} disabled={isMigrating}>
                       {isMigrating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                      Migrar slug
+                      {tr('admin.migrations.slugs', 'Migrar slugs')}
                     </Button>
                   </div>
 
@@ -1712,9 +1729,9 @@ function AdminPageContent() {
                     <>
                       <Separator />
                       <div className="space-y-3">
-                        <p className="text-sm font-medium text-amber-900">{t.admin?.health?.demoEnv ?? 'Entorn DEMO'}</p>
+                        <p className="text-sm font-medium text-amber-900">{tr('admin.health.demoEnv', 'Entorn DEMO')}</p>
                         <p className="text-sm text-amber-800">
-                          {t.admin?.health?.demoDescription ?? 'Estàs treballant amb dades de demostració. Les accions aquí no afecten producció.'}
+                          {tr('admin.health.demoDescription', 'Estàs treballant amb dades de demostració. Les accions aquí no afecten producció.')}
                         </p>
                         <div className="flex flex-wrap items-center gap-2">
                           <Button
@@ -1723,7 +1740,7 @@ function AdminPageContent() {
                             onClick={() => setSelectedDemoMode('short')}
                             disabled={isSeedingDemo}
                           >
-                            Short
+                            {tr('admin.health.demoShortMode', 'Short')}
                           </Button>
                           <Button
                             variant={selectedDemoMode === 'work' ? 'default' : 'outline'}
@@ -1731,33 +1748,33 @@ function AdminPageContent() {
                             onClick={() => setSelectedDemoMode('work')}
                             disabled={isSeedingDemo}
                           >
-                            Work
+                            {tr('admin.health.demoWorkMode', 'Work')}
                           </Button>
                           <span className="text-xs text-amber-700">
                             {selectedDemoMode === 'short'
-                              ? (t.admin?.health?.demoShort ?? 'Dades netes per videos i pitch')
-                              : (t.admin?.health?.demoWork ?? 'Dades amb anomalies per validar workflows')}
+                              ? tr('admin.health.demoShort', 'Dades netes per vídeos i pitch')
+                              : tr('admin.health.demoWork', 'Dades amb anomalies per validar workflows')}
                           </span>
                         </div>
                         <Button onClick={handleRegenerateDemo} disabled={isSeedingDemo} variant="outline">
                           {isSeedingDemo ? (
                             <>
                               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                              {t.admin?.health?.regenerating ?? 'Regenerant...'}
+                              {tr('admin.health.regenerating', 'Regenerant...')}
                             </>
                           ) : (
                             <>
                               <Play className="mr-2 h-4 w-4" />
-                              {t.admin?.health?.regenerateDemo ?? 'Regenerar demo'}
+                              {tr('admin.health.regenerateDemo', 'Regenerar demo')}
                             </>
                           )}
                         </Button>
                         {seedResult && (
                           <div className={`rounded-lg p-3 text-sm ${seedResult.ok ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
                             {seedResult.ok ? (
-                              <span>Seed completat ({seedResult.demoMode})</span>
+                              <span>{tr('admin.health.seedCompleted', 'Seed completat ({mode})').replace('{mode}', String(seedResult.demoMode ?? ''))}</span>
                             ) : (
-                              <span>Error: {seedResult.error}</span>
+                              <span>{tr('admin.health.seedError', 'Error: {error}').replace('{error}', seedResult.error ?? '')}</span>
                             )}
                           </div>
                         )}
@@ -1771,8 +1788,8 @@ function AdminPageContent() {
 
             <div className="space-y-4">
               <AreaSectionHeader
-                title="Eines tecniques"
-                description="Accessos rapids a consola, logs i documentacio de suport."
+                title={tr('admin.technical.toolsTitle', 'Eines tècniques')}
+                description={tr('admin.technical.toolsDescription', 'Accessos ràpids a consola, logs i documentació de suport.')}
               />
               <Card>
                 <CardContent className="grid gap-3 pt-6 md:grid-cols-3">
@@ -1783,7 +1800,7 @@ function AdminPageContent() {
                     className="flex items-center gap-2 rounded-lg border px-4 py-3 text-sm transition-colors hover:bg-muted/50"
                   >
                     <ExternalLink className="h-4 w-4 text-muted-foreground" />
-                    Firebase Console
+                    {tr('admin.technical.firebaseConsole', 'Firebase Console')}
                   </a>
                   <a
                     href="https://console.cloud.google.com/logs/query?project=summa-social"
@@ -1792,18 +1809,18 @@ function AdminPageContent() {
                     className="flex items-center gap-2 rounded-lg border px-4 py-3 text-sm transition-colors hover:bg-muted/50"
                   >
                     <ExternalLink className="h-4 w-4 text-muted-foreground" />
-                    Cloud Logging
+                    {tr('admin.technical.cloudLogging', 'Cloud Logging')}
                   </a>
                   <button
                     type="button"
                     className="flex items-center gap-2 rounded-lg border px-4 py-3 text-left text-sm transition-colors hover:bg-muted/50"
                     onClick={() => {
                       navigator.clipboard.writeText('docs/DEV-SOLO-MANUAL.md');
-                      toast({ title: t.admin?.health?.copiedToClipboard ?? 'Copiat al porta-retalls' });
+                      toast({ title: tr('admin.health.copiedToClipboard', 'Copiat al porta-retalls') });
                     }}
                   >
                     <Wrench className="h-4 w-4 text-muted-foreground" />
-                    Manual de suport
+                    {tr('admin.technical.supportManual', 'Manual de suport')}
                   </button>
                 </CardContent>
               </Card>
@@ -1811,18 +1828,18 @@ function AdminPageContent() {
 
             <div className="space-y-4">
               <AreaSectionHeader
-                title="Activitat recent"
-                description="Registre dels ultims canvis fets des del panell de SuperAdmin."
+                title={tr('admin.updates.title', 'Activitat SuperAdmin')}
+                description={tr('admin.updates.description', 'Últimes accions registrades')}
               />
               <Card>
                 <CardContent>
                   {isLoadingAudit ? (
                     <div className="flex items-center gap-2 pt-6 text-sm text-muted-foreground">
                       <Loader2 className="h-4 w-4 animate-spin" />
-                      {t.common?.loading ?? 'Carregant...'}
+                      {tr('common.loading', 'Carregant...')}
                     </div>
                   ) : auditLogs.length === 0 ? (
-                    <p className="pt-6 text-sm text-muted-foreground">{t.admin?.updates?.noActions ?? 'Cap accio registrada encara.'}</p>
+                    <p className="pt-6 text-sm text-muted-foreground">{tr('admin.updates.noActions', 'Cap acció registrada encara.')}</p>
                   ) : (
                     <div className="space-y-2 pt-6">
                       {auditLogs.map((log) => (
@@ -1864,25 +1881,25 @@ function AdminPageContent() {
           <AlertDialogHeader>
             <AlertDialogTitle>
               {suspendDialogOrg?.status === 'suspended'
-                ? (t.admin?.shell?.reactivateTitle ?? 'Reactivar organització?')
-                : (t.admin?.shell?.suspendTitle ?? 'Suspendre organització?')}
+                ? tr('admin.shell.reactivateTitle', 'Reactivar organització?')
+                : tr('admin.shell.suspendTitle', 'Suspendre organització?')}
             </AlertDialogTitle>
             <AlertDialogDescription>
               {suspendDialogOrg?.status === 'suspended'
-                ? (t.admin?.shell?.reactivateDesc?.({ org: suspendDialogOrg?.name ?? '' }) ?? `L'organització "${suspendDialogOrg?.name}" tornarà a estar activa i els seus membres podran accedir-hi.`)
-                : (t.admin?.shell?.suspendDesc?.({ org: suspendDialogOrg?.name ?? '' }) ?? `L'organització "${suspendDialogOrg?.name}" quedarà suspesa i els seus membres no podran accedir-hi.`)
+                ? tr('admin.shell.reactivateDesc', 'L\'organització "{org}" tornarà a estar activa i els seus membres podran accedir-hi.').replace('{org}', suspendDialogOrg?.name ?? '')
+                : tr('admin.shell.suspendDesc', 'L\'organització "{org}" quedarà suspesa i els seus membres no podran accedir-hi.').replace('{org}', suspendDialogOrg?.name ?? '')
               }
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isProcessing}>{t.common?.cancel ?? 'Cancel·lar'}</AlertDialogCancel>
+            <AlertDialogCancel disabled={isProcessing}>{tr('common.cancel', 'Cancel·lar')}</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => suspendDialogOrg && handleToggleSuspend(suspendDialogOrg)}
               disabled={isProcessing}
               className={suspendDialogOrg?.status === 'suspended' ? '' : 'bg-destructive text-destructive-foreground hover:bg-destructive/90'}
             >
               {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {suspendDialogOrg?.status === 'suspended' ? (t.admin?.shell?.reactivate ?? 'Reactivar') : (t.admin?.shell?.suspend ?? 'Suspendre')}
+              {suspendDialogOrg?.status === 'suspended' ? tr('admin.shell.reactivate', 'Reactivar') : tr('admin.shell.suspend', 'Suspendre')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -1892,26 +1909,26 @@ function AdminPageContent() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle className="text-amber-800">
-              {t.admin?.health?.confirmRegenTitle?.({ mode: selectedDemoMode }) ?? `Regenerar dades demo (${selectedDemoMode})?`}
+              {tr('admin.health.confirmRegenTitle', 'Regenerar dades demo ({mode})?').replace('{mode}', selectedDemoMode)}
             </AlertDialogTitle>
             <AlertDialogDescription>
-              {t.admin?.health?.confirmRegenDesc ?? 'Aquesta acció esborrarà totes les dades de demostració existents i en crearà de noves.'}
+              {tr('admin.health.confirmRegenDesc', 'Aquesta acció esborrarà totes les dades de demostració existents i en crearà de noves.')}
               <br /><br />
-              <strong>{t.admin?.health?.selectedMode ?? 'Mode seleccionat:'}</strong>{' '}
+              <strong>{tr('admin.health.selectedMode', 'Mode seleccionat:')}</strong>{' '}
               {selectedDemoMode === 'short'
-                ? (t.admin?.health?.shortModeDesc ?? 'Short — Dades netes per vídeos i pitch')
-                : (t.admin?.health?.workModeDesc ?? 'Work — Dades amb anomalies per validar workflows reals')}
+                ? tr('admin.health.shortModeDesc', 'Short — Dades netes per vídeos i pitch')
+                : tr('admin.health.workModeDesc', 'Work — Dades amb anomalies per validar workflows reals')}
               <br /><br />
-              <strong>{t.admin?.health?.onlyDemo ?? "Només afecta l'organització demo (slug: demo). Cap dada de producció serà modificada."}</strong>
+              <strong>{tr('admin.health.onlyDemo', "Només afecta l'organització demo (slug: demo). Cap dada de producció serà modificada.")}</strong>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>{t.common?.cancel ?? 'Cancel·lar'}</AlertDialogCancel>
+            <AlertDialogCancel>{tr('common.cancel', 'Cancel·lar')}</AlertDialogCancel>
             <AlertDialogAction
               onClick={executeRegenerateDemo}
               className="bg-amber-600 text-white hover:bg-amber-700"
             >
-              {t.admin?.health?.regenerateDemo ?? 'Regenerar demo'} ({selectedDemoMode})
+              {tr('admin.health.regenerateDemo', 'Regenerar demo')} ({selectedDemoMode})
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -1922,8 +1939,13 @@ function AdminPageContent() {
 
 export default function AdminPage() {
   return (
-    <React.Suspense fallback={<div className="p-6 text-sm text-muted-foreground">Carregant...</div>}>
+    <React.Suspense fallback={<AdminPageSuspenseFallback />}>
       <AdminPageContent />
     </React.Suspense>
   );
+}
+
+function AdminPageSuspenseFallback() {
+  const { tr } = useTranslations();
+  return <div className="p-6 text-sm text-muted-foreground">{tr('common.loading', 'Carregant...')}</div>;
 }

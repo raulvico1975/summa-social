@@ -568,7 +568,9 @@ export function QuickExpenseScreen({ organizationId, isLandingMode = false }: Qu
               ))}
               {hiddenCount > 0 && (
                 <p className="text-xs text-muted-foreground text-center">
-                  +{hiddenCount} fitxer{hiddenCount > 1 ? 's' : ''} més
+                  {tr('projectModule.quickExpense.hiddenFiles', '+{count} fitxer{plural} més')
+                    .replace('{count}', String(hiddenCount))
+                    .replace('{plural}', hiddenCount > 1 ? 's' : '')}
                 </p>
               )}
 
@@ -625,15 +627,15 @@ export function QuickExpenseScreen({ organizationId, isLandingMode = false }: Qu
 
           {currency === 'EUR' ? (
             // Input EUR directe
-            <Input
-              id="amount"
-              type="number"
-              inputMode="decimal"
-              step="0.01"
-              min="0"
-              placeholder="Ex: 12,50"
-              value={amountEUR}
-              onChange={(e) => {
+              <Input
+                id="amount"
+                type="number"
+                inputMode="decimal"
+                step="0.01"
+                min="0"
+              placeholder={tr('projectModule.quickExpense.amountPlaceholder', 'Ex: 12,50')}
+                value={amountEUR}
+                onChange={(e) => {
                 userEditedAmount.current = true;
                 setAmountEUR(e.target.value);
               }}
@@ -649,7 +651,7 @@ export function QuickExpenseScreen({ organizationId, isLandingMode = false }: Qu
                   inputMode="decimal"
                   step="0.01"
                   min="0"
-                  placeholder={`Import en ${currency}`}
+                  placeholder={tr('projectModule.quickExpense.originalAmountPlaceholder', 'Import en {currency}').replace('{currency}', currency)}
                   value={amountOriginal}
                   onChange={(e) => {
                     userEditedAmount.current = true;

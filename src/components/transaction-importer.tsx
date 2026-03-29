@@ -961,8 +961,8 @@ export function TransactionImporter({ availableCategories }: TransactionImporter
         setIsAccountDialogOpen(open);
         if (!open) setPendingFile(null);
       }}>
-        <DialogContent>
-          <DialogHeader>
+        <DialogContent className="grid max-h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] gap-0 overflow-hidden p-0 sm:max-w-xl">
+          <DialogHeader className="border-b px-4 py-5 pr-10 sm:px-6">
             <DialogTitle>{t.settings.bankAccounts.selectAccount}</DialogTitle>
             <DialogDescription>
               {t.settings.bankAccounts.selectAccountRequired}
@@ -970,11 +970,11 @@ export function TransactionImporter({ availableCategories }: TransactionImporter
           </DialogHeader>
 
           {isLoadingBankAccounts ? (
-            <div className="flex items-center justify-center py-4">
+            <div className="flex items-center justify-center px-4 py-6 sm:px-6">
               <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
             </div>
           ) : bankAccounts.length === 0 ? (
-            <div className="flex flex-col items-center gap-4 py-4">
+            <div className="flex flex-col items-center gap-4 px-4 py-6 text-center sm:px-6">
               <div className="flex items-center gap-2 text-amber-600">
                 <AlertTriangle className="h-5 w-5" />
                 <span>{t.settings.bankAccounts.noAccountsWarning}</span>
@@ -987,14 +987,14 @@ export function TransactionImporter({ availableCategories }: TransactionImporter
             </div>
           ) : (
             <>
-              <div className="grid gap-4 py-4">
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label className="text-right">{t.settings.bankAccounts.name}</Label>
+              <div className="space-y-4 overflow-y-auto px-4 py-4 sm:px-6">
+                <div className="space-y-2">
+                  <Label htmlFor="transaction-bank-account">{t.settings.bankAccounts.name}</Label>
                   <Select
                     value={selectedBankAccountId ?? ''}
                     onValueChange={(value) => setSelectedBankAccountId(value)}
                   >
-                    <SelectTrigger className="col-span-3">
+                    <SelectTrigger id="transaction-bank-account">
                       <SelectValue placeholder={t.settings.bankAccounts.selectAccount} />
                     </SelectTrigger>
                     <SelectContent>
@@ -1006,7 +1006,7 @@ export function TransactionImporter({ availableCategories }: TransactionImporter
                       ))}
                     </SelectContent>
                   </Select>
-                  <div className="col-span-3 col-start-2 text-xs text-muted-foreground">
+                  <div className="text-xs leading-relaxed text-muted-foreground">
                     {t.movements.import.formatsHelp}
                   </div>
                 </div>
@@ -1069,7 +1069,7 @@ export function TransactionImporter({ availableCategories }: TransactionImporter
                   </div>
                 )}
               </div>
-              <DialogFooter>
+              <DialogFooter className="border-t bg-background px-4 py-4 sm:px-6">
                 <Button
                   variant="outline"
                   onClick={() => {
@@ -1097,7 +1097,7 @@ export function TransactionImporter({ availableCategories }: TransactionImporter
           if (!open) handleMappingCancel();
         }}
       >
-        <DialogContent className="max-h-[85vh] w-full max-w-5xl flex flex-col overflow-hidden p-0">
+        <DialogContent className="flex max-h-[calc(100dvh-2rem)] w-[min(96vw,72rem)] max-w-5xl flex-col overflow-hidden p-0">
           {mappingState && (
             <RemittanceStyleMappingStep
               fields={[

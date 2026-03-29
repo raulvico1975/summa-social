@@ -38,7 +38,7 @@ export default function QuickExpensePage() {
   if (!organizationId) {
     return (
       <div className="flex h-[100dvh] items-center justify-center p-4">
-        <div className="animate-pulse text-muted-foreground">Carregant...</div>
+        <div className="animate-pulse text-muted-foreground">{t.common.loading}</div>
       </div>
     );
   }

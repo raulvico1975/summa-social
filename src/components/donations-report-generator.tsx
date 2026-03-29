@@ -179,7 +179,7 @@ export function DonationsReportGenerator() {
   const { organizationId } = useCurrentOrganization();
   const { buildUrl } = useOrgUrl();
   const { can } = usePermissions();
-  const { t, tr } = useTranslations();
+  const { t, tr, language } = useTranslations();
   const isMobile = useIsMobile();
   const canGenerateModel182 = can('fiscal.model182.generar');
   const canExportReports = can('informes.exportar');
@@ -690,6 +690,48 @@ export function DonationsReportGenerator() {
     });
   };
 
+  const isPortuguese = language === 'pt';
+  const aeatExcludedDialogTitle = isPortuguese
+    ? 'Ha doadores excluidos'
+    : t.reports.aeatExcludedDialogTitle;
+  const aeatExcludedDialogDesc = (included: number, excluded: number) => {
+    if (!isPortuguese) {
+      return t.reports.aeatExcludedDialogDesc(included, excluded);
+    }
+    return `O ficheiro AEAT incluira ${included} doadores. ${excluded} ${excluded === 1 ? 'doador sera excluido por dados incompletos.' : 'doadores serao excluidos por dados incompletos.'}`;
+  };
+  const aeatExcludedHelp = isPortuguese
+    ? 'Pode transferir a lista para os contactar e corrigir os dados antes de apresentar o 182.'
+    : t.reports.aeatExcludedHelp;
+  const aeatExcludedNoNif = isPortuguese
+    ? 'sem NIF'
+    : t.reports.aeatExcludedNoNif;
+  const aeatExcludedPreviewMore = (count: number) => (
+    isPortuguese ? `... e mais ${count}` : t.reports.aeatExcludedPreviewMore(count)
+  );
+  const aeatIssueLabel = (code: string, meta?: { taxIdLength?: number }) => {
+    if (!isPortuguese) {
+      return t.reports.aeatIssueLabel(code, meta);
+    }
+    switch (code) {
+      case 'TAXID_EMPTY': return 'NIF/CIF em falta';
+      case 'TAXID_INVALID_CHARS': return 'NIF/CIF com caracteres invalidos';
+      case 'TAXID_INVALID_LENGTH': return `NIF/CIF com comprimento incorreto (${meta?.taxIdLength ?? '?'})`;
+      case 'ZIPCODE_INCOMPLETE': return 'codigo postal incompleto';
+      case 'DONOR_TYPE_MISSING': return 'tipo de doador (F/J) por indicar';
+      default: return code;
+    }
+  };
+  const downloadExcludedCsvLabel = isPortuguese
+    ? 'Transferir excluidos (CSV)'
+    : t.reports.downloadExcludedCsv;
+  const exportAnywayLabel = isPortuguese
+    ? 'Exportar mesmo assim'
+    : t.reports.exportAnyway;
+  const cancelToFixLabel = isPortuguese
+    ? 'Cancelar e rever dados'
+    : t.reports.aeatCancelToFix;
+
   return (
       <Card>
         <CardHeader>
@@ -939,63 +981,57 @@ export function DonationsReportGenerator() {
             DIALOG EXCLOSOS AEAT
             ═══════════════════════════════════════════════════════════════════════ */}
         <Dialog open={aeatExcludedDialogOpen} onOpenChange={setAeatExcludedDialogOpen}>
-          <DialogContent className="w-[calc(100vw-2rem)] max-w-3xl sm:max-w-3xl max-h-[80vh] overflow-hidden">
-            <DialogHeader>
+          <DialogContent className="grid w-[min(calc(100vw-2rem),48rem)] max-w-3xl grid-rows-[auto_minmax(0,1fr)_auto] gap-0 overflow-hidden p-0 sm:w-full">
+            <DialogHeader className="gap-2 border-b px-6 pb-4 pt-6">
               <DialogTitle className="flex items-center gap-2">
                 <AlertTriangle className="h-5 w-5 text-amber-500" />
-                {t.reports.aeatExcludedDialogTitle}
+                {aeatExcludedDialogTitle}
               </DialogTitle>
               <DialogDescription>
-                {aeatPendingExport && t.reports.aeatExcludedDialogDesc(
+                {aeatPendingExport && aeatExcludedDialogDesc(
                   aeatPendingExport.includedCount,
                   aeatPendingExport.excludedCount
                 )}
               </DialogDescription>
             </DialogHeader>
 
-            {/* Llista d'exclosos (màxim 5) */}
-            {aeatPendingExport && aeatPendingExport.excludedCount > 0 && (
-              <div className="max-h-[45vh] overflow-auto pr-2 border rounded-md p-2 bg-muted/30">
-                <ul className="space-y-2">
-                  {aeatPendingExport.excluded.slice(0, 5).map((exc, i) => {
-                    const issuesText = exc.issueCodes
-                      .map(code => t.reports.aeatIssueLabel(code, exc.issueMeta))
-                      .join('; ');
-                    const taxIdOrLabel = exc.taxIdRaw?.trim() || t.reports.aeatExcludedNoNif;
-                    return (
-                      <li key={i} className="text-sm break-words whitespace-normal min-w-0">
-                        <span className="font-medium text-foreground">{exc.name}</span>
-                        {' — '}
-                        <span className="font-mono break-all">{taxIdOrLabel}</span>
-                        {' — '}
-                        <span className="text-muted-foreground">{issuesText}</span>
+            <div className="min-h-0 space-y-4 overflow-y-auto px-6 py-5">
+              {/* Llista d'exclosos (màxim 5) */}
+              {aeatPendingExport && aeatPendingExport.excludedCount > 0 && (
+                <div className="rounded-xl border border-border/70 bg-muted/20 p-3">
+                  <ul className="space-y-3">
+                    {aeatPendingExport.excluded.slice(0, 5).map((exc, i) => {
+                      const issuesText = exc.issueCodes
+                        .map(code => aeatIssueLabel(code, exc.issueMeta))
+                        .join('; ');
+                      const taxIdOrLabel = exc.taxIdRaw?.trim() || aeatExcludedNoNif;
+                      return (
+                        <li key={i} className="text-sm leading-relaxed break-words whitespace-normal min-w-0">
+                          <span className="font-medium text-foreground">{exc.name}</span>
+                          {' — '}
+                          <span className="font-mono break-all">{taxIdOrLabel}</span>
+                          {' — '}
+                          <span className="text-muted-foreground">{issuesText}</span>
+                        </li>
+                      );
+                    })}
+                    {aeatPendingExport.excludedCount > 5 && (
+                      <li className="text-sm italic text-muted-foreground">
+                        {aeatExcludedPreviewMore(aeatPendingExport.excludedCount - 5)}
                       </li>
-                    );
-                  })}
-                  {aeatPendingExport.excludedCount > 5 && (
-                    <li className="text-sm text-muted-foreground italic">
-                      {t.reports.aeatExcludedPreviewMore(aeatPendingExport.excludedCount - 5)}
-                    </li>
-                  )}
-                </ul>
-              </div>
-            )}
+                    )}
+                  </ul>
+                </div>
+              )}
 
-            {/* Help text */}
-            <p className="text-sm text-muted-foreground">
-              {t.reports.aeatExcludedHelp}
-            </p>
+              {/* Help text */}
+              <p className="text-sm leading-relaxed text-muted-foreground">
+                {aeatExcludedHelp}
+              </p>
+            </div>
 
-            <DialogFooter className="flex-col sm:flex-row gap-2">
-              <Button
-                variant="outline"
-                onClick={handleDownloadExcludedCsv}
-                className="w-full sm:w-auto"
-              >
-                <Download className="mr-2 h-4 w-4" />
-                {t.reports.downloadExcludedCsv}
-              </Button>
-              <Button variant="outline" asChild className="w-full sm:w-auto">
+            <DialogFooter className="gap-2 border-t bg-muted/10 px-6 py-4 sm:justify-between sm:space-x-0">
+              <Button asChild className="w-full sm:w-auto">
                 <Link
                   href={buildUrl('/donants?filter=incomplete')}
                   onClick={() => {
@@ -1007,11 +1043,19 @@ export function DonationsReportGenerator() {
                 </Link>
               </Button>
               <Button
-                variant="default"
+                variant="outline"
+                onClick={handleDownloadExcludedCsv}
+                className="w-full sm:w-auto"
+              >
+                <Download className="mr-2 h-4 w-4" />
+                {downloadExcludedCsvLabel}
+              </Button>
+              <Button
+                variant="outline"
                 onClick={handleConfirmAEATExport}
                 className="w-full sm:w-auto"
               >
-                {t.reports.exportAnyway}
+                {exportAnywayLabel}
               </Button>
               <Button
                 variant="ghost"
@@ -1021,7 +1065,7 @@ export function DonationsReportGenerator() {
                 }}
                 className="w-full sm:w-auto"
               >
-                {t.reports.aeatCancelToFix}
+                {cancelToFixLabel}
               </Button>
             </DialogFooter>
           </DialogContent>

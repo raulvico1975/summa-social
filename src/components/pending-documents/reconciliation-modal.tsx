@@ -198,7 +198,7 @@ export function ReconciliationModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px]">
+      <DialogContent className="sm:max-w-[680px]">
         <DialogHeader>
           <DialogTitle>{t.reconciliation.title}</DialogTitle>
           <DialogDescription>
@@ -206,15 +206,15 @@ export function ReconciliationModal({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="grid grid-cols-[1fr_auto_1fr] gap-4 py-4">
+        <div className="grid gap-4 py-4 md:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] md:items-start">
           {/* Document pendent */}
-          <div className="space-y-3">
+          <div className="min-w-0 space-y-3 rounded-lg border bg-muted/20 p-4">
             <h4 className="font-medium text-sm text-muted-foreground">{t.reconciliation.pendingDoc}</h4>
 
             <div className="space-y-2">
               <div className="flex items-center gap-2 text-sm">
                 <FileText className="h-4 w-4 text-muted-foreground" />
-                <span className="truncate">{pendingDoc.file.filename}</span>
+                <span className="min-w-0 break-words">{pendingDoc.file.filename}</span>
               </div>
 
               <div className="flex items-center gap-2 text-sm">
@@ -229,12 +229,12 @@ export function ReconciliationModal({
 
               <div className="flex items-center gap-2 text-sm">
                 <User className="h-4 w-4 text-muted-foreground" />
-                <span>{supplier?.name || '—'}</span>
+                <span className="break-words">{supplier?.name || '—'}</span>
               </div>
 
               <div className="flex items-center gap-2 text-sm">
                 <FolderOpen className="h-4 w-4 text-muted-foreground" />
-                <span>{getCategoryName(pendingDoc.categoryId)}</span>
+                <span className="break-words">{getCategoryName(pendingDoc.categoryId)}</span>
               </div>
 
               <div className="pt-2">
@@ -246,12 +246,13 @@ export function ReconciliationModal({
           </div>
 
           {/* Arrow */}
-          <div className="flex items-center justify-center">
-            <ArrowRight className="h-6 w-6 text-muted-foreground" />
+          <div className="flex items-center justify-center py-1 md:py-0">
+            <ArrowRight className="h-6 w-6 text-muted-foreground md:block hidden" />
+            <ArrowRight className="h-6 w-6 rotate-90 text-muted-foreground md:hidden" />
           </div>
 
           {/* Transacció bancària */}
-          <div className="space-y-3">
+          <div className="min-w-0 space-y-3 rounded-lg border bg-muted/20 p-4">
             <h4 className="font-medium text-sm text-muted-foreground">{t.reconciliation.bankMovement}</h4>
 
             <div className="space-y-2">
@@ -261,19 +262,19 @@ export function ReconciliationModal({
               </div>
 
               <div className="text-sm">
-                <span className="text-muted-foreground line-clamp-2">
+                <span className="break-words text-muted-foreground">
                   {transaction.description}
                 </span>
               </div>
 
               <div className="flex items-center gap-2 text-sm">
                 <User className="h-4 w-4 text-muted-foreground" />
-                <span>{getContactName(transaction.contactId, contacts)}</span>
+                <span className="break-words">{getContactName(transaction.contactId, contacts)}</span>
               </div>
 
               <div className="flex items-center gap-2 text-sm">
                 <FolderOpen className="h-4 w-4 text-muted-foreground" />
-                <span>{getCategoryName(transaction.category)}</span>
+                <span className="break-words">{getCategoryName(transaction.category)}</span>
               </div>
 
               <div className="pt-2">

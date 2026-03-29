@@ -40,6 +40,11 @@ export function PublicContactForm({ locale, labels }: PublicContactFormProps) {
   const [website, setWebsite] = useState('');
   const [status, setStatus] = useState<SubmitStatus>('idle');
   const [feedback, setFeedback] = useState('');
+  const websiteLabel =
+    locale === 'es' ? 'Página web' :
+    locale === 'fr' ? 'Site web' :
+    locale === 'pt' ? 'Website' :
+    'Pàgina web';
 
   function resetFeedback() {
     if (status !== 'idle') {
@@ -177,7 +182,7 @@ export function PublicContactForm({ locale, labels }: PublicContactFormProps) {
       </div>
 
       <div className="sr-only" aria-hidden="true">
-        <Label htmlFor="contact-website">Website</Label>
+        <Label htmlFor="contact-website">{websiteLabel}</Label>
         <Input
           id="contact-website"
           tabIndex={-1}

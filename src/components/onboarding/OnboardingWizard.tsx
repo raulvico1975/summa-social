@@ -27,7 +27,7 @@ import {
   UserPlus,
   Heart,
 } from 'lucide-react';
-import { useTranslations } from '@/i18n';
+import { useTranslations, type TrFunction } from '@/i18n';
 import { useCurrentOrganization, useOrgUrl } from '@/hooks/organization-provider';
 import { useFirebase, useCollection, useMemoFirebase, setDocumentNonBlocking } from '@/firebase';
 import { collection, doc, updateDoc, serverTimestamp } from 'firebase/firestore';
@@ -134,7 +134,7 @@ function getImportChecklist(
   categories: Category[] | null,
   bankAccounts: BankAccount[] | null,
   contacts: Contact[] | null,
-  t: typeof import('./../../i18n/ca').ca
+  tr: TrFunction
 ): ImportCheckItem[] {
   // Separar contactes per tipus (camp type: 'donor' | 'supplier' | 'employee')
   // Font: mateixa que donor-manager.tsx, supplier-manager.tsx, employee-manager.tsx
@@ -145,43 +145,43 @@ function getImportChecklist(
   return [
     {
       id: 'categories',
-      label: t.onboarding?.steps?.categories ?? 'Categories',
-      description: t.onboarding?.import?.categoriesDesc ?? 'Ingressos i despeses',
+      label: tr('onboarding.import.categories', 'Categories'),
+      description: tr('onboarding.import.categoriesDesc', 'Ingressos i despeses'),
       icon: FolderTree,
       isComplete: (categories?.length || 0) > 0,
     },
     {
       id: 'bankAccounts',
-      label: t.onboarding?.import?.bankAccounts ?? 'Comptes bancaris',
-      description: t.onboarding?.import?.bankAccountsDesc ?? 'IBAN i noms dels comptes',
+      label: tr('onboarding.import.bankAccounts', 'Comptes bancaris'),
+      description: tr('onboarding.import.bankAccountsDesc', 'IBAN i noms dels comptes'),
       icon: Landmark,
       isComplete: (bankAccounts?.length || 0) > 0,
     },
     {
       id: 'members',
-      label: t.onboarding?.import?.members ?? 'Membres',
-      description: t.onboarding?.import?.membersDesc ?? 'Invitacions massives per email',
+      label: tr('onboarding.import.members', 'Membres'),
+      description: tr('onboarding.import.membersDesc', 'Invitacions massives per email'),
       icon: UserPlus,
       isComplete: false, // No es pot detectar fàcilment si hi ha invitacions pendents
     },
     {
       id: 'employees',
-      label: t.onboarding?.import?.employees ?? 'Treballadors',
-      description: t.onboarding?.import?.employeesDesc ?? 'Nòmines i dietes',
+      label: tr('onboarding.import.employees', 'Treballadors'),
+      description: tr('onboarding.import.employeesDesc', 'Nòmines i dietes'),
       icon: Users,
       isComplete: employees.length > 0,
     },
     {
       id: 'suppliers',
-      label: t.onboarding?.import?.suppliers ?? 'Proveïdors',
-      description: t.onboarding?.import?.suppliersDesc ?? 'Contactes de pagament',
+      label: tr('onboarding.import.suppliers', 'Proveïdors'),
+      description: tr('onboarding.import.suppliersDesc', 'Contactes de pagament'),
       icon: Building2,
       isComplete: suppliers.length > 0,
     },
     {
       id: 'donors',
-      label: t.onboarding?.import?.donors ?? 'Donants',
-      description: t.onboarding?.import?.donorsDesc ?? 'Contactes de donació',
+      label: tr('onboarding.import.donors', 'Donants'),
+      description: tr('onboarding.import.donorsDesc', 'Contactes de donació'),
       icon: Heart,
       isComplete: donors.length > 0,
     },
@@ -192,39 +192,39 @@ function getOnboardingChecks(
   organization: Organization | null,
   contacts: Contact[] | null,
   categories: Category[] | null,
-  t: typeof import('./../../i18n/ca').ca
+  tr: TrFunction
 ): OnboardingCheckResult[] {
   return [
     {
       step: 'organization',
       isComplete: !!(organization?.name && organization?.taxId && organization?.address && organization?.city && organization?.zipCode),
       isOptional: false,
-      label: t.onboarding?.steps?.organization ?? "Dades de l'organització",
-      description: t.onboarding?.steps?.organizationDesc ?? 'Nom, CIF i adreça fiscal',
+      label: tr('onboarding.steps.organization', "Dades de l'organització"),
+      description: tr('onboarding.steps.organizationDesc', 'Nom, CIF i adreça fiscal'),
       href: '/dashboard/configuracion',
     },
     {
       step: 'signature',
       isComplete: !!(organization?.signatureUrl && organization?.signatoryName && organization?.signatoryRole),
       isOptional: false,
-      label: t.onboarding?.steps?.signature ?? 'Firma i signant',
-      description: t.onboarding?.steps?.signatureDesc ?? 'Necessaris per emetre certificats',
+      label: tr('onboarding.steps.signature', 'Firma i signant'),
+      description: tr('onboarding.steps.signatureDesc', 'Necessaris per emetre certificats'),
       href: '/dashboard/configuracion',
     },
     {
       step: 'categories',
       isComplete: !!(categories && categories.length > 0),
       isOptional: false,
-      label: t.onboarding?.steps?.categories ?? 'Categories',
-      description: t.onboarding?.steps?.categoriesDesc ?? 'Crea o personalitza les categories',
+      label: tr('onboarding.steps.categories', 'Categories'),
+      description: tr('onboarding.steps.categoriesDesc', 'Crea o personalitza les categories'),
       href: '/dashboard/configuracion',
     },
     {
       step: 'contacts',
       isComplete: !!(contacts && contacts.length > 0),
       isOptional: true,
-      label: t.onboarding?.steps?.contacts ?? 'Contactes',
-      description: t.onboarding?.steps?.contactsDesc ?? 'Importa donants o proveïdors',
+      label: tr('onboarding.steps.contacts', 'Contactes'),
+      description: tr('onboarding.steps.contactsDesc', 'Importa donants o proveïdors'),
       href: '/dashboard/donants',
     },
   ];
@@ -251,7 +251,7 @@ interface OnboardingWizardModalProps {
 }
 
 export function OnboardingWizardModal({ open, onOpenChange }: OnboardingWizardModalProps) {
-  const { t } = useTranslations();
+  const { tr } = useTranslations();
   const { firestore, user } = useFirebase();
   const { organizationId, organization } = useCurrentOrganization();
   const { buildUrl } = useOrgUrl();
@@ -286,13 +286,13 @@ export function OnboardingWizardModal({ open, onOpenChange }: OnboardingWizardMo
   // Igual que fan donor-manager.tsx, supplier-manager.tsx i employee-manager.tsx
 
   const checks = React.useMemo(
-    () => getOnboardingChecks(organization, contacts, categories, t),
-    [organization, contacts, categories, t]
+    () => getOnboardingChecks(organization, contacts, categories, tr),
+    [organization, contacts, categories, tr]
   );
 
   const importChecklist = React.useMemo(
-    () => getImportChecklist(categories, bankAccounts, contacts, t),
-    [categories, bankAccounts, contacts, t]
+    () => getImportChecklist(categories, bankAccounts, contacts, tr),
+    [categories, bankAccounts, contacts, tr]
   );
 
   const progress = React.useMemo(() => computeProgress(checks), [checks]);
@@ -491,15 +491,15 @@ export function OnboardingWizardModal({ open, onOpenChange }: OnboardingWizardMo
               <PartyPopper className="h-8 w-8 text-emerald-600" />
             </div>
             <DialogTitle className="text-2xl font-bold tracking-tight font-headline">
-              {t.onboarding?.completeTitle ?? "Tot a punt!"}
+              {tr('onboarding.completeTitle', 'Tot a punt!')}
             </DialogTitle>
             <DialogDescription>
-              {t.onboarding?.completeDescription ?? "La configuració inicial s'ha completat. Ja pots començar a gestionar les finances de la teva organització."}
+              {tr('onboarding.completeDescription', "La configuració inicial s'ha completat. Ja pots començar a gestionar les finances de la teva organització.")}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 pt-4">
             <div className="rounded-lg border bg-muted/30 p-4 space-y-2">
-              <p className="text-sm font-medium">{t.onboarding?.summaryTitle ?? "Resum de configuració"}</p>
+              <p className="text-sm font-medium">{tr('onboarding.summaryTitle', 'Resum de configuració')}</p>
               <ul className="text-sm text-muted-foreground space-y-1">
                 {checks.filter(c => c.isComplete).map(check => (
                   <li key={check.step} className="flex items-center gap-2">
@@ -510,7 +510,7 @@ export function OnboardingWizardModal({ open, onOpenChange }: OnboardingWizardMo
               </ul>
             </div>
             <Button onClick={handleClose} className="w-full">
-              {t.onboarding?.goToDashboard ?? "Anar al Dashboard"}
+              {tr('onboarding.goToDashboard', 'Anar al Dashboard')}
             </Button>
           </div>
         </>
@@ -523,25 +523,25 @@ export function OnboardingWizardModal({ open, onOpenChange }: OnboardingWizardMo
         <>
           <DialogHeader>
             <DialogTitle className="text-xl font-bold tracking-tight font-headline">
-              {t.onboarding?.setupTitle ?? "Configuració inicial"}
+              {tr('onboarding.setupTitle', 'Configuració inicial')}
             </DialogTitle>
             <DialogDescription>
-              {t.onboarding?.modeSelection?.subtitle ?? "Com vols configurar la teva organització?"}
+              {tr('onboarding.modeSelection.subtitle', 'Com vols configurar la teva organització?')}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3 pt-4">
             {/* Opció Manual */}
             <button
               onClick={() => handleSelectMode('manual')}
-              className="w-full flex items-start gap-4 p-4 rounded-lg border hover:bg-muted/50 transition-colors text-left"
+              className="w-full flex items-start gap-4 rounded-lg border p-4 text-left transition-colors hover:bg-muted/50"
             >
               <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-100 flex-shrink-0">
                 <ArrowRight className="h-5 w-5 text-blue-600" />
               </div>
-              <div>
-                <p className="font-medium">{t.onboarding?.modeSelection?.manual ?? "Pas a pas"}</p>
-                <p className="text-sm text-muted-foreground">
-                  {t.onboarding?.modeSelection?.manualDesc ?? "Configura manualment cada secció. Ideal si comences de zero."}
+              <div className="min-w-0">
+                <p className="font-medium">{tr('onboarding.modeSelection.manual', 'Pas a pas')}</p>
+                <p className="text-sm text-muted-foreground break-words leading-relaxed">
+                  {tr('onboarding.modeSelection.manualDesc', 'Configura manualment cada secció. Ideal si comences de zero.')}
                 </p>
               </div>
             </button>
@@ -549,15 +549,15 @@ export function OnboardingWizardModal({ open, onOpenChange }: OnboardingWizardMo
             {/* Opció Import */}
             <button
               onClick={() => handleSelectMode('import')}
-              className="w-full flex items-start gap-4 p-4 rounded-lg border hover:bg-muted/50 transition-colors text-left"
+              className="w-full flex items-start gap-4 rounded-lg border p-4 text-left transition-colors hover:bg-muted/50"
             >
               <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-100 flex-shrink-0">
                 <Upload className="h-5 w-5 text-emerald-600" />
               </div>
-              <div>
-                <p className="font-medium">{t.onboarding?.modeSelection?.import ?? "Importar dades"}</p>
-                <p className="text-sm text-muted-foreground">
-                  {t.onboarding?.modeSelection?.importDesc ?? "Carrega fitxers Excel amb categories, comptes, contactes i més."}
+              <div className="min-w-0">
+                <p className="font-medium">{tr('onboarding.modeSelection.import', 'Importar dades')}</p>
+                <p className="text-sm text-muted-foreground break-words leading-relaxed">
+                  {tr('onboarding.modeSelection.importDesc', 'Carrega fitxers Excel amb categories, comptes, contactes i més.')}
                 </p>
               </div>
             </button>
@@ -570,7 +570,7 @@ export function OnboardingWizardModal({ open, onOpenChange }: OnboardingWizardMo
                 onClick={handleClose}
               >
                 <X className="h-4 w-4 mr-2" />
-                {t.common?.close ?? "Tancar"}
+                {tr('common.close', 'Tancar')}
               </Button>
             </div>
           </div>
@@ -585,10 +585,10 @@ export function OnboardingWizardModal({ open, onOpenChange }: OnboardingWizardMo
           <DialogHeader>
             <DialogTitle className="text-xl font-bold tracking-tight font-headline flex items-center gap-2">
               <FileSpreadsheet className="h-5 w-5" />
-              {t.onboarding?.importMode?.title ?? "Importar dades"}
+              {tr('onboarding.importMode.title', 'Importar dades')}
             </DialogTitle>
             <DialogDescription>
-              {t.onboarding?.importMode?.subtitle ?? "Carrega fitxers Excel per configurar ràpidament. Pots importar qualsevol combinació."}
+              {tr('onboarding.importMode.subtitle', 'Carrega fitxers Excel per configurar ràpidament. Pots importar qualsevol combinació.')}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 pt-2">
@@ -600,7 +600,7 @@ export function OnboardingWizardModal({ open, onOpenChange }: OnboardingWizardMo
                   <li key={item.id}>
                     <button
                       onClick={() => handleOpenImporter(item.id)}
-                      className="w-full flex items-center gap-3 p-3 rounded-lg border hover:bg-muted/50 transition-colors group text-left"
+                      className="w-full flex items-center gap-3 rounded-lg border p-3 text-left transition-colors group hover:bg-muted/50"
                     >
                       <div className={`flex h-8 w-8 items-center justify-center rounded-md flex-shrink-0 ${
                         item.isComplete ? 'bg-emerald-100' : 'bg-muted'
@@ -614,7 +614,7 @@ export function OnboardingWizardModal({ open, onOpenChange }: OnboardingWizardMo
                             <CheckCircle2 className="h-4 w-4 text-emerald-600 inline ml-2" />
                           )}
                         </p>
-                        <p className="text-xs text-muted-foreground">
+                        <p className="text-xs text-muted-foreground break-words leading-relaxed">
                           {item.description}
                         </p>
                       </div>
@@ -628,14 +628,14 @@ export function OnboardingWizardModal({ open, onOpenChange }: OnboardingWizardMo
             {/* Botons d'acció */}
             <div className="pt-2 border-t space-y-2">
               <Button onClick={handleClose} className="w-full">
-                {t.onboarding?.buttons?.finish ?? "Finalitzar"}
+                {tr('onboarding.buttons.finish', 'Finalitzar')}
               </Button>
               <Button
                 variant="ghost"
                 className="w-full text-muted-foreground"
                 onClick={handleBackToModeSelection}
               >
-                {t.onboarding?.buttons?.back ?? "Tornar"}
+                {tr('onboarding.buttons.back', 'Tornar')}
               </Button>
             </div>
           </div>
@@ -648,17 +648,17 @@ export function OnboardingWizardModal({ open, onOpenChange }: OnboardingWizardMo
       <>
         <DialogHeader>
           <DialogTitle className="text-xl font-bold tracking-tight font-headline">
-            {t.onboarding?.setupTitle ?? "Configuració inicial"}
+            {tr('onboarding.setupTitle', 'Configuració inicial')}
           </DialogTitle>
           <DialogDescription>
-            {t.onboarding?.welcomeDescription ?? "Configura la teva organització en pocs passos per començar a gestionar les finances."}
+            {tr('onboarding.welcomeDescription', 'Configura la teva organització en pocs passos per començar a gestionar les finances.')}
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4 pt-2">
           {/* Barra de progrés */}
           <div>
             <div className="flex items-center justify-between text-sm text-muted-foreground mb-2">
-              <span>{t.onboarding?.progress ?? "Progrés"}</span>
+              <span>{tr('onboarding.progress', 'Progrés')}</span>
               <span>{progress}%</span>
             </div>
             <Progress value={progress} className="h-2" />
@@ -674,7 +674,7 @@ export function OnboardingWizardModal({ open, onOpenChange }: OnboardingWizardMo
                 <Link
                   href={hrefWithOnboarding}
                   onClick={() => handleNavigate(check.href, check.step)}
-                  className="flex items-center gap-3 p-3 rounded-lg border hover:bg-muted/50 transition-colors group"
+                  className="flex items-center gap-3 rounded-lg border p-3 transition-colors group hover:bg-muted/50"
                 >
                   {check.isComplete ? (
                     <CheckCircle2 className="h-5 w-5 text-emerald-600 flex-shrink-0" />
@@ -686,11 +686,11 @@ export function OnboardingWizardModal({ open, onOpenChange }: OnboardingWizardMo
                       {check.label}
                       {check.isOptional && (
                         <span className="ml-2 text-xs text-muted-foreground font-normal">
-                          ({t.onboarding?.optional ?? "opcional"})
+                          ({tr('onboarding.optional', 'opcional')})
                         </span>
                       )}
                     </p>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-xs text-muted-foreground break-words leading-relaxed">
                       {check.description}
                     </p>
                   </div>
@@ -710,7 +710,7 @@ export function OnboardingWizardModal({ open, onOpenChange }: OnboardingWizardMo
               className="w-full text-muted-foreground"
               onClick={handleBackToModeSelection}
             >
-              {t.onboarding?.buttons?.back ?? "Tornar"}
+              {tr('onboarding.buttons.back', 'Tornar')}
             </Button>
           </div>
         </div>
@@ -721,8 +721,10 @@ export function OnboardingWizardModal({ open, onOpenChange }: OnboardingWizardMo
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-lg max-h-[85vh] overflow-y-auto">
-          {renderContent()}
+        <DialogContent className="flex max-h-[calc(100dvh-2rem)] w-[min(96vw,34rem)] flex-col overflow-hidden p-0 sm:max-w-lg">
+          <div className="flex-1 min-h-0 overflow-y-auto px-5 py-5 sm:px-6">
+            {renderContent()}
+          </div>
         </DialogContent>
       </Dialog>
 

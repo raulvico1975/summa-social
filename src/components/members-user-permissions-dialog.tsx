@@ -249,7 +249,7 @@ export function MembersUserPermissionsDialog({
   return (
     <Dialog open={open} onOpenChange={handleDialogOpenChange}>
       <DialogContent
-        className="max-h-[90vh] overflow-y-auto sm:max-w-3xl"
+        className="flex max-h-[calc(100dvh-2rem)] w-[min(96vw,48rem)] flex-col overflow-hidden p-0 sm:max-w-3xl"
         onCloseAutoFocus={(event) => {
           event.preventDefault();
           const previous = lastFocusedElementRef.current;
@@ -258,7 +258,7 @@ export function MembersUserPermissionsDialog({
           }
         }}
       >
-        <DialogHeader>
+        <DialogHeader className="shrink-0 border-b px-5 py-4 pr-12 sm:px-6">
           <DialogTitle>{tr('permissionsDialog.title', 'Permisos d usuari')}</DialogTitle>
           <DialogDescription>
             {`${tr('permissionsDialog.description', 'Configura seccions, accions critiques i capacitat de Projectes per a')} ${member.displayName || member.email}.`}
@@ -266,83 +266,87 @@ export function MembersUserPermissionsDialog({
           <p className="text-xs text-muted-foreground">{userPermissionsStatusLabel}</p>
         </DialogHeader>
 
-        <div className="space-y-5 py-2">
-          <div className="space-y-2">
-            <h3 className="text-sm font-semibold">{tr('permissionsDialog.sectionsTitle', 'Seccions')}</h3>
-            <div className="grid gap-3 sm:grid-cols-2">
-              {SECTION_TOGGLES.map((section) => (
-                <div key={section} className="flex min-h-12 items-center justify-between gap-3 rounded-lg border bg-background px-3 py-2">
-                  <Label htmlFor={`section-${section}`} className="cursor-pointer text-sm leading-tight">{permissionLabel(section, 'section')}</Label>
-                  <Switch
-                    id={`section-${section}`}
-                    checked={effectivePermissions[section]}
-                    disabled={isProjectsSectionLocked && section === 'sections.projectes'}
-                    onCheckedChange={(checked) => togglePermission(section, checked === true)}
-                  />
-                </div>
-              ))}
+        <div className="flex-1 min-h-0 overflow-y-auto px-5 py-5 sm:px-6">
+          <div className="space-y-5">
+            <div className="space-y-2">
+              <h3 className="text-sm font-semibold">{tr('permissionsDialog.sectionsTitle', 'Seccions')}</h3>
+              <div className="grid gap-3 sm:grid-cols-2">
+                {SECTION_TOGGLES.map((section) => (
+                  <div key={section} className="flex min-h-12 items-start justify-between gap-3 rounded-lg border bg-background px-3 py-2 sm:items-center">
+                    <Label htmlFor={`section-${section}`} className="min-w-0 cursor-pointer text-sm leading-tight break-words">{permissionLabel(section, 'section')}</Label>
+                    <Switch
+                      id={`section-${section}`}
+                      checked={effectivePermissions[section]}
+                      disabled={isProjectsSectionLocked && section === 'sections.projectes'}
+                      onCheckedChange={(checked) => togglePermission(section, checked === true)}
+                    />
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
 
-          <Separator />
+            <Separator />
 
-          <div className="space-y-2">
-            <h3 className="text-sm font-semibold">{tr('permissionsDialog.actionsTitle', 'Accions critiques')}</h3>
-            <div className="grid gap-3 sm:grid-cols-2">
-              {CRITICAL_ACTION_TOGGLES.map((action) => (
-                <div key={action} className="flex min-h-12 items-center justify-between gap-3 rounded-lg border bg-background px-3 py-2">
-                  <Label htmlFor={`action-${action}`} className="cursor-pointer text-sm leading-tight">{permissionLabel(action, 'action')}</Label>
-                  <Switch
-                    id={`action-${action}`}
-                    checked={effectivePermissions[action]}
-                    onCheckedChange={(checked) => togglePermission(action, checked === true)}
-                  />
-                </div>
-              ))}
+            <div className="space-y-2">
+              <h3 className="text-sm font-semibold">{tr('permissionsDialog.actionsTitle', 'Accions critiques')}</h3>
+              <div className="grid gap-3 sm:grid-cols-2">
+                {CRITICAL_ACTION_TOGGLES.map((action) => (
+                  <div key={action} className="flex min-h-12 items-start justify-between gap-3 rounded-lg border bg-background px-3 py-2 sm:items-center">
+                    <Label htmlFor={`action-${action}`} className="min-w-0 cursor-pointer text-sm leading-tight break-words">{permissionLabel(action, 'action')}</Label>
+                    <Switch
+                      id={`action-${action}`}
+                      checked={effectivePermissions[action]}
+                      onCheckedChange={(checked) => togglePermission(action, checked === true)}
+                    />
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
 
-          <Separator />
+            <Separator />
 
-          <div className="space-y-2">
-            <h3 className="text-sm font-semibold">{tr('permissionsDialog.projectsTitle', 'Projectes')}</h3>
-            <RadioGroup
-              value={projectCapabilityValue}
-              onValueChange={(value) => handleProjectCapabilityChange(value as 'manage' | 'expenseInput' | 'none')}
-              className="grid gap-2 sm:grid-cols-2"
-            >
-              <div className="flex items-center gap-2 rounded-lg border bg-background p-3">
-                <RadioGroupItem value="manage" id="projects-manage" />
-                <Label htmlFor="projects-manage" className="cursor-pointer text-sm leading-tight">{tr('permissionsDialog.projects.manage', 'Gestio de projectes')}</Label>
-              </div>
-              <div className="flex items-center gap-2 rounded-lg border bg-background p-3">
-                <RadioGroupItem value="expenseInput" id="projects-expense-input" />
-                <Label htmlFor="projects-expense-input" className="cursor-pointer text-sm leading-tight">{tr('permissionsDialog.projects.expenseInput', 'Entrada de despeses')}</Label>
-              </div>
-              <div className="flex items-center gap-2 rounded-lg border bg-background p-3 sm:col-span-2">
-                <RadioGroupItem value="none" id="projects-none" />
-                <Label htmlFor="projects-none" className="cursor-pointer text-sm leading-tight">{tr('permissionsDialog.projects.none', 'Sense accés a projectes')}</Label>
-              </div>
-            </RadioGroup>
+            <div className="space-y-2">
+              <h3 className="text-sm font-semibold">{tr('permissionsDialog.projectsTitle', 'Projectes')}</h3>
+              <RadioGroup
+                value={projectCapabilityValue}
+                onValueChange={(value) => handleProjectCapabilityChange(value as 'manage' | 'expenseInput' | 'none')}
+                className="grid gap-2 sm:grid-cols-2"
+              >
+                <div className="flex items-center gap-2 rounded-lg border bg-background p-3">
+                  <RadioGroupItem value="manage" id="projects-manage" />
+                  <Label htmlFor="projects-manage" className="cursor-pointer text-sm leading-tight break-words">{tr('permissionsDialog.projects.manage', 'Gestio de projectes')}</Label>
+                </div>
+                <div className="flex items-center gap-2 rounded-lg border bg-background p-3">
+                  <RadioGroupItem value="expenseInput" id="projects-expense-input" />
+                  <Label htmlFor="projects-expense-input" className="cursor-pointer text-sm leading-tight break-words">{tr('permissionsDialog.projects.expenseInput', 'Entrada de despeses')}</Label>
+                </div>
+                <div className="flex items-center gap-2 rounded-lg border bg-background p-3 sm:col-span-2">
+                  <RadioGroupItem value="none" id="projects-none" />
+                  <Label htmlFor="projects-none" className="cursor-pointer text-sm leading-tight break-words">{tr('permissionsDialog.projects.none', 'Sense accés a projectes')}</Label>
+                </div>
+              </RadioGroup>
+            </div>
           </div>
         </div>
 
-        <DialogFooter>
-          <Button
-            variant="ghost"
-            className="sm:mr-auto"
-            onClick={handleRestoreDefaults}
-            disabled={isSaving || !canRestoreDefaults}
-          >
-            {tr('permissionsDialog.restoreDefaults', 'Restaurar per defecte')}
-          </Button>
-          <Button variant="outline" onClick={closeDialog} disabled={isSaving}>{tr('permissionsDialog.cancel', 'Cancel lar')}</Button>
-          <Button onClick={handleSave} disabled={isSaving}>
-            {isSaving
-              ? tr('permissionsDialog.saving', 'Desant...')
-              : tr('permissionsDialog.save', 'Desar permisos')}
-          </Button>
-        </DialogFooter>
+        <div className="shrink-0 border-t bg-background px-5 py-4 sm:px-6">
+          <DialogFooter>
+            <Button
+              variant="ghost"
+              className="sm:mr-auto"
+              onClick={handleRestoreDefaults}
+              disabled={isSaving || !canRestoreDefaults}
+            >
+              {tr('permissionsDialog.restoreDefaults', 'Restaurar per defecte')}
+            </Button>
+            <Button variant="outline" onClick={closeDialog} disabled={isSaving}>{tr('permissionsDialog.cancel', 'Cancel lar')}</Button>
+            <Button onClick={handleSave} disabled={isSaving}>
+              {isSaving
+                ? tr('permissionsDialog.saving', 'Desant...')
+                : tr('permissionsDialog.save', 'Desar permisos')}
+            </Button>
+          </DialogFooter>
+        </div>
       </DialogContent>
     </Dialog>
   );

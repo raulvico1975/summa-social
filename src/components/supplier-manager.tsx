@@ -605,15 +605,15 @@ export function SupplierManager() {
           </CardContent>
         </Card>
 
-        <DialogContent className="sm:max-w-3xl max-h-[90vh] flex flex-col">
+        <DialogContent className="flex max-h-[calc(100dvh-2rem)] w-[min(95vw,56rem)] flex-col overflow-hidden p-0 sm:max-w-3xl">
           {/* Header fix */}
-          <DialogHeader className="flex-shrink-0">
+          <DialogHeader className="flex-shrink-0 border-b px-4 py-5 pr-10 sm:px-6">
             <DialogTitle>{dialogTitle}</DialogTitle>
             <DialogDescription>{dialogDescription}</DialogDescription>
           </DialogHeader>
 
           {/* Cos amb scroll si cal */}
-          <div className="flex-1 min-h-0 overflow-y-auto py-4">
+          <div className="flex-1 min-h-0 overflow-y-auto px-4 py-4 sm:px-6">
             {/* ═══════════════════════════════════════════════════════════════════
                 BLOC 1: Dades bàsiques i identificació (2 columnes)
                 ═══════════════════════════════════════════════════════════════════ */}
@@ -760,7 +760,7 @@ export function SupplierManager() {
           </div>
 
           {/* Footer fix */}
-          <DialogFooter className="flex-shrink-0 pt-4 border-t">
+          <DialogFooter className="flex-shrink-0 border-t bg-background px-4 py-4 sm:px-6">
             <DialogClose asChild>
               <Button variant="outline">{t.common.cancel}</Button>
             </DialogClose>

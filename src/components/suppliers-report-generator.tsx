@@ -68,7 +68,7 @@ export function SuppliersReportGenerator() {
   const { firestore, auth } = useFirebase();
   const { organizationId, organization } = useCurrentOrganization();
   const { can } = usePermissions();
-  const { t } = useTranslations();
+  const { t, language } = useTranslations();
   const isMobile = useIsMobile();
   const canGenerateModel347 = can('fiscal.model347.generar');
   const canExportReports = can('informes.exportar');
@@ -428,6 +428,62 @@ export function SuppliersReportGenerator() {
   };
 
   const hasData = model347 && (model347.expenses.length > 0 || model347.income.length > 0);
+  const isPortuguese = language === 'pt';
+  const model347DetailTitle = (name: string) => (
+    isPortuguese ? `Transacoes de ${name}` : t.reports.model347DetailTitle(name)
+  );
+  const model347DetailDescription = isPortuguese
+    ? 'Desmarque as transacoes que nao devem ser incluidas no Modelo 347.'
+    : t.reports.model347DetailDescription;
+  const model347EmailDialogTitle = isPortuguese
+    ? 'Texto de email de confirmacao (Modelo 347)'
+    : t.reports.model347EmailDialogTitle;
+  const model347EmailDialogDescription = (supplierName: string) => (
+    isPortuguese
+      ? `Reveja e copie o texto para o enviar a ${supplierName}.`
+      : t.reports.model347EmailDialogDescription(supplierName)
+  );
+  const model347EmailDialogDescriptionFallback = isPortuguese
+    ? 'Reveja e copie o texto para o enviar ao fornecedor.'
+    : t.reports.model347EmailDialogDescriptionFallback;
+  const model347ExcludedDialogTitle = isPortuguese
+    ? 'Ha fornecedores excluidos'
+    : t.reports.model347AEATExcludedDialogTitle;
+  const model347ExcludedDialogDesc = (included: number, excluded: number) => (
+    isPortuguese
+      ? `O ficheiro AEAT incluira ${included} fornecedores. ${excluded} ${excluded === 1 ? 'fornecedor sera excluido por dados incompletos.' : 'fornecedores serao excluidos por dados incompletos.'}`
+      : t.reports.model347AEATExcludedDialogDesc(included, excluded)
+  );
+  const model347ExcludedHelp = isPortuguese
+    ? 'Pode transferir a lista para corrigir os dados dos fornecedores antes de apresentar o 347.'
+    : t.reports.model347AEATExcludedHelp;
+  const model347DownloadExcludedCsv = isPortuguese
+    ? 'Transferir excluidos (CSV)'
+    : t.reports.model347DownloadExcludedCsv;
+  const model347ExportAnyway = isPortuguese
+    ? 'Exportar mesmo assim'
+    : t.reports.model347ExportAnyway;
+  const model347CancelToFix = isPortuguese
+    ? 'Cancelar e rever dados'
+    : t.reports.model347CancelToFix;
+  const missingTaxIdLabel = isPortuguese
+    ? 'sem NIF'
+    : t.reports.missingTaxId;
+  const model347IssueLabel = (code: string, meta?: { taxIdLength?: number }) => {
+    if (!isPortuguese) {
+      return t.reports.model347AEATIssueLabel(code, meta);
+    }
+    switch (code) {
+      case 'TAXID_EMPTY': return 'NIF/CIF em falta';
+      case 'TAXID_INVALID_CHARS': return 'NIF/CIF com caracteres invalidos';
+      case 'TAXID_INVALID_LENGTH': return `NIF/CIF com comprimento incorreto (${meta?.taxIdLength ?? '?'})`;
+      case 'PROVINCE_CODE_MISSING': return 'codigo de provincia indisponivel (e preciso um CP valido)';
+      default: return code;
+    }
+  };
+  const model347PreviewMoreLabel = (count: number) => (
+    isPortuguese ? `... e mais ${count}` : `… i ${count} més`
+  );
 
   // ═══════════════════════════════════════════════════════════════════════════
   // RENDER
@@ -587,18 +643,18 @@ export function SuppliersReportGenerator() {
           DIALOG DETALL TRANSACCIONS
           ═══════════════════════════════════════════════════════════════════════ */}
       <Dialog open={detailDialogOpen} onOpenChange={setDetailDialogOpen}>
-        <DialogContent className="w-[calc(100vw-2rem)] max-w-3xl sm:max-w-3xl max-h-[80vh] overflow-hidden">
-          <DialogHeader>
+        <DialogContent className="grid w-[min(calc(100vw-2rem),48rem)] max-w-3xl grid-rows-[auto_minmax(0,1fr)] gap-0 overflow-hidden p-0 sm:w-full">
+          <DialogHeader className="border-b px-6 pb-4 pt-6">
             <DialogTitle>
-              {detailAggregate && t.reports.model347DetailTitle(detailAggregate.name)}
+              {detailAggregate && model347DetailTitle(detailAggregate.name)}
             </DialogTitle>
             <DialogDescription>
-              {t.reports.model347DetailDescription}
+              {model347DetailDescription}
             </DialogDescription>
           </DialogHeader>
 
           {detailAggregate && (
-            <div className="max-h-[55vh] overflow-auto">
+            <div className="min-h-0 overflow-auto px-6 py-5">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -646,18 +702,18 @@ export function SuppliersReportGenerator() {
           DIALOG EMAIL CONFIRMACIÓ 347
           ═══════════════════════════════════════════════════════════════════════ */}
       <Dialog open={emailDialogOpen} onOpenChange={setEmailDialogOpen}>
-        <DialogContent className="w-[calc(100vw-2rem)] max-w-3xl sm:max-w-3xl max-h-[85vh] overflow-hidden">
-          <DialogHeader>
-            <DialogTitle>{t.reports.model347EmailDialogTitle}</DialogTitle>
+        <DialogContent className="grid w-[min(calc(100vw-2rem),48rem)] max-w-3xl grid-rows-[auto_minmax(0,1fr)_auto] gap-0 overflow-hidden p-0 sm:w-full">
+          <DialogHeader className="border-b px-6 pb-4 pt-6">
+            <DialogTitle>{model347EmailDialogTitle}</DialogTitle>
             <DialogDescription>
               {emailAggregate
-                ? t.reports.model347EmailDialogDescription(emailAggregate.name)
-                : t.reports.model347EmailDialogDescriptionFallback}
+                ? model347EmailDialogDescription(emailAggregate.name)
+                : model347EmailDialogDescriptionFallback}
             </DialogDescription>
           </DialogHeader>
 
           {emailDraft && (
-            <div className="space-y-3 overflow-auto max-h-[55vh]">
+            <div className="min-h-0 space-y-3 overflow-auto px-6 py-5">
               <div className="rounded-md border bg-muted/20 p-3">
                 <p className="text-xs uppercase tracking-wide text-muted-foreground">
                   {t.reports.model347EmailSubjectLabel}
@@ -676,7 +732,7 @@ export function SuppliersReportGenerator() {
             </div>
           )}
 
-          <DialogFooter className="flex-col sm:flex-row gap-2">
+          <DialogFooter className="gap-2 border-t bg-muted/10 px-6 py-4">
             <Button variant="outline" onClick={handleCopyEmailDraft} className="w-full sm:w-auto">
               <Copy className="mr-2 h-4 w-4" />
               {t.reports.model347EmailCopyButton}
@@ -700,60 +756,62 @@ export function SuppliersReportGenerator() {
           }
         }}
       >
-        <DialogContent className="w-[calc(100vw-2rem)] max-w-3xl sm:max-w-3xl max-h-[80vh] overflow-hidden">
-          <DialogHeader>
+        <DialogContent className="grid w-[min(calc(100vw-2rem),48rem)] max-w-3xl grid-rows-[auto_minmax(0,1fr)_auto] gap-0 overflow-hidden p-0 sm:w-full">
+          <DialogHeader className="gap-2 border-b px-6 pb-4 pt-6">
             <DialogTitle className="flex items-center gap-2">
               <AlertTriangle className="h-5 w-5 text-amber-500" />
-              {t.reports.model347AEATExcludedDialogTitle}
+              {model347ExcludedDialogTitle}
             </DialogTitle>
             <DialogDescription>
-              {aeatPendingExport && t.reports.model347AEATExcludedDialogDesc(
+              {aeatPendingExport && model347ExcludedDialogDesc(
                 aeatPendingExport.includedCount,
                 aeatPendingExport.excludedCount
               )}
             </DialogDescription>
           </DialogHeader>
 
-          {aeatPendingExport && aeatPendingExport.excludedCount > 0 && (
-            <div className="max-h-[45vh] overflow-auto pr-2 border rounded-md p-2 bg-muted/30">
-              <ul className="space-y-2">
-                {aeatPendingExport.excluded.slice(0, 5).map((exc, i) => {
-                  const issuesText = exc.issueCodes
-                    .map(code => t.reports.model347AEATIssueLabel(code, exc.issueMeta))
-                    .join('; ');
-                  return (
-                    <li key={i} className="text-sm break-words whitespace-normal min-w-0">
-                      <span className="font-medium text-foreground">{exc.name}</span>
-                      {' — '}
-                      <span className="font-mono break-all">{exc.taxIdRaw || t.reports.missingTaxId}</span>
-                      {' — '}
-                      <span className="text-muted-foreground">{issuesText}</span>
+          <div className="min-h-0 space-y-4 overflow-auto px-6 py-5">
+            {aeatPendingExport && aeatPendingExport.excludedCount > 0 && (
+              <div className="rounded-xl border border-border/70 bg-muted/20 p-3">
+                <ul className="space-y-3">
+                  {aeatPendingExport.excluded.slice(0, 5).map((exc, i) => {
+                    const issuesText = exc.issueCodes
+                      .map(code => model347IssueLabel(code, exc.issueMeta))
+                      .join('; ');
+                      return (
+                        <li key={i} className="text-sm leading-relaxed break-words whitespace-normal min-w-0">
+                          <span className="font-medium text-foreground">{exc.name}</span>
+                          {' — '}
+                          <span className="font-mono break-all">{exc.taxIdRaw || missingTaxIdLabel}</span>
+                          {' — '}
+                          <span className="text-muted-foreground">{issuesText}</span>
+                        </li>
+                    );
+                  })}
+                  {aeatPendingExport.excludedCount > 5 && (
+                    <li className="text-sm italic text-muted-foreground">
+                      {model347PreviewMoreLabel(aeatPendingExport.excludedCount - 5)}
                     </li>
-                  );
-                })}
-                {aeatPendingExport.excludedCount > 5 && (
-                  <li className="text-sm text-muted-foreground italic">
-                    … i {aeatPendingExport.excludedCount - 5} més
-                  </li>
-                )}
-              </ul>
-            </div>
-          )}
+                  )}
+                </ul>
+              </div>
+            )}
 
-          <p className="text-sm text-muted-foreground">
-            {t.reports.model347AEATExcludedHelp}
-          </p>
+            <p className="text-sm leading-relaxed text-muted-foreground">
+              {model347ExcludedHelp}
+            </p>
+          </div>
 
-          <DialogFooter className="flex-col sm:flex-row gap-2">
+          <DialogFooter className="gap-2 border-t bg-muted/10 px-6 py-4 sm:space-x-0">
             <Button variant="outline" onClick={handleDownloadExcludedCsv} className="w-full sm:w-auto">
               <Download className="mr-2 h-4 w-4" />
-              {t.reports.model347DownloadExcludedCsv}
+              {model347DownloadExcludedCsv}
             </Button>
             <Button variant="default" onClick={handleConfirmAEATExport} className="w-full sm:w-auto">
-              {t.reports.model347ExportAnyway}
+              {model347ExportAnyway}
             </Button>
             <Button variant="ghost" onClick={() => { setAeatExcludedDialogOpen(false); setAeatPendingExport(null); }} className="w-full sm:w-auto">
-              {t.reports.model347CancelToFix}
+              {model347CancelToFix}
             </Button>
           </DialogFooter>
         </DialogContent>

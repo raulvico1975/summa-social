@@ -45,7 +45,7 @@ function OrgLoginContent() {
   const nextPath = searchParams.get('next');
   const inviteToken = searchParams.get('inviteToken');
   const { auth, firestore, user, isUserLoading } = useFirebase();
-  const { tr, language } = useTranslations();
+  const { t, tr, language } = useTranslations();
   const { toast } = useToast();
 
   const [email, setEmail] = React.useState('');
@@ -85,7 +85,7 @@ function OrgLoginContent() {
           const slugData = slugSnap.data();
           setOrganization({
             id: slugData.orgId,
-            name: slugData.orgName || 'Organización',
+            name: slugData.orgName || tr('login.organizationFallback', 'Organització'),
             slug: orgSlug
           });
         } else {
@@ -100,7 +100,7 @@ function OrgLoginContent() {
     };
 
     loadOrganization();
-  }, [orgSlug, firestore, isDemoLogin]);
+  }, [orgSlug, firestore, isDemoLogin, tr]);
 
   // Si l'usuari ja està autenticat, redirigir al dashboard (o nextPath si ve de inactivitat)
   React.useEffect(() => {
@@ -112,7 +112,7 @@ function OrgLoginContent() {
 
   const handleLogin = async () => {
     if (!email || !password) {
-      setError('Todos los campos son obligatorios');
+      setError(tr('login.allFieldsRequired', 'Introdueix email i contrasenya'));
       return;
     }
 
@@ -181,30 +181,30 @@ function OrgLoginContent() {
             setInviteGate('failed');
             setIsLoggingIn(false);
 
-            let inviteError = 'No s\'ha pogut acceptar la invitació. Torna-ho a provar.';
+            let inviteError = tr('login.inviteAcceptError', "No s'ha pogut acceptar la invitació. Torna-ho a provar.");
             switch (inviteResult.error) {
               case 'expired':
               case 'invitation_expired':
-                inviteError = 'Aquesta invitació ha expirat. Demana\'n una de nova a l\'administrador.';
+                inviteError = tr('login.inviteExpired', "Aquesta invitació ha expirat. Demana'n una de nova a l'administrador.");
                 break;
               case 'already_used':
-                inviteError = 'Aquesta invitació ja s\'ha utilitzat. Si encara necessites accés, demana una nova invitació.';
+                inviteError = tr('login.inviteAlreadyUsed', "Aquesta invitació ja s'ha utilitzat. Si encara necessites accés, demana una nova invitació.");
                 break;
               case 'already_member':
-                inviteError = 'Aquest compte ja és membre d’aquesta organització. Entra sense l’enllaç d’invitació.';
+                inviteError = tr('login.inviteAlreadyMember', "Aquest compte ja és membre d'aquesta organització. Entra sense l'enllaç d'invitació.");
                 break;
               case 'org_mismatch':
-                inviteError = 'Aquesta invitació no correspon a aquesta organització.';
+                inviteError = tr('login.inviteOrgMismatch', 'Aquesta invitació no correspon a aquesta organització.');
                 break;
               case 'email_mismatch':
-                inviteError = 'El compte amb què has iniciat sessió no coincideix amb l’email de la invitació.';
+                inviteError = tr('login.inviteEmailMismatch', "El compte amb què has iniciat sessió no coincideix amb l'email de la invitació.");
                 break;
             }
 
             setError(inviteError);
             toast({
               variant: 'destructive',
-              title: 'Invitació no acceptada',
+              title: tr('login.inviteRejectedTitle', 'Invitació no acceptada'),
               description: inviteError,
             });
             return;
@@ -212,27 +212,29 @@ function OrgLoginContent() {
 
           setInviteGate('passed');
           toast({
-            title: 'Invitació acceptada!',
-            description: `T'has unit a ${organization.name}`,
+            title: tr('login.inviteAcceptedTitle', 'Invitació acceptada!'),
+            description: tr('login.inviteAcceptedDescription', "T'has unit a {organization}")
+              .replace('{organization}', organization.name),
           });
         } catch (inviteErr) {
           console.error('Error processant invitació:', inviteErr);
           setInviteGate('failed');
           setIsLoggingIn(false);
-          setError('No s\'ha pogut completar l\'accés amb la invitació. Torna-ho a provar.');
+          const inviteCompleteError = tr('login.inviteCompleteError', "No s'ha pogut completar l'accés amb la invitació. Torna-ho a provar.");
+          setError(inviteCompleteError);
           await auth.signOut().catch(() => undefined);
           toast({
             variant: 'destructive',
-            title: 'Invitació no acceptada',
-            description: 'No s\'ha pogut completar l\'accés amb la invitació. Torna-ho a provar.',
+            title: tr('login.inviteRejectedTitle', 'Invitació no acceptada'),
+            description: inviteCompleteError,
           });
           return;
         }
       }
 
       toast({
-        title: 'Sesión iniciada',
-        description: 'Bienvenido de nuevo',
+        title: tr('login.loginSuccess', 'Sessió iniciada'),
+        description: tr('login.loginDescription', 'Benvingut de nou!'),
       });
 
       // Redirigir a nextPath si existeix, sinó al dashboard
@@ -243,26 +245,26 @@ function OrgLoginContent() {
       console.error('Error de login:', err);
       setIsLoggingIn(false);
 
-      let friendlyError = 'Error al iniciar sesión';
+      let friendlyError = tr('login.genericError', "Error d'autenticació. Torna-ho a provar.");
       switch (err.code) {
         case 'auth/invalid-email':
-          friendlyError = 'El correo electrónico no es válido';
+          friendlyError = tr('login.invalidEmail', 'El format del correu no és vàlid');
           break;
         case 'auth/user-not-found':
-          friendlyError = 'No existe ningún usuario con este correo';
+          friendlyError = tr('login.userNotFound', 'No existeix cap compte amb aquest correu');
           break;
         case 'auth/wrong-password':
         case 'auth/invalid-credential':
-          friendlyError = 'Contraseña incorrecta';
+          friendlyError = tr('login.wrongPassword', 'La contrasenya és incorrecta');
           break;
         case 'auth/too-many-requests':
-          friendlyError = 'Demasiados intentos. Espera unos minutos';
+          friendlyError = tr('login.tooManyRequests', 'Massa intents. Prova-ho de nou més tard.');
           break;
         default:
           friendlyError = err.message || friendlyError;
       }
       setError(friendlyError);
-      toast({ variant: 'destructive', title: 'Error', description: friendlyError });
+      toast({ variant: 'destructive', title: t.common.error, description: friendlyError });
     }
   };
 
@@ -324,7 +326,7 @@ function OrgLoginContent() {
     return (
       <main className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        <p className="mt-4 text-muted-foreground">Cargando...</p>
+        <p className="mt-4 text-muted-foreground">{t.common.loading}</p>
       </main>
     );
   }
@@ -337,14 +339,15 @@ function OrgLoginContent() {
           <AlertCircle className="h-16 w-16 text-destructive" />
           <div className="space-y-2">
             <h1 className="text-2xl font-bold tracking-tight">
-              Organización no encontrada
+              {tr('login.organizationNotFoundTitle', 'Organització no trobada')}
             </h1>
             <p className="text-muted-foreground">
-              No existe ninguna organización con la URL <span className="font-mono text-primary">{orgSlug}</span>
+              {tr('login.organizationNotFoundDescription', "No existeix cap organització amb la URL {slug}")
+                .replace('{slug}', orgSlug)}
             </p>
           </div>
           <Button variant="outline" onClick={() => router.push('/')}>
-            Volver al inicio
+            {tr('login.backHome', "Tornar a l'inici")}
           </Button>
         </div>
       </main>
@@ -356,7 +359,7 @@ function OrgLoginContent() {
     return (
       <main className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        <p className="mt-4 text-muted-foreground">Redirigiendo...</p>
+        <p className="mt-4 text-muted-foreground">{tr('login.redirecting', 'Redirigint...')}</p>
       </main>
     );
   }
@@ -380,7 +383,7 @@ function OrgLoginContent() {
           <div className="flex items-center gap-2 bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-400 rounded-lg px-4 py-3 w-full">
             <Clock className="h-5 w-5 shrink-0" />
             <span className="text-sm">
-              Sessió tancada per inactivitat. Torna a iniciar sessió per continuar.
+              {tr('login.idleReason', 'Sessió tancada per inactivitat. Torna a iniciar sessió per continuar.')}
             </span>
           </div>
         )}
@@ -388,21 +391,21 @@ function OrgLoginContent() {
           <div className="flex items-center gap-2 bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-400 rounded-lg px-4 py-3 w-full">
             <Clock className="h-5 w-5 shrink-0" />
             <span className="text-sm">
-              Per seguretat, cal tornar a iniciar sessió cada 12 hores.
+              {tr('login.maxSessionReason', 'Per seguretat, cal tornar a iniciar sessió cada 12 hores.')}
             </span>
           </div>
         )}
 
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Iniciar sesión</h1>
+          <h1 className="text-2xl font-bold tracking-tight">{tr('login.title', 'Iniciar sessió')}</h1>
           <p className="text-muted-foreground mt-2">
-            Accede a tu cuenta para continuar
+            {tr('login.prompt', 'Introdueix les teves credencials per accedir.')}
           </p>
         </div>
 
         <div className="w-full space-y-4 text-left">
           <div className="space-y-2">
-            <Label htmlFor="email">Correo electrónico</Label>
+            <Label htmlFor="email">{tr('login.email', 'Correu electrònic')}</Label>
             <Input
               type="email"
               id="email"
@@ -414,14 +417,14 @@ function OrgLoginContent() {
                 setNextResetAllowedAt(0);
               }}
               onKeyPress={handleKeyPress}
-              placeholder="nombre@ejemplo.com"
+              placeholder={tr('login.emailPlaceholder', 'nom@exemple.com')}
               disabled={isLoggingIn}
               autoComplete="email"
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="password">Contraseña</Label>
+            <Label htmlFor="password">{tr('login.password', 'Contrasenya')}</Label>
             <Input
               type="password"
               id="password"
@@ -432,7 +435,7 @@ function OrgLoginContent() {
                 setResetInfo('');
               }}
               onKeyPress={handleKeyPress}
-              placeholder="••••••••"
+              placeholder={tr('login.passwordPlaceholder', '••••••••')}
               disabled={isLoggingIn}
               autoComplete="current-password"
             />
@@ -468,10 +471,10 @@ function OrgLoginContent() {
           {isLoggingIn ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Accediendo...
+              {tr('login.accessing', 'Accedint...')}
             </>
           ) : (
-            'Acceder'
+            tr('login.submit', 'Accedir')
           )}
         </Button>
       </div>
@@ -480,12 +483,14 @@ function OrgLoginContent() {
 }
 
 export default function OrgLoginPage() {
+  const { tr } = useTranslations();
+
   return (
     <Suspense
       fallback={
         <main className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          <p className="mt-4 text-muted-foreground">Cargando...</p>
+          <p className="mt-4 text-muted-foreground">{tr('login.loading', 'Carregant...')}</p>
         </main>
       }
     >

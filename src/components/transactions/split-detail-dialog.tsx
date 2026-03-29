@@ -22,6 +22,7 @@ import {
 import type { Transaction } from '@/lib/data';
 import { formatCurrencyEU } from '@/lib/normalize';
 import { Loader2 } from 'lucide-react';
+import { useTranslations } from '@/i18n';
 
 interface SplitDetailDialogProps {
   open: boolean;
@@ -45,6 +46,7 @@ export function SplitDetailDialog({
   onUndoSplit,
   isUndoing = false,
 }: SplitDetailDialogProps) {
+  const { tr } = useTranslations();
   const totalParts = React.useMemo(
     () => splitParts.reduce((sum, item) => sum + item.amount, 0),
     [splitParts]
@@ -56,20 +58,20 @@ export function SplitDetailDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[85vh] overflow-hidden sm:max-w-3xl">
         <DialogHeader>
-          <DialogTitle>Detall del desglossament</DialogTitle>
+          <DialogTitle>{tr('dialogs.splitDetail.title', 'Detall del desglossament')}</DialogTitle>
           <DialogDescription>
-            El moviment bancari pare no es modifica. Pots revisar les parts i desfer el desglossament.
+            {tr('dialogs.splitDetail.description', 'El moviment bancari pare no es modifica. Pots revisar les parts i desfer el desglossament.')}
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-3 overflow-y-auto pr-1">
           <div className="rounded-md border p-3 text-sm">
             <div className="flex items-center justify-between gap-2">
-              <span className="text-muted-foreground">Import original</span>
+              <span className="text-muted-foreground">{tr('dialogs.splitDetail.originalAmount', 'Import original')}</span>
               <span className="font-medium">{formatCurrencyEU(parentTransaction.amount)}</span>
             </div>
             <div className="mt-1 flex items-center justify-between gap-2">
-              <span className="text-muted-foreground">Total parts</span>
+              <span className="text-muted-foreground">{tr('dialogs.splitDetail.totalParts', 'Total parts')}</span>
               <span className="font-medium">{formatCurrencyEU(totalParts)}</span>
             </div>
           </div>
@@ -78,17 +80,17 @@ export function SplitDetailDialog({
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-[120px] text-right">Import</TableHead>
-                  <TableHead className="w-[120px]">Tipus</TableHead>
-                  <TableHead>Contacte</TableHead>
-                  <TableHead>Nota</TableHead>
+                  <TableHead className="w-[120px] text-right">{tr('dialogs.splitDetail.amount', 'Import')}</TableHead>
+                  <TableHead className="w-[120px]">{tr('dialogs.splitDetail.type', 'Tipus')}</TableHead>
+                  <TableHead>{tr('dialogs.splitDetail.contact', 'Contacte')}</TableHead>
+                  <TableHead>{tr('dialogs.splitDetail.note', 'Nota')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {splitParts.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={4} className="text-center text-muted-foreground">
-                      No hi ha línies actives.
+                      {tr('dialogs.splitDetail.detailEmpty', 'No hi ha línies actives.')}
                     </TableCell>
                   </TableRow>
                 ) : (
@@ -103,7 +105,9 @@ export function SplitDetailDialog({
                         <TableCell className="text-right font-mono">{formatCurrencyEU(item.amount)}</TableCell>
                         <TableCell>
                           <Badge variant={isDonationLine ? 'default' : 'secondary'}>
-                            {isDonationLine ? 'Donació' : 'Altres'}
+                            {isDonationLine
+                              ? tr('dialogs.splitDetail.donationType', 'Donació')
+                              : tr('dialogs.splitDetail.otherType', 'Altres')}
                           </Badge>
                         </TableCell>
                         <TableCell>{contactLabel}</TableCell>
@@ -127,7 +131,7 @@ export function SplitDetailDialog({
             onClick={() => onUndoSplit(parentTransaction.id)}
           >
             {isUndoing ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-            Desfer desglossament
+            {tr('dialogs.splitDetail.undo', 'Desfer desglossament')}
           </Button>
         </DialogFooter>
       </DialogContent>
