@@ -1,0 +1,19 @@
+{
+  "id": "social-vertical",
+  "label": "Social vertical",
+  "surfaces": ["social", "reels", "shorts"],
+  "aspectRatio": "9:16",
+  "resolution": {
+    "width": 1080,
+    "height": 1920
+  },
+  "durationSeconds": {
+    "min": 15,
+    "max": 35
+  },
+  "includeIntro": false,
+  "includeOutro": true,
+  "embedCaptions": true,
+  "captionsMode": "burned-in",
+  "goal": "Peces curtes i directes per xarxes verticals."
+}

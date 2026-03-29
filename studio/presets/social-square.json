@@ -1,0 +1,19 @@
+{
+  "id": "social-square",
+  "label": "Social square",
+  "surfaces": ["social", "paid"],
+  "aspectRatio": "1:1",
+  "resolution": {
+    "width": 1080,
+    "height": 1080
+  },
+  "durationSeconds": {
+    "min": 15,
+    "max": 35
+  },
+  "includeIntro": false,
+  "includeOutro": true,
+  "embedCaptions": true,
+  "captionsMode": "burned-in",
+  "goal": "Distribucio organica o de pagament en canals socials quadrats."
+}

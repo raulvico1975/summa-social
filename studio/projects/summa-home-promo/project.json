@@ -1,0 +1,41 @@
+{
+  "slug": "summa-home-promo",
+  "brand": "summa",
+  "preset": "home-hero",
+  "title": "Home hero comercial",
+  "status": "draft",
+  "objective": "",
+  "audience": "web visitors",
+  "locales": [
+    "ca",
+    "es"
+  ],
+  "recording": {
+    "script": "",
+    "sourceScenario": "",
+    "notes": []
+  },
+  "storyboard": {
+    "slug": "",
+    "captionsMode": "overlay"
+  },
+  "targets": [
+    {
+      "surface": "home",
+      "locale": "ca"
+    },
+    {
+      "surface": "home",
+      "locale": "es"
+    }
+  ],
+  "brandAssets": {
+    "intro": false,
+    "outro": false,
+    "doodles": []
+  },
+  "publish": {
+    "publicDir": "",
+    "landingSlug": ""
+  }
+}

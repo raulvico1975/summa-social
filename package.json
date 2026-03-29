@@ -57,8 +57,10 @@
     "perf:deps-audit": "node scripts/performance/bundle-deps-audit.mjs --out tmp/performance/deps-audit-latest.json",
     "perf:monthly": "node scripts/performance/monthly-performance-check.mjs",
     "migrate:capabilities": "node scripts/migrations/backfill-member-capabilities.mjs",
-    "images:landings:optimize": "node scripts/images/optimize-landing-assets.mjs"
-    ,
+    "images:landings:optimize": "node scripts/images/optimize-landing-assets.mjs",
+    "video:studio": "node scripts/video-studio/studio-cli.mjs",
+    "video:doctor": "node scripts/video-studio/studio-cli.mjs doctor",
+    "video:presets": "node scripts/video-studio/studio-cli.mjs list-presets",
     "editorial:seed-historical": "node --import tsx scripts/editorial/seed-historical.ts",
     "editorial:generate-monthly": "node --import tsx scripts/editorial/generate-monthly.ts",
     "editorial:derive-linkedin": "node --import tsx scripts/editorial/derive-linkedin.ts",

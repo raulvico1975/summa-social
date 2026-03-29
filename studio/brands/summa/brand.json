@@ -1,0 +1,41 @@
+{
+  "id": "summa",
+  "name": "Summa Social",
+  "defaultLocales": ["ca", "es"],
+  "defaultCaptionStyle": "summa-subtitle",
+  "logoPath": "public/brand/summa-logo-full-transparent-inter.png",
+  "palette": {
+    "primary": "#2563eb",
+    "secondary": "#0f172a",
+    "surface": "#f8fafc",
+    "surfaceDark": "#0f172a",
+    "text": "#0f172a",
+    "textOnDark": "#ffffff"
+  },
+  "introClips": {
+    "ca": "public/brand/video/demo-intro-ca.mp4",
+    "es": "public/brand/video/demo-intro-es.mp4",
+    "default": "public/brand/video/demo-intro.mp4"
+  },
+  "outroClips": {
+    "ca": "public/brand/video/demo-outro-ca.mp4",
+    "es": "public/brand/video/demo-outro-es.mp4",
+    "default": "public/brand/video/demo-outro.mp4"
+  },
+  "motionAssets": {
+    "doodles": [
+      "public/visuals/marca/doodle_captura.png",
+      "public/visuals/marca/doodle_error_evitat.png",
+      "public/visuals/marca/doodle_liquidac.png",
+      "public/visuals/marca/doodle_proces_temps.png",
+      "public/visuals/marca/doodle_quadrar.png",
+      "public/visuals/marca/doodle_resultat.png"
+    ]
+  },
+  "defaults": {
+    "landingPreset": "landing-hero",
+    "commercialPreset": "home-hero",
+    "socialSquarePreset": "social-square",
+    "socialVerticalPreset": "social-vertical"
+  }
+}

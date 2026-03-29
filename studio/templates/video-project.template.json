@@ -1,0 +1,29 @@
+{
+  "slug": "__SLUG__",
+  "brand": "__BRAND__",
+  "preset": "__PRESET__",
+  "title": "__TITLE__",
+  "status": "draft",
+  "objective": "",
+  "audience": "web visitors",
+  "locales": ["ca", "es"],
+  "recording": {
+    "script": "",
+    "sourceScenario": "",
+    "notes": []
+  },
+  "storyboard": {
+    "slug": "",
+    "captionsMode": "overlay"
+  },
+  "targets": [],
+  "brandAssets": {
+    "intro": true,
+    "outro": true,
+    "doodles": []
+  },
+  "publish": {
+    "publicDir": "",
+    "landingSlug": ""
+  }
+}

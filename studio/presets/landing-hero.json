@@ -1,0 +1,19 @@
+{
+  "id": "landing-hero",
+  "label": "Landing hero",
+  "surfaces": ["landing", "seo"],
+  "aspectRatio": "16:9",
+  "resolution": {
+    "width": 1920,
+    "height": 1080
+  },
+  "durationSeconds": {
+    "min": 20,
+    "max": 35
+  },
+  "includeIntro": false,
+  "includeOutro": false,
+  "embedCaptions": false,
+  "captionsMode": "overlay",
+  "goal": "Mostrar el valor principal d una funcionalitat en molt poc temps."
+}
