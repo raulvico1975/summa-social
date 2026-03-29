@@ -83,7 +83,7 @@ export function ExpenseAttachmentsDropzone({
   buildFileName,
 }: ExpenseAttachmentsDropzoneProps) {
   const storage = useStorage();
-  const { t } = useTranslations();
+  const { t, tr } = useTranslations();
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   const [isDragging, setIsDragging] = React.useState(false);
@@ -95,14 +95,14 @@ export function ExpenseAttachmentsDropzone({
 
   // Textos i18n
   const texts = {
-    dropzone: t.projectModule.dropzoneTitle,
-    or: t.projectModule.dropzoneOr,
-    selectFiles: t.projectModule.dropzoneSelect,
-    uploading: t.projectModule.dropzoneUploading,
-    maxSize: t.projectModule.dropzoneMaxSize,
-    fileTooLarge: t.projectModule.dropzoneFileTooLarge,
-    invalidType: t.projectModule.dropzoneInvalidType,
-    uploadError: t.projectModule.dropzoneUploadError,
+    dropzone: tr('projectModule.dropzoneTitle', t.projectModule.dropzoneTitle),
+    or: tr('projectModule.dropzoneOr', t.projectModule.dropzoneOr),
+    selectFiles: tr('projectModule.dropzoneSelect', t.projectModule.dropzoneSelect),
+    uploading: tr('projectModule.dropzoneUploading', t.projectModule.dropzoneUploading),
+    maxSize: tr('projectModule.dropzoneMaxSize', t.projectModule.dropzoneMaxSize),
+    fileTooLarge: tr('projectModule.dropzoneFileTooLarge', t.projectModule.dropzoneFileTooLarge),
+    invalidType: tr('projectModule.dropzoneInvalidType', t.projectModule.dropzoneInvalidType),
+    uploadError: tr('projectModule.dropzoneUploadError', t.projectModule.dropzoneUploadError),
   };
 
   // ---------------------------------------------------------------------------
@@ -434,7 +434,7 @@ export function ExpenseAttachmentsDropzone({
                           e.stopPropagation();
                           handleStartRename(attachment);
                         }}
-                        title="Renomenar"
+      title={tr('projectModule.dropzoneRename', 'Renomenar')}
                       >
                         <Pencil className="h-3 w-3" />
                       </Button>

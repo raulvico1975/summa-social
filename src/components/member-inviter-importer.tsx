@@ -57,7 +57,7 @@ export function MemberInviterImporter({ open, onOpenChange, onComplete }: Member
   const { toast } = useToast();
   const { firestore, user } = useFirebase();
   const { organization, organizationId, userRole } = useCurrentOrganization();
-  const { t } = useTranslations();
+  const { t, tr } = useTranslations();
 
   // Membres existents
   const membersCollection = useMemoFirebase(
@@ -131,8 +131,8 @@ export function MemberInviterImporter({ open, onOpenChange, onComplete }: Member
       if (rows.length === 0) {
         toast({
           variant: 'destructive',
-          title: 'Fitxer buit',
-          description: 'No s\'han trobat dades d\'invitacions al fitxer.',
+          title: tr('memberInviterImporter.emptyFileTitle', t.importers.common.emptyFile),
+          description: tr('memberInviterImporter.emptyFileDescription', "No s'han trobat dades d'invitacions al fitxer."),
         });
         setIsProcessing(false);
         return;
@@ -153,8 +153,8 @@ export function MemberInviterImporter({ open, onOpenChange, onComplete }: Member
       console.error('Error llegint fitxer:', error);
       toast({
         variant: 'destructive',
-        title: 'Error',
-        description: 'No s\'ha pogut llegir el fitxer Excel.',
+        title: t.common.error,
+        description: tr('memberInviterImporter.readError', "No s'ha pogut llegir el fitxer Excel."),
       });
     } finally {
       setIsProcessing(false);
@@ -192,8 +192,8 @@ export function MemberInviterImporter({ open, onOpenChange, onComplete }: Member
 
       setStep('done');
       toast({
-        title: 'Invitacions creades',
-        description: `S'han creat ${created} invitacions.`,
+        title: tr('memberInviterImporter.importCompleteTitle', 'Invitacions creades'),
+        description: tr('memberInviterImporter.importCompleteDescription', "S'han creat {count} invitacions.").replace('{count}', String(created)),
       });
 
       onComplete?.();
@@ -201,8 +201,8 @@ export function MemberInviterImporter({ open, onOpenChange, onComplete }: Member
       console.error('Error creant invitacions:', error);
       toast({
         variant: 'destructive',
-        title: 'Error',
-        description: 'S\'ha produït un error durant la creació d\'invitacions.',
+        title: t.common.error,
+        description: tr('memberInviterImporter.importError', "S'ha produït un error durant la creació d'invitacions."),
       });
       setStep('preview');
     } finally {
@@ -217,14 +217,14 @@ export function MemberInviterImporter({ open, onOpenChange, onComplete }: Member
         return (
           <Badge variant="default" className="bg-green-100 text-green-800 hover:bg-green-100">
             <CheckCircle2 className="h-3 w-3 mr-1" />
-            Nova invitació
+            {tr('memberInviterImporter.actionCreate', 'Nova invitació')}
           </Badge>
         );
       case 'skip':
         return (
           <Badge variant="secondary" className="bg-gray-100 text-gray-600">
             <Ban className="h-3 w-3 mr-1" />
-            Ometre
+            {tr('memberInviterImporter.actionSkip', 'Ometre')}
           </Badge>
         );
     }
@@ -265,10 +265,10 @@ export function MemberInviterImporter({ open, onOpenChange, onComplete }: Member
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <FileSpreadsheet className="h-5 w-5 text-blue-500" />
-            Importar invitacions massives
+            {tr('memberInviterImporter.title', 'Importar invitacions massives')}
           </DialogTitle>
           <DialogDescription>
-            Crea múltiples invitacions des d'un fitxer Excel (.xlsx)
+            {tr('memberInviterImporter.description', "Crea múltiples invitacions des d'un fitxer Excel (.xlsx)")}
           </DialogDescription>
         </DialogHeader>
 
@@ -279,9 +279,9 @@ export function MemberInviterImporter({ open, onOpenChange, onComplete }: Member
               <div className="mx-auto w-16 h-16 rounded-full bg-blue-50 flex items-center justify-center">
                 <Upload className="h-8 w-8 text-blue-500" />
               </div>
-              <h3 className="font-medium">Selecciona un fitxer Excel</h3>
+              <h3 className="font-medium">{tr('memberInviterImporter.uploadTitle', 'Selecciona un fitxer Excel')}</h3>
               <p className="text-sm text-muted-foreground max-w-md">
-                El fitxer ha de contenir columnes: Email (obligatori), Rol (admin/user/viewer), Nom (opcional)
+                {tr('memberInviterImporter.uploadDescription', 'El fitxer ha de contenir columnes: Email (obligatori), Rol (admin/user/viewer), Nom (opcional)')}
               </p>
             </div>
 
@@ -289,7 +289,7 @@ export function MemberInviterImporter({ open, onOpenChange, onComplete }: Member
             {parseErrors.length > 0 && (
               <Alert variant="destructive" className="max-w-md">
                 <AlertTriangle className="h-4 w-4" />
-                <AlertTitle>Errors al fitxer</AlertTitle>
+                <AlertTitle>{tr('memberInviterImporter.fileErrorsTitle', 'Errors al fitxer')}</AlertTitle>
                 <AlertDescription>
                   <ul className="mt-2 space-y-1 text-sm">
                     {parseErrors.map((e, i) => (
@@ -307,7 +307,7 @@ export function MemberInviterImporter({ open, onOpenChange, onComplete }: Member
                 className="gap-2"
               >
                 <Download className="h-4 w-4" />
-                Descarregar plantilla
+                {t.importers.common.downloadTemplate}
               </Button>
 
               <Button
@@ -316,7 +316,7 @@ export function MemberInviterImporter({ open, onOpenChange, onComplete }: Member
                 className="gap-2"
               >
                 <FileSpreadsheet className="h-4 w-4" />
-                {isProcessing ? 'Processant...' : 'Seleccionar fitxer'}
+                {isProcessing ? t.importers.common.importing : tr('memberInviterImporter.selectFile', 'Seleccionar fitxer')}
               </Button>
             </div>
 
@@ -332,8 +332,7 @@ export function MemberInviterImporter({ open, onOpenChange, onComplete }: Member
             <Alert className="max-w-md">
               <AlertCircle className="h-4 w-4" />
               <AlertDescription className="text-xs">
-                Les invitacions es deduplicaran automàticament.
-                Es saltaran emails que ja siguin membres o que ja tinguin invitació pendent.
+                {tr('memberInviterImporter.mergingHelp', 'Les invitacions es deduplicaran automàticament. Es saltaran emails que ja siguin membres o que ja tinguin invitació pendent.')}
               </AlertDescription>
             </Alert>
           </div>
@@ -346,11 +345,11 @@ export function MemberInviterImporter({ open, onOpenChange, onComplete }: Member
             <div className="flex gap-4 text-sm">
               <div className="flex items-center gap-2">
                 <div className="w-3 h-3 rounded-full bg-green-500" />
-                <span>{importResult.summary.toCreate} invitacions noves</span>
+                <span>{tr('memberInviterImporter.summaryNew', '{count} invitacions noves').replace('{count}', String(importResult.summary.toCreate))}</span>
               </div>
               <div className="flex items-center gap-2">
                 <div className="w-3 h-3 rounded-full bg-gray-400" />
-                <span>{importResult.summary.toSkip} omesos</span>
+                <span>{tr('memberInviterImporter.summarySkipped', '{count} omesos').replace('{count}', String(importResult.summary.toSkip))}</span>
               </div>
             </div>
 
@@ -361,7 +360,7 @@ export function MemberInviterImporter({ open, onOpenChange, onComplete }: Member
                 <AlertDescription>
                   <details className="text-xs">
                     <summary className="cursor-pointer">
-                      {parseWarnings.length + importResult.warnings.length} avís(os)
+                      {tr('memberInviterImporter.warningsCount', '{count} avís(os)').replace('{count}', String(parseWarnings.length + importResult.warnings.length))}
                     </summary>
                     <ul className="mt-2 space-y-1">
                       {[...parseWarnings, ...importResult.warnings].map((w, i) => (
@@ -378,11 +377,11 @@ export function MemberInviterImporter({ open, onOpenChange, onComplete }: Member
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-32">Acció</TableHead>
+                    <TableHead className="w-32">{tr('memberInviterImporter.table.action', 'Acció')}</TableHead>
                     <TableHead>Email</TableHead>
-                    <TableHead>Rol</TableHead>
-                    <TableHead>Nom</TableHead>
-                    <TableHead className="w-48">Detalls</TableHead>
+                    <TableHead>{tr('memberInviterImporter.table.role', 'Rol')}</TableHead>
+                    <TableHead>{t.importers.common.name}</TableHead>
+                    <TableHead className="w-48">{tr('memberInviterImporter.table.details', 'Detalls')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -421,8 +420,8 @@ export function MemberInviterImporter({ open, onOpenChange, onComplete }: Member
               <div className="mx-auto w-16 h-16 rounded-full bg-blue-50 flex items-center justify-center">
                 <FileSpreadsheet className="h-8 w-8 text-blue-500" />
               </div>
-              <h3 className="font-medium">Creant invitacions...</h3>
-              <p className="text-sm text-muted-foreground">Això pot trigar uns segons</p>
+              <h3 className="font-medium">{tr('memberInviterImporter.importingTitle', 'Creant invitacions...')}</h3>
+              <p className="text-sm text-muted-foreground">{tr('memberInviterImporter.importingDescription', 'Això pot trigar uns segons')}</p>
             </div>
           </div>
         )}
@@ -434,10 +433,9 @@ export function MemberInviterImporter({ open, onOpenChange, onComplete }: Member
               <div className="mx-auto w-16 h-16 rounded-full bg-green-50 flex items-center justify-center">
                 <CheckCircle2 className="h-8 w-8 text-green-500" />
               </div>
-              <h3 className="font-medium">Invitacions creades</h3>
+              <h3 className="font-medium">{tr('memberInviterImporter.doneTitle', 'Invitacions creades')}</h3>
               <p className="text-sm text-muted-foreground">
-                Les persones invitades rebran un enllaç per registrar-se.
-                Recorda enviar-los l'enllaç corresponent.
+                {tr('memberInviterImporter.doneDescription', "Les persones invitades rebran un enllaç per registrar-se. Recorda enviar-los l'enllaç corresponent.")}
               </p>
             </div>
           </div>
@@ -447,27 +445,27 @@ export function MemberInviterImporter({ open, onOpenChange, onComplete }: Member
         <DialogFooter className="flex-shrink-0 pt-4 border-t">
           {step === 'upload' && (
             <Button variant="outline" onClick={() => onOpenChange(false)}>
-              Cancel·lar
+              {t.importers.common.close}
             </Button>
           )}
 
           {step === 'preview' && (
             <>
               <Button variant="outline" onClick={() => setStep('upload')}>
-                Tornar
+                {t.importers.common.back}
               </Button>
               <Button
                 onClick={handleApplyImport}
                 disabled={isProcessing || importResult?.summary.toCreate === 0}
               >
-                Crear {importResult?.summary.toCreate} invitacions
+                {tr('memberInviterImporter.createButton', 'Crear {count} invitacions').replace('{count}', String(importResult?.summary.toCreate ?? 0))}
               </Button>
             </>
           )}
 
           {step === 'done' && (
             <Button onClick={() => onOpenChange(false)}>
-              Tancar
+              {t.importers.common.close}
             </Button>
           )}
         </DialogFooter>

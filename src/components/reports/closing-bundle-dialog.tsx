@@ -75,7 +75,7 @@ export function ClosingBundleDialog({ open, onOpenChange }: ClosingBundleDialogP
       toast({
         variant: 'destructive',
         title: t.common.error,
-        description: 'No tens permisos per exportar informes.',
+        description: t.reports.closingBundle.errors.unauthorized,
       });
       return;
     }

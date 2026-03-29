@@ -565,7 +565,7 @@ export function BudgetImportWizard({
             onValueChange={(v) => setMapping(prev => ({ ...prev, nameColumn: v || null }))}
           >
             <SelectTrigger>
-              <SelectValue placeholder="Selecciona..." />
+              <SelectValue placeholder={tr('projectModule.import.selectPlaceholder', 'Selecciona...')} />
             </SelectTrigger>
             <SelectContent>
               {headers.map(h => (
@@ -584,7 +584,7 @@ export function BudgetImportWizard({
             onValueChange={(v) => setMapping(prev => ({ ...prev, amountColumn: v || null }))}
           >
             <SelectTrigger>
-              <SelectValue placeholder="Selecciona..." />
+              <SelectValue placeholder={tr('projectModule.import.selectPlaceholder', 'Selecciona...')} />
             </SelectTrigger>
             <SelectContent>
               {headers.map(h => {
@@ -610,7 +610,7 @@ export function BudgetImportWizard({
             onValueChange={(v) => setMapping(prev => ({ ...prev, codeColumn: v === '__none__' ? null : v, extractCodeFromName: v === '__none__' ? prev.extractCodeFromName : false }))}
           >
             <SelectTrigger>
-              <SelectValue placeholder="Cap" />
+              <SelectValue placeholder={tr('projectModule.import.nonePlaceholder', 'Cap')} />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="__none__">{tr('projectModule.import.none', 'Cap')}</SelectItem>
@@ -724,7 +724,7 @@ export function BudgetImportWizard({
             {includedCount} {tr('projectModule.import.linesSelected', 'partides seleccionades')}
           </p>
           <p className="font-medium">
-            Total: {formatAmount(includedTotal)}
+            {tr('projectModule.import.totalLabel', 'Total: {amount}').replace('{amount}', formatAmount(includedTotal))}
           </p>
         </div>
 
@@ -737,7 +737,7 @@ export function BudgetImportWizard({
                   <li key={i}>{w}</li>
                 ))}
                 {warnings.length > 5 && (
-                  <li>...i {warnings.length - 5} més</li>
+                  <li>{tr('projectModule.import.moreWarnings', '...i {count} més').replace('{count}', String(warnings.length - 5))}</li>
                 )}
               </ul>
             </AlertDescription>

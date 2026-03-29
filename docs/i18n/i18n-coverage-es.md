@@ -1,13 +1,13 @@
 # Informe de cobertura i18n: ES vs CA
 
-Generat: 2026-01-13
+Generat: 2026-03-29
 
 ## Resum
 
 | Mètrica | Valor |
 |---------|-------|
-| Claus a CA (base) | 3456 |
-| Claus a ES | 3456 |
+| Claus a CA (base) | 4169 |
+| Claus a ES | 4169 |
 | Claus missing a ES | 0 |
 | Claus extra a ES | 0 |
 | Claus buides a ES | 0 |

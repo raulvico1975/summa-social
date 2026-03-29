@@ -139,7 +139,7 @@ function FxTransferForm({
   isSaving: boolean;
   initialData?: FxTransfer | null;
 }) {
-  const { t, tr } = useTranslations();
+  const { tr } = useTranslations();
   const [date, setDate] = React.useState('');
   const [eurSent, setEurSent] = React.useState('');
   const [localCurrency, setLocalCurrency] = React.useState('');
@@ -178,21 +178,21 @@ function FxTransferForm({
     const newErrors: Record<string, string> = {};
 
     if (!date.trim()) {
-      newErrors.date = t.projectModule?.fxTransfersDateRequired ?? 'La data és obligatòria';
+      newErrors.date = tr('projectModule.budget.fxTransfersDateRequired');
     }
 
     const eur = parseFloat(eurSent.replace(',', '.'));
     if (isNaN(eur) || eur <= 0) {
-      newErrors.eurSent = t.projectModule?.fxTransfersAmountPositive ?? "L'import ha de ser positiu";
+      newErrors.eurSent = tr('projectModule.budget.fxTransfersAmountPositive');
     }
 
     const local = parseFloat(localReceived.replace(',', '.'));
     if (isNaN(local) || local <= 0) {
-      newErrors.localReceived = t.projectModule?.fxTransfersAmountPositive ?? "L'import ha de ser positiu";
+      newErrors.localReceived = tr('projectModule.budget.fxTransfersAmountPositive');
     }
 
     if (!localCurrency.trim()) {
-      newErrors.localCurrency = t.projectModule?.fxTransfersCurrencyRequired ?? 'La moneda és obligatòria';
+      newErrors.localCurrency = tr('projectModule.budget.fxTransfersCurrencyRequired');
     }
 
     setErrors(newErrors);
@@ -219,17 +219,17 @@ function FxTransferForm({
         <DialogHeader>
           <DialogTitle>
             {initialData
-              ? (t.projectModule?.fxTransfersEdit ?? 'Editar transferència')
-              : (t.projectModule?.fxTransfersAdd ?? 'Afegir transferència')}
+              ? tr('projectModule.budget.fxTransfersEdit')
+              : tr('projectModule.budget.fxTransfersAdd')}
           </DialogTitle>
           <DialogDescription>
-            {t.projectModule?.fxTransfersHelp ?? 'Registra els canvis de moneda reals per calcular el TC ponderat del projecte.'}
+            {tr('projectModule.budget.fxTransfersHelp')}
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="fxDate">{t.projectModule?.fxTransfersDate ?? 'Data'}</Label>
+            <Label htmlFor="fxDate">{tr('projectModule.budget.fxTransfersDate')}</Label>
             <Input
               id="fxDate"
               type="date"
@@ -242,7 +242,7 @@ function FxTransferForm({
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="fxEurSent">{t.projectModule?.fxTransfersEurSent ?? 'EUR enviats'}</Label>
+              <Label htmlFor="fxEurSent">{tr('projectModule.budget.fxTransfersEurSent')}</Label>
               <Input
                 id="fxEurSent"
                 type="text"
@@ -256,7 +256,7 @@ function FxTransferForm({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="fxCurrency">{t.projectModule?.currency ?? 'Moneda'}</Label>
+              <Label htmlFor="fxCurrency">{tr('projectModule.currency')}</Label>
               <Input
                 id="fxCurrency"
                 type="text"
@@ -271,7 +271,7 @@ function FxTransferForm({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="fxLocalReceived">{t.projectModule?.fxTransfersLocalReceived ?? 'Import local rebut'}</Label>
+            <Label htmlFor="fxLocalReceived">{tr('projectModule.budget.fxTransfersLocalReceived')}</Label>
             <Input
               id="fxLocalReceived"
               type="text"
@@ -287,31 +287,31 @@ function FxTransferForm({
           {/* Preview TC implícit */}
           {implicitRate !== null && (
             <div className="rounded-md bg-muted/50 px-3 py-2 text-sm">
-              <span className="text-muted-foreground">{t.projectModule?.fxTransfersImplicitRate ?? 'TC implícit'}:</span>{' '}
+              <span className="text-muted-foreground">{tr('projectModule.budget.fxTransfersImplicitRate')}:</span>{' '}
               <span className="font-mono font-medium">{implicitRate.toFixed(6)}</span>{' '}
-              <span className="text-muted-foreground">{t.projectModule?.fxTransfersEurPerLocal ?? 'EUR/local'}</span>
+              <span className="text-muted-foreground">{tr('projectModule.budget.fxTransfersEurPerLocal')}</span>
             </div>
           )}
 
           <div className="space-y-2">
-            <Label htmlFor="fxBankRef">{t.projectModule?.fxTransfersBankRef ?? 'Ref. bancària'}</Label>
+            <Label htmlFor="fxBankRef">{tr('projectModule.budget.fxTransfersBankRef')}</Label>
             <Input
               id="fxBankRef"
               type="text"
               value={bankTxRef}
               onChange={(e) => setBankTxRef(e.target.value)}
-              placeholder="Opcional"
+              placeholder={tr('projectModule.budget.optional')}
               className="h-9"
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="fxNotes">{t.projectModule?.fxTransfersNotes ?? 'Notes'}</Label>
+            <Label htmlFor="fxNotes">{tr('projectModule.budget.fxTransfersNotes')}</Label>
             <Textarea
               id="fxNotes"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              placeholder="Opcional"
+              placeholder={tr('projectModule.budget.optional')}
               rows={2}
               className="text-sm"
             />
@@ -319,10 +319,10 @@ function FxTransferForm({
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSaving}>
-              {t.common?.cancel ?? 'Cancel·lar'}
+              {tr('common.cancel')}
             </Button>
             <Button type="submit" disabled={isSaving}>
-              {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : (t.common?.save ?? 'Desar')}
+              {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : tr('common.save')}
             </Button>
           </DialogFooter>
         </form>
@@ -345,7 +345,7 @@ function BudgetLineForm({
   isSaving: boolean;
   initialData?: BudgetLine | null;
 }) {
-  const { t, tr } = useTranslations();
+  const { tr } = useTranslations();
   const [name, setName] = React.useState('');
   const [code, setCode] = React.useState('');
   const [budgetedAmountEUR, setBudgetedAmountEUR] = React.useState('');
@@ -373,12 +373,12 @@ function BudgetLineForm({
     const newErrors: Record<string, string> = {};
 
     if (!name.trim()) {
-      newErrors.name = t.projectModule?.nameRequired ?? 'El nom és obligatori';
+      newErrors.name = tr('projectModule.nameRequired');
     }
 
     const amount = parseFloat(budgetedAmountEUR.replace(',', '.'));
     if (isNaN(amount) || amount <= 0) {
-      newErrors.budgetedAmountEUR = t.projectModule?.amountPositive ?? 'L\'import ha de ser positiu';
+      newErrors.budgetedAmountEUR = tr('projectModule.amountPositive');
     }
 
     setErrors(newErrors);
@@ -402,38 +402,38 @@ function BudgetLineForm({
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>
-            {initialData ? (t.projectModule?.editBudgetLine ?? 'Editar partida') : (t.projectModule?.addBudgetLine ?? 'Afegir partida')}
+            {initialData ? tr('projectModule.editBudgetLine') : tr('projectModule.addBudgetLine')}
           </DialogTitle>
           <DialogDescription>
-            {t.projectModule?.budgetLineDescription ?? 'Defineix una partida del pressupost'}
+            {tr('projectModule.budgetLineDescription')}
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="name">{t.projectModule?.lineName ?? 'Nom de la partida'} *</Label>
+            <Label htmlFor="name">{tr('projectModule.lineName')} *</Label>
             <Input
               id="name"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="p.ex. Personal, Materials, Viatges..."
+              placeholder={tr('projectModule.budget.lineNameExample')}
               className={errors.name ? 'border-destructive' : ''}
             />
             {errors.name && <p className="text-sm text-destructive">{errors.name}</p>}
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="code">{t.projectModule?.lineCode ?? 'Codi'}</Label>
+            <Label htmlFor="code">{tr('projectModule.lineCode')}</Label>
             <Input
               id="code"
               value={code}
               onChange={(e) => setCode(e.target.value)}
-              placeholder="p.ex. A1, B2..."
+              placeholder={tr('projectModule.budget.lineCodeExample')}
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="budgetedAmountEUR">{t.projectModule?.budgetedAmount ?? 'Import pressupostat (€)'} *</Label>
+            <Label htmlFor="budgetedAmountEUR">{tr('projectModule.budgetedAmount')} *</Label>
             <Input
               id="budgetedAmountEUR"
               type="text"
@@ -447,22 +447,22 @@ function BudgetLineForm({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="order">{t.projectModule?.lineOrder ?? 'Ordre'}</Label>
+            <Label htmlFor="order">{tr('projectModule.lineOrder')}</Label>
             <Input
               id="order"
               type="number"
               value={order}
               onChange={(e) => setOrder(e.target.value)}
-              placeholder="1, 2, 3..."
+              placeholder={tr('projectModule.budget.orderExample')}
             />
           </div>
 
           <DialogFooter className="pt-4">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSaving}>
-              {t.common?.cancel ?? 'Cancel·lar'}
+              {tr('common.cancel')}
             </Button>
             <Button type="submit" disabled={isSaving}>
-              {isSaving ? (t.common?.saving ?? 'Desant...') : (t.common?.save ?? 'Desar')}
+              {isSaving ? tr('common.saving') : tr('common.save')}
             </Button>
           </DialogFooter>
         </form>
@@ -616,25 +616,22 @@ export default function ProjectBudgetPage() {
     try {
       const result = await reapplyFx(projectId, fxTransfers, project);
       if (result.updated > 0) {
-        const fxReapplyDoneText = t.projectModule?.fxReapplyDoneText;
         toast({
-          title: t.projectModule?.fxReapplyDoneTitle ?? 'Assignacions recalculades',
-          description: typeof fxReapplyDoneText === 'function'
-            ? fxReapplyDoneText(result.updated)
-            : `S'han actualitzat ${result.updated} imputacions.`,
+          title: tr('projectModule.budget.fxReapplyDoneTitle'),
+          description: tr('projectModule.budget.fxReapplyDoneText').replace('{count}', String(result.updated)),
         });
         await refreshExpenseLinks();
       } else {
         toast({
-          title: t.projectModule?.fxReapplyNothingTitle ?? 'No cal recalcular',
-          description: t.projectModule?.fxReapplyNothingText ?? "No s'han trobat imputacions que necessitin actualització.",
+          title: tr('projectModule.budget.fxReapplyNothingTitle'),
+          description: tr('projectModule.budget.fxReapplyNothingText'),
         });
       }
     } catch (err) {
       toast({
         variant: 'destructive',
-        title: tr('projectModule.budget.error', 'Error'),
-        description: err instanceof Error ? err.message : tr('projectModule.budget.errorRecalculating', 'Error recalculant'),
+        title: tr('projectModule.budget.error'),
+        description: err instanceof Error ? err.message : tr('projectModule.budget.errorRecalculating'),
       });
     }
   }, [project, projectId, fxTransfers, reapplyFx, toast, t, refreshExpenseLinks]);
@@ -691,8 +688,8 @@ export default function ProjectBudgetPage() {
     try {
       await save(projectId, data, editingLine?.id);
       toast({
-        title: editingLine ? tr('projectModule.budget.lineUpdated', 'Partida actualitzada') : tr('projectModule.budget.lineCreated', 'Partida creada'),
-        description: tr('projectModule.budget.lineSavedDesc', `La partida "${data.name}" s'ha desat correctament.`),
+        title: editingLine ? tr('projectModule.budget.lineUpdated') : tr('projectModule.budget.lineCreated'),
+        description: tr('projectModule.budget.lineSavedDescNamed').replace('{name}', data.name),
       });
       setFormOpen(false);
       setEditingLine(null);
@@ -700,8 +697,8 @@ export default function ProjectBudgetPage() {
     } catch (err) {
       toast({
         variant: 'destructive',
-        title: tr('projectModule.budget.error', 'Error'),
-        description: err instanceof Error ? err.message : tr('projectModule.budget.errorSavingLine', 'Error desant partida'),
+        title: tr('projectModule.budget.error'),
+        description: err instanceof Error ? err.message : tr('projectModule.budget.errorSavingLine'),
       });
     }
   };
@@ -716,8 +713,8 @@ export default function ProjectBudgetPage() {
     if (hasLinkedExpenses) {
       toast({
         variant: 'destructive',
-        title: tr('projectModule.budget.error', 'Error'),
-        description: tr('projectModule.budget.cannotDeleteLineHasExpenses', 'No es pot eliminar aquesta partida perquè té despeses assignades. Desassigna-les primer.'),
+        title: tr('projectModule.budget.error'),
+        description: tr('projectModule.budget.cannotDeleteLineHasExpenses'),
       });
       return;
     }
@@ -725,16 +722,16 @@ export default function ProjectBudgetPage() {
     try {
       await remove(projectId, deleteConfirm.id);
       toast({
-        title: tr('projectModule.budget.lineDeleted', 'Partida eliminada'),
-        description: tr('projectModule.budget.lineDeletedDesc', `La partida "${deleteConfirm.name}" s'ha eliminat.`),
+        title: tr('projectModule.budget.lineDeleted'),
+        description: tr('projectModule.budget.lineDeletedDescNamed').replace('{name}', deleteConfirm.name),
       });
       setDeleteConfirm(null);
       await refreshLines();
     } catch (err) {
       toast({
         variant: 'destructive',
-        title: tr('projectModule.budget.error', 'Error'),
-        description: err instanceof Error ? err.message : tr('projectModule.budget.errorDeletingLine', 'Error eliminant partida'),
+        title: tr('projectModule.budget.error'),
+        description: err instanceof Error ? err.message : tr('projectModule.budget.errorDeletingLine'),
       });
     }
   };
@@ -778,19 +775,19 @@ export default function ProjectBudgetPage() {
       const expenseMap = new Map(allExpenses.map((e) => [e.expense.txId, e.expense]));
 
       const columnLabels: FundingColumnLabels = {
-        order: tr('projectModule.export.columns.order', 'Núm.'),
-        date: tr('projectModule.export.columns.date', 'Data'),
-        concept: tr('projectModule.export.columns.concept', 'Concepte / Descripció'),
-        supplier: tr('projectModule.export.columns.supplier', 'Proveïdor'),
-        invoiceNumber: tr('projectModule.export.columns.invoiceNumber', 'Núm. factura'),
-        budgetLine: tr('projectModule.export.columns.budgetLine', 'Partida'),
-        fxRateApplied: tr('projectModule.export.columns.fxRateApplied', 'Tipus de canvi aplicat'),
-        totalOriginalAmount: tr('projectModule.export.columns.totalOriginalAmount', 'Import total (moneda despesa)'),
-        currency: tr('projectModule.export.columns.currency', 'Moneda'),
-        totalEurAmount: tr('projectModule.export.columns.totalEurAmount', 'Import total (EUR)'),
-        assignedPct: tr('projectModule.export.columns.assignedPct', '% imputat'),
-        assignedOriginalAmount: tr('projectModule.export.columns.assignedOriginalAmount', 'Import imputat (moneda local)'),
-        assignedEurAmount: tr('projectModule.export.columns.assignedEurAmount', 'Import imputat (EUR)'),
+        order: tr('projectModule.export.columns.order'),
+        date: tr('projectModule.export.columns.date'),
+        concept: tr('projectModule.export.columns.concept'),
+        supplier: tr('projectModule.export.columns.supplier'),
+        invoiceNumber: tr('projectModule.export.columns.invoiceNumber'),
+        budgetLine: tr('projectModule.export.columns.budgetLine'),
+        fxRateApplied: tr('projectModule.export.columns.fxRateApplied'),
+        totalOriginalAmount: tr('projectModule.export.columns.totalOriginalAmount'),
+        currency: tr('projectModule.export.columns.currency'),
+        totalEurAmount: tr('projectModule.export.columns.totalEurAmount'),
+        assignedPct: tr('projectModule.export.columns.assignedPct'),
+        assignedOriginalAmount: tr('projectModule.export.columns.assignedOriginalAmount'),
+        assignedEurAmount: tr('projectModule.export.columns.assignedEurAmount'),
       };
 
       const { blob, filename } = buildProjectJustificationFundingXlsx({
@@ -816,15 +813,15 @@ export default function ProjectBudgetPage() {
       URL.revokeObjectURL(url);
 
       toast({
-        title: tr('projectModule.budget.excelGenerated', 'Excel generat'),
-        description: tr('projectModule.budget.excelDownloaded', `S'ha descarregat el fitxer ${filename}`),
+        title: tr('projectModule.budget.excelGenerated'),
+        description: tr('projectModule.budget.excelDownloadedNamed').replace('{filename}', filename),
       });
     } catch (err) {
       console.error('Error exporting funding:', err);
       toast({
         variant: 'destructive',
-        title: 'Error',
-        description: err instanceof Error ? err.message : tr('projectModule.budget.errorGeneratingExcel', 'Error generant Excel'),
+        title: tr('projectModule.budget.error'),
+        description: err instanceof Error ? err.message : tr('projectModule.budget.errorGeneratingExcel'),
       });
     } finally {
       setIsExportingFunding(false);
@@ -854,7 +851,7 @@ export default function ProjectBudgetPage() {
     try {
       // Obtenir nom de l'organització
       const orgDoc = await getDoc(doc(firestore, 'organizations', organizationId));
-      const orgName = orgDoc.data()?.name ?? 'Organitzacio';
+      const orgName = orgDoc.data()?.name ?? tr('projectModule.budget.orgFallbackName');
 
       // Extreure les despeses del feed (que ja té tota la info)
       const expenses = allExpenses.map((e) => e.expense);
@@ -884,16 +881,21 @@ export default function ProjectBudgetPage() {
       });
 
       toast({
-        title: t.projectModule?.zipGenerated ?? 'ZIP generat',
-        description: `${result.okCount} comprovants descarregats. ${result.missingCount > 0 ? `${result.missingCount} sense document.` : ''}`,
+        title: tr('projectModule.zipGenerated'),
+        description: [
+          tr('projectModule.budget.zipSummary').replace('{count}', String(result.okCount)),
+          result.missingCount > 0
+            ? tr('projectModule.budget.zipMissingDocuments').replace('{count}', String(result.missingCount))
+            : '',
+        ].filter(Boolean).join(' '),
       });
     } catch (err) {
       console.error('Error exporting ZIP:', err);
       trackUX('budget.downloadZip.error', { message: err instanceof Error ? err.message : 'Error desconegut' });
       toast({
         variant: 'destructive',
-        title: 'Error',
-        description: err instanceof Error ? err.message : tr('projectModule.budget.errorGeneratingZip', 'Error generant ZIP'),
+        title: tr('projectModule.budget.error'),
+        description: err instanceof Error ? err.message : tr('projectModule.budget.errorGeneratingZip'),
       });
     } finally {
       setIsExportingZip(false);
@@ -914,10 +916,10 @@ export default function ProjectBudgetPage() {
     return (
       <div className="flex flex-col items-center justify-center py-12 gap-4">
         <AlertCircle className="h-12 w-12 text-destructive" />
-        <p className="text-destructive font-medium">{tr('projectModule.budget.errorLoading', 'Error carregant projecte')}</p>
-        <p className="text-muted-foreground text-sm">{projectError?.message ?? tr('projectModule.budget.notFound', 'Projecte no trobat')}</p>
+        <p className="text-destructive font-medium">{tr('projectModule.budget.errorLoading')}</p>
+        <p className="text-muted-foreground text-sm">{projectError?.message ?? tr('projectModule.budget.notFound')}</p>
         <Link href={buildUrl('/dashboard/project-module/projects')}>
-          <Button variant="outline">{tr('projectModule.budget.backToProjects', 'Tornar a projectes')}</Button>
+          <Button variant="outline">{tr('projectModule.budget.backToProjects')}</Button>
         </Link>
       </div>
     );
@@ -931,12 +933,12 @@ export default function ProjectBudgetPage() {
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:gap-4">
         <div className="flex items-center gap-3 flex-1 min-w-0">
           <Link href={buildUrl('/dashboard/project-module/projects')}>
-            <Button variant="ghost" size="icon" title={t.projectModule?.backToProjects ?? 'Tornar a projectes'}>
+            <Button variant="ghost" size="icon" title={tr('projectModule.backToProjects')}>
               <ArrowLeft className="h-4 w-4" />
             </Button>
           </Link>
           <div className="min-w-0">
-            <h1 className="text-xl md:text-2xl font-bold truncate">{tr('projectModule.budget.title', 'Gestió Econòmica')}</h1>
+            <h1 className="text-xl md:text-2xl font-bold truncate">{tr('projectModule.budget.title')}</h1>
             <p className="text-muted-foreground text-sm truncate">
               {project.name} {project.code && `(${project.code})`}
             </p>
@@ -954,20 +956,20 @@ export default function ProjectBudgetPage() {
               }}
             >
               <Compass className="h-4 w-4 mr-2" />
-              {tr('projectModule.budget.startJustification', 'Iniciar justificació')}
-              <Badge variant="secondary" className="ml-2 text-[10px] px-1.5 py-0">Beta</Badge>
+              {tr('projectModule.budget.startJustification')}
+              <Badge variant="secondary" className="ml-2 text-[10px] px-1.5 py-0">{tr('projectModule.budget.betaBadge')}</Badge>
             </Button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" className="w-full">
                   <MoreVertical className="h-4 w-4 mr-2" />
-                  {tr('projectModule.budget.moreActions', 'Més accions')}
+                  {tr('projectModule.budget.moreActions')}
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
                 <DropdownMenuItem onClick={handleViewExpenses}>
                   <Eye className="mr-2 h-4 w-4" />
-                  {t.projectModule?.viewExpensesTooltip ?? 'Veure despeses'}
+                  {tr('projectModule.budget.viewExpensesAction')}
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={handleOpenExportDialog}
@@ -978,7 +980,7 @@ export default function ProjectBudgetPage() {
                   ) : (
                     <Download className="mr-2 h-4 w-4" />
                   )}
-                  {t.projectModule?.exportExcel ?? 'Exportar Excel'}
+                  {tr('projectModule.exportExcel')}
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={handleExportZip}
@@ -989,11 +991,11 @@ export default function ProjectBudgetPage() {
                   ) : (
                     <FileArchive className="mr-2 h-4 w-4" />
                   )}
-                  {t.projectModule?.downloadAttachments ?? 'Baixar comprovants'}
+                  {tr('projectModule.downloadAttachments')}
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setImportWizardOpen(true)}>
                   <Upload className="mr-2 h-4 w-4" />
-                  {t.projectModule?.importBudget ?? 'Importar pressupost'}
+                  {tr('projectModule.importBudget')}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -1007,14 +1009,14 @@ export default function ProjectBudgetPage() {
               }}
             >
               <Compass className="h-4 w-4 mr-2" />
-              {tr('projectModule.budget.startJustification', 'Iniciar justificació')}
-              <Badge variant="secondary" className="ml-2 text-[10px] px-1.5 py-0">Beta</Badge>
+              {tr('projectModule.budget.startJustification')}
+              <Badge variant="secondary" className="ml-2 text-[10px] px-1.5 py-0">{tr('projectModule.budget.betaBadge')}</Badge>
             </Button>
             <Button
               variant="outline"
               size="icon"
               onClick={handleViewExpenses}
-              title={t.projectModule?.viewExpensesTooltip ?? 'Veure despeses del projecte'}
+              title={tr('projectModule.viewExpensesTooltip')}
             >
               <Eye className="h-4 w-4" />
             </Button>
@@ -1023,7 +1025,7 @@ export default function ProjectBudgetPage() {
               size="icon"
               onClick={handleOpenExportDialog}
               disabled={isExportingFunding || expensesLoading || projectAssignmentsCount === 0}
-              title={t.projectModule?.exportExcel ?? 'Exportar justificació (Excel)'}
+              title={tr('projectModule.exportExcel')}
             >
               {isExportingFunding ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -1036,7 +1038,7 @@ export default function ProjectBudgetPage() {
               size="icon"
               onClick={handleExportZip}
               disabled={isExportingZip || expensesLoading || projectAssignmentsCount === 0}
-              title={t.projectModule?.downloadAttachments ?? 'Baixar comprovants (ZIP)'}
+              title={tr('projectModule.downloadAttachments')}
             >
               {isExportingZip ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -1048,7 +1050,7 @@ export default function ProjectBudgetPage() {
               variant="outline"
               size="icon"
               onClick={() => setImportWizardOpen(true)}
-              title={t.projectModule?.importBudget ?? 'Importar pressupost (Excel)'}
+              title={tr('projectModule.importBudget')}
             >
               <Upload className="h-4 w-4" />
             </Button>
@@ -1072,7 +1074,7 @@ export default function ProjectBudgetPage() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <Card>
             <CardHeader className="pb-2">
-              <CardDescription>{tr('projectModule.budget.globalBudget', 'Pressupost global')}</CardDescription>
+              <CardDescription>{tr('projectModule.budget.globalBudget')}</CardDescription>
             </CardHeader>
             <CardContent>
               <p className="text-2xl font-bold">
@@ -1082,7 +1084,7 @@ export default function ProjectBudgetPage() {
           </Card>
           <Card>
             <CardHeader className="pb-2">
-              <CardDescription>{t.projectModule?.executed ?? 'Executat'}</CardDescription>
+              <CardDescription>{tr('projectModule.executed')}</CardDescription>
             </CardHeader>
             <CardContent>
               <p className="text-2xl font-bold">{formatAmount(totals.totalProjectExecution)}</p>
@@ -1099,8 +1101,8 @@ export default function ProjectBudgetPage() {
             <CardHeader className="pb-2">
               <CardDescription>
                 {totals.globalBudget !== null && totals.totalProjectExecution > totals.globalBudget
-                  ? (t.projectModule?.overspend ?? 'Sobreexecució')
-                  : (t.projectModule?.pending ?? 'Pendent')}
+                  ? tr('projectModule.overspend')
+                  : tr('projectModule.pending')}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -1110,7 +1112,7 @@ export default function ProjectBudgetPage() {
                     {formatAmount(Math.abs(totals.globalBudget - totals.totalProjectExecution))}
                   </p>
                   <p className="text-xs text-muted-foreground mt-1">
-                    {formatPercent((totals.totalProjectExecution / totals.globalBudget) * 100)} {tr('projectModule.budget.executedLabel', 'executat')}
+                    {formatPercent((totals.totalProjectExecution / totals.globalBudget) * 100)} {tr('projectModule.budget.executedLabel')}
                   </p>
                 </>
               ) : (
@@ -1124,18 +1126,18 @@ export default function ProjectBudgetPage() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <Card>
             <CardHeader className="pb-2">
-              <CardDescription>{t.projectModule?.budgetTotalLabel ?? 'Pressupost total del projecte'}</CardDescription>
+              <CardDescription>{tr('projectModule.budgetTotalLabel')}</CardDescription>
             </CardHeader>
             <CardContent>
               <p className="text-2xl font-bold">{formatAmount(totals.budgetedFromLines)}</p>
               <p className="text-xs text-muted-foreground mt-1">
-                {tr('projectModule.budget.calculatedFromLines', 'Calculat a partir de les partides')}
+                {tr('projectModule.budget.calculatedFromLines')}
               </p>
             </CardContent>
           </Card>
           <Card>
             <CardHeader className="pb-2">
-              <CardDescription>{t.projectModule?.executed ?? 'Executat'}</CardDescription>
+              <CardDescription>{tr('projectModule.executed')}</CardDescription>
             </CardHeader>
             <CardContent>
               <p className="text-2xl font-bold">{formatAmount(totals.executedByLines)}</p>
@@ -1152,8 +1154,8 @@ export default function ProjectBudgetPage() {
             <CardHeader className="pb-2">
               <CardDescription>
                 {totals.executedByLines > totals.budgetedFromLines
-                  ? (t.projectModule?.overspend ?? 'Sobreexecució')
-                  : (t.projectModule?.pending ?? 'Pendent')}
+                  ? tr('projectModule.overspend')
+                  : tr('projectModule.pending')}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -1169,37 +1171,37 @@ export default function ProjectBudgetPage() {
       <details className="group rounded-lg border bg-background">
         <summary className="flex cursor-pointer items-center justify-between px-4 py-3 text-sm font-medium list-none [&::-webkit-details-marker]:hidden">
           <div className="flex items-center gap-2">
-            <span>{t.projectModule?.fxSectionTitle ?? 'Transferències i tipus de canvi'}</span>
+            <span>{tr('projectModule.budget.fxSectionTitle')}</span>
             <Popover>
               <PopoverTrigger asChild>
                 <button
                   type="button"
                   onClick={(e) => e.stopPropagation()}
                   className="inline-flex h-5 w-5 items-center justify-center rounded-full border text-xs text-muted-foreground hover:bg-muted"
-                  aria-label={t.projectModule?.fxHelpAria ?? 'Ajuda sobre transferències i tipus de canvi'}
+                  aria-label={tr('projectModule.budget.fxHelpAria')}
                 >
                   ?
                 </button>
               </PopoverTrigger>
               <PopoverContent className="max-w-sm text-sm leading-relaxed" onClick={(e) => e.stopPropagation()}>
                 <div className="space-y-3">
-                  <p className="font-medium">{t.projectModule?.fxHelpTitle ?? 'Com s\'aplica el tipus de canvi'}</p>
+                  <p className="font-medium">{tr('projectModule.budget.fxHelpTitle')}</p>
                   <ul className="space-y-2 list-none p-0">
                     <li>
-                      <strong>{t.projectModule?.fxHelpModeExpenseTitle ?? 'TC forçat a la despesa'}</strong><br />
-                      {t.projectModule?.fxHelpModeExpenseText ?? 'Si una despesa té un tipus de canvi propi, s\'aplica sempre aquest valor.'}
+                      <strong>{tr('projectModule.budget.fxHelpModeExpenseTitle')}</strong><br />
+                      {tr('projectModule.budget.fxHelpModeExpenseText')}
                     </li>
                     <li>
-                      <strong>{t.projectModule?.fxHelpModeTransfersTitle ?? 'TC calculat per transferències'}</strong><br />
-                      {t.projectModule?.fxHelpModeTransfersText ?? 'Quan hi ha transferències, Summa calcula automàticament un tipus de canvi ponderat a partir de les dades reals.'}
+                      <strong>{tr('projectModule.budget.fxHelpModeTransfersTitle')}</strong><br />
+                      {tr('projectModule.budget.fxHelpModeTransfersText')}
                     </li>
                     <li>
-                      <strong>{t.projectModule?.fxHelpModeManualTitle ?? 'TC manual del projecte'}</strong><br />
-                      {t.projectModule?.fxHelpModeManualText ?? 'Valor global que només s\'utilitza si no hi ha transferències.'}
+                      <strong>{tr('projectModule.budget.fxHelpModeManualTitle')}</strong><br />
+                      {tr('projectModule.budget.fxHelpModeManualText')}
                     </li>
                   </ul>
                   <div className="text-xs text-muted-foreground">
-                    {t.projectModule?.fxHelpPriority ?? 'Prioritat: despesa → transferències → valor manual.'}
+                    {tr('projectModule.budget.fxHelpPriority')}
                   </div>
                 </div>
               </PopoverContent>
@@ -1216,7 +1218,7 @@ export default function ProjectBudgetPage() {
             <RefreshCcw className="h-4 w-4 text-blue-600" />
             <AlertDescription className="flex items-center justify-between">
               <span className="text-sm text-blue-800">
-                {t.projectModule?.fxReapplyNoticeText ?? "Hi ha despeses imputades amb un tipus de canvi anterior."}
+                {tr('projectModule.budget.fxReapplyNoticeText')}
               </span>
               <Button
                 variant="outline"
@@ -1230,7 +1232,7 @@ export default function ProjectBudgetPage() {
                 ) : (
                   <RefreshCcw className="h-3 w-3 mr-1" />
                 )}
-                {t.projectModule?.fxReapplyButton ?? "Re-aplicar tipus de canvi"}
+                {tr('projectModule.budget.fxReapplyButton')}
               </Button>
             </AlertDescription>
           </Alert>
@@ -1238,27 +1240,27 @@ export default function ProjectBudgetPage() {
 
         {/* Bloc 1: TC calculat (ponderat) */}
         <div className="rounded-md bg-muted/30 p-3 text-sm">
-          <div className="text-muted-foreground">{t.projectModule?.fxTransfersWeightedRate ?? 'TC projecte (ponderat)'}</div>
+          <div className="text-muted-foreground">{tr('projectModule.budget.fxTransfersWeightedRate')}</div>
           <div className="mt-1 font-mono">
             {weightedFxRate !== null ? (
               <>
-                {new Intl.NumberFormat('ca-ES', { minimumFractionDigits: 10, maximumFractionDigits: 10 }).format(weightedFxRate)} {t.projectModule?.fxTransfersEurPerLocal ?? 'EUR/local'}
+                {new Intl.NumberFormat('ca-ES', { minimumFractionDigits: 10, maximumFractionDigits: 10 }).format(weightedFxRate)} {tr('projectModule.budget.fxTransfersEurPerLocal')}
                 {weightedFxCurrency && <span className="ml-1">({weightedFxCurrency})</span>}
               </>
             ) : project.fxRate ? (
               <>
-                {new Intl.NumberFormat('ca-ES', { minimumFractionDigits: 2, maximumFractionDigits: 6 }).format(project.fxRate)} {project.fxCurrency ?? ''} = 1 EUR
-                <span className="ml-2 not-italic text-xs text-muted-foreground font-sans">({t.projectModule?.fxLegacyTitle ?? 'TC manual'})</span>
+                {new Intl.NumberFormat('ca-ES', { minimumFractionDigits: 2, maximumFractionDigits: 6 }).format(project.fxRate)} {project.fxCurrency ?? ''} {tr('projectModule.budget.exchangeRateReference')}
+                <span className="ml-2 not-italic text-xs text-muted-foreground font-sans">({tr('projectModule.budget.fxLegacyTitle')})</span>
               </>
             ) : (
-              <span className="italic font-sans text-muted-foreground">{t.projectModule?.notConfigured ?? 'No configurat'}</span>
+              <span className="italic font-sans text-muted-foreground">{tr('projectModule.notConfigured')}</span>
             )}
           </div>
         </div>
 
         {/* Bloc 2: Transferències */}
         <div className="flex items-center justify-between">
-          <h4 className="text-sm font-medium">{t.projectModule?.fxTransfersTitle ?? 'Transferències'}</h4>
+          <h4 className="text-sm font-medium">{tr('projectModule.budget.fxTransfersTitle')}</h4>
           <Button
             variant="outline"
             size="sm"
@@ -1269,7 +1271,7 @@ export default function ProjectBudgetPage() {
             }}
           >
             <Plus className="h-4 w-4 mr-1" />
-            {t.projectModule?.fxTransfersAdd ?? 'Afegir transferència'}
+            {tr('projectModule.budget.fxTransfersAdd')}
           </Button>
         </div>
         {fxTransfers.length > 0 && (
@@ -1277,11 +1279,11 @@ export default function ProjectBudgetPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="text-xs">{t.projectModule?.fxTransfersDate ?? 'Data'}</TableHead>
-                  <TableHead className="text-xs text-right">{t.projectModule?.fxTransfersEurSent ?? 'EUR enviats'}</TableHead>
-                  <TableHead className="text-xs">{t.projectModule?.currency ?? 'Moneda'}</TableHead>
-                  <TableHead className="text-xs text-right">{t.projectModule?.fxTransfersLocalReceived ?? 'Import local rebut'}</TableHead>
-                  <TableHead className="text-xs text-right">{t.projectModule?.fxTransfersImplicitRate ?? 'TC implícit'}</TableHead>
+                  <TableHead className="text-xs">{tr('projectModule.budget.fxTransfersDate')}</TableHead>
+                  <TableHead className="text-xs text-right">{tr('projectModule.budget.fxTransfersEurSent')}</TableHead>
+                  <TableHead className="text-xs">{tr('projectModule.currency')}</TableHead>
+                  <TableHead className="text-xs text-right">{tr('projectModule.budget.fxTransfersLocalReceived')}</TableHead>
+                  <TableHead className="text-xs text-right">{tr('projectModule.budget.fxTransfersImplicitRate')}</TableHead>
                   <TableHead className="text-xs w-[80px]"></TableHead>
                 </TableRow>
               </TableHeader>
@@ -1330,13 +1332,13 @@ export default function ProjectBudgetPage() {
 
         {fxTransfers.length === 0 && !fxTransfersLoading && (
           <p className="text-sm text-muted-foreground italic px-1">
-            {t.projectModule?.fxTransfersNoTransfers ?? 'Sense transferències registrades'}
+            {tr('projectModule.budget.fxTransfersNoTransfers')}
           </p>
         )}
 
         {/* Bloc 3: TC manual (fallback global) */}
         <div className="rounded-md border border-dashed p-3 text-sm">
-          <div className="text-muted-foreground">{t.projectModule?.fxLegacyTitle ?? 'TC manual (fallback)'}</div>
+          <div className="text-muted-foreground">{tr('projectModule.budget.fxLegacyFallbackTitle')}</div>
           <div className="mt-2">
             {fxEditMode ? (
               <div className="flex flex-wrap items-end gap-4">
@@ -1362,7 +1364,7 @@ export default function ProjectBudgetPage() {
                     className="h-8 text-sm font-mono"
                   />
                 </div>
-                <span className="text-sm text-muted-foreground">= 1 EUR</span>
+                <span className="text-sm text-muted-foreground">{tr('projectModule.budget.exchangeRateReference')}</span>
                 <div className="flex gap-2">
                   <Button
                     variant="outline"
@@ -1375,7 +1377,7 @@ export default function ProjectBudgetPage() {
                     }}
                     disabled={isSavingFx}
                   >
-                    {t.common?.cancel ?? 'Cancel·lar'}
+                    {tr('common.cancel')}
                   </Button>
                   <Button
                     size="sm"
@@ -1385,30 +1387,34 @@ export default function ProjectBudgetPage() {
                       if (fxRateInput && (isNaN(rate!) || rate! <= 0)) {
                         toast({
                           variant: 'destructive',
-                          title: 'Error',
-                          description: t.projectModule?.fxRatePositive ?? 'El tipus de canvi ha de ser positiu',
+                          title: tr('projectModule.budget.error'),
+                          description: tr('projectModule.fxRatePositive'),
                         });
                         return;
                       }
                       try {
                         await saveFx(projectId, rate, fxCurrencyInput || null);
                         toast({
-                          title: t.projectModule?.fxSaved ?? 'Tipus de canvi desat',
-                          description: rate ? `${rate} ${fxCurrencyInput} = 1 EUR` : tr('projectModule.budget.fxRateRemoved', 'Tipus de canvi eliminat'),
+                          title: tr('projectModule.fxSaved'),
+                          description: rate
+                            ? tr('projectModule.budget.fxRateSavedDesc')
+                                .replace('{rate}', String(rate))
+                                .replace('{currency}', fxCurrencyInput)
+                            : tr('projectModule.budget.fxRateRemoved'),
                         });
                         setFxEditMode(false);
                         await refreshProject();
                       } catch (err) {
                         toast({
                           variant: 'destructive',
-                          title: 'Error',
-                          description: err instanceof Error ? err.message : tr('projectModule.budget.errorSavingFxRate', 'Error desant tipus de canvi'),
+                          title: tr('projectModule.budget.error'),
+                          description: err instanceof Error ? err.message : tr('projectModule.budget.errorSavingFxRate'),
                         });
                       }
                     }}
                     disabled={isSavingFx}
                   >
-                    {isSavingFx ? <Loader2 className="h-4 w-4 animate-spin" /> : (t.common?.save ?? 'Desar')}
+                    {isSavingFx ? <Loader2 className="h-4 w-4 animate-spin" /> : tr('common.save')}
                   </Button>
                 </div>
               </div>
@@ -1416,9 +1422,9 @@ export default function ProjectBudgetPage() {
               <div className="flex items-center justify-between gap-4">
                 <span className="text-sm text-muted-foreground">
                   {project.fxRate ? (
-                    <><span className="font-mono">{new Intl.NumberFormat('ca-ES', { minimumFractionDigits: 2, maximumFractionDigits: 6 }).format(project.fxRate)} {project.fxCurrency ?? ''}</span> = 1 EUR</>
+                    <><span className="font-mono">{new Intl.NumberFormat('ca-ES', { minimumFractionDigits: 2, maximumFractionDigits: 6 }).format(project.fxRate)} {project.fxCurrency ?? ''}</span> {tr('projectModule.budget.exchangeRateReference')}</>
                   ) : (
-                    <span className="italic">{t.projectModule?.notConfigured ?? 'No configurat'}</span>
+                    <span className="italic">{tr('projectModule.notConfigured')}</span>
                   )}
                 </span>
                 <Button
@@ -1426,7 +1432,7 @@ export default function ProjectBudgetPage() {
                   size="icon"
                   className="h-8 w-8 shrink-0"
                   onClick={() => setFxEditMode(true)}
-                  title={t.projectModule?.editFx ?? 'Editar tipus de canvi'}
+                  title={tr('projectModule.budget.editFx')}
                 >
                   <Pencil className="h-4 w-4" />
                 </Button>
@@ -1434,7 +1440,7 @@ export default function ProjectBudgetPage() {
             )}
           </div>
           <div className="mt-1 text-xs text-muted-foreground">
-            {t.projectModule?.fxLegacyHelp ?? "S'aplica a tot el projecte si no hi ha transferències."}
+            {tr('projectModule.budget.fxLegacyHelp')}
           </div>
         </div>
 
@@ -1447,16 +1453,16 @@ export default function ProjectBudgetPage() {
           <CardContent className="pt-6">
             <div className="text-center space-y-4">
               <p className="text-muted-foreground">
-                {tr('projectModule.budget.noBudgetLinesHint', 'Només cal crear partides si necessites control detallat per justificar el projecte.')}
+                {tr('projectModule.budget.noBudgetLinesHint')}
               </p>
               <div className="flex flex-col sm:flex-row gap-2 justify-center">
                 <Button onClick={openNew} variant="outline">
                   <Plus className="h-4 w-4 mr-2" />
-                  {tr('projectModule.budget.createLineManually', 'Crear partida manualment')}
+                  {tr('projectModule.budget.createLineManually')}
                 </Button>
                 <Button onClick={() => setImportWizardOpen(true)} variant="outline">
                   <Upload className="h-4 w-4 mr-2" />
-                  {tr('projectModule.budget.importLinesExcel', 'Importar partides (Excel)')}
+                  {tr('projectModule.budget.importLinesExcel')}
                 </Button>
               </div>
             </div>
@@ -1472,17 +1478,17 @@ export default function ProjectBudgetPage() {
             <div className="rounded-lg border bg-muted/30 px-4 py-3">
               <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
                 <div>
-                  <span className="text-muted-foreground">{tr('projectModule.budget.globalBudgetLabel', 'Pressupost global')}:</span>{' '}
+                  <span className="text-muted-foreground">{tr('projectModule.budget.globalBudgetLabel')}:</span>{' '}
                   <span className="font-medium">{formatAmount(totals.globalBudget)}</span>
                 </div>
                 <div>
-                  <span className="text-muted-foreground">{tr('projectModule.budget.linesTotalLabel', 'Suma de partides')}:</span>{' '}
+                  <span className="text-muted-foreground">{tr('projectModule.budget.linesTotalLabel')}:</span>{' '}
                   <span className="font-medium">{formatAmount(totals.budgetedFromLines)}</span>
                 </div>
                 {totals.budgetedFromLines !== totals.globalBudget && (
                   <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">
                     <Info className="h-3 w-3 mr-1" />
-                    {tr('projectModule.budget.linesTotalMismatch', 'La suma de partides no coincideix amb el pressupost global')}
+                    {tr('projectModule.budget.linesTotalMismatch')}
                   </Badge>
                 )}
               </div>
@@ -1491,10 +1497,10 @@ export default function ProjectBudgetPage() {
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
-              <CardTitle>{t.projectModule?.budgetLines ?? 'Seguiment Econòmic'}</CardTitle>
+              <CardTitle>{tr('projectModule.budget.title')}</CardTitle>
               <Button variant="outline" size="sm" onClick={openNew}>
                 <Plus className="h-4 w-4 mr-2" />
-                {t.projectModule?.addBudgetLine ?? 'Afegir partida'}
+                {tr('projectModule.addBudgetLine')}
               </Button>
             </CardHeader>
             <CardContent>
@@ -1506,7 +1512,7 @@ export default function ProjectBudgetPage() {
                 </div>
               ) : linesError ? (
                 <div className="text-center py-8 text-destructive">
-                  {tr('projectModule.budget.errorLoadingLines', 'Error carregant partides')}: {linesError.message}
+                  {tr('projectModule.budget.errorLoadingLines')}: {linesError.message}
                 </div>
               ) : isMobile ? (
             <div className="flex flex-col gap-2 p-3">
@@ -1534,23 +1540,23 @@ export default function ProjectBudgetPage() {
                       hasNoExecution ? (
                         <Badge key="status" variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 text-xs">
                           <Info className="h-2.5 w-2.5 mr-0.5" />
-                          {tr('projectModule.budget.noExecShort', 'Sense exec.')}
+                          {tr('projectModule.budget.noExecShort')}
                         </Badge>
                       ) : isOverspend ? (
                         <Badge key="status" variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200 text-xs">
                           <AlertTriangle className="h-2.5 w-2.5 mr-0.5" />
-                          {tr('projectModule.budget.alert', 'ALERTA')}
+                          {tr('projectModule.budget.alert')}
                         </Badge>
                       ) : (
                         <Badge key="status" variant="outline" className="bg-green-50 text-green-700 border-green-200 text-xs">
                           <CheckCircle className="h-2.5 w-2.5 mr-0.5" />
-                          OK
+                          {tr('projectModule.budget.statusOk')}
                         </Badge>
                       )
                     ]}
                     meta={[
-                      { label: tr('projectModule.budget.budgetedShort', 'Pres.'), value: formatAmount(line.budgetedAmountEUR) },
-                      { label: tr('projectModule.budget.executedShort', 'Exec.'), value: formatAmount(executed) },
+                      { label: tr('projectModule.budget.budgetedShort'), value: formatAmount(line.budgetedAmountEUR) },
+                      { label: tr('projectModule.budget.executedShort'), value: formatAmount(executed) },
                       { value: formatPercent(percentExec) },
                       ...(showOverspend
                         ? [{ value: <span className="text-red-600 font-medium">+{formatAmount(Math.abs(pending))}</span> }]
@@ -1571,14 +1577,14 @@ export default function ProjectBudgetPage() {
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem onClick={() => openEdit(line)}>
                             <Pencil className="mr-2 h-4 w-4" />
-                            {tr('projectModule.budget.edit', 'Editar')}
+                            {tr('projectModule.budget.edit')}
                           </DropdownMenuItem>
                           <DropdownMenuItem
                             onClick={() => setDeleteConfirm(line)}
                             className="text-destructive"
                           >
                             <Trash2 className="mr-2 h-4 w-4" />
-                            {tr('projectModule.budget.delete', 'Eliminar')}
+                            {tr('projectModule.budget.delete')}
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -1592,13 +1598,13 @@ export default function ProjectBudgetPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-[60px]">{t.projectModule?.lineCode ?? 'Codi'}</TableHead>
-                  <TableHead>{t.projectModule?.lineName ?? 'Partida'}</TableHead>
-                  <TableHead className="text-right">{t.projectModule?.budgeted ?? 'Pressupostat'}</TableHead>
-                  <TableHead className="text-right">{t.projectModule?.executed ?? 'Executat'}</TableHead>
+                  <TableHead className="w-[60px]">{tr('projectModule.lineCode')}</TableHead>
+                  <TableHead>{tr('projectModule.lineName')}</TableHead>
+                  <TableHead className="text-right">{tr('projectModule.budgeted')}</TableHead>
+                  <TableHead className="text-right">{tr('projectModule.executed')}</TableHead>
                   <TableHead className="text-right">%</TableHead>
-                  <TableHead className="text-right">{t.projectModule?.pending ?? 'Pendent'}</TableHead>
-                  <TableHead className="w-[100px]">{t.projectModule?.status ?? 'Estat'}</TableHead>
+                  <TableHead className="text-right">{tr('projectModule.pending')}</TableHead>
+                  <TableHead className="w-[100px]">{tr('projectModule.status')}</TableHead>
                   <TableHead className="w-[100px]"></TableHead>
                 </TableRow>
               </TableHeader>
@@ -1639,24 +1645,24 @@ export default function ProjectBudgetPage() {
                       </TableCell>
                       <TableCell className={`text-right font-mono ${showOverspend ? 'text-red-600' : ''}`}>
                         {showOverspend
-                          ? `${t.projectModule?.overspend ?? 'Sobreexecució'}: ${formatAmount(Math.abs(pending))}`
+                          ? `${tr('projectModule.overspend')}: ${formatAmount(Math.abs(pending))}`
                           : formatAmount(pending)}
                       </TableCell>
                       <TableCell>
                         {hasNoExecution ? (
                           <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
                             <Info className="h-3 w-3 mr-1" />
-                            {t.projectModule?.noExecution ?? 'Sense execució'}
+                            {tr('projectModule.noExecution')}
                           </Badge>
                         ) : isOverspend ? (
                           <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">
                             <AlertTriangle className="h-3 w-3 mr-1" />
-                            {tr('projectModule.budget.alert', 'ALERTA')}
+                            {tr('projectModule.budget.alert')}
                           </Badge>
                         ) : (
                           <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
                             <CheckCircle className="h-3 w-3 mr-1" />
-                            OK
+                            {tr('projectModule.budget.statusOk')}
                           </Badge>
                         )}
                       </TableCell>
@@ -1667,7 +1673,7 @@ export default function ProjectBudgetPage() {
                             size="icon"
                             className="h-7 w-7"
                             onClick={(e) => openEdit(line, e)}
-                            title={t.projectModule?.editBudgetLine ?? 'Editar partida'}
+                            title={tr('projectModule.editBudgetLine')}
                           >
                             <Pencil className="h-3.5 w-3.5" />
                           </Button>
@@ -1679,7 +1685,7 @@ export default function ProjectBudgetPage() {
                               e.stopPropagation();
                               setDeleteConfirm(line);
                             }}
-                            title={t.projectModule?.deleteBudgetLine ?? 'Eliminar partida'}
+                            title={tr('projectModule.deleteBudgetLine')}
                           >
                             <Trash2 className="h-3.5 w-3.5" />
                           </Button>
@@ -1745,10 +1751,10 @@ export default function ProjectBudgetPage() {
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>
-              {tr('projectModule.exportExcel', 'Exportar justificació (Excel)')}
+              {tr('projectModule.exportExcel')}
             </DialogTitle>
             <DialogDescription>
-              {tr('projectModule.export.orderMode.label', 'Ordre de les files')}
+              {tr('projectModule.export.orderMode.label')}
             </DialogDescription>
           </DialogHeader>
 
@@ -1760,25 +1766,25 @@ export default function ProjectBudgetPage() {
             <div className="flex items-start space-x-3 p-3 border rounded-lg hover:bg-muted/50">
               <RadioGroupItem value="budgetLineThenChronological" id="order-budget" className="mt-1" />
               <Label htmlFor="order-budget" className="font-medium cursor-pointer">
-                {tr('projectModule.export.orderMode.byBudgetLine', 'Per partida i data')}
+                {tr('projectModule.export.orderMode.byBudgetLine')}
               </Label>
             </div>
 
             <div className="flex items-start space-x-3 p-3 border rounded-lg hover:bg-muted/50">
               <RadioGroupItem value="chronological" id="order-chrono" className="mt-1" />
               <Label htmlFor="order-chrono" className="font-medium cursor-pointer">
-                {tr('projectModule.export.orderMode.chronological', 'Cronològic')}
+                {tr('projectModule.export.orderMode.chronological')}
               </Label>
             </div>
           </RadioGroup>
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setExportDialogOpen(false)}>
-              {t.common?.cancel ?? 'Cancel·lar'}
+              {tr('common.cancel')}
             </Button>
             <Button onClick={handleConfirmExportFunding}>
               <Download className="h-4 w-4 mr-2" />
-              {tr('projectModule.export.download', 'Descarregar')}
+              {tr('projectModule.export.download')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1805,7 +1811,7 @@ export default function ProjectBudgetPage() {
           try {
             await saveFxTransfer(projectId, data, editingFxTransfer?.id);
             toast({
-              title: t.projectModule?.fxTransfersSaved ?? 'Transferència desada',
+              title: tr('projectModule.budget.fxTransfersSaved'),
             });
             setFxTransferFormOpen(false);
             setEditingFxTransfer(null);
@@ -1813,8 +1819,8 @@ export default function ProjectBudgetPage() {
           } catch (err) {
             toast({
               variant: 'destructive',
-              title: tr('projectModule.budget.error', 'Error'),
-              description: err instanceof Error ? err.message : tr('projectModule.budget.errorSavingTransfer', 'Error desant transferència'),
+              title: tr('projectModule.budget.error'),
+              description: err instanceof Error ? err.message : tr('projectModule.budget.errorSavingTransfer'),
             });
           }
         }}
@@ -1829,13 +1835,13 @@ export default function ProjectBudgetPage() {
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>{t.projectModule?.fxTransfersDeleteTitle ?? 'Eliminar transferència'}</AlertDialogTitle>
+            <AlertDialogTitle>{tr('projectModule.budget.fxTransfersDeleteTitle')}</AlertDialogTitle>
             <AlertDialogDescription>
-              {t.projectModule?.fxTransfersDeleteWarning ?? 'Eliminar aquesta transferència canviarà el tipus de canvi ponderat del projecte i pot afectar els imports EUR de les despeses assignades.'}
+              {tr('projectModule.budget.fxTransfersDeleteWarning')}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>{t.common?.cancel ?? 'Cancel·lar'}</AlertDialogCancel>
+            <AlertDialogCancel>{tr('common.cancel')}</AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               onClick={async () => {
@@ -1843,20 +1849,20 @@ export default function ProjectBudgetPage() {
                 try {
                   await removeFxTransfer(projectId, deleteFxTransferConfirm.id);
                   toast({
-                    title: t.projectModule?.fxTransfersDeleted ?? 'Transferència eliminada',
+                    title: tr('projectModule.budget.fxTransfersDeleted'),
                   });
                   setDeleteFxTransferConfirm(null);
                   await refreshFxTransfers();
                 } catch (err) {
                   toast({
                     variant: 'destructive',
-                    title: 'Error',
-                    description: err instanceof Error ? err.message : tr('projectModule.budget.errorDeletingTransfer', 'Error eliminant transferència'),
+                    title: tr('projectModule.budget.error'),
+                    description: err instanceof Error ? err.message : tr('projectModule.budget.errorDeletingTransfer'),
                   });
                 }
               }}
             >
-              {t.common?.delete ?? 'Eliminar'}
+              {tr('common.delete')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -1867,18 +1873,18 @@ export default function ProjectBudgetPage() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
-              {t.projectModule?.fxReapplyConfirmTitle ?? "Re-aplicar tipus de canvi"}
+              {tr('projectModule.budget.fxReapplyConfirmTitle')}
             </AlertDialogTitle>
             <AlertDialogDescription>
-              {t.projectModule?.fxReapplyConfirmText ?? "Aquesta acció recalcularà els imports en EUR segons el tipus de canvi actual del projecte. Les despeses amb TC manual no es modificaran."}
+              {tr('projectModule.budget.fxReapplyConfirmText')}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>{t.common?.cancel ?? 'Cancel·lar'}</AlertDialogCancel>
+            <AlertDialogCancel>{tr('common.cancel')}</AlertDialogCancel>
             <AlertDialogAction onClick={handleReapplyFx} disabled={isReapplying}>
               {isReapplying
-                ? (t.projectModule?.fxReapplyRunning ?? 'Recalculant...')
-                : (t.projectModule?.fxReapplyButton ?? 'Re-aplicar')}
+                ? tr('projectModule.budget.fxReapplyRunning')
+                : tr('projectModule.budget.fxReapplyButton')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

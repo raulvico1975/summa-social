@@ -17,6 +17,7 @@ import { useFirebase, useMemoFirebase, addDocumentNonBlocking } from '@/firebase
 import { useCurrentOrganization } from '@/hooks/organization-provider';
 import { collection } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
+import { useTranslations } from '@/i18n';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // TYPES
@@ -44,6 +45,7 @@ export function CreateSupplierModal({
   const { firestore } = useFirebase();
   const { organizationId } = useCurrentOrganization();
   const { toast } = useToast();
+  const { t } = useTranslations();
 
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [name, setName] = React.useState('');
@@ -71,8 +73,8 @@ export function CreateSupplierModal({
     if (!name.trim()) {
       toast({
         variant: 'destructive',
-        title: 'Error',
-        description: 'El nom del proveïdor és obligatori.',
+        title: t.common.error,
+        description: t.importers.supplier.errors.missingName,
       });
       return;
     }
@@ -80,8 +82,8 @@ export function CreateSupplierModal({
     if (!contactsCollection || !organizationId) {
       toast({
         variant: 'destructive',
-        title: 'Error',
-        description: 'No s\'ha pogut connectar amb la base de dades.',
+        title: t.common.error,
+        description: t.common.dbConnectionError,
       });
       return;
     }
@@ -110,8 +112,8 @@ export function CreateSupplierModal({
       }
 
       toast({
-        title: 'Proveïdor creat',
-        description: `S'ha creat "${name.trim()}" correctament.`,
+        title: t.suppliers.supplierCreated,
+        description: t.suppliers.supplierCreatedDescription(name.trim()),
       });
 
       onCreated(docRef.id);
@@ -120,8 +122,8 @@ export function CreateSupplierModal({
       console.error('Error creating supplier:', error);
       toast({
         variant: 'destructive',
-        title: 'Error',
-        description: 'No s\'ha pogut crear el proveïdor.',
+        title: t.common.error,
+        description: t.common.actionError,
       });
     } finally {
       setIsSubmitting(false);
@@ -133,9 +135,9 @@ export function CreateSupplierModal({
       <DialogContent className="sm:max-w-[400px]">
         <form onSubmit={handleSubmit}>
           <DialogHeader>
-            <DialogTitle>Nou proveïdor</DialogTitle>
+            <DialogTitle>{t.suppliers.addTitle}</DialogTitle>
             <DialogDescription>
-              Crea un proveïdor ràpidament. Podràs completar les dades més tard.
+              {t.suppliers.addDescription}
             </DialogDescription>
           </DialogHeader>
 
@@ -143,20 +145,20 @@ export function CreateSupplierModal({
             {/* Nom (obligatori) */}
             <div className="space-y-2">
               <Label htmlFor="supplier-name">
-                Nom <span className="text-destructive">*</span>
+                {t.suppliers.name} <span className="text-destructive">*</span>
               </Label>
               <Input
                 id="supplier-name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="Nom del proveïdor"
+                placeholder={t.suppliers.namePlaceholder}
                 autoFocus
               />
             </div>
 
             {/* CIF/NIF (opcional) */}
             <div className="space-y-2">
-              <Label htmlFor="supplier-taxid">CIF/NIF</Label>
+              <Label htmlFor="supplier-taxid">{t.suppliers.taxId}</Label>
               <Input
                 id="supplier-taxid"
                 value={taxId}
@@ -167,7 +169,7 @@ export function CreateSupplierModal({
 
             {/* IBAN (opcional) */}
             <div className="space-y-2">
-              <Label htmlFor="supplier-iban">IBAN</Label>
+              <Label htmlFor="supplier-iban">{t.suppliers.iban}</Label>
               <Input
                 id="supplier-iban"
                 value={iban}
@@ -184,11 +186,11 @@ export function CreateSupplierModal({
               onClick={() => onOpenChange(false)}
               disabled={isSubmitting}
             >
-              Cancel·lar
+              {t.common.cancel}
             </Button>
             <Button type="submit" disabled={isSubmitting || !name.trim()}>
               {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Crear proveïdor
+              {t.suppliers.save}
             </Button>
           </DialogFooter>
         </form>

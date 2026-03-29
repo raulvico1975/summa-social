@@ -23,6 +23,7 @@ import {
   deriveReturnRemittanceStatus,
 } from '@/lib/remittances/returns-remittance-state';
 import { assertNoActiveReturnChildren } from '@/lib/returns/process-guards';
+import { useTranslations } from '@/i18n';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TIPUS
@@ -413,6 +414,7 @@ export function useReturnImporter(options: UseReturnImporterOptions = {}) {
   const isContextMode = !!parentTransaction;
 
   const { toast } = useToast();
+  const { t, tr } = useTranslations();
   const { firestore, user } = useFirebase();
   const { organizationId } = useCurrentOrganization();
   const userId = user?.uid;
@@ -550,7 +552,11 @@ export function useReturnImporter(options: UseReturnImporterOptions = {}) {
       }
 
       if (allParsedRows.length === 0) {
-        toast({ variant: 'destructive', title: 'Error', description: 'Els fitxers estan buits' });
+        toast({
+          variant: 'destructive',
+          title: tr('returnImporter.errors.emptyFilesTitle', t.common.error),
+          description: tr('returnImporter.errors.emptyFilesDesc', 'Els fitxers estan buits'),
+        });
         setIsProcessing(false);
         return;
       }
@@ -566,11 +572,15 @@ export function useReturnImporter(options: UseReturnImporterOptions = {}) {
 
       setStep('mapping');
     } catch (error: any) {
-      toast({ variant: 'destructive', title: 'Error', description: error.message });
+      toast({
+        variant: 'destructive',
+        title: t.common.error,
+        description: error.message,
+      });
     } finally {
       setIsProcessing(false);
     }
-  }, [toast]);
+  }, [toast, t.common.error, tr]);
 
   // ═══════════════════════════════════════════════════════════════════════════
   // MATCHING - FLUX COMPLET REFACTORITZAT
@@ -580,8 +590,8 @@ export function useReturnImporter(options: UseReturnImporterOptions = {}) {
     if (mapping.ibanColumn === null || mapping.amountColumn === null) {
       toast({
         variant: 'destructive',
-        title: 'Falten columnes',
-        description: 'Has de seleccionar les columnes IBAN i Import'
+        title: tr('returnImporter.errors.missingColumnsTitle', 'Falten columnes'),
+        description: tr('returnImporter.errors.missingColumnsDesc', 'Has de seleccionar les columnes IBAN i Import')
       });
       return;
     }
@@ -721,8 +731,14 @@ export function useReturnImporter(options: UseReturnImporterOptions = {}) {
           const deltaEur = (sumReturnsAbsCents - parentAbsCents) / 100;
           toast({
             variant: 'destructive',
-            title: 'Import no quadra',
-            description: `El fitxer suma ${(sumReturnsAbsCents / 100).toFixed(2)}€, però l'apunt és ${(parentAbsCents / 100).toFixed(2)}€ (delta: ${deltaEur > 0 ? '+' : ''}${deltaEur.toFixed(2)}€)`,
+            title: tr('returnImporter.errors.amountMismatchTitle', 'Import no quadra'),
+            description: tr(
+              'returnImporter.errors.amountMismatchDesc',
+              "El fitxer suma {fileAmount}€, però l'apunt és {entryAmount}€ (delta: {delta}€)"
+            )
+              .replace('{fileAmount}', (sumReturnsAbsCents / 100).toFixed(2))
+              .replace('{entryAmount}', (parentAbsCents / 100).toFixed(2))
+              .replace('{delta}', `${deltaEur > 0 ? '+' : ''}${deltaEur.toFixed(2)}`),
           });
           setIsProcessing(false);
           return;
@@ -1056,11 +1072,15 @@ export function useReturnImporter(options: UseReturnImporterOptions = {}) {
       setStep('preview');
 
     } catch (error: any) {
-      toast({ variant: 'destructive', title: 'Error', description: error.message });
+      toast({
+        variant: 'destructive',
+        title: t.common.error,
+        description: error.message,
+      });
     } finally {
       setIsProcessing(false);
     }
-  }, [allRows, startRow, mapping, donors, pendingReturns, files, toast, isContextMode, parentTransaction]);
+  }, [allRows, startRow, mapping, donors, pendingReturns, files, toast, isContextMode, parentTransaction, t.common.error, tr]);
 
   // ═══════════════════════════════════════════════════════════════════════════
   // PROCESSAR DEVOLUCIONS (escriptura a Firestore)
@@ -1101,11 +1121,18 @@ export function useReturnImporter(options: UseReturnImporterOptions = {}) {
       if (withoutDonor.length > 0) {
         toast({
           variant: 'destructive',
-          title: 'No s\'han pogut assignar',
-          description: `${withoutDonor.length} devolucions no tenen donant identificat. Cal assignar donant manualment.`
+          title: tr('returnImporter.errors.noAssignmentsTitle', "No s'han pogut assignar"),
+          description: tr(
+            'returnImporter.errors.noAssignmentsDesc',
+            '{count} devolucions no tenen donant identificat. Cal assignar donant manualment.'
+          ).replace('{count}', String(withoutDonor.length))
         });
       } else {
-        toast({ variant: 'destructive', title: 'Res a processar', description: 'No hi ha devolucions per assignar' });
+        toast({
+          variant: 'destructive',
+          title: tr('returnImporter.errors.nothingToProcessTitle', 'Res a processar'),
+          description: tr('returnImporter.errors.nothingToProcessDesc', 'No hi ha devolucions per assignar'),
+        });
       }
       return;
     }
@@ -1196,7 +1223,7 @@ export function useReturnImporter(options: UseReturnImporterOptions = {}) {
           if (!lockResult.ok) {
             toast({
               variant: 'destructive',
-              title: 'Operació bloquejada',
+              title: tr('returnImporter.errors.lockedTitle', 'Operació bloquejada'),
               description: getLockFailureMessage(lockResult),
             });
             continue; // Skip this group, try next
@@ -1248,7 +1275,7 @@ export function useReturnImporter(options: UseReturnImporterOptions = {}) {
             const hasContact = !!ret.resolvedDonorId;
             const donorId = ret.resolvedDonorId;
             const donor = hasContact ? donorsById.get(donorId!) : null;
-            const donorName = donor?.name ?? 'Donant';
+            const donorName = donor?.name ?? tr('returnImporter.defaults.donorName', 'Donant');
 
             const childTxData: Record<string, unknown> = {
               source: 'remittance',
@@ -1257,7 +1284,7 @@ export function useReturnImporter(options: UseReturnImporterOptions = {}) {
               amount: -Math.abs(ret.amount),  // Import SEMPRE negatiu (devolució)
               date: ret.date?.toISOString().split('T')[0] || group.date.toISOString().split('T')[0],
               transactionType: 'return',
-              description: ret.returnReason || group.originalTransaction.description || 'Devolució',
+              description: ret.returnReason || group.originalTransaction.description || tr('returnImporter.defaults.returnDescription', 'Devolució'),
               createdAt: new Date().toISOString(),
               // Heretar bankAccountId del pare
               bankAccountId: group.originalTransaction.bankAccountId ?? null,
@@ -1440,10 +1467,10 @@ export function useReturnImporter(options: UseReturnImporterOptions = {}) {
           const childTxData = buildReturnChildDraft({
             parentTransaction: group.originalTransaction,
             contactId: donorId,
-            donorName: donor?.name ?? 'Donant',
+            donorName: donor?.name ?? tr('returnImporter.defaults.donorName', 'Donant'),
             amount: ret.amount,
             date: ret.date?.toISOString().split('T')[0] || group.date.toISOString().split('T')[0],
-            description: ret.returnReason || group.originalTransaction.description || 'Devolució',
+            description: ret.returnReason || group.originalTransaction.description || tr('returnImporter.defaults.returnDescription', 'Devolució'),
           });
 
           await createReturnChild({
@@ -1461,13 +1488,18 @@ export function useReturnImporter(options: UseReturnImporterOptions = {}) {
       }
 
       toast({
-        title: 'Devolucions assignades',
-        description: `S'han assignat ${processedIndividual + processedGrouped} devolucions correctament`
+        title: t.returnImporter.success,
+        description: tr('returnImporter.successDesc', "S'han assignat {count} devolucions correctament")
+          .replace('{count}', String(processedIndividual + processedGrouped))
       });
 
       reset();
     } catch (error: any) {
-      toast({ variant: 'destructive', title: 'Error', description: error.message });
+      toast({
+        variant: 'destructive',
+        title: t.common.error,
+        description: error.message,
+      });
       setStep('preview');
     } finally {
       // Alliberar tots els locks adquirits
@@ -1478,7 +1510,7 @@ export function useReturnImporter(options: UseReturnImporterOptions = {}) {
       }
       setIsProcessing(false);
     }
-  }, [organizationId, parsedReturns, groupedMatches, firestore, userId, toast, reset]);
+  }, [organizationId, parsedReturns, groupedMatches, firestore, userId, toast, reset, donors, t.common.error, t.returnImporter.success, tr]);
 
   // ═══════════════════════════════════════════════════════════════════════════
   // CREAR DONANT PER A DEVOLUCIÓ PENDENT

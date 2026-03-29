@@ -91,7 +91,7 @@ export default function PendingDocsPage() {
   const { firestore, storage } = useFirebase();
   const router = useRouter();
   const { toast } = useToast();
-  const { t } = useTranslations();
+  const { t, tr } = useTranslations();
   const isMobile = useIsMobile();
 
   // Feature flag check - redirect if not enabled
@@ -386,7 +386,7 @@ export default function PendingDocsPage() {
       toast({
         variant: 'destructive',
         title: t.pendingDocs.toasts.error,
-        description: 'Aquest document no està conciliat',
+        description: tr('pendingDocs.toasts.notMatched', 'Aquest document no està conciliat'),
       });
       return;
     }

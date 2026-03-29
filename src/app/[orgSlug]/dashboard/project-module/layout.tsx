@@ -13,6 +13,7 @@ import { FolderKanban, Lock, Settings } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import { usePermissions } from '@/hooks/use-permissions';
+import { useTranslations } from '@/i18n';
 
 interface ProjectModuleLayoutProps {
   children: React.ReactNode;
@@ -23,6 +24,7 @@ export default function ProjectModuleLayout({ children }: ProjectModuleLayoutPro
   const { firestore } = useFirebase();
   const { buildUrl } = useOrgUrl();
   const { toast } = useToast();
+  const { t, tr } = useTranslations();
   const router = useRouter();
   const { canAccessProjectsArea } = usePermissions();
   const [isActivating, setIsActivating] = React.useState(false);
@@ -44,8 +46,8 @@ export default function ProjectModuleLayout({ children }: ProjectModuleLayoutPro
       });
 
       toast({
-        title: 'Mòdul activat',
-        description: 'El Mòdul Projectes s\'ha activat correctament.',
+        title: tr('projectModule.layout.activatedTitle', 'Mòdul activat'),
+        description: tr('projectModule.layout.activatedDescription', "El Mòdul Projectes s'ha activat correctament."),
       });
 
       // Refrescar la pàgina per carregar les dades
@@ -54,8 +56,8 @@ export default function ProjectModuleLayout({ children }: ProjectModuleLayoutPro
       console.error('Error activant mòdul:', error);
       toast({
         variant: 'destructive',
-        title: 'Error',
-        description: 'No s\'ha pogut activar el mòdul. Torna-ho a intentar.',
+        title: t.common.error,
+        description: tr('projectModule.layout.activationError', "No s'ha pogut activar el mòdul. Torna-ho a intentar."),
       });
     } finally {
       setIsActivating(false);
@@ -67,9 +69,9 @@ export default function ProjectModuleLayout({ children }: ProjectModuleLayoutPro
       <div className="flex min-h-[50vh] items-center justify-center p-4">
         <Card className="max-w-md">
           <CardHeader>
-            <CardTitle>Acces restringit</CardTitle>
+            <CardTitle>{tr('projectModule.capture.restrictedTitle', 'Accés restringit')}</CardTitle>
             <CardDescription>
-              No tens permisos per operar al modul de Projectes.
+              {tr('projectModule.layout.restrictedBody', 'No tens permisos per operar al mòdul de Projectes.')}
             </CardDescription>
           </CardHeader>
         </Card>
@@ -86,24 +88,24 @@ export default function ProjectModuleLayout({ children }: ProjectModuleLayoutPro
             <div className="mx-auto mb-4 h-12 w-12 rounded-full bg-muted flex items-center justify-center">
               <Lock className="h-6 w-6 text-muted-foreground" />
             </div>
-            <CardTitle className="text-xl">Mòdul Projectes no activat</CardTitle>
+            <CardTitle className="text-xl">{tr('projectModule.layout.notEnabledTitle', 'Mòdul Projectes no activat')}</CardTitle>
             <CardDescription>
-              El Mòdul Projectes permet gestionar despeses, pressupostos i justificacions econòmiques per projectes.
+              {tr('projectModule.layout.notEnabledDescription', 'El Mòdul Projectes permet gestionar despeses, pressupostos i justificacions econòmiques per projectes.')}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="rounded-lg bg-muted/50 p-4 space-y-2">
               <div className="flex items-center gap-2 text-sm">
                 <FolderKanban className="h-4 w-4 text-emerald-600" />
-                <span>Gestió de pressupostos per projecte</span>
+                <span>{tr('projectModule.layout.featureBudgets', 'Gestió de pressupostos per projecte')}</span>
               </div>
               <div className="flex items-center gap-2 text-sm">
                 <FolderKanban className="h-4 w-4 text-emerald-600" />
-                <span>Imputació de despeses a partides</span>
+                <span>{tr('projectModule.layout.featureImputations', 'Imputació de despeses a partides')}</span>
               </div>
               <div className="flex items-center gap-2 text-sm">
                 <FolderKanban className="h-4 w-4 text-emerald-600" />
-                <span>Justificació assistida amb suggerències</span>
+                <span>{tr('projectModule.layout.featureJustifications', 'Justificació assistida amb suggerències')}</span>
               </div>
             </div>
 
@@ -113,11 +115,13 @@ export default function ProjectModuleLayout({ children }: ProjectModuleLayoutPro
                 onClick={handleActivateModule}
                 disabled={isActivating}
               >
-                {isActivating ? 'Activant...' : 'Activar Mòdul Projectes'}
+                {isActivating
+                  ? tr('projectModule.layout.activating', 'Activant...')
+                  : tr('projectModule.layout.activateAction', 'Activar Mòdul Projectes')}
               </Button>
             ) : (
               <div className="text-center text-sm text-muted-foreground">
-                <p>Contacta amb l&apos;administrador de l&apos;organització per activar aquest mòdul.</p>
+                <p>{tr('projectModule.layout.contactAdmin', "Contacta amb l'administrador de l'organització per activar aquest mòdul.")}</p>
               </div>
             )}
 
@@ -127,7 +131,7 @@ export default function ProjectModuleLayout({ children }: ProjectModuleLayoutPro
               onClick={() => router.push(buildUrl('/dashboard/configuracion'))}
             >
               <Settings className="h-4 w-4 mr-2" />
-              Anar a Configuració
+              {tr('projectModule.layout.goToSettings', 'Anar a Configuració')}
             </Button>
           </CardContent>
         </Card>

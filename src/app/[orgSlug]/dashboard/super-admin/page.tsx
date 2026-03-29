@@ -454,11 +454,11 @@ export default function SuperAdminOrgPage() {
   const getActionBadge = (action: AuditLog['action']) => {
     switch (action) {
       case 'CREATE':
-        return <Badge className="bg-green-100 text-green-800 border-green-300">Crear</Badge>;
+        return <Badge className="bg-green-100 text-green-800 border-green-300">{t.common.add}</Badge>;
       case 'UPDATE':
-        return <Badge className="bg-blue-100 text-blue-800 border-blue-300">Editar</Badge>;
+        return <Badge className="bg-blue-100 text-blue-800 border-blue-300">{t.common.edit}</Badge>;
       case 'DELETE':
-        return <Badge variant="destructive">Eliminar</Badge>;
+        return <Badge variant="destructive">{t.common.delete}</Badge>;
       default:
         return <Badge variant="outline">{action}</Badge>;
     }

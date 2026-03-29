@@ -33,7 +33,7 @@ export default function LiquidacioDetailPage() {
   const { organizationId } = useCurrentOrganization();
   const { firestore } = useFirebase();
   const { buildUrl } = useOrgUrl();
-  const { t } = useTranslations();
+  const { t, tr } = useTranslations();
 
   const reportId = params.id as string;
   const initialTab = searchParams.get('tab'); // 'kilometratge' o null
@@ -61,20 +61,20 @@ export default function LiquidacioDetailPage() {
         if (snapshot.exists()) {
           setReport({ ...snapshot.data(), id: snapshot.id } as ExpenseReport);
         } else {
-          setError('Liquidació no trobada');
+          setError(tr('expenseReports.notFound', 'Liquidació no trobada'));
           setReport(null);
         }
         setIsLoading(false);
       },
       (err) => {
         console.error('[LiquidacioDetailPage] Error:', err);
-        setError('Error carregant la liquidació');
+        setError(tr('expenseReports.loadError', 'Error carregant la liquidació'));
         setIsLoading(false);
       }
     );
 
     return () => unsubscribe();
-  }, [organizationId, firestore, reportId]);
+  }, [organizationId, firestore, reportId, tr]);
 
   // Handler per tancar (tornar al llistat)
   const handleClose = () => {
@@ -105,16 +105,16 @@ export default function LiquidacioDetailPage() {
               <ArrowLeft className="h-4 w-4" />
             </Button>
           </Link>
-          <h1 className="text-2xl font-bold font-headline">Error</h1>
+          <h1 className="text-2xl font-bold font-headline">{t.common.error}</h1>
         </div>
         <div className="text-center py-12">
-          <p className="text-muted-foreground">{error || 'Liquidació no trobada'}</p>
+          <p className="text-muted-foreground">{error || tr('expenseReports.notFound', 'Liquidació no trobada')}</p>
           <Button
             variant="outline"
             className="mt-4"
             onClick={() => router.push(buildUrl('/dashboard/movimientos/liquidacions'))}
           >
-            Tornar al llistat
+            {tr('expenseReports.backToList', 'Tornar al llistat')}
           </Button>
         </div>
       </div>

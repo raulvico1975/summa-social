@@ -58,7 +58,7 @@ export function MembersManager() {
   const { firestore, user } = useFirebase();
   const { organizationId, userRole } = useCurrentOrganization();
   const { toast } = useToast();
-  const { t } = useTranslations();
+  const { t, tr } = useTranslations();
   const isMobile = useIsMobile();
 
   // Col·leccions
@@ -245,7 +245,7 @@ export function MembersManager() {
                   variant="outline"
                   size="icon"
                   onClick={() => setIsImporterOpen(true)}
-                  title="Importar invitacions massives"
+                  title={tr('members.importInvitations')}
                 >
                   <Upload className="h-4 w-4" />
                 </Button>
@@ -255,7 +255,7 @@ export function MembersManager() {
                   size="icon"
                   onClick={() => exportMembersToExcel(members || [])}
                   disabled={!members || members.length === 0}
-                  title="Exportar membres a Excel"
+                  title={tr('members.exportMembers')}
                 >
                   <Download className="h-4 w-4" />
                 </Button>
@@ -322,7 +322,7 @@ export function MembersManager() {
                                 {member.role === 'user' && (
                                   <DropdownMenuItem onClick={() => openUserPermissionsDialog(member)}>
                                     <Shield className="mr-2 h-4 w-4" />
-                                    Permisos
+                                    {tr('members.permissions')}
                                   </DropdownMenuItem>
                                 )}
                                 <DropdownMenuSeparator />
@@ -418,7 +418,7 @@ export function MembersManager() {
                                       {member.role === 'user' && (
                                         <DropdownMenuItem onClick={() => openUserPermissionsDialog(member)}>
                                           <Shield className="mr-2 h-4 w-4" />
-                                          Permisos
+                                          {tr('members.permissions')}
                                         </DropdownMenuItem>
                                       )}
                                       <DropdownMenuItem

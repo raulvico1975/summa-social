@@ -23,6 +23,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Upload, FileSpreadsheet, AlertCircle, CheckCircle2, ArrowRightCircle, Ban, Download } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useTranslations } from '@/i18n';
 import { useFirebase, useMemoFirebase, addDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
 import { collection, doc, query, where } from 'firebase/firestore';
@@ -57,6 +58,7 @@ export function EmployeeImporter({ open, onOpenChange, onComplete }: EmployeeImp
   const { firestore } = useFirebase();
   const { organizationId } = useCurrentOrganization();
   const { toast } = useToast();
+  const { t, tr } = useTranslations();
 
   // State
   const [step, setStep] = React.useState<ImportStep>('upload');
@@ -109,8 +111,8 @@ export function EmployeeImporter({ open, onOpenChange, onComplete }: EmployeeImp
       if (rows.length === 0) {
         toast({
           variant: 'destructive',
-          title: 'Fitxer buit',
-          description: 'No s\'han trobat dades de treballadors al fitxer.',
+          title: tr('employeeImporter.emptyFileTitle', t.importers.common.emptyFile),
+          description: tr('employeeImporter.emptyFileDescription', "No s'han trobat dades de treballadors al fitxer."),
         });
         setIsProcessing(false);
         return;
@@ -126,8 +128,8 @@ export function EmployeeImporter({ open, onOpenChange, onComplete }: EmployeeImp
       console.error('Error llegint fitxer:', error);
       toast({
         variant: 'destructive',
-        title: 'Error',
-        description: 'No s\'ha pogut llegir el fitxer Excel.',
+        title: t.common.error,
+        description: tr('employeeImporter.readError', "No s'ha pogut llegir el fitxer Excel."),
       });
     } finally {
       setIsProcessing(false);
@@ -177,8 +179,10 @@ export function EmployeeImporter({ open, onOpenChange, onComplete }: EmployeeImp
 
       setStep('done');
       toast({
-        title: 'Importació completada',
-        description: `${created} creats, ${updated} actualitzats.`,
+        title: t.importers.common.importComplete,
+        description: tr('employeeImporter.importSummary', '{created} creats, {updated} actualitzats.')
+          .replace('{created}', String(created))
+          .replace('{updated}', String(updated)),
       });
 
       onComplete?.();
@@ -186,8 +190,8 @@ export function EmployeeImporter({ open, onOpenChange, onComplete }: EmployeeImp
       console.error('Error important:', error);
       toast({
         variant: 'destructive',
-        title: 'Error',
-        description: 'S\'ha produït un error durant la importació.',
+        title: t.common.error,
+        description: tr('employeeImporter.importError', "S'ha produït un error durant la importació."),
       });
       setStep('preview');
     } finally {
@@ -202,21 +206,21 @@ export function EmployeeImporter({ open, onOpenChange, onComplete }: EmployeeImp
         return (
           <Badge variant="default" className="bg-green-100 text-green-800 hover:bg-green-100">
             <CheckCircle2 className="h-3 w-3 mr-1" />
-            Nou
+            {tr('employeeImporter.actionCreate', 'Nou')}
           </Badge>
         );
       case 'update':
         return (
           <Badge variant="default" className="bg-blue-100 text-blue-800 hover:bg-blue-100">
             <ArrowRightCircle className="h-3 w-3 mr-1" />
-            Actualitzar
+            {tr('employeeImporter.actionUpdate', 'Actualitzar')}
           </Badge>
         );
       case 'skip':
         return (
           <Badge variant="secondary" className="bg-gray-100 text-gray-600">
             <Ban className="h-3 w-3 mr-1" />
-            Ometre
+            {tr('employeeImporter.actionSkip', 'Ometre')}
           </Badge>
         );
     }
@@ -228,10 +232,10 @@ export function EmployeeImporter({ open, onOpenChange, onComplete }: EmployeeImp
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <FileSpreadsheet className="h-5 w-5 text-purple-500" />
-            Importar treballadors
+            {tr('employeeImporter.title', 'Importar treballadors')}
           </DialogTitle>
           <DialogDescription>
-            Importa treballadors des d'un fitxer Excel (.xlsx)
+            {tr('employeeImporter.description', "Importa treballadors des d'un fitxer Excel (.xlsx)")}
           </DialogDescription>
         </DialogHeader>
 
@@ -242,9 +246,9 @@ export function EmployeeImporter({ open, onOpenChange, onComplete }: EmployeeImp
               <div className="mx-auto w-16 h-16 rounded-full bg-purple-50 flex items-center justify-center">
                 <Upload className="h-8 w-8 text-purple-500" />
               </div>
-              <h3 className="font-medium">Selecciona un fitxer Excel</h3>
+              <h3 className="font-medium">{tr('employeeImporter.uploadTitle', 'Selecciona un fitxer Excel')}</h3>
               <p className="text-sm text-muted-foreground max-w-md">
-                El fitxer ha de contenir una capçalera amb columnes: NIF, Nom, Email, Telèfon, IBAN, Data alta, Codi postal, Notes
+                {tr('employeeImporter.uploadDescription', 'El fitxer ha de contenir una capçalera amb columnes: NIF, Nom, Email, Telèfon, IBAN, Data alta, Codi postal, Notes')}
               </p>
             </div>
 
@@ -255,7 +259,7 @@ export function EmployeeImporter({ open, onOpenChange, onComplete }: EmployeeImp
                 className="gap-2"
               >
                 <Download className="h-4 w-4" />
-                Descarregar plantilla
+                {t.importers.common.downloadTemplate}
               </Button>
 
               <Button
@@ -264,7 +268,7 @@ export function EmployeeImporter({ open, onOpenChange, onComplete }: EmployeeImp
                 className="gap-2"
               >
                 <FileSpreadsheet className="h-4 w-4" />
-                {isProcessing ? 'Processant...' : 'Seleccionar fitxer'}
+                {isProcessing ? t.importers.common.importing : tr('employeeImporter.selectFile', 'Seleccionar fitxer')}
               </Button>
             </div>
 
@@ -280,9 +284,7 @@ export function EmployeeImporter({ open, onOpenChange, onComplete }: EmployeeImp
             <Alert className="max-w-md">
               <AlertCircle className="h-4 w-4" />
               <AlertDescription className="text-xs">
-                Els treballadors es relacionen per <strong>NIF</strong>.
-                Si el NIF coincideix, s'actualitza; si no, es crea un nou registre.
-                Si no s'informa el NIF, sempre es crea un nou treballador.
+                {tr('employeeImporter.matchingHelp', "Els treballadors es relacionen per NIF. Si el NIF coincideix, s'actualitza; si no, es crea un nou registre. Si no s'informa el NIF, sempre es crea un nou treballador.")}
               </AlertDescription>
             </Alert>
           </div>
@@ -295,25 +297,25 @@ export function EmployeeImporter({ open, onOpenChange, onComplete }: EmployeeImp
             <div className="flex gap-4 text-sm">
               <div className="flex items-center gap-2">
                 <div className="w-3 h-3 rounded-full bg-green-500" />
-                <span>{importResult.summary.toCreate} nous</span>
+                <span>{tr('employeeImporter.summaryNew', '{count} nous').replace('{count}', String(importResult.summary.toCreate))}</span>
               </div>
               <div className="flex items-center gap-2">
                 <div className="w-3 h-3 rounded-full bg-blue-500" />
-                <span>{importResult.summary.toUpdate} actualitzacions</span>
+                <span>{tr('employeeImporter.summaryUpdated', '{count} actualitzacions').replace('{count}', String(importResult.summary.toUpdate))}</span>
               </div>
               <div className="flex items-center gap-2">
                 <div className="w-3 h-3 rounded-full bg-gray-400" />
-                <span>{importResult.summary.toSkip} omesos</span>
+                <span>{tr('employeeImporter.summarySkipped', '{count} omesos').replace('{count}', String(importResult.summary.toSkip))}</span>
               </div>
             </div>
 
             {/* Avisos de parsing */}
             {parseWarnings.length > 0 && (
               <Alert variant="destructive">
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription>
-                  <details className="text-xs">
-                    <summary className="cursor-pointer">{parseWarnings.length} avís(os) durant el parsing</summary>
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>
+                    <details className="text-xs">
+                    <summary className="cursor-pointer">{tr('employeeImporter.warningsCount', '{count} avís(os) durant el parsing').replace('{count}', String(parseWarnings.length))}</summary>
                     <ul className="mt-2 space-y-1">
                       {parseWarnings.map((w, i) => (
                         <li key={i}>{w}</li>
@@ -329,11 +331,11 @@ export function EmployeeImporter({ open, onOpenChange, onComplete }: EmployeeImp
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-24">Acció</TableHead>
+                    <TableHead className="w-24">{tr('employeeImporter.table.action', 'Acció')}</TableHead>
                     <TableHead>NIF</TableHead>
-                    <TableHead>Nom</TableHead>
+                    <TableHead>{t.importers.common.name}</TableHead>
                     <TableHead>Email</TableHead>
-                    <TableHead className="w-48">Detalls</TableHead>
+                    <TableHead className="w-48">{tr('employeeImporter.table.details', 'Detalls')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -352,7 +354,7 @@ export function EmployeeImporter({ open, onOpenChange, onComplete }: EmployeeImp
                       </TableCell>
                       <TableCell className="text-xs text-muted-foreground">
                         {preview.action === 'update' && preview.changes && (
-                          <span>Canvis: {preview.changes.join(', ')}</span>
+                          <span>{tr('employeeImporter.changesLabel', 'Canvis:')} {preview.changes.join(', ')}</span>
                         )}
                         {preview.action === 'skip' && preview.reason && (
                           <span>{preview.reason}</span>
@@ -373,8 +375,8 @@ export function EmployeeImporter({ open, onOpenChange, onComplete }: EmployeeImp
               <div className="mx-auto w-16 h-16 rounded-full bg-purple-50 flex items-center justify-center">
                 <FileSpreadsheet className="h-8 w-8 text-purple-500" />
               </div>
-              <h3 className="font-medium">Important treballadors...</h3>
-              <p className="text-sm text-muted-foreground">Això pot trigar uns segons</p>
+              <h3 className="font-medium">{tr('employeeImporter.importingTitle', 'Important treballadors...')}</h3>
+              <p className="text-sm text-muted-foreground">{tr('employeeImporter.importingDescription', 'Això pot trigar uns segons')}</p>
             </div>
           </div>
         )}
@@ -386,9 +388,9 @@ export function EmployeeImporter({ open, onOpenChange, onComplete }: EmployeeImp
               <div className="mx-auto w-16 h-16 rounded-full bg-green-50 flex items-center justify-center">
                 <CheckCircle2 className="h-8 w-8 text-green-500" />
               </div>
-              <h3 className="font-medium">Importació completada</h3>
+              <h3 className="font-medium">{t.importers.common.importComplete}</h3>
               <p className="text-sm text-muted-foreground">
-                Tots els treballadors s'han processat correctament
+                {tr('employeeImporter.doneDescription', "Tots els treballadors s'han processat correctament")}
               </p>
             </div>
           </div>
@@ -398,14 +400,14 @@ export function EmployeeImporter({ open, onOpenChange, onComplete }: EmployeeImp
         <DialogFooter className="flex-shrink-0 pt-4 border-t">
           {step === 'upload' && (
             <Button variant="outline" onClick={() => onOpenChange(false)}>
-              Cancel·lar
+              {t.importers.common.close}
             </Button>
           )}
 
           {step === 'preview' && (
             <>
               <Button variant="outline" onClick={() => setStep('upload')}>
-                Tornar
+                {t.importers.common.back}
               </Button>
               <Button
                 onClick={handleApplyImport}
@@ -414,14 +416,14 @@ export function EmployeeImporter({ open, onOpenChange, onComplete }: EmployeeImp
                   (importResult?.summary.toCreate === 0 && importResult?.summary.toUpdate === 0)
                 }
               >
-                Aplicar importació
+                {tr('employeeImporter.applyImport', 'Aplicar importació')}
               </Button>
             </>
           )}
 
           {step === 'done' && (
             <Button onClick={() => onOpenChange(false)}>
-              Tancar
+              {t.importers.common.close}
             </Button>
           )}
         </DialogFooter>

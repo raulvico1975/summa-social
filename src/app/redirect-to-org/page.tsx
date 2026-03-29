@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { signOut } from 'firebase/auth';
 import { broadcastLogoutSync } from '@/lib/session-sync';
+import { useTranslations } from '@/i18n';
 
 type PageState = 'loading' | 'error' | 'no-org';
 
@@ -21,6 +22,7 @@ function RedirectContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { firestore, auth, user, isUserLoading } = useFirebase();
+  const { t, tr } = useTranslations();
 
   const [pageState, setPageState] = useState<PageState>('loading');
   const [errorMessage, setErrorMessage] = useState<string>('');
@@ -105,7 +107,7 @@ function RedirectContent() {
           const orgSnap = await getDoc(orgRef);
 
           if (!orgSnap.exists()) {
-            setErrorMessage('L\'organització assignada no existeix.');
+            setErrorMessage(tr('redirectToOrg.errors.orgMissing', "L'organització assignada no existeix."));
             setDebugInfo(`orgId: ${orgId}`);
             setPageState('error');
             return;
@@ -116,7 +118,7 @@ function RedirectContent() {
         }
 
         if (!slug) {
-          setErrorMessage('L\'organització no té un identificador (slug) configurat.');
+          setErrorMessage(tr('redirectToOrg.errors.slugMissing', "L'organització no té un identificador (slug) configurat."));
           setDebugInfo(`orgId: ${orgId}`);
           setPageState('error');
           return;
@@ -128,7 +130,7 @@ function RedirectContent() {
 
       } catch (err) {
         console.error('[redirect-to-org] Error:', err);
-        setErrorMessage('Error carregant l\'organització. Torna a iniciar sessió.');
+        setErrorMessage(tr('redirectToOrg.errors.generic', "Error carregant l'organització. Torna a iniciar sessió."));
         setDebugInfo(err instanceof Error ? err.message : 'Unknown error');
         setPageState('error');
       }
@@ -153,7 +155,7 @@ function RedirectContent() {
       <div className="flex min-h-screen items-center justify-center">
         <div className="text-center">
           <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
-          <p className="text-muted-foreground">Carregant organització...</p>
+          <p className="text-muted-foreground">{tr('redirectToOrg.loadingOrganization', 'Carregant organització...')}</p>
         </div>
       </div>
     );
@@ -166,14 +168,14 @@ function RedirectContent() {
         <Card className="w-full max-w-md">
           <CardHeader className="text-center">
             <AlertCircle className="mx-auto h-12 w-12 text-orange-500" />
-            <CardTitle className="mt-4">Sense organització</CardTitle>
+            <CardTitle className="mt-4">{tr('redirectToOrg.noOrganizationTitle', 'Sense organització')}</CardTitle>
             <CardDescription>
-              No tens accés a cap organització. Contacta amb l'administrador per obtenir una invitació.
+              {tr('redirectToOrg.noOrganizationDescription', "No tens accés a cap organització. Contacta amb l'administrador per obtenir una invitació.")}
             </CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col gap-3">
             <Button onClick={handleLogout} variant="outline">
-              Tancar sessió
+              {tr('redirectToOrg.signOut', 'Tancar sessió')}
             </Button>
             {debugInfo && (
               <p className="text-xs text-muted-foreground text-center font-mono">
@@ -192,12 +194,12 @@ function RedirectContent() {
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <AlertCircle className="mx-auto h-12 w-12 text-destructive" />
-          <CardTitle className="mt-4">Error</CardTitle>
+          <CardTitle className="mt-4">{t.common.error}</CardTitle>
           <CardDescription>{errorMessage}</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-3">
           <Button onClick={handleLogout}>
-            Tornar a iniciar sessió
+            {tr('redirectToOrg.signInAgain', 'Tornar a iniciar sessió')}
           </Button>
           {debugInfo && (
             <p className="text-xs text-muted-foreground text-center font-mono">
@@ -211,13 +213,15 @@ function RedirectContent() {
 }
 
 export default function RedirectToOrgPage() {
+  const { t } = useTranslations();
+
   return (
     <Suspense
       fallback={
         <div className="flex min-h-screen items-center justify-center">
           <div className="text-center">
             <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
-            <p className="text-muted-foreground">Carregant...</p>
+            <p className="text-muted-foreground">{t.common.loading}</p>
           </div>
         </div>
       }

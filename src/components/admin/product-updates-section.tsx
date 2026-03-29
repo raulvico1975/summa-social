@@ -71,6 +71,7 @@ import {
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import { useIsMobile } from '@/hooks/use-is-mobile';
+import { useTranslations } from '@/i18n';
 
 import { stripUndefined, stripUndefinedDeep } from '@/lib/firestore-utils';
 
@@ -224,6 +225,18 @@ export function ProductUpdatesSection({ isSuperAdmin = false }: ProductUpdatesSe
   const { firestore } = useFirebase();
   const { toast } = useToast();
   const isMobile = useIsMobile();
+  const { tr, language } = useTranslations();
+  const uiLocale = language === 'es' ? 'es-ES' : language === 'fr' ? 'fr-FR' : language === 'pt' ? 'pt-PT' : 'ca-ES';
+  const riskLabel = React.useCallback(
+    (risk: AIGeneratedContent['analysis']['techRisk']) =>
+      tr(`admin.productUpdates.analysis.riskLevels.${risk}`, risk),
+    [tr]
+  );
+  const recommendationLabel = React.useCallback(
+    (recommendation: AIGeneratedContent['analysis']['recommendation']) =>
+      tr(`admin.productUpdates.analysis.recommendations.${recommendation}`, recommendation),
+    [tr]
+  );
 
   // Tab actiu controlat per Select/Tabs
   const [activeTab, setActiveTab] = React.useState<string>('drafts');
@@ -307,7 +320,7 @@ export function ProductUpdatesSection({ isSuperAdmin = false }: ProductUpdatesSe
 
       // Validar estructura
       if (!data.drafts || !Array.isArray(data.drafts)) {
-        throw new Error('Format JSON invàlid: falta array "drafts"');
+        throw new Error(tr('admin.productUpdates.toast.invalidJsonFormat', 'Format JSON invàlid: falta array "drafts"'));
       }
 
       // Obtenir IDs existents per evitar duplicats
@@ -361,15 +374,17 @@ export function ProductUpdatesSection({ isSuperAdmin = false }: ProductUpdatesSe
       }
 
       toast({
-        title: 'Importació completada',
-        description: `${insertedCount} esborranys importats${skippedCount > 0 ? `, ${skippedCount} saltats (duplicats o invàlids)` : ''}.`,
+        title: tr('admin.productUpdates.toast.importSuccessTitle', 'Importació completada'),
+        description: tr('admin.productUpdates.toast.importSuccessDescription', '{inserted} esborranys importats{skippedPart}.')
+          .replace('{inserted}', String(insertedCount))
+          .replace('{skippedPart}', skippedCount > 0 ? tr('admin.productUpdates.toast.importSkippedPart', ', {count} saltats (duplicats o invàlids)').replace('{count}', String(skippedCount)) : ''),
       });
     } catch (error) {
       console.error('Error importar JSON:', error);
       toast({
         variant: 'destructive',
-        title: 'Error',
-        description: error instanceof Error ? error.message : 'No s\'ha pogut importar el fitxer.',
+        title: tr('admin.productUpdates.toast.errorTitle', 'Error'),
+        description: error instanceof Error ? error.message : tr('admin.productUpdates.toast.importError', 'No s’ha pogut importar el fitxer.'),
       });
     } finally {
       setIsImporting(false);
@@ -393,19 +408,19 @@ export function ProductUpdatesSection({ isSuperAdmin = false }: ProductUpdatesSe
 
     // Validar
     if (!editTitle.trim()) {
-      toast({ variant: 'destructive', title: 'Error', description: 'El títol és obligatori.' });
+      toast({ variant: 'destructive', title: tr('admin.productUpdates.toast.errorTitle', 'Error'), description: tr('admin.productUpdates.toast.titleRequired', 'El títol és obligatori.') });
       return;
     }
     if (editTitle.length > 60) {
-      toast({ variant: 'destructive', title: 'Error', description: 'El títol ha de tenir màxim 60 caràcters.' });
+      toast({ variant: 'destructive', title: tr('admin.productUpdates.toast.errorTitle', 'Error'), description: tr('admin.productUpdates.toast.titleMax', 'El títol ha de tenir màxim 60 caràcters.') });
       return;
     }
     if (!editDescription.trim()) {
-      toast({ variant: 'destructive', title: 'Error', description: 'La descripció és obligatòria.' });
+      toast({ variant: 'destructive', title: tr('admin.productUpdates.toast.errorTitle', 'Error'), description: tr('admin.productUpdates.toast.descriptionRequired', 'La descripció és obligatòria.') });
       return;
     }
     if (editDescription.length > 140) {
-      toast({ variant: 'destructive', title: 'Error', description: 'La descripció ha de tenir màxim 140 caràcters.' });
+      toast({ variant: 'destructive', title: tr('admin.productUpdates.toast.errorTitle', 'Error'), description: tr('admin.productUpdates.toast.descriptionMax', 'La descripció ha de tenir màxim 140 caràcters.') });
       return;
     }
 
@@ -417,12 +432,12 @@ export function ProductUpdatesSection({ isSuperAdmin = false }: ProductUpdatesSe
         link: editLink.trim() || null,
       });
 
-      toast({ title: 'Esborrany actualitzat' });
+      toast({ title: tr('admin.productUpdates.toast.draftUpdated', 'Esborrany actualitzat') });
       setIsEditDialogOpen(false);
       setEditingDraft(null);
     } catch (error) {
       console.error('Error guardar esborrany:', error);
-      toast({ variant: 'destructive', title: 'Error', description: 'No s\'ha pogut guardar.' });
+      toast({ variant: 'destructive', title: tr('admin.productUpdates.toast.errorTitle', 'Error'), description: tr('admin.productUpdates.toast.saveError', 'No s’ha pogut guardar.') });
     } finally {
       setIsSaving(false);
     }
@@ -451,12 +466,12 @@ export function ProductUpdatesSection({ isSuperAdmin = false }: ProductUpdatesSe
       });
 
       toast({
-        title: 'Novetat publicada',
-        description: 'Els usuaris la veuran a la campaneta de novetats.',
+        title: tr('admin.productUpdates.toast.publishedTitle', 'Novetat publicada'),
+        description: tr('admin.productUpdates.toast.publishedDescription', 'Els usuaris la veuran a la campaneta de novetats.'),
       });
     } catch (error) {
       console.error('Error publicar:', error);
-      toast({ variant: 'destructive', title: 'Error', description: 'No s\'ha pogut publicar.' });
+      toast({ variant: 'destructive', title: tr('admin.productUpdates.toast.errorTitle', 'Error'), description: tr('admin.productUpdates.toast.publishError', 'No s’ha pogut publicar.') });
     } finally {
       setIsPublishing(null);
     }
@@ -469,10 +484,10 @@ export function ProductUpdatesSection({ isSuperAdmin = false }: ProductUpdatesSe
       await updateDoc(doc(firestore, 'productUpdateDrafts', draft.id), {
         status: 'discarded',
       });
-      toast({ title: 'Esborrany descartat' });
+      toast({ title: tr('admin.productUpdates.toast.draftDiscarded', 'Esborrany descartat') });
     } catch (error) {
       console.error('Error descartar:', error);
-      toast({ variant: 'destructive', title: 'Error', description: 'No s\'ha pogut descartar.' });
+      toast({ variant: 'destructive', title: tr('admin.productUpdates.toast.errorTitle', 'Error'), description: tr('admin.productUpdates.toast.discardError', 'No s’ha pogut descartar.') });
     } finally {
       setIsDiscarding(null);
     }
@@ -485,10 +500,10 @@ export function ProductUpdatesSection({ isSuperAdmin = false }: ProductUpdatesSe
       await updateDoc(doc(firestore, 'productUpdates', update.id), {
         isActive: false,
       });
-      toast({ title: 'Novetat despublicada', description: 'Els usuaris ja no la veuran.' });
+      toast({ title: tr('admin.productUpdates.toast.unpublishedTitle', 'Novetat despublicada'), description: tr('admin.productUpdates.toast.unpublishedDescription', 'Els usuaris ja no la veuran.') });
     } catch (error) {
       console.error('Error despublicar:', error);
-      toast({ variant: 'destructive', title: 'Error', description: 'No s\'ha pogut despublicar.' });
+      toast({ variant: 'destructive', title: tr('admin.productUpdates.toast.errorTitle', 'Error'), description: tr('admin.productUpdates.toast.unpublishError', 'No s’ha pogut despublicar.') });
     } finally {
       setIsUnpublishing(null);
     }
@@ -497,7 +512,7 @@ export function ProductUpdatesSection({ isSuperAdmin = false }: ProductUpdatesSe
   // Handler generar contingut amb IA
   const handleGenerateAI = async () => {
     if (!aiTitle.trim() || !aiDescription.trim()) {
-      toast({ variant: 'destructive', title: 'Error', description: 'Títol i descripció són obligatoris.' });
+      toast({ variant: 'destructive', title: tr('admin.productUpdates.toast.errorTitle', 'Error'), description: tr('admin.productUpdates.toast.aiRequired', 'Títol i descripció són obligatoris.') });
       return;
     }
 
@@ -524,18 +539,18 @@ export function ProductUpdatesSection({ isSuperAdmin = false }: ProductUpdatesSe
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.error || 'Error generant contingut');
+        throw new Error(error.error || tr('admin.productUpdates.toast.aiGenerateError', 'Error generant contingut'));
       }
 
       const data = await response.json() as AIGeneratedContent;
       setGeneratedContent(data);
-      toast({ title: 'Contingut generat', description: 'Revisa el preview abans de publicar.' });
+      toast({ title: tr('admin.productUpdates.toast.aiGeneratedTitle', 'Contingut generat'), description: tr('admin.productUpdates.toast.aiGeneratedDescription', 'Revisa el preview abans de publicar.') });
     } catch (error) {
       console.error('Error generar IA:', error);
       toast({
         variant: 'destructive',
-        title: 'Error',
-        description: error instanceof Error ? error.message : 'No s\'ha pogut generar contingut.',
+        title: tr('admin.productUpdates.toast.errorTitle', 'Error'),
+        description: error instanceof Error ? error.message : tr('admin.productUpdates.toast.aiGenerateErrorDescription', 'No s’ha pogut generar contingut.'),
       });
     } finally {
       setIsGenerating(false);
@@ -545,7 +560,7 @@ export function ProductUpdatesSection({ isSuperAdmin = false }: ProductUpdatesSe
   // Handler publicar des d'IA
   const handlePublishAI = async () => {
     if (!generatedContent || !aiTitle.trim() || !aiDescription.trim()) {
-      toast({ variant: 'destructive', title: 'Error', description: 'Genera contingut primer.' });
+      toast({ variant: 'destructive', title: tr('admin.productUpdates.toast.errorTitle', 'Error'), description: tr('admin.productUpdates.toast.generateFirst', 'Genera contingut primer.') });
       return;
     }
 
@@ -609,8 +624,8 @@ export function ProductUpdatesSection({ isSuperAdmin = false }: ProductUpdatesSe
       await setDoc(doc(firestore, 'productUpdates', updateId), updateData);
 
       toast({
-        title: 'Novetat publicada',
-        description: 'Els usuaris la veuran a la campaneta de novetats.',
+        title: tr('admin.productUpdates.toast.publishedTitle', 'Novetat publicada'),
+        description: tr('admin.productUpdates.toast.publishedDescription', 'Els usuaris la veuran a la campaneta de novetats.'),
       });
 
       // Reset form
@@ -626,7 +641,7 @@ export function ProductUpdatesSection({ isSuperAdmin = false }: ProductUpdatesSe
       setGeneratedContent(null);
     } catch (error) {
       console.error('Error publicar IA:', error);
-      toast({ variant: 'destructive', title: 'Error', description: 'No s\'ha pogut publicar.' });
+      toast({ variant: 'destructive', title: tr('admin.productUpdates.toast.errorTitle', 'Error'), description: tr('admin.productUpdates.toast.publishError', 'No s’ha pogut publicar.') });
     } finally {
       setIsPublishingAI(false);
     }
@@ -635,20 +650,20 @@ export function ProductUpdatesSection({ isSuperAdmin = false }: ProductUpdatesSe
   // Helper copiar text
   const copyToClipboard = (text: string, label: string) => {
     navigator.clipboard.writeText(text);
-    toast({ title: `${label} copiat` });
+    toast({ title: tr('admin.productUpdates.toast.copied', '{label} copiat').replace('{label}', label) });
   };
 
   // Exportar JSON legacy per web públic (només suport temporal)
   const handleExportWebJson = () => {
     if (!published || published.length === 0) {
-      toast({ variant: 'destructive', title: 'Cap novetat', description: 'No hi ha novetats actives amb web.enabled' });
+      toast({ variant: 'destructive', title: tr('admin.productUpdates.toast.noUpdatesTitle', 'Cap novetat'), description: tr('admin.productUpdates.toast.noWebEnabled', 'No hi ha novetats actives amb web.enabled') });
       return;
     }
 
     // Filtrar només updates amb web.enabled
     const webUpdates = published.filter(u => u.web?.enabled && u.web?.slug);
     if (webUpdates.length === 0) {
-      toast({ variant: 'destructive', title: 'Cap novetat web', description: 'Activa web.enabled i slug a les novetats que vulguis publicar.' });
+      toast({ variant: 'destructive', title: tr('admin.productUpdates.toast.noWebUpdatesTitle', 'Cap novetat web'), description: tr('admin.productUpdates.toast.noWebUpdatesDescription', 'Activa web.enabled i slug a les novetats que vulguis publicar.') });
       return;
     }
 
@@ -677,8 +692,8 @@ export function ProductUpdatesSection({ isSuperAdmin = false }: ProductUpdatesSe
     URL.revokeObjectURL(url);
 
     toast({
-      title: 'JSON legacy exportat',
-      description: `${webUpdates.length} novetats. Aquest export ja no es necessari per al web public i queda només com a suport legacy.`,
+      title: tr('admin.productUpdates.toast.legacyExportTitle', 'JSON legacy exportat'),
+      description: tr('admin.productUpdates.toast.legacyExportDescription', '{count} novetats. Aquest export ja no és necessari per al web públic i queda només com a suport legacy.').replace('{count}', String(webUpdates.length)),
     });
   };
 
@@ -689,10 +704,10 @@ export function ProductUpdatesSection({ isSuperAdmin = false }: ProductUpdatesSe
           <div>
             <CardTitle className="flex items-center gap-2 text-base">
               <Megaphone className="h-4 w-4" />
-              Novetats
+              {tr('admin.content.updatesHeaderTitle', 'Novetats')}
             </CardTitle>
             <CardDescription>
-              Gestiona les novetats visibles per als usuaris
+              {tr('admin.productUpdates.description', 'Gestiona les novetats visibles per als usuaris')}
             </CardDescription>
           </div>
           {/* Mobile: CTA + dropdown */}
@@ -706,7 +721,7 @@ export function ProductUpdatesSection({ isSuperAdmin = false }: ProductUpdatesSe
                     ) : (
                       <Upload className="mr-2 h-4 w-4" />
                     )}
-                    Importar esborranys
+                    {tr('admin.productUpdates.importDrafts', 'Importar esborranys')}
                   </span>
                 </Button>
               </Label>
@@ -722,13 +737,13 @@ export function ProductUpdatesSection({ isSuperAdmin = false }: ProductUpdatesSe
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline" className="w-full">
                     <MoreVertical className="h-4 w-4 mr-2" />
-                    Més accions
+                    {tr('admin.productUpdates.moreActions', 'Més accions')}
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56">
                   <DropdownMenuItem onClick={handleExportWebJson}>
                     <FileJson className="h-4 w-4 mr-2" />
-                    Exportar JSON legacy
+                    {tr('admin.productUpdates.exportLegacyJson', 'Exportar JSON legacy')}
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -739,10 +754,10 @@ export function ProductUpdatesSection({ isSuperAdmin = false }: ProductUpdatesSe
               <div className="flex flex-col items-end gap-1">
                 <Button variant="outline" size="sm" onClick={handleExportWebJson}>
                   <FileJson className="mr-2 h-4 w-4" />
-                  Exportar JSON legacy
+                  {tr('admin.productUpdates.exportLegacyJson', 'Exportar JSON legacy')}
                 </Button>
                 <p className="text-[10px] text-muted-foreground max-w-[200px] text-right">
-                  Suport temporal. El web public ja llegeix des de Firestore server-side
+                  {tr('admin.productUpdates.legacySupportHint', 'Suport temporal. El web públic ja llegeix des de Firestore server-side')}
                 </p>
               </div>
               <Label htmlFor="import-json" className="cursor-pointer">
@@ -753,7 +768,7 @@ export function ProductUpdatesSection({ isSuperAdmin = false }: ProductUpdatesSe
                     ) : (
                       <Upload className="mr-2 h-4 w-4" />
                     )}
-                    Importar esborranys
+                    {tr('admin.productUpdates.importDrafts', 'Importar esborranys')}
                   </span>
                 </Button>
               </Label>
@@ -779,33 +794,33 @@ export function ProductUpdatesSection({ isSuperAdmin = false }: ProductUpdatesSe
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="drafts">
-                  Esborranys {activeDrafts.length > 0 && `(${activeDrafts.length})`}
+                  {tr('admin.productUpdates.tabs.drafts', 'Esborranys')} {activeDrafts.length > 0 && `(${activeDrafts.length})`}
                 </SelectItem>
                 <SelectItem value="published">
-                  Publicades {published && published.length > 0 && `(${published.length})`}
+                  {tr('admin.productUpdates.tabs.published', 'Publicades')} {published && published.length > 0 && `(${published.length})`}
                 </SelectItem>
                 <SelectItem value="create-ai">
-                  Crear amb IA
+                  {tr('admin.productUpdates.tabs.createAi', 'Crear amb IA')}
                 </SelectItem>
               </SelectContent>
             </Select>
           ) : (
             <TabsList className="mb-4">
               <TabsTrigger value="drafts">
-                Esborranys
+                {tr('admin.productUpdates.tabs.drafts', 'Esborranys')}
                 {activeDrafts.length > 0 && (
                   <Badge variant="secondary" className="ml-2">{activeDrafts.length}</Badge>
                 )}
               </TabsTrigger>
               <TabsTrigger value="published">
-                Publicades
+                {tr('admin.productUpdates.tabs.published', 'Publicades')}
                 {published && published.length > 0 && (
                   <Badge variant="outline" className="ml-2">{published.length}</Badge>
                 )}
               </TabsTrigger>
               <TabsTrigger value="create-ai">
                 <Sparkles className="h-4 w-4 mr-1" />
-                Crear amb IA
+                {tr('admin.productUpdates.tabs.createAi', 'Crear amb IA')}
               </TabsTrigger>
             </TabsList>
           )}
@@ -815,23 +830,23 @@ export function ProductUpdatesSection({ isSuperAdmin = false }: ProductUpdatesSe
             {isLoadingDrafts ? (
               <div className="flex items-center gap-2 text-sm text-muted-foreground py-4">
                 <Loader2 className="h-4 w-4 animate-spin" />
-                Carregant...
+                {tr('admin.productUpdates.loading', 'Carregant...')}
               </div>
             ) : activeDrafts.length === 0 ? (
               <div className="py-8 text-center text-muted-foreground">
                 <FileJson className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                <p className="text-sm">Cap esborrany pendent.</p>
+                <p className="text-sm">{tr('admin.productUpdates.emptyDrafts', 'Cap esborrany pendent.')}</p>
                 {!isMobile && (
-                  <p className="text-xs mt-1">Executa <code className="bg-muted px-1 rounded">npm run updates:drafts</code> i importa el JSON.</p>
+                  <p className="text-xs mt-1">{tr('admin.productUpdates.emptyDraftsHint', 'Executa npm run updates:drafts i importa el JSON.')}</p>
                 )}
               </div>
             ) : (
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Títol</TableHead>
-                    <TableHead>Descripció</TableHead>
-                    <TableHead className="w-[180px]">Accions</TableHead>
+                    <TableHead>{tr('admin.productUpdates.table.title', 'Títol')}</TableHead>
+                    <TableHead>{tr('admin.productUpdates.table.description', 'Descripció')}</TableHead>
+                    <TableHead className="w-[180px]">{tr('admin.productUpdates.table.actions', 'Accions')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -847,7 +862,7 @@ export function ProductUpdatesSection({ isSuperAdmin = false }: ProductUpdatesSe
                             variant="ghost"
                             size="sm"
                             onClick={() => handleEditDraft(draft)}
-                            title="Editar"
+                            title={tr('admin.productUpdates.edit', 'Editar')}
                           >
                             <Pencil className="h-4 w-4" />
                           </Button>
@@ -856,7 +871,7 @@ export function ProductUpdatesSection({ isSuperAdmin = false }: ProductUpdatesSe
                             size="sm"
                             onClick={() => handlePublish(draft)}
                             disabled={isPublishing === draft.id}
-                            title="Publicar"
+                            title={tr('admin.productUpdates.publish', 'Publicar')}
                           >
                             {isPublishing === draft.id ? (
                               <Loader2 className="h-4 w-4 animate-spin" />
@@ -870,7 +885,7 @@ export function ProductUpdatesSection({ isSuperAdmin = false }: ProductUpdatesSe
                             onClick={() => handleDiscard(draft)}
                             disabled={isDiscarding === draft.id}
                             className="text-destructive hover:text-destructive"
-                            title="Descartar"
+                            title={tr('admin.productUpdates.discard', 'Descartar')}
                           >
                             {isDiscarding === draft.id ? (
                               <Loader2 className="h-4 w-4 animate-spin" />
@@ -892,20 +907,20 @@ export function ProductUpdatesSection({ isSuperAdmin = false }: ProductUpdatesSe
             {isLoadingPublished ? (
               <div className="flex items-center gap-2 text-sm text-muted-foreground py-4">
                 <Loader2 className="h-4 w-4 animate-spin" />
-                Carregant...
+                {tr('admin.productUpdates.loading', 'Carregant...')}
               </div>
             ) : !published || published.length === 0 ? (
               <div className="py-8 text-center text-muted-foreground">
                 <Megaphone className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                <p className="text-sm">Cap novetat publicada encara.</p>
+                <p className="text-sm">{tr('admin.productUpdates.emptyPublished', 'Cap novetat publicada encara.')}</p>
               </div>
             ) : (
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Títol</TableHead>
-                    <TableHead>Descripció</TableHead>
-                    <TableHead>Publicada</TableHead>
+                    <TableHead>{tr('admin.productUpdates.table.title', 'Títol')}</TableHead>
+                    <TableHead>{tr('admin.productUpdates.table.description', 'Descripció')}</TableHead>
+                    <TableHead>{tr('admin.productUpdates.table.publishedAt', 'Publicada')}</TableHead>
                     <TableHead className="w-[80px]"></TableHead>
                   </TableRow>
                 </TableHeader>
@@ -928,7 +943,7 @@ export function ProductUpdatesSection({ isSuperAdmin = false }: ProductUpdatesSe
                       </TableCell>
                       <TableCell className="text-xs text-muted-foreground">
                         {update.publishedAt instanceof Date
-                          ? update.publishedAt.toLocaleDateString('ca-ES', {
+                          ? update.publishedAt.toLocaleDateString(uiLocale, {
                               day: '2-digit',
                               month: '2-digit',
                               year: 'numeric',
@@ -942,7 +957,7 @@ export function ProductUpdatesSection({ isSuperAdmin = false }: ProductUpdatesSe
                           onClick={() => handleUnpublish(update)}
                           disabled={isUnpublishing === update.id}
                           className="text-muted-foreground hover:text-foreground"
-                          title="Despublicar"
+                          title={tr('admin.productUpdates.unpublish', 'Despublicar')}
                         >
                           {isUnpublishing === update.id ? (
                             <Loader2 className="h-4 w-4 animate-spin" />
@@ -965,86 +980,86 @@ export function ProductUpdatesSection({ isSuperAdmin = false }: ProductUpdatesSe
               <div className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="ai-title">
-                    Títol <span className="text-xs text-muted-foreground">(obligatori)</span>
+                    {tr('admin.productUpdates.fields.title', 'Títol')} <span className="text-xs text-muted-foreground">({tr('admin.productUpdates.required', 'obligatori')})</span>
                   </Label>
                   <Input
                     id="ai-title"
                     value={aiTitle}
                     onChange={(e) => setAiTitle(e.target.value)}
                     maxLength={60}
-                    placeholder="Títol curt i descriptiu"
+                    placeholder={tr('admin.productUpdates.placeholders.title', 'Títol curt i descriptiu')}
                   />
                 </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="ai-description">
-                    Descripció breu <span className="text-xs text-muted-foreground">(obligatori)</span>
+                    {tr('admin.productUpdates.fields.shortDescription', 'Descripció breu')} <span className="text-xs text-muted-foreground">({tr('admin.productUpdates.required', 'obligatori')})</span>
                   </Label>
                   <Textarea
                     id="ai-description"
                     value={aiDescription}
                     onChange={(e) => setAiDescription(e.target.value)}
                     maxLength={140}
-                    placeholder="Descripció que apareixerà a la campaneta"
+                    placeholder={tr('admin.productUpdates.placeholders.shortDescription', 'Descripció que apareixerà a la campaneta')}
                     rows={2}
                   />
                 </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="ai-link">
-                    Enllaç <span className="text-xs text-muted-foreground">(opcional)</span>
+                    {tr('admin.productUpdates.fields.link', 'Enllaç')} <span className="text-xs text-muted-foreground">({tr('admin.productUpdates.optional', 'opcional')})</span>
                   </Label>
                   <Input
                     id="ai-link"
                     value={aiLink}
                     onChange={(e) => setAiLink(e.target.value)}
-                    placeholder="/dashboard/movimientos"
+                    placeholder={tr('admin.productUpdates.placeholders.link', '/dashboard/movimientos')}
                   />
                 </div>
 
                 <div className="border-t pt-4 space-y-3">
-                  <p className="text-xs font-medium text-muted-foreground">Context addicional per IA (opcional)</p>
+                  <p className="text-xs font-medium text-muted-foreground">{tr('admin.productUpdates.aiContextTitle', 'Context addicional per IA (opcional)')}</p>
 
                   <div className="space-y-2">
-                    <Label htmlFor="ai-change" className="text-xs">Què ha canviat?</Label>
+                    <Label htmlFor="ai-change" className="text-xs">{tr('admin.productUpdates.fields.change', 'Què ha canviat?')}</Label>
                     <Input
                       id="ai-change"
                       value={aiChangeBrief}
                       onChange={(e) => setAiChangeBrief(e.target.value)}
-                      placeholder="Nou botó per exportar, millora de rendiment..."
+                      placeholder={tr('admin.productUpdates.placeholders.change', 'Nou botó per exportar, millora de rendiment...')}
                       className="text-sm"
                     />
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="ai-problem" className="text-xs">Problema que resol?</Label>
+                    <Label htmlFor="ai-problem" className="text-xs">{tr('admin.productUpdates.fields.problem', 'Problema que resol?')}</Label>
                     <Input
                       id="ai-problem"
                       value={aiProblemReal}
                       onChange={(e) => setAiProblemReal(e.target.value)}
-                      placeholder="Abans calia fer-ho manualment..."
+                      placeholder={tr('admin.productUpdates.placeholders.problem', 'Abans calia fer-ho manualment...')}
                       className="text-sm"
                     />
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="ai-affects" className="text-xs">A qui afecta?</Label>
+                    <Label htmlFor="ai-affects" className="text-xs">{tr('admin.productUpdates.fields.affects', 'A qui afecta?')}</Label>
                     <Input
                       id="ai-affects"
                       value={aiAffects}
                       onChange={(e) => setAiAffects(e.target.value)}
-                      placeholder="Tots els usuaris, administradors..."
+                      placeholder={tr('admin.productUpdates.placeholders.affects', 'Tots els usuaris, administradors...')}
                       className="text-sm"
                     />
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="ai-action" className="text-xs">Acció de l'usuari?</Label>
+                    <Label htmlFor="ai-action" className="text-xs">{tr('admin.productUpdates.fields.userAction', 'Acció de l’usuari?')}</Label>
                     <Input
                       id="ai-action"
                       value={aiUserAction}
                       onChange={(e) => setAiUserAction(e.target.value)}
-                      placeholder="Anar a Moviments > Exportar..."
+                      placeholder={tr('admin.productUpdates.placeholders.userAction', 'Anar a Moviments > Exportar...')}
                       className="text-sm"
                     />
                   </div>
@@ -1053,8 +1068,8 @@ export function ProductUpdatesSection({ isSuperAdmin = false }: ProductUpdatesSe
                 <div className="border-t pt-4 space-y-3">
                   <div className="flex items-center justify-between">
                     <div>
-                      <Label htmlFor="web-toggle">Publicar al web</Label>
-                      <p className="text-xs text-muted-foreground">Genera contingut per /novetats</p>
+                      <Label htmlFor="web-toggle">{tr('admin.productUpdates.webToggle', 'Publicar al web')}</Label>
+                      <p className="text-xs text-muted-foreground">{tr('admin.productUpdates.webToggleHint', 'Genera contingut per /novetats')}</p>
                     </div>
                     <Switch
                       id="web-toggle"
@@ -1064,8 +1079,8 @@ export function ProductUpdatesSection({ isSuperAdmin = false }: ProductUpdatesSe
                   </div>
                   <div className="flex items-center justify-between">
                     <div>
-                      <Label htmlFor="social-toggle">Xarxes socials</Label>
-                      <p className="text-xs text-muted-foreground">Genera copy per X i LinkedIn</p>
+                      <Label htmlFor="social-toggle">{tr('admin.productUpdates.socialToggle', 'Xarxes socials')}</Label>
+                      <p className="text-xs text-muted-foreground">{tr('admin.productUpdates.socialToggleHint', 'Genera copy per X i LinkedIn')}</p>
                     </div>
                     <Switch
                       id="social-toggle"
@@ -1084,12 +1099,12 @@ export function ProductUpdatesSection({ isSuperAdmin = false }: ProductUpdatesSe
                     {isGenerating ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Generant...
+                        {tr('admin.productUpdates.generating', 'Generant...')}
                       </>
                     ) : (
                       <>
                         <Sparkles className="mr-2 h-4 w-4" />
-                        Generar contingut
+                        {tr('admin.productUpdates.generateContent', 'Generar contingut')}
                       </>
                     )}
                   </Button>
@@ -1101,14 +1116,14 @@ export function ProductUpdatesSection({ isSuperAdmin = false }: ProductUpdatesSe
                 {generatedContent ? (
                   <>
                     <div className="flex items-center justify-between">
-                      <p className="text-sm font-medium">Preview</p>
+                      <p className="text-sm font-medium">{tr('admin.productUpdates.preview', 'Preview')}</p>
                       <div className="flex gap-1">
                         <Button
                           variant={previewTab === 'app' ? 'default' : 'ghost'}
                           size="sm"
                           onClick={() => setPreviewTab('app')}
                         >
-                          App
+                          {tr('admin.productUpdates.previewTabs.app', 'App')}
                         </Button>
                         {generatedContent.web && (
                           <Button
@@ -1116,7 +1131,7 @@ export function ProductUpdatesSection({ isSuperAdmin = false }: ProductUpdatesSe
                             size="sm"
                             onClick={() => setPreviewTab('web')}
                           >
-                            Web
+                            {tr('admin.productUpdates.previewTabs.web', 'Web')}
                           </Button>
                         )}
                         {generatedContent.social && (
@@ -1126,14 +1141,14 @@ export function ProductUpdatesSection({ isSuperAdmin = false }: ProductUpdatesSe
                               size="sm"
                               onClick={() => setPreviewTab('x')}
                             >
-                              X
+                              {tr('admin.productUpdates.previewTabs.x', 'X')}
                             </Button>
                             <Button
                               variant={previewTab === 'linkedin' ? 'default' : 'ghost'}
                               size="sm"
                               onClick={() => setPreviewTab('linkedin')}
                             >
-                              LinkedIn
+                              {tr('admin.productUpdates.previewTabs.linkedin', 'LinkedIn')}
                             </Button>
                           </>
                         )}
@@ -1159,24 +1174,29 @@ export function ProductUpdatesSection({ isSuperAdmin = false }: ProductUpdatesSe
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => copyToClipboard(generatedContent.web!.content, 'Contingut web')}
+                            onClick={() => copyToClipboard(generatedContent.web!.content, tr('admin.productUpdates.copyLabels.webContent', 'Contingut web'))}
                           >
                             <Copy className="h-4 w-4 mr-1" />
-                            Copiar
+                            {tr('admin.productUpdates.copy', 'Copiar')}
                           </Button>
                         </div>
                       )}
                       {previewTab === 'x' && generatedContent.social && (
                         <div className="space-y-2">
                           <p className="text-sm whitespace-pre-wrap">{generatedContent.social.xText}</p>
-                          <p className="text-xs text-muted-foreground">{generatedContent.social.xText.length}/280 chars</p>
+                          <p className="text-xs text-muted-foreground">
+                            {tr('admin.productUpdates.xLength', '{count}/280 caràcters').replace(
+                              '{count}',
+                              String(generatedContent.social.xText.length)
+                            )}
+                          </p>
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => copyToClipboard(generatedContent.social!.xText, 'Text X')}
+                            onClick={() => copyToClipboard(generatedContent.social!.xText, tr('admin.productUpdates.copyLabels.xText', 'Text X'))}
                           >
                             <Copy className="h-4 w-4 mr-1" />
-                            Copiar
+                            {tr('admin.productUpdates.copy', 'Copiar')}
                           </Button>
                         </div>
                       )}
@@ -1186,17 +1206,17 @@ export function ProductUpdatesSection({ isSuperAdmin = false }: ProductUpdatesSe
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => copyToClipboard(generatedContent.social!.linkedinText, 'Text LinkedIn')}
+                            onClick={() => copyToClipboard(generatedContent.social!.linkedinText, tr('admin.productUpdates.copyLabels.linkedinText', 'Text LinkedIn'))}
                           >
                             <Copy className="h-4 w-4 mr-1" />
-                            Copiar
+                            {tr('admin.productUpdates.copy', 'Copiar')}
                           </Button>
                         </div>
                       )}
                       {/* Link web per social */}
                       {(previewTab === 'x' || previewTab === 'linkedin') && webEnabled && aiTitle && (
                         <div className="pt-2 border-t">
-                          <p className="text-xs text-muted-foreground mb-1">Link web:</p>
+                          <p className="text-xs text-muted-foreground mb-1">{tr('admin.productUpdates.webLinkLabel', 'Link web:')}</p>
                           <div className="flex items-center gap-2">
                             <code className="text-xs bg-muted px-2 py-1 rounded flex-1 truncate">
                               {`https://summasocial.app/ca/novetats/${aiTitle.trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}`}
@@ -1206,7 +1226,7 @@ export function ProductUpdatesSection({ isSuperAdmin = false }: ProductUpdatesSe
                               size="sm"
                               onClick={() => copyToClipboard(
                                 `https://summasocial.app/ca/novetats/${aiTitle.trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}`,
-                                'Link'
+                                tr('admin.productUpdates.copyLabels.link', 'Link')
                               )}
                             >
                               <Copy className="h-4 w-4" />
@@ -1220,41 +1240,41 @@ export function ProductUpdatesSection({ isSuperAdmin = false }: ProductUpdatesSe
                     {generatedContent.image && (
                       <div className="border rounded-lg p-3 bg-muted/30">
                         <div className="flex items-center justify-between mb-2">
-                          <p className="text-xs font-medium">Prompt imatge (per generar manualment)</p>
+                          <p className="text-xs font-medium">{tr('admin.productUpdates.imagePromptTitle', 'Prompt imatge (per generar manualment)')}</p>
                           <Button
                             variant="ghost"
                             size="sm"
                             className="h-6 px-2"
-                            onClick={() => copyToClipboard(generatedContent.image!.prompt, 'Prompt')}
+                            onClick={() => copyToClipboard(generatedContent.image!.prompt, tr('admin.productUpdates.copyLabels.prompt', 'Prompt'))}
                           >
                             <Copy className="h-3 w-3 mr-1" />
-                            Copiar
+                            {tr('admin.productUpdates.copy', 'Copiar')}
                           </Button>
                         </div>
                         <p className="text-xs text-muted-foreground mb-2">{generatedContent.image.prompt}</p>
                         <p className="text-xs text-muted-foreground">
-                          <span className="font-medium">Alt text:</span> {generatedContent.image.altText}
+                          <span className="font-medium">{tr('admin.productUpdates.altText', 'Alt text:')}</span> {generatedContent.image.altText}
                         </p>
                       </div>
                     )}
 
                     {/* Anàlisi IA */}
                     <div className="border rounded-lg p-3 bg-muted/30">
-                      <p className="text-xs font-medium mb-2">Anàlisi IA</p>
+                      <p className="text-xs font-medium mb-2">{tr('admin.productUpdates.aiAnalysis', 'Anàlisi IA')}</p>
                       <div className="grid grid-cols-3 gap-2 text-xs">
                         <div>
-                          <span className="text-muted-foreground">Claredat:</span>{' '}
+                          <span className="text-muted-foreground">{tr('admin.productUpdates.analysis.clarity', 'Claredat:')}</span>{' '}
                           <span className="font-medium">{generatedContent.analysis.clarityScore}/10</span>
                         </div>
                         <div>
-                          <span className="text-muted-foreground">Risc:</span>{' '}
+                          <span className="text-muted-foreground">{tr('admin.productUpdates.analysis.risk', 'Risc:')}</span>{' '}
                           <Badge variant={generatedContent.analysis.techRisk === 'low' ? 'secondary' : 'destructive'}>
-                            {generatedContent.analysis.techRisk}
+                            {riskLabel(generatedContent.analysis.techRisk)}
                           </Badge>
                         </div>
                         <div>
                           <Badge variant={generatedContent.analysis.recommendation === 'PUBLICAR' ? 'default' : 'outline'}>
-                            {generatedContent.analysis.recommendation}
+                            {recommendationLabel(generatedContent.analysis.recommendation)}
                           </Badge>
                         </div>
                       </div>
@@ -1271,12 +1291,12 @@ export function ProductUpdatesSection({ isSuperAdmin = false }: ProductUpdatesSe
                       {isPublishingAI ? (
                         <>
                           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Publicant...
+                          {tr('admin.productUpdates.publishing', 'Publicant...')}
                         </>
                       ) : (
                         <>
                           <Check className="mr-2 h-4 w-4" />
-                          Publicar novetat
+                          {tr('admin.productUpdates.publishUpdate', 'Publicar novetat')}
                         </>
                       )}
                     </Button>
@@ -1284,8 +1304,8 @@ export function ProductUpdatesSection({ isSuperAdmin = false }: ProductUpdatesSe
                 ) : (
                   <div className="border rounded-lg p-8 text-center text-muted-foreground">
                     <Sparkles className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                    <p className="text-sm">Omple els camps i genera contingut amb IA</p>
-                    <p className="text-xs mt-1">El contingut generat apareixerà aquí per revisar</p>
+                    <p className="text-sm">{tr('admin.productUpdates.emptyAiPreview', 'Omple els camps i genera contingut amb IA')}</p>
+                    <p className="text-xs mt-1">{tr('admin.productUpdates.emptyAiPreviewHint', 'El contingut generat apareixerà aquí per revisar')}</p>
                   </div>
                 )}
               </div>
@@ -1298,58 +1318,58 @@ export function ProductUpdatesSection({ isSuperAdmin = false }: ProductUpdatesSe
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Editar esborrany</DialogTitle>
+            <DialogTitle>{tr('admin.productUpdates.editDialogTitle', 'Editar esborrany')}</DialogTitle>
             <DialogDescription>
-              Ajusta el títol i la descripció abans de publicar.
+              {tr('admin.productUpdates.editDialogDescription', 'Ajusta el títol i la descripció abans de publicar.')}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label htmlFor="edit-title">
-                Títol <span className="text-xs text-muted-foreground">(màx 60 caràcters)</span>
+                {tr('admin.productUpdates.fields.title', 'Títol')} <span className="text-xs text-muted-foreground">({tr('admin.productUpdates.max60', 'màx 60 caràcters')})</span>
               </Label>
               <Input
                 id="edit-title"
                 value={editTitle}
                 onChange={(e) => setEditTitle(e.target.value)}
                 maxLength={60}
-                placeholder="Títol curt i descriptiu"
+                placeholder={tr('admin.productUpdates.placeholders.title', 'Títol curt i descriptiu')}
               />
               <p className="text-xs text-muted-foreground text-right">{editTitle.length}/60</p>
             </div>
             <div className="space-y-2">
               <Label htmlFor="edit-description">
-                Descripció <span className="text-xs text-muted-foreground">(màx 140 caràcters)</span>
+                {tr('admin.productUpdates.fields.description', 'Descripció')} <span className="text-xs text-muted-foreground">({tr('admin.productUpdates.max140', 'màx 140 caràcters')})</span>
               </Label>
               <Textarea
                 id="edit-description"
                 value={editDescription}
                 onChange={(e) => setEditDescription(e.target.value)}
                 maxLength={140}
-                placeholder="Descripció breu de la novetat"
+                placeholder={tr('admin.productUpdates.placeholders.editDescription', 'Descripció breu de la novetat')}
                 rows={3}
               />
               <p className="text-xs text-muted-foreground text-right">{editDescription.length}/140</p>
             </div>
             <div className="space-y-2">
               <Label htmlFor="edit-link">
-                Enllaç <span className="text-xs text-muted-foreground">(opcional)</span>
+                {tr('admin.productUpdates.fields.link', 'Enllaç')} <span className="text-xs text-muted-foreground">({tr('admin.productUpdates.optional', 'opcional')})</span>
               </Label>
               <Input
                 id="edit-link"
                 value={editLink}
                 onChange={(e) => setEditLink(e.target.value)}
-                placeholder="/dashboard/movimientos o URL completa"
+                placeholder={tr('admin.productUpdates.placeholders.editLink', '/dashboard/movimientos o URL completa')}
               />
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
-              Cancel·lar
+              {tr('admin.productUpdates.cancel', 'Cancel·lar')}
             </Button>
             <Button onClick={handleSaveEdit} disabled={isSaving}>
               {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Guardar
+              {tr('admin.productUpdates.save', 'Guardar')}
             </Button>
           </DialogFooter>
         </DialogContent>

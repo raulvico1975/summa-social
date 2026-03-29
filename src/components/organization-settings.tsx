@@ -346,10 +346,10 @@ export function OrganizationSettings() {
               id="taxId"
               value={formData.taxId}
               onChange={(e) => handleChange('taxId', e.target.value.toUpperCase())}
-              placeholder="G12345678"
+              placeholder={tr('settings.organization.placeholders.taxId')}
             />
             <p className="text-xs text-muted-foreground">
-              {t.form?.taxIdHelp ?? "8 dígits + lletra (DNI) o lletra + 7 dígits + lletra (NIE/CIF)."}
+              {t.form.taxIdHelp}
             </p>
           </div>
         </div>
@@ -360,7 +360,7 @@ export function OrganizationSettings() {
             id="address"
             value={formData.address}
             onChange={(e) => handleChange('address', e.target.value)}
-            placeholder="Carrer Exemple, 123"
+            placeholder={tr('settings.organization.placeholders.address')}
           />
         </div>
         <div className="grid gap-4 sm:grid-cols-3">
@@ -370,7 +370,7 @@ export function OrganizationSettings() {
               id="zipCode"
               value={formData.zipCode}
               onChange={(e) => handleChange('zipCode', e.target.value)}
-              placeholder="08001"
+              placeholder={tr('settings.organization.placeholders.zipCode')}
               maxLength={5}
             />
           </div>
@@ -380,7 +380,7 @@ export function OrganizationSettings() {
               id="city"
               value={formData.city}
               onChange={(e) => handleChange('city', e.target.value)}
-              placeholder="Barcelona"
+              placeholder={tr('settings.organization.placeholders.city')}
             />
           </div>
           <div className="space-y-2">
@@ -389,7 +389,7 @@ export function OrganizationSettings() {
               id="province"
               value={formData.province}
               onChange={(e) => handleChange('province', e.target.value)}
-              placeholder="Barcelona"
+              placeholder={tr('settings.organization.placeholders.province')}
             />
           </div>
         </div>
@@ -401,7 +401,7 @@ export function OrganizationSettings() {
               id="phone"
               value={formData.phone}
               onChange={(e) => handleChange('phone', e.target.value)}
-              placeholder="93 123 45 67"
+              placeholder={tr('settings.organization.placeholders.phone')}
             />
           </div>
           <div className="space-y-2">
@@ -411,7 +411,7 @@ export function OrganizationSettings() {
               type="email"
               value={formData.email}
               onChange={(e) => handleChange('email', e.target.value)}
-              placeholder="info@exemple.org"
+              placeholder={tr('settings.organization.placeholders.email')}
             />
           </div>
         </div>
@@ -421,7 +421,7 @@ export function OrganizationSettings() {
             id="website"
             value={formData.website}
             onChange={(e) => handleChange('website', e.target.value)}
-            placeholder="https://www.exemple.org"
+            placeholder={tr('settings.organization.placeholders.website')}
           />
         </div>
 
@@ -461,12 +461,12 @@ export function OrganizationSettings() {
               value={formData.language}
               onValueChange={(value: 'ca' | 'es') => handleChange('language', value)}
             >
-              <SelectTrigger className="w-[200px]">
+            <SelectTrigger className="w-[200px]">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="es">Castellano</SelectItem>
-                <SelectItem value="ca">Català</SelectItem>
+                <SelectItem value="es">{t.settings.spanish}</SelectItem>
+                <SelectItem value="ca">{t.settings.catalan}</SelectItem>
               </SelectContent>
             </Select>
             <p className="text-xs text-muted-foreground">{t.settings.organization.certificateLanguageDescription}</p>

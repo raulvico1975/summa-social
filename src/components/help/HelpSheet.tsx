@@ -322,8 +322,8 @@ export function HelpSheet() {
     } catch {
       toast({
         variant: 'destructive',
-        title: 'Error',
-        description: 'No s\'ha pogut copiar l\'enllaç.',
+        title: tr('common.error'),
+        description: tr('help.ui.copyLinkError'),
       });
     }
   };

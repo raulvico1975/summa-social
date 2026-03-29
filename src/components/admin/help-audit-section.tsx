@@ -21,6 +21,7 @@ import {
   type HelpLocale,
 } from '@/lib/help/help-audit';
 import { getLocalBundle, trFactory } from '@/i18n/json-runtime';
+import { useTranslations } from '@/i18n';
 import { HelpEditorDialog } from './help-editor-dialog';
 
 /**
@@ -31,6 +32,7 @@ import { HelpEditorDialog } from './help-editor-dialog';
  */
 export function HelpAuditSection() {
   const { toast } = useToast();
+  const { tr } = useTranslations();
   const [editingRouteKey, setEditingRouteKey] = React.useState<string | null>(null);
   const [refreshKey, setRefreshKey] = React.useState(0);
 
@@ -78,8 +80,8 @@ export function HelpAuditSection() {
     const prefix = `help.${routeKey}.`;
     navigator.clipboard.writeText(prefix);
     toast({
-      title: 'Prefix copiat',
-      description: `"${prefix}" copiat al porta-retalls. Cerca aquest prefix a Traduccions.`,
+      title: tr('admin.helpAudit.toast.copiedTitle', 'Prefix copiat'),
+      description: tr('admin.helpAudit.toast.copiedDescription', '"{prefix}" copiat al porta-retalls. Cerca aquest prefix a Traduccions.').replace('{prefix}', prefix),
     });
   };
 
@@ -88,28 +90,28 @@ export function HelpAuditSection() {
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-base">
           <HelpCircle className="h-4 w-4" />
-          Ajudes contextuals
+          {tr('admin.helpAudit.title', 'Ajudes contextuals')}
           {incompleteCount > 0 && (
             <Badge variant="outline" className="ml-2 bg-amber-100 text-amber-800 border-amber-300">
-              {incompleteCount} incompletes
+              {tr('admin.helpAudit.incompleteBadge', '{count} incompletes').replace('{count}', String(incompleteCount))}
             </Badge>
           )}
         </CardTitle>
         <CardDescription>
-          Estat de publicació de les ajudes per pantalla i idioma. Les ajudes es gestionen via Traduccions.
+          {tr('admin.helpAudit.description', 'Estat de publicació de les ajudes per pantalla i idioma. Les ajudes es gestionen via Traduccions.')}
         </CardDescription>
       </CardHeader>
       <CardContent>
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Pantalla (routeKey)</TableHead>
+              <TableHead>{tr('admin.helpAudit.table.screen', 'Pantalla (routeKey)')}</TableHead>
               {REQUIRED_HELP_LOCALES.map((locale) => (
                 <TableHead key={locale} className="text-center w-16">
                   {locale.toUpperCase()}
                 </TableHead>
               ))}
-              <TableHead className="w-32">Accions</TableHead>
+              <TableHead className="w-32">{tr('admin.helpAudit.table.actions', 'Accions')}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -136,17 +138,17 @@ export function HelpAuditSection() {
                       size="sm"
                       className="h-7 px-2 text-xs"
                       onClick={() => setEditingRouteKey(result.routeKey)}
-                      title={`Editar ajuda per ${result.routeKey}`}
+                      title={tr('admin.helpAudit.editTitle', 'Editar ajuda per {routeKey}').replace('{routeKey}', result.routeKey)}
                     >
                       <Pencil className="h-3 w-3 mr-1" />
-                      Editar
+                      {tr('admin.helpAudit.edit', 'Editar')}
                     </Button>
                     <Button
                       variant="ghost"
                       size="sm"
                       className="h-7 px-2 text-xs"
                       onClick={() => handleCopyPrefix(result.routeKey)}
-                      title={`Copia prefix help.${result.routeKey}.`}
+                      title={tr('admin.helpAudit.copyTitle', 'Copia prefix help.{routeKey}.').replace('{routeKey}', result.routeKey)}
                     >
                       <Copy className="h-3 w-3" />
                     </Button>
@@ -160,10 +162,10 @@ export function HelpAuditSection() {
         <div className="mt-4 p-3 bg-muted/50 rounded-lg text-sm text-muted-foreground">
           <p className="flex items-center gap-2">
             <ExternalLink className="h-4 w-4" />
-            Clica <strong>Editar</strong> per modificar l&apos;ajuda directament, o copia el prefix per editar via Traduccions.
+            {tr('admin.helpAudit.footer.editHint', 'Clica Editar per modificar l’ajuda directament, o copia el prefix per editar via Traduccions.')}
           </p>
           <p className="mt-1 text-xs">
-            Cada ajuda requereix com a mínim: <code>help.ROUTEKEY.title</code> i <code>help.ROUTEKEY.intro</code>
+            {tr('admin.helpAudit.footer.minimumFields', 'Cada ajuda requereix com a mínim: help.ROUTEKEY.title i help.ROUTEKEY.intro')}
           </p>
         </div>
 

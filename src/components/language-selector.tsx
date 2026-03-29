@@ -15,7 +15,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Globe } from 'lucide-react';
 
 export function LanguageSelector() {
-  const { language, setLanguage, t } = useTranslations();
+  const { language, setLanguage, t, tr } = useTranslations();
   const { toast } = useToast();
 
   const handleLanguageChange = (newLanguage: Language) => {
@@ -24,8 +24,8 @@ export function LanguageSelector() {
     const languageName =
       newLanguage === 'ca' ? t.settings.catalan :
       newLanguage === 'es' ? t.settings.spanish :
-      newLanguage === 'fr' ? 'Français' :
-      'Português';
+      newLanguage === 'fr' ? tr('settings.french') :
+      tr('settings.portuguese');
 
     toast({
       title: t.settings.languageSaved,
@@ -49,16 +49,16 @@ export function LanguageSelector() {
           <Label htmlFor="language-select">{t.settings.languageSelector}</Label>
           <Select value={language} onValueChange={(value) => handleLanguageChange(value as Language)}>
             <SelectTrigger id="language-select" className="w-full">
-              <SelectValue placeholder={t.settings.languageSelector} />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="ca">{t.settings.catalan}</SelectItem>
-              <SelectItem value="es">{t.settings.spanish}</SelectItem>
-              <SelectItem value="fr">Français</SelectItem>
-              <SelectItem value="pt">Português</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+            <SelectValue placeholder={t.settings.languageSelector} />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="ca">{t.settings.catalan}</SelectItem>
+            <SelectItem value="es">{t.settings.spanish}</SelectItem>
+            <SelectItem value="fr">{tr('settings.french')}</SelectItem>
+            <SelectItem value="pt">{tr('settings.portuguese')}</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
       </CardContent>
     </Card>
   );

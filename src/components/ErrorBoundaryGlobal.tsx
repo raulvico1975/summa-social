@@ -7,6 +7,7 @@ import * as React from 'react';
 import { usePathname } from 'next/navigation';
 import { useFirebase } from '@/firebase';
 import { OrganizationContext } from '@/hooks/organization-provider';
+import { useTranslations } from '@/i18n';
 import {
   reportSystemIncident,
   shouldIgnoreError,
@@ -22,6 +23,9 @@ interface ErrorBoundaryProps {
   firestore: Firestore | null;
   pathname: string | null;
   canReportIncident: boolean;
+  errorTitle: string;
+  errorDescription: string;
+  reloadLabel: string;
   orgId?: string;
   orgSlug?: string;
 }
@@ -71,15 +75,15 @@ class ReactErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBounda
       return (
         <div className="min-h-screen flex items-center justify-center p-4">
           <div className="max-w-md text-center">
-            <h1 className="text-2xl font-bold mb-4">Hi ha hagut un error</h1>
+            <h1 className="text-2xl font-bold mb-4">{this.props.errorTitle}</h1>
             <p className="text-muted-foreground mb-4">
-              S&apos;ha produït un error inesperat. L&apos;equip tècnic ha estat notificat.
+              {this.props.errorDescription}
             </p>
             <button
               onClick={() => window.location.reload()}
               className="px-4 py-2 bg-primary text-primary-foreground rounded hover:opacity-90"
             >
-              Recarregar pàgina
+              {this.props.reloadLabel}
             </button>
           </div>
         </div>
@@ -101,6 +105,7 @@ export function ErrorBoundaryGlobal({
 }) {
   const { firestore, isUserLoading } = useFirebase();
   const pathname = usePathname();
+  const { tr } = useTranslations();
   // useContext retorna undefined si no hi ha provider (no llança error)
   const org = React.useContext(OrganizationContext);
   const orgId = org?.organizationId;
@@ -199,6 +204,9 @@ export function ErrorBoundaryGlobal({
       firestore={firestore}
       pathname={pathname}
       canReportIncident={canReportIncident}
+      errorTitle={tr('globalError.title', 'Hi ha hagut un error')}
+      errorDescription={tr('globalError.description', "S'ha produït un error inesperat. L'equip tècnic ha estat notificat.")}
+      reloadLabel={tr('globalError.reload', 'Recarregar pàgina')}
       orgId={orgId ?? undefined}
       orgSlug={orgSlug ?? undefined}
     >
