@@ -2,9 +2,9 @@
   "slug": "summa-home-promo",
   "brand": "summa",
   "preset": "home-hero",
-  "title": "Home hero comercial",
+  "title": "Home hero explicatiu",
   "status": "published",
-  "objective": "Peca mare de captacio per explicar en menys de 20 segons que Summa resol tresoreria, quotes, donacions i fiscalitat dins d un sol sistema.",
+  "objective": "Peca mare de captacio per explicar en uns 30 segons les funcionalitats clau de Summa dins d un sol sistema.",
   "audience": "web visitors",
   "locales": [
     "ca",
@@ -32,7 +32,7 @@
       "ca",
       "es"
     ],
-    "lastRenderedAt": "2026-03-29T08:20:09.176Z",
+    "lastRenderedAt": "2026-03-29T08:33:15.518Z",
     "renderedVariants": [
       "ca",
       "es"
@@ -61,7 +61,7 @@
     "copyCaptions": true,
     "generatePoster": true,
     "posterTimeSeconds": 2,
-    "lastPublishedAt": "2026-03-29T08:20:09.511Z",
+    "lastPublishedAt": "2026-03-29T08:33:15.860Z",
     "publishedVariants": [
       "ca",
       "es"
