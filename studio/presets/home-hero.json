@@ -1,6 +1,6 @@
 {
   "id": "home-hero",
-  "label": "Home hero comercial",
+  "label": "Home explainer premium",
   "surfaces": ["home", "marketing"],
   "aspectRatio": "16:9",
   "resolution": {
@@ -8,12 +8,12 @@
     "height": 1080
   },
   "durationSeconds": {
-    "min": 18,
-    "max": 30
+    "min": 30,
+    "max": 40
   },
   "includeIntro": false,
   "includeOutro": false,
   "embedCaptions": false,
   "captionsMode": "overlay",
-  "goal": "Transmitre clarament el valor comercial de Summa en un primer impacte."
+  "goal": "Explicar amb claredat els fluxos clau de Summa amb un acabat premium i ritme pausat."
 }

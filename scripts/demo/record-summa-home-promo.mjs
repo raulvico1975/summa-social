@@ -10,35 +10,41 @@ const TMP_DIR = path.join(ROOT_DIR, 'tmp', 'summa-home-promo');
 const OUTPUT_VIDEO_PATH = path.join(OUTPUT_DIR, 'summa-home-promo.mp4');
 const SUMMARY_PATH = path.join(OUTPUT_DIR, 'recording-summary.json');
 const DEFAULT_FPS = 25;
-const DEFAULT_CRF = 18;
-const DEFAULT_PRESET = 'medium';
-const DEFAULT_TRANSITION_SECONDS = 0.36;
+const DEFAULT_CRF = 12;
+const DEFAULT_PRESET = 'slower';
+const DEFAULT_TRANSITION_SECONDS = 0.6;
 const OUTPUT_DIMENSIONS = { width: 1920, height: 1080 };
 
 const CLIPS = [
   {
     name: 'conciliacio',
-    source: 'public/visuals/landings/conciliacio-bancaria-ong/animations/conciliacio-bancaria-demo-ca.mp4',
-    sourceStart: 4.0,
-    sourceEnd: 11.8,
+    source: 'output/playwright/bank-reconciliation-demo/bank-reconciliation-demo.mp4',
+    sourceStart: 1.2,
+    sourceEnd: 10.2,
+  },
+  {
+    name: 'remeses-in',
+    source: 'output/playwright/member-remittance-split-demo/member-remittance-split-demo.mp4',
+    sourceStart: 28.4,
+    sourceEnd: 34.0,
+  },
+  {
+    name: 'devolucions',
+    source: 'output/playwright/returns-resolution-demo/returns-resolution-demo.mp4',
+    sourceStart: 8.0,
+    sourceEnd: 18.0,
   },
   {
     name: 'donants',
-    source: 'public/visuals/landings/control-donacions-ong/animations/control-donacions-demo-ca.mp4',
-    sourceStart: 7.8,
-    sourceEnd: 15.0,
-  },
-  {
-    name: 'remeses',
-    source: 'public/visuals/landings/remeses-sepa/animations/remeses-sepa-demo-ca.mp4',
-    sourceStart: 6.5,
-    sourceEnd: 14.3,
+    source: 'output/playwright/donations-control-demo/donations-control-demo.mp4',
+    sourceStart: 8.0,
+    sourceEnd: 15.2,
   },
   {
     name: 'fiscalitat',
-    source: 'public/visuals/landings/model-182/animations/model-182-demo-ca.mp4',
-    sourceStart: 2.2,
-    sourceEnd: 10.1,
+    source: 'output/playwright/model-182-demo/model-182-demo.mp4',
+    sourceStart: 5.2,
+    sourceEnd: 13.8,
   },
 ];
 

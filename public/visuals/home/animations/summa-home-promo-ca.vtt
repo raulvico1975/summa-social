@@ -1,17 +1,21 @@
 WEBVTT
 
 1
-00:00:00.000 --> 00:00:07.400
-Conciliacio bancaria: importes, evites duplicats i categoritzes
+00:00:00.000 --> 00:00:09.000
+Moviments bancaris: importes, evites duplicats i categoritzes
 
 2
-00:00:07.400 --> 00:00:15.000
-Socis i donants: historial, devolucions i seguiment net
+00:00:09.000 --> 00:00:14.100
+Remeses IN: divideixes l abonament i el vincules a cada quota
 
 3
-00:00:15.000 --> 00:00:22.200
-Remeses SEPA: prepares quotes sense fulls de calcul
+00:00:14.100 --> 00:00:23.500
+Devolucions: assignes cada rebut retornat al soci correcte
 
 4
-00:00:22.200 --> 00:00:29.500
-Model 182: revises, depures i exportes amb mes confianca
+00:00:23.500 --> 00:00:30.200
+Socis i donants: historial, devolucions i import net en una fitxa
+
+5
+00:00:30.200 --> 00:00:38.200
+Model 182: el tancament fiscal arriba molt mes preparat

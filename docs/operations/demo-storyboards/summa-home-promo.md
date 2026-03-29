@@ -2,23 +2,26 @@
 
 ## Objectiu
 
-Fer una peca mare de la home que expliqui en menys de 20 segons que Summa cobreix la tresoreria, les quotes, les donacions i la fiscalitat dins d un mateix sistema.
+Fer una peca mare de la home que expliqui en 35-40 segons com Summa cobreix moviments, remeses IN, devolucions, seguiment de socis i fiscalitat dins d un mateix sistema.
 
 ## Construccio
 
 - clip 1: conciliacio bancaria
-- clip 2: remeses SEPA
-- clip 3: control de donacions
-- clip 4: model 182
+- clip 2: divisio de remesa IN
+- clip 3: devolucions
+- clip 4: control de socis i donants
+- clip 5: model 182
 
-La gravacio base no depen del navegador ni del demo server. Es compon a partir de clips ja publicats de landings reals.
+La gravacio base depen de captures master en `output/playwright/` i no de clips curts ja publicats per landings. Aquest criteri evita recompressions innecessaries i permet una peça final amb mes qualitat.
+Per a aquesta peça, els gravadors `commercial` han de prioritzar nitidesa i llegibilitat per sobre del pes final.
 
 ## Missatge
 
 1. Tot passa dins de Summa.
-2. Importes extractes i evites feina manual.
-3. Cobres quotes i segueixes cada donacio.
-4. Tanques fiscalitat amb mes control.
+2. Els moviments entren ordenats i es poden treballar.
+3. Les remeses i devolucions es resolen des del mateix circuit.
+4. Cada soci o donant queda contextualitzat.
+5. La fiscalitat arriba mes preparada al tancament.
 
 ## Projecte
 

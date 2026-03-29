@@ -30,7 +30,7 @@ Alla hi trobaras:
 Exemples bons:
 
 - `Vull un video curt per landing sobre remeses de quotes, en catala i castella`
-- `Necessito una peça comercial per la home de Summa, 20-30 segons, to premium`
+- `Necessito una peça comercial per la home de Summa, 35-40 segons, to premium`
 - `Adapta aquest video a square i vertical per xarxes`
 
 ## Que no cal que decideixis tu
@@ -70,6 +70,17 @@ No:
 - una app nova separada
 
 Aquestes opcions podran arribar mes endavant, pero ara mateix complicarien mes del que ajudarien.
+
+## Regla nova per a videos de la home
+
+Si demanes un `video mare` o `video principal` de la home, el sistema ha d entendre per defecte:
+
+- no un trailer ultracurt
+- si una demo curta de funcionalitats
+- amb ritme clar
+- amb blocs que es puguin entendre
+- i amb una qualitat d export mes exigent
+- i basada en captures master de qualitat, no en peces curtes ja recomprimides
 
 ## Objectiu d aquest sistema
 

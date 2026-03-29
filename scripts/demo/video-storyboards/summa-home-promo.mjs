@@ -42,14 +42,14 @@ export default {
   captions: [
     {
       start: 0.0,
-      end: 7.4,
+      end: 9.0,
       subtitle: {
-        ca: 'Conciliacio bancaria: importes, evites duplicats i categoritzes',
-        es: 'Conciliacion bancaria: importas, evitas duplicados y categorizas',
+        ca: 'Moviments bancaris: importes, evites duplicats i categoritzes',
+        es: 'Movimientos bancarios: importas, evitas duplicados y categorizas',
       },
       headline: {
-        ca: 'Conciliacio bancaria mes ordenada des del principi',
-        es: 'Conciliacion bancaria mas ordenada desde el principio',
+        ca: 'Moviments bancaris mes ordenats des del principi',
+        es: 'Movimientos bancarios mas ordenados desde el principio',
       },
       body: {
         ca: 'L extracte entra amb context: es detecten conflictes, s eviten repeticions i cada moviment queda preparat per revisar.',
@@ -57,11 +57,43 @@ export default {
       },
     },
     {
-      start: 7.4,
-      end: 15.0,
+      start: 9.0,
+      end: 14.1,
       subtitle: {
-        ca: 'Socis i donants: historial, devolucions i seguiment net',
-        es: 'Socios y donantes: historico, devoluciones y seguimiento claro',
+        ca: 'Remeses IN: divideixes l abonament i el vincules a cada quota',
+        es: 'Remesas IN: divides el abono y lo vinculas a cada cuota',
+      },
+      headline: {
+        ca: 'La remesa agrupada es resol dins del mateix circuit',
+        es: 'La remesa agrupada se resuelve dentro del mismo circuito',
+      },
+      body: {
+        ca: 'Obres l abonament bancari, revises el match i deixes cada quota vinculada sense fulls de calcul.',
+        es: 'Abres el abono bancario, revisas el match y dejas cada cuota vinculada sin hojas de calculo.',
+      },
+    },
+    {
+      start: 14.1,
+      end: 23.5,
+      subtitle: {
+        ca: 'Devolucions: assignes cada rebut retornat al soci correcte',
+        es: 'Devoluciones: asignas cada recibo devuelto al socio correcto',
+      },
+      headline: {
+        ca: 'Les incidencies queden resoltes sense perdre traçabilitat',
+        es: 'Las incidencias quedan resueltas sin perder trazabilidad',
+      },
+      body: {
+        ca: 'Des de Moviments obres la devolucio, identifiques el soci afectat i la deixes llesta pel circuit fiscal.',
+        es: 'Desde Movimientos abres la devolucion, identificas al socio afectado y la dejas lista para el circuito fiscal.',
+      },
+    },
+    {
+      start: 23.5,
+      end: 30.2,
+      subtitle: {
+        ca: 'Socis i donants: historial, devolucions i import net en una fitxa',
+        es: 'Socios y donantes: historico, devoluciones e importe neto en una ficha',
       },
       headline: {
         ca: 'Cada relacio economica queda contextualitzada',
@@ -73,27 +105,11 @@ export default {
       },
     },
     {
-      start: 15.0,
-      end: 22.2,
+      start: 30.2,
+      end: 38.2,
       subtitle: {
-        ca: 'Remeses SEPA: prepares quotes sense fulls de calcul',
-        es: 'Remesas SEPA: preparas cuotas sin hojas de calculo',
-      },
-      headline: {
-        ca: 'Les quotes recurrents surten mes netes',
-        es: 'Las cuotas recurrentes salen mas limpias',
-      },
-      body: {
-        ca: 'Revises imports, nombre de carrecs i data de cobrament abans d exportar el fitxer que necessita el banc.',
-        es: 'Revisas importes, numero de cargos y fecha de cobro antes de exportar el fichero que necesita el banco.',
-      },
-    },
-    {
-      start: 22.2,
-      end: 29.5,
-      subtitle: {
-        ca: 'Model 182: revises, depures i exportes amb mes confianca',
-        es: 'Modelo 182: revisas, depuras y exportas con mas confianza',
+        ca: 'Model 182: el tancament fiscal arriba molt mes preparat',
+        es: 'Modelo 182: el cierre fiscal llega mucho mas preparado',
       },
       headline: {
         ca: 'La fiscalitat arriba mes ordenada al tancament',

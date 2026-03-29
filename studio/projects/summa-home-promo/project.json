@@ -2,9 +2,9 @@
   "slug": "summa-home-promo",
   "brand": "summa",
   "preset": "home-hero",
-  "title": "Home hero explicatiu",
+  "title": "Home explainer premium",
   "status": "published",
-  "objective": "Peca mare de captacio per explicar en uns 30 segons les funcionalitats clau de Summa dins d un sol sistema.",
+  "objective": "Peca mare de captacio per explicar en 35-40 segons els fluxos clau de Summa amb ritme clar, context funcional i acabat premium.",
   "audience": "web visitors",
   "locales": [
     "ca",
@@ -16,7 +16,7 @@
     "sourceVideo": "output/playwright/summa-home-promo/summa-home-promo.mp4",
     "args": [],
     "notes": [
-      "No cal demo server: la peça base es compon a partir de clips publicats de landings reals."
+      "Cal tenir disponibles les captures base de conciliacio, remeses IN, devolucions, donants i model 182."
     ]
   },
   "storyboard": {
@@ -27,12 +27,16 @@
     "mode": "storyboard",
     "storyboardSlug": "summa-home-promo",
     "captionStyle": "summa-subtitle",
+    "encoding": {
+      "crf": 10,
+      "preset": "veryslow"
+    },
     "inputPath": "output/playwright/summa-home-promo/summa-home-promo.mp4",
     "variants": [
       "ca",
       "es"
     ],
-    "lastRenderedAt": "2026-03-29T08:33:15.518Z",
+    "lastRenderedAt": "2026-03-29T14:56:38.156Z",
     "renderedVariants": [
       "ca",
       "es"
@@ -61,7 +65,7 @@
     "copyCaptions": true,
     "generatePoster": true,
     "posterTimeSeconds": 2,
-    "lastPublishedAt": "2026-03-29T08:33:15.860Z",
+    "lastPublishedAt": "2026-03-29T14:56:38.503Z",
     "publishedVariants": [
       "ca",
       "es"

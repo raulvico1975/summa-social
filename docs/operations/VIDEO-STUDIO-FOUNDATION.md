@@ -111,6 +111,32 @@ La traduccio tecnica d aixo ha de recaure en el sistema:
 - storyboard: captions i ritme
 - export: public web o carpeta d artefactes
 
+## Regla nova per a la peça mare de la home
+
+Per Summa, el criteri correcte passa a ser:
+
+- `home explainer premium`
+- 35-40 segons
+- fluxos reals del dia a dia
+- ritme clar entre blocs
+- cada bloc identificable amb una caption curta
+- menys sensacio de muntatge agressiu
+- millor qualitat de render que una landing curta
+
+L ordre recomanat avui per Summa es:
+
+1. moviments i conciliacio
+2. remeses IN
+3. devolucions
+4. fitxa de soci o donant
+5. model 182
+
+I la regla de qualitat:
+
+- no construir la peça mare a partir de clips de landing ja recomprimits si existeixen captures master a `output/playwright/`
+- permetre encoding per projecte quan una peça premium necessiti un estandard superior
+- per a captures `commercial`, la sortida master ha de prioritzar qualitat sobre pes de fitxer i evitar exports tous en pantalles Retina
+
 ## Forma de creixer
 
 ### Fase 1. Repo toolkit
@@ -148,6 +174,7 @@ Nomes si volem:
 - manifests humans i editables
 - configuracio genericament reutilitzable
 - Summa continua sent el primer cas de marca, no l unic
+- els presets `commercial` no poden quedar al mateix nivell de compressio que una preview o una landing curta
 
 ## Primer lliurable d aquesta branca
 

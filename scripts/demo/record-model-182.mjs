@@ -323,6 +323,8 @@ async function runFlow(page, artifactDir) {
 }
 
 function convertVideo(ffmpegPath, inputPath, outputPath, trimStartSeconds, durationSeconds) {
+  const exportPreset = QUALITY_MODE === 'commercial' ? 'slower' : 'slow';
+  const exportCrf = QUALITY_MODE === 'commercial' ? '12' : '18';
   const args = [
     '-y',
     '-ss',
@@ -335,9 +337,9 @@ function convertVideo(ffmpegPath, inputPath, outputPath, trimStartSeconds, durat
     '-c:v',
     'libx264',
     '-preset',
-    'slow',
+    exportPreset,
     '-crf',
-    '18',
+    exportCrf,
     '-pix_fmt',
     'yuv420p',
     '-movflags',

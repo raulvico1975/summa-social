@@ -687,6 +687,14 @@ function renderProjectCommand() {
     validation.inputPath,
   ];
 
+  const renderEncoding = project.render?.encoding;
+  if (renderEncoding?.crf !== undefined) {
+    args.push('--crf', String(renderEncoding.crf));
+  }
+  if (renderEncoding?.preset) {
+    args.push('--preset', String(renderEncoding.preset));
+  }
+
   log(`Renderitzant projecte ${slug}...`);
   runNodeScript(POSTPRODUCE_SCRIPT, args.slice(1));
 

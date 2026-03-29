@@ -18,6 +18,8 @@ const DEFAULT_FPS = 25;
 const DEFAULT_CRF = 18;
 const DEFAULT_PRESET = 'medium';
 const DEFAULT_TRANSITION_SECONDS = 0.36;
+let ACTIVE_CRF = DEFAULT_CRF;
+let ACTIVE_PRESET = DEFAULT_PRESET;
 const SUPPORTED_VARIANTS = ['ca', 'es', 'dual'];
 const SUPPORTED_CAPTION_STYLES = ['legacy', 'summa-card', 'summa-subtitle'];
 
@@ -579,9 +581,9 @@ function renderIntroOrOutro(ffmpegPath, clipPath, durationSeconds, dimensions, l
     '-c:v',
     'libx264',
     '-preset',
-    DEFAULT_PRESET,
+    ACTIVE_PRESET,
     '-crf',
-    String(DEFAULT_CRF),
+    String(ACTIVE_CRF),
     '-pix_fmt',
     'yuv420p',
     '-movflags',
@@ -603,9 +605,9 @@ function renderMainVideo(ffmpegPath, inputPath, outputPath, filterScriptPath) {
     '-c:v',
     'libx264',
     '-preset',
-    DEFAULT_PRESET,
+    ACTIVE_PRESET,
     '-crf',
-    String(DEFAULT_CRF),
+    String(ACTIVE_CRF),
     '-pix_fmt',
     'yuv420p',
     '-movflags',
@@ -633,9 +635,9 @@ function renderEditedMainSource(ffmpegPath, inputPath, outputPath, segments) {
       '-c:v',
       'libx264',
       '-preset',
-      DEFAULT_PRESET,
+      ACTIVE_PRESET,
       '-crf',
-      String(DEFAULT_CRF),
+      String(ACTIVE_CRF),
       '-pix_fmt',
       'yuv420p',
       '-movflags',
@@ -670,9 +672,9 @@ function renderEditedMainSource(ffmpegPath, inputPath, outputPath, segments) {
     '-c:v',
     'libx264',
     '-preset',
-    DEFAULT_PRESET,
+    ACTIVE_PRESET,
     '-crf',
-    String(DEFAULT_CRF),
+    String(ACTIVE_CRF),
     '-pix_fmt',
     'yuv420p',
     '-movflags',
@@ -700,9 +702,9 @@ function crossfadeClips(ffmpegPath, clips, outputPath, requestedTransitionSecond
       '-c:v',
       'libx264',
       '-preset',
-      DEFAULT_PRESET,
+      ACTIVE_PRESET,
       '-crf',
-      String(DEFAULT_CRF),
+      String(ACTIVE_CRF),
       '-pix_fmt',
       'yuv420p',
       '-movflags',
@@ -756,9 +758,9 @@ function crossfadeClips(ffmpegPath, clips, outputPath, requestedTransitionSecond
     '-c:v',
     'libx264',
     '-preset',
-    DEFAULT_PRESET,
+    ACTIVE_PRESET,
     '-crf',
-    String(DEFAULT_CRF),
+    String(ACTIVE_CRF),
     '-pix_fmt',
     'yuv420p',
     '-movflags',
@@ -791,9 +793,9 @@ function normalizeExternalClip(ffmpegPath, assetPath, outputPath, dimensions) {
     '-c:v',
     'libx264',
     '-preset',
-    DEFAULT_PRESET,
+    ACTIVE_PRESET,
     '-crf',
-    String(DEFAULT_CRF),
+    String(ACTIVE_CRF),
     '-pix_fmt',
     'yuv420p',
     '-movflags',
@@ -1144,11 +1146,25 @@ async function main() {
   const primaryVariant = variants.includes('dual') ? 'dual' : variants[0];
   const captionStyle = parseCaptionStyleArg(parseArg('--caption-style'));
   const skipSummary = parseFlag('--skip-summary');
+  const crfArg = parseArg('--crf');
+  const presetArg = parseArg('--preset');
 
   const ffmpegPath = findBinary('ffmpeg');
   const ffprobePath = findBinary('ffprobe');
   if (!ffmpegPath || !ffprobePath) {
     fail('Cal tenir ffmpeg i ffprobe disponibles al sistema.');
+  }
+
+  if (crfArg !== null) {
+    const parsedCrf = Number(crfArg);
+    if (!Number.isFinite(parsedCrf) || parsedCrf < 0 || parsedCrf > 51) {
+      fail(`Valor de --crf invalid: ${crfArg}`);
+    }
+    ACTIVE_CRF = parsedCrf;
+  }
+
+  if (presetArg) {
+    ACTIVE_PRESET = presetArg;
   }
 
   const { storyboard, storyboardPath } = await loadStoryboard(storyboardSlug);
