@@ -19,26 +19,26 @@ const CLIPS = [
   {
     name: 'conciliacio',
     source: 'public/visuals/landings/conciliacio-bancaria-ong/animations/conciliacio-bancaria-demo-ca.mp4',
-    sourceStart: 0.0,
-    sourceEnd: 5.6,
+    sourceStart: 5.2,
+    sourceEnd: 10.0,
+  },
+  {
+    name: 'donants',
+    source: 'public/visuals/landings/control-donacions-ong/animations/control-donacions-demo-ca.mp4',
+    sourceStart: 9.6,
+    sourceEnd: 14.2,
   },
   {
     name: 'remeses',
     source: 'public/visuals/landings/remeses-sepa/animations/remeses-sepa-demo-ca.mp4',
-    sourceStart: 0.0,
-    sourceEnd: 5.2,
-  },
-  {
-    name: 'donacions',
-    source: 'public/visuals/landings/control-donacions-ong/animations/control-donacions-demo-ca.mp4',
-    sourceStart: 0.4,
-    sourceEnd: 5.0,
+    sourceStart: 8.8,
+    sourceEnd: 13.6,
   },
   {
     name: 'fiscalitat',
     source: 'public/visuals/landings/model-182/animations/model-182-demo-ca.mp4',
-    sourceStart: 0.0,
-    sourceEnd: 4.6,
+    sourceStart: 4.2,
+    sourceEnd: 8.6,
   },
 ];
 

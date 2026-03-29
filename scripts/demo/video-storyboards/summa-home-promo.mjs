@@ -42,66 +42,82 @@ export default {
   captions: [
     {
       start: 0.0,
-      end: 4.7,
+      end: 2.2,
       subtitle: {
-        ca: 'Tresoreria, quotes i fiscalitat dins un sol sistema',
-        es: 'Tesoreria, cuotas y fiscalidad dentro de un solo sistema',
+        ca: 'La gestió econòmica no hauria de viure dispersa',
+        es: 'La gestión económica no debería vivir dispersa',
       },
       headline: {
-        ca: 'Tot passa dins de Summa',
-        es: 'Todo pasa dentro de Summa',
+        ca: 'Tot allò econòmic, dins d un sol sistema',
+        es: 'Todo lo económico, dentro de un solo sistema',
       },
       body: {
-        ca: 'No cal saltar entre banc, fulls de calcul i eines separades per tenir una visio fiable.',
-        es: 'No hace falta saltar entre banco, hojas de calculo y herramientas separadas para tener una vision fiable.',
+        ca: 'Summa connecta tresoreria, quotes, donacions i fiscalitat sense treballar cada peça per separat.',
+        es: 'Summa conecta tesorería, cuotas, donaciones y fiscalidad sin trabajar cada pieza por separado.',
       },
     },
     {
-      start: 4.7,
-      end: 9.3,
+      start: 2.2,
+      end: 4.8,
       subtitle: {
-        ca: 'Importes extractes i evites feina manual',
-        es: 'Importas extractos y evitas trabajo manual',
+        ca: 'Els extractes entren i els duplicats es revisen abans',
+        es: 'Los extractos entran y los duplicados se revisan antes',
       },
       headline: {
-        ca: 'Conciliacio amb mes context',
-        es: 'Conciliacion con mas contexto',
+        ca: 'La conciliació comença amb més control',
+        es: 'La conciliación empieza con más control',
       },
       body: {
-        ca: 'Els moviments entren, es revisen i queden classificats sense reconstruir-ho tot a ma.',
-        es: 'Los movimientos entran, se revisan y quedan clasificados sin reconstruirlo todo a mano.',
+        ca: 'Abans d afectar el llistat, Summa detecta conflictes i ajuda a mantenir neta la importació.',
+        es: 'Antes de afectar al listado, Summa detecta conflictos y ayuda a mantener limpia la importación.',
       },
     },
     {
-      start: 9.3,
-      end: 14.0,
+      start: 4.8,
+      end: 9.0,
       subtitle: {
-        ca: 'Cobres quotes i segueixes cada donacio',
-        es: 'Cobras cuotas y sigues cada donacion',
+        ca: 'Cada soci o donant conserva el seu context econòmic',
+        es: 'Cada socio o donante conserva su contexto económico',
       },
       headline: {
-        ca: 'Relacio economica amb cada persona',
-        es: 'Relacion economica con cada persona',
+        ca: 'La relació amb cada persona és traçable',
+        es: 'La relación con cada persona es trazable',
       },
       body: {
-        ca: 'Remeses, contactes i historial queden connectats dins d una mateixa operativa.',
-        es: 'Remesas, contactos e historial quedan conectados dentro de una misma operativa.',
+        ca: 'Fitxa, historial, devolucions i import net certificable queden connectats dins del mateix perfil.',
+        es: 'Ficha, histórico, devoluciones e importe neto certificable quedan conectados dentro del mismo perfil.',
       },
     },
     {
-      start: 14.0,
-      end: 18.9,
+      start: 9.0,
+      end: 13.8,
       subtitle: {
-        ca: 'Tanques model 182 i obligacions fiscals amb mes control',
-        es: 'Cierras modelo 182 y obligaciones fiscales con mas control',
+        ca: 'Les remeses surten revisades i preparades per al banc',
+        es: 'Las remesas salen revisadas y preparadas para el banco',
       },
       headline: {
-        ca: 'Fiscalitat preparada per revisar i presentar',
-        es: 'Fiscalidad lista para revisar y presentar',
+        ca: 'Cobrar quotes no hauria de ser artesanal',
+        es: 'Cobrar cuotas no debería ser artesanal',
       },
       body: {
-        ca: 'Donacions, certificats i fitxers oficials queden ordenats per arribar millor als tancaments.',
-        es: 'Donaciones, certificados y ficheros oficiales quedan ordenados para llegar mejor a los cierres.',
+        ca: 'Revises l import, el nombre de càrrecs i exportes el fitxer SEPA amb una operativa molt més neta.',
+        es: 'Revisas el importe, el número de cargos y exportas el fichero SEPA con una operativa mucho más limpia.',
+      },
+    },
+    {
+      start: 13.8,
+      end: 17.5,
+      subtitle: {
+        ca: 'Quan toca tancar, la fiscalitat ja està molt més preparada',
+        es: 'Cuando toca cerrar, la fiscalidad ya está mucho más preparada',
+      },
+      headline: {
+        ca: 'El tancament arriba més ordenat',
+        es: 'El cierre llega más ordenado',
+      },
+      body: {
+        ca: 'Model 182, devolucions i imports nets apareixen estructurats per revisar i presentar amb més confiança.',
+        es: 'Modelo 182, devoluciones e importes netos aparecen estructurados para revisar y presentar con más confianza.',
       },
     },
   ],
