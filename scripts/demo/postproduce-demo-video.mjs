@@ -446,8 +446,8 @@ function buildSubtitleBackdropFilters(caption, variant) {
   const veilHeight = variant === 'dual' ? 160 : 126;
   const softEdgeY = variant === 'dual' ? 'ih-236' : 'ih-192';
   const softEdgeHeight = variant === 'dual' ? 56 : 48;
-  const softEdgeColor = caption.surface === 'dark' ? '0x111827@0.06' : '0x111827@0.10';
-  const veilColor = caption.surface === 'dark' ? '0x111827@0.18' : '0x111827@0.30';
+  const softEdgeColor = caption.surface === 'dark' ? '0x111827@0.06' : '0x111827@0.16';
+  const veilColor = caption.surface === 'dark' ? '0x111827@0.18' : '0x111827@0.42';
 
   return [
     `drawbox=x=0:y=${softEdgeY}:w=iw:h=${softEdgeHeight}:color=${softEdgeColor}:replace=1:t=fill:enable='${enable}*${alpha}'`,
