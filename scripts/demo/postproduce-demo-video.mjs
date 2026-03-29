@@ -15,8 +15,8 @@ const DEFAULT_FONT_BOLD = '/System/Library/Fonts/Supplemental/Arial Bold.ttf';
 const DEFAULT_FONT_REGULAR = '/System/Library/Fonts/Supplemental/Arial.ttf';
 const DEFAULT_FONT_UI = '/System/Library/Fonts/SFNS.ttf';
 const DEFAULT_FPS = 25;
-const DEFAULT_CRF = 18;
-const DEFAULT_PRESET = 'medium';
+const DEFAULT_CRF = 12;
+const DEFAULT_PRESET = 'slow';
 const DEFAULT_TRANSITION_SECONDS = 0.36;
 let ACTIVE_CRF = DEFAULT_CRF;
 let ACTIVE_PRESET = DEFAULT_PRESET;
@@ -268,6 +268,22 @@ function resolveStoryboardPresentation(storyboard) {
     embedCaptions: presentation.embedCaptions !== false,
     captionTextMode: presentation.captionTextMode === 'subtitle' ? 'subtitle' : 'full',
   };
+}
+
+function resolvePresentationOverride() {
+  if (parseFlag('--embed-captions') && parseFlag('--no-embed-captions')) {
+    fail('No pots usar --embed-captions i --no-embed-captions alhora.');
+  }
+
+  if (parseFlag('--embed-captions')) {
+    return { embedCaptions: true };
+  }
+
+  if (parseFlag('--no-embed-captions')) {
+    return { embedCaptions: false };
+  }
+
+  return {};
 }
 
 function normalizeEditSegments(rawSegments, maxDurationSeconds) {
@@ -954,6 +970,7 @@ async function renderVariant({
       logoPath,
       introAssetPath,
       outroAssetPath,
+      presentationOverride,
 }) {
   const { artifactDir, inputPath, outputPath, srtPath, vttPath, summaryPath } = derivePaths(
     storyboard,
@@ -969,7 +986,10 @@ async function renderVariant({
   ensureDir(artifactDir);
 
   const videoMeta = probeVideo(ffprobePath, inputPath);
-  const presentation = resolveStoryboardPresentation(storyboard);
+  const presentation = {
+    ...resolveStoryboardPresentation(storyboard),
+    ...presentationOverride,
+  };
   const editSegments = normalizeEditSegments(storyboard.edit?.segments, videoMeta.durationSeconds);
   const tmpDir = path.join(DEFAULT_TMP_DIR, `${storyboard.slug}-${variant}`);
   resetDir(tmpDir);
@@ -1148,6 +1168,7 @@ async function main() {
   const skipSummary = parseFlag('--skip-summary');
   const crfArg = parseArg('--crf');
   const presetArg = parseArg('--preset');
+  const presentationOverride = resolvePresentationOverride();
 
   const ffmpegPath = findBinary('ffmpeg');
   const ffprobePath = findBinary('ffprobe');
@@ -1206,6 +1227,7 @@ async function main() {
       logoPath,
       introAssetPath,
       outroAssetPath,
+      presentationOverride,
     });
   }
 }

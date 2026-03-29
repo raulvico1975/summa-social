@@ -15,5 +15,9 @@
   "includeOutro": false,
   "embedCaptions": false,
   "captionsMode": "overlay",
+  "encoding": {
+    "crf": 8,
+    "preset": "veryslow"
+  },
   "goal": "Explicar amb claredat els fluxos clau de Summa amb un acabat premium i ritme pausat."
 }

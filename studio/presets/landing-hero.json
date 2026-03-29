@@ -15,5 +15,9 @@
   "includeOutro": false,
   "embedCaptions": false,
   "captionsMode": "overlay",
+  "encoding": {
+    "crf": 9,
+    "preset": "veryslow"
+  },
   "goal": "Mostrar el valor principal d una funcionalitat en molt poc temps."
 }

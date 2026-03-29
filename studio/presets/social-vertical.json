@@ -15,5 +15,9 @@
   "includeOutro": true,
   "embedCaptions": true,
   "captionsMode": "burned-in",
+  "encoding": {
+    "crf": 10,
+    "preset": "slower"
+  },
   "goal": "Peces curtes i directes per xarxes verticals."
 }

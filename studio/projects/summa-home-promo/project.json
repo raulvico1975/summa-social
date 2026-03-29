@@ -27,8 +27,9 @@
     "mode": "storyboard",
     "storyboardSlug": "summa-home-promo",
     "captionStyle": "summa-subtitle",
+    "embedCaptions": false,
     "encoding": {
-      "crf": 10,
+      "crf": 8,
       "preset": "veryslow"
     },
     "inputByVariant": {
@@ -39,7 +40,7 @@
       "ca",
       "es"
     ],
-    "lastRenderedAt": "2026-03-29T15:48:49.830Z",
+    "lastRenderedAt": "2026-03-29T16:04:01.558Z",
     "renderedVariants": [
       "ca",
       "es"
@@ -68,7 +69,7 @@
     "copyCaptions": true,
     "generatePoster": true,
     "posterTimeSeconds": 2,
-    "lastPublishedAt": "2026-03-29T15:48:50.167Z",
+    "lastPublishedAt": "2026-03-29T16:04:01.921Z",
     "publishedVariants": [
       "ca",
       "es"

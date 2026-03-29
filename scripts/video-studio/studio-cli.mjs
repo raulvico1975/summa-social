@@ -693,6 +693,12 @@ function renderProjectCommand() {
   const storyboardSlug = validation.storyboardSlug;
   const variants = validation.variants;
   const captionStyle = project.render?.captionStyle || findBrandById(project.brand)?.defaultCaptionStyle || 'summa-subtitle';
+  const preset = findPresetById(project.preset);
+  const renderEncoding = project.render?.encoding || preset?.encoding || null;
+  const embedCaptions =
+    typeof project.render?.embedCaptions === 'boolean'
+      ? project.render.embedCaptions
+      : (typeof preset?.embedCaptions === 'boolean' ? preset.embedCaptions : null);
 
   log(`Renderitzant projecte ${slug}...`);
   for (const variant of variants) {
@@ -708,12 +714,16 @@ function renderProjectCommand() {
       resolveProjectInputPath(project, variant),
     ];
 
-    const renderEncoding = project.render?.encoding;
     if (renderEncoding?.crf !== undefined) {
       args.push('--crf', String(renderEncoding.crf));
     }
     if (renderEncoding?.preset) {
       args.push('--preset', String(renderEncoding.preset));
+    }
+    if (embedCaptions === true) {
+      args.push('--embed-captions');
+    } else if (embedCaptions === false) {
+      args.push('--no-embed-captions');
     }
 
     runNodeScript(POSTPRODUCE_SCRIPT, args.slice(1));
@@ -851,6 +861,8 @@ function initProject() {
       mode: 'storyboard',
       storyboardSlug: '',
       captionStyle: brand.defaultCaptionStyle || 'summa-subtitle',
+      embedCaptions: typeof preset.embedCaptions === 'boolean' ? preset.embedCaptions : false,
+      encoding: preset.encoding || null,
       inputPath: '',
       variants: brand.defaultLocales || ['ca'],
     },
