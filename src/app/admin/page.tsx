@@ -59,6 +59,7 @@ import {
   Send,
   BrainCircuit,
   Languages,
+  Video,
 } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -73,6 +74,7 @@ import { broadcastLogoutSync } from '@/lib/session-sync';
 import { HelpAuditSection } from '@/components/admin/help-audit-section';
 import { SuperAdminsManager } from '@/components/admin/super-admins-manager';
 import { EditorialCenter } from '@/components/admin/editorial-center';
+import { VideoStudioCenter } from '@/components/admin/video-studio-center';
 import { migrateExistingSlugs } from '@/lib/slugs';
 import { logAdminAction, getRecentAuditLogs, formatAuditAction, type AdminAuditLog } from '@/lib/admin-audit';
 import { isDemoEnv } from '@/lib/demo/isDemoOrg';
@@ -105,7 +107,7 @@ function resolveAuthLanguage(language: string): string {
 }
 
 type AdminArea = 'system' | 'entities' | 'content' | 'settings'
-type ContentModule = 'help' | 'bot' | 'updates' | 'translations'
+type ContentModule = 'help' | 'bot' | 'updates' | 'translations' | 'video'
 type AdminNavigationDetail = {
   area?: AdminArea
   contentModule?: ContentModule
@@ -771,6 +773,12 @@ function AdminPageContent() {
       title: 'Traduccions',
       summary: translationsCard?.headline ?? 'Textos per idioma',
       icon: <Languages className="h-4 w-4" />,
+    },
+    {
+      id: 'video',
+      title: 'Video Studio',
+      summary: 'Videos per web, landings i xarxes',
+      icon: <Video className="h-4 w-4" />,
     },
   ]
 
@@ -1475,6 +1483,16 @@ function AdminPageContent() {
                 <div data-section="i18n">
                   <I18nManager />
                 </div>
+              </div>
+            )}
+
+            {activeContentModule === 'video' && (
+              <div className="space-y-6">
+                <AreaSectionHeader
+                  title="Video Studio"
+                  description="Centre intern per demanar, estructurar i escalar videos comercials i demos de producte sense dependre de coneixement tecnic."
+                />
+                <VideoStudioCenter />
               </div>
             )}
           </TabsContent>
