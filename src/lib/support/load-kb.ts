@@ -1,13 +1,11 @@
 /**
  * KB Loader — Summa Social Support Bot
  *
- * Loads all KB cards (fallbacks + cards/) and guide content from i18n.
+ * Loads all KB cards and guide content from build-bundled JSON assets.
  * Cached in module memory (singleton) for performance.
  */
 
-import { readFileSync, readdirSync, statSync } from 'fs'
-import { join, dirname } from 'path'
-import { fileURLToPath } from 'url'
+import { bundledAllCards, bundledI18n } from './kb-bundle.generated'
 
 // -------------------------------------------------------------------
 // Types
@@ -33,46 +31,18 @@ export interface KBCard {
 }
 
 // -------------------------------------------------------------------
-// Paths
-// -------------------------------------------------------------------
-
-const __filename2 = fileURLToPath(import.meta.url)
-const __dirname2 = dirname(__filename2)
-const KB_DIR = join(__dirname2, '..', '..', '..', 'docs', 'kb')
-const CARDS_DIR = join(KB_DIR, 'cards')
-const FALLBACKS_PATH = join(KB_DIR, '_fallbacks.json')
-const I18N_DIR = join(__dirname2, '..', '..', 'i18n', 'locales')
-
-// -------------------------------------------------------------------
 // Cache
 // -------------------------------------------------------------------
 
 let cachedCards: KBCard[] | null = null
 const cachedI18n: Record<string, Record<string, string>> = {}
 
-function findJsonFiles(dir: string): string[] {
-  const results: string[] = []
-  for (const entry of readdirSync(dir)) {
-    const full = join(dir, entry)
-    if (statSync(full).isDirectory()) {
-      results.push(...findJsonFiles(full))
-    } else if (entry.endsWith('.json')) {
-      results.push(full)
-    }
-  }
-  return results
-}
-
 function loadI18n(lang: string): Record<string, string> {
   if (cachedI18n[lang]) return cachedI18n[lang]
-  try {
-    const raw = JSON.parse(readFileSync(join(I18N_DIR, `${lang}.json`), 'utf-8'))
-    // Flat JSON: keys are dot-separated like "guides.firstDay.title"
-    cachedI18n[lang] = raw
-    return raw
-  } catch {
-    return {}
-  }
+  const raw = bundledI18n[lang]
+  if (!raw) return {}
+  cachedI18n[lang] = raw
+  return raw
 }
 
 function collectIndexedSection(
@@ -117,34 +87,8 @@ function extractStepsFromCardText(cardText: string): string[] {
 
 export function loadAllCards(): KBCard[] {
   if (cachedCards) return cachedCards
-
-  const cards: KBCard[] = []
-
-  // Fallbacks
-  try {
-    const fallbacks = JSON.parse(readFileSync(FALLBACKS_PATH, 'utf-8')) as KBCard[]
-    cards.push(...fallbacks)
-  } catch (e) {
-    console.error('[load-kb] Cannot load fallbacks:', e)
-  }
-
-  // Cards from subdirectories
-  try {
-    const files = findJsonFiles(CARDS_DIR)
-    for (const file of files) {
-      try {
-        const card = JSON.parse(readFileSync(file, 'utf-8')) as KBCard
-        cards.push(card)
-      } catch (e) {
-        console.error(`[load-kb] Cannot parse ${file}:`, e)
-      }
-    }
-  } catch (e) {
-    console.error('[load-kb] Cannot read cards dir:', e)
-  }
-
-  cachedCards = cards
-  return cards
+  cachedCards = bundledAllCards
+  return bundledAllCards
 }
 
 /**

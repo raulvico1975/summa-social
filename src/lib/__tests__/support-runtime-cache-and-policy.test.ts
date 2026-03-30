@@ -3,8 +3,7 @@ import assert from 'node:assert/strict'
 import { readFileSync, readdirSync, statSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import nextConfig from '../../../next.config'
-import { loadAllCards } from '../support/load-kb'
+import { loadAllCards, loadGuideContent } from '../support/load-kb'
 import { isEmergencyRuntimeKb, loadKbCards } from '../support/load-kb-runtime'
 import { normalizeUiPathsAgainstCatalog } from '../support/engine/policy'
 
@@ -27,24 +26,31 @@ function findJsonFiles(dir: string): string[] {
   return results
 }
 
-test('runtime KB only loads repo cards and fallbacks', async () => {
+test('runtime KB bundle matches repo cards and fallbacks', async () => {
   const here = dirname(fileURLToPath(import.meta.url))
   const kbDir = join(here, '..', '..', '..', 'docs', 'kb')
   const fallbacksPath = join(kbDir, '_fallbacks.json')
   const cardsDir = join(kbDir, 'cards')
 
-  const fallbacks = JSON.parse(readFileSync(fallbacksPath, 'utf-8')) as unknown[]
+  const fallbacks = JSON.parse(readFileSync(fallbacksPath, 'utf-8')) as Array<{ id: string }>
   const cardFiles = findJsonFiles(cardsDir)
-  const expectedCount = fallbacks.length + cardFiles.length
+  const expectedIds = [
+    ...fallbacks.map(card => card.id),
+    ...cardFiles.map(file => (JSON.parse(readFileSync(file, 'utf-8')) as { id: string }).id),
+  ].sort()
 
   const baseCards = loadAllCards()
   const runtimeCards = await loadKbCards()
 
-  assert.equal(baseCards.length, expectedCount)
-  assert.equal(runtimeCards.length, expectedCount)
+  assert.equal(baseCards.length, expectedIds.length)
+  assert.equal(runtimeCards.length, expectedIds.length)
   assert.deepEqual(
     runtimeCards.map(card => card.id).sort(),
     baseCards.map(card => card.id).sort()
+  )
+  assert.deepEqual(
+    baseCards.map(card => card.id).sort(),
+    expectedIds
   )
 })
 
@@ -68,16 +74,9 @@ test('runtime KB health check detects emergency-only dataset', () => {
   assert.equal(isEmergencyRuntimeKb(loadAllCards()), false)
 })
 
-test('next config traces support KB assets into production server bundle', () => {
-  const includes = nextConfig.outputFileTracingIncludes ?? {}
-  const supportBotIncludes = includes['/api/support/bot'] ?? []
+test('guide content loads from bundled locales without filesystem access', () => {
+  const guide = loadGuideContent('firstDay', 'es')
 
-  assert.ok(
-    supportBotIncludes.includes('docs/kb/**/*'),
-    'Missing docs/kb tracing include for /api/support/bot'
-  )
-  assert.ok(
-    supportBotIncludes.includes('src/i18n/locales/**/*.json'),
-    'Missing i18n locale tracing include for /api/support/bot'
-  )
+  assert.match(guide, /Orientarse el primer día sin perderse/i)
+  assert.match(guide, /Qué hacer ahora:/i)
 })
