@@ -22,6 +22,7 @@
   { "q": "com canvio l'idioma de l'app?", "expectedCardId": "guide-change-language" },
   { "q": "com gestiono els accessos i permisos?", "expectedCardId": "guide-access-security" },
   { "q": "com dono d'alta un nou soci", "expectedCardId": "howto-member-create" },
+  { "q": "com edito un soci?", "expectedCardId": "howto-donor-update-details" },
   { "q": "com edito les dades d'un soci", "expectedCardId": "howto-donor-update-details" },
   { "q": "com modifico l'IBAN d'un soci", "expectedCardId": "howto-donor-update-iban" },
   { "q": "com veig l'historial d'un soci", "expectedCardId": "howto-donor-history-summary" },

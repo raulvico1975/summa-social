@@ -10,6 +10,12 @@ const nextConfig: NextConfig = {
   /* config options here */
   productionBrowserSourceMaps: true,
   outputFileTracingRoot: process.cwd(),
+  outputFileTracingIncludes: {
+    '/api/support/bot': [
+      'docs/kb/**/*',
+      'src/i18n/locales/**/*.json',
+    ],
+  },
   serverExternalPackages: [
     'genkit',
     '@genkit-ai/core',

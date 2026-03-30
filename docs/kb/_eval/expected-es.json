@@ -22,6 +22,7 @@
   { "q": "¿cómo cambio el idioma de la app?", "expectedCardId": "guide-change-language" },
   { "q": "¿cómo gestiono los accesos y permisos?", "expectedCardId": "guide-access-security" },
   { "q": "¿cómo doy de alta a un nuevo socio?", "expectedCardId": "howto-member-create" },
+  { "q": "como edito un socio?", "expectedCardId": "howto-donor-update-details" },
   { "q": "¿cómo edito los datos de un socio?", "expectedCardId": "howto-donor-update-details" },
   { "q": "¿cómo modifico el IBAN de un socio?", "expectedCardId": "howto-donor-update-iban" },
   { "q": "¿cómo veo el historial de un socio?", "expectedCardId": "howto-donor-history-summary" },

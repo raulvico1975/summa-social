@@ -12,7 +12,7 @@ import { z } from 'genkit'
 import { verifyIdToken, getAdminDb, validateUserMembership, isSuperAdmin } from '@/lib/api/admin-sdk'
 import { requireOperationalAccess } from '@/lib/api/require-operational-access'
 import { loadGuideContent, type KBCard } from '@/lib/support/load-kb'
-import { loadKbCards } from '@/lib/support/load-kb-runtime'
+import { isEmergencyRuntimeKb, loadKbCards } from '@/lib/support/load-kb-runtime'
 import { incrementBotQuestionCounters, logBotQuestion, normalizeForHash } from '@/lib/support/bot-question-log'
 import { debugRetrieveCard, detectSmallTalkResponse, retrieveCard, type KbLang, type RetrievalResult, type RetrievalTraceDiscard } from '@/lib/support/bot-retrieval'
 import { orchestrator } from '@/lib/support/engine/orchestrator'
@@ -631,7 +631,12 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
       console.error('[bot] loadKbCards error:', cardsError)
     }
 
-    const criticalCards = ensureCriticalCardsPresent(cards)
+    const runtimeKbMissing = isEmergencyRuntimeKb(cards)
+    if (runtimeKbMissing) {
+      console.error('[bot] runtime KB unavailable in deployed artifact; keeping emergency fallback dataset only')
+    }
+
+    const criticalCards = runtimeKbMissing ? cards : ensureCriticalCardsPresent(cards)
     const retrievableCards = filterCardsForSupportAccess(criticalCards, superAdminUser)
     const cardsFilteredOutByAccess = traceEnabled
       ? criticalCards

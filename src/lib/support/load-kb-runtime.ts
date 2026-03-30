@@ -16,6 +16,14 @@ type CachedKB = {
 
 let cached: CachedKB | null = null
 
+const EMERGENCY_RUNTIME_CARD_IDS = new Set([
+  'fallback-no-answer',
+  'fallback-fiscal-unclear',
+  'fallback-sepa-unclear',
+  'fallback-remittances-unclear',
+  'fallback-danger-unclear',
+])
+
 function buildEmergencyFallbackCards(): KBCard[] {
   const base = {
     type: 'fallback',
@@ -92,6 +100,11 @@ function buildEmergencyFallbackCards(): KBCard[] {
       },
     },
   ]
+}
+
+export function isEmergencyRuntimeKb(cards: KBCard[]): boolean {
+  if (cards.length !== EMERGENCY_RUNTIME_CARD_IDS.size) return false
+  return cards.every(card => card.type === 'fallback' && EMERGENCY_RUNTIME_CARD_IDS.has(card.id))
 }
 
 /**

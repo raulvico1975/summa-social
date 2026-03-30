@@ -254,6 +254,12 @@ test('retrieveCard resolves donor edit variants without clarify', () => {
   }
 })
 
+test('retrieveCard resolves short spanish member edit phrasing without drifting to paid quotas', () => {
+  const result = retrieveCard('como edito un socio?', 'es', cards)
+  assert.equal(result.card.id, 'howto-donor-update-details')
+  assert.equal(result.mode, 'card')
+})
+
 test('retrieveCard keeps IBAN update routed to the dedicated card', () => {
   const ca = retrieveCard("com modifico l'IBAN d'un soci", 'ca', cards)
   assert.equal(ca.card.id, 'howto-donor-update-iban')
@@ -427,6 +433,26 @@ test('retrieveCard uses memory to keep a follow-up on the same permissions workf
 
   const result = retrieveCard('on ho faig?', 'ca', cards, supportContext)
   assert.equal(result.card.id, 'howto-member-user-permissions')
+  assert.equal(result.mode, 'card')
+})
+
+test('retrieveCard does not let paid-quota context hijack a new short edit question', () => {
+  const supportContext: SupportContext = {
+    screen: {
+      pathname: '/dashboard/donants',
+      routeKey: 'donants',
+      routeUiPath: 'Donants',
+      helpOpen: false,
+    },
+    previousCardId: 'manual-member-paid-quotas',
+    recentTurns: [
+      { role: 'user', text: 'como puedo saber las cuotas que un socio ha pagado?' },
+      { role: 'bot', text: 'Como ver las cuotas pagadas por un socio', cardId: 'manual-member-paid-quotas', mode: 'card' },
+    ],
+  }
+
+  const result = retrieveCard('como edito un socio?', 'es', cards, supportContext)
+  assert.equal(result.card.id, 'howto-donor-update-details')
   assert.equal(result.mode, 'card')
 })
 
