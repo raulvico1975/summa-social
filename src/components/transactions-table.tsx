@@ -39,6 +39,7 @@ import {
 } from '@/components/ui/tooltip';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
+import { Progress } from '@/components/ui/progress';
 import {
   Select,
   SelectContent,
@@ -787,6 +788,7 @@ export function TransactionsTable({
     loadingStates,
     isBatchCategorizing,
     batchProgress,
+    batchStatus,
     handleCategorize,
     handleBatchCategorize,
     handleCancelBatch,
@@ -2372,6 +2374,92 @@ export function TransactionsTable({
     sourceEmpty: t.movements.table.sourceEmpty,
   }), [t]);
 
+  const batchProcessingCategories = React.useMemo(() => {
+    const translated = (availableCategories ?? [])
+      .map((category) => categoryTranslations[category.name] || category.name)
+      .filter(Boolean);
+
+    const unique = Array.from(new Set(translated)).slice(0, 6);
+
+    if (unique.length > 0) return unique;
+
+    if (language === 'es') {
+      return ['Donaciones', 'Cuotas socios', 'Gastos de actividad', 'Suministros', 'Banco', 'Proveedores'];
+    }
+
+    if (language === 'fr') {
+      return ['Dons', 'Cotisations', "Dépenses d'activité", 'Fournitures', 'Banque', 'Fournisseurs'];
+    }
+
+    return ['Donacions', 'Quotes socis', "Despeses d'activitat", 'Subministraments', 'Banc', 'Proveïdors'];
+  }, [availableCategories, categoryTranslations, language]);
+
+  const batchProcessingCopy = React.useMemo(() => {
+    if (language === 'es') {
+      return {
+        badge: 'Summa IA',
+        title: 'está asignando categorías',
+        progressLabel: (current: number, total: number) => `Movimiento ${current} de ${total}`,
+        summaryLabel: (applied: number, review: number) =>
+          review > 0
+            ? `${applied} categorías aplicadas · ${review} pendientes de revisión`
+            : `${applied} categorías aplicadas`,
+        phaseLabel: (phase: NonNullable<typeof batchStatus>['phase'], optionCount: number, categoryName: string | null, delayMs: number) => {
+          if (phase === 'preparing') return 'Preparando el lote de sugerencias...';
+          if (phase === 'analyzing') return optionCount > 0
+            ? `Contrastando este movimiento con ${optionCount} categorías posibles...`
+            : 'Analizando el movimiento...';
+          if (phase === 'applying') return categoryName
+            ? `Aplicando sugerencia: ${categoryName}`
+            : 'Aplicando sugerencia...';
+          return `Pausa breve para mantener estable el ritmo (${Math.max(1, Math.round(delayMs / 1000))} s).`;
+        },
+      };
+    }
+
+    if (language === 'fr') {
+      return {
+        badge: 'Summa IA',
+        title: 'attribue des catégories',
+        progressLabel: (current: number, total: number) => `Mouvement ${current} sur ${total}`,
+        summaryLabel: (applied: number, review: number) =>
+          review > 0
+            ? `${applied} catégories appliquées · ${review} à vérifier`
+            : `${applied} catégories appliquées`,
+        phaseLabel: (phase: NonNullable<typeof batchStatus>['phase'], optionCount: number, categoryName: string | null, delayMs: number) => {
+          if (phase === 'preparing') return 'Préparation du lot de suggestions...';
+          if (phase === 'analyzing') return optionCount > 0
+            ? `Comparaison de ce mouvement avec ${optionCount} catégories possibles...`
+            : 'Analyse du mouvement...';
+          if (phase === 'applying') return categoryName
+            ? `Application de la suggestion : ${categoryName}`
+            : 'Application de la suggestion...';
+          return `Courte pause pour garder un rythme stable (${Math.max(1, Math.round(delayMs / 1000))} s).`;
+        },
+      };
+    }
+
+    return {
+      badge: 'Summa IA',
+      title: 'està assignant categories',
+      progressLabel: (current: number, total: number) => `Moviment ${current} de ${total}`,
+      summaryLabel: (applied: number, review: number) =>
+        review > 0
+          ? `${applied} categories aplicades · ${review} pendents de revisió`
+          : `${applied} categories aplicades`,
+      phaseLabel: (phase: NonNullable<typeof batchStatus>['phase'], optionCount: number, categoryName: string | null, delayMs: number) => {
+        if (phase === 'preparing') return 'Preparant el lot de suggeriments...';
+        if (phase === 'analyzing') return optionCount > 0
+          ? `Contrastant aquest moviment amb ${optionCount} categories possibles...`
+          : 'Analitzant el moviment...';
+        if (phase === 'applying') return categoryName
+          ? `Aplicant suggeriment: ${categoryName}`
+          : 'Aplicant suggeriment...';
+        return `Pausa breu per mantenir estable el ritme (${Math.max(1, Math.round(delayMs / 1000))} s).`;
+      },
+    };
+  }, [batchStatus, language]);
+
   return (
     <TooltipProvider>
       {/* ═══════════════════════════════════════════════════════════════════════
@@ -2455,6 +2543,76 @@ export function TransactionsTable({
           t={filterTranslations}
         />
       </div>
+
+      <Dialog open={isBatchCategorizing} onOpenChange={() => undefined}>
+        <DialogContent className="sm:max-w-lg [&>button]:hidden">
+          <div className="space-y-6 py-2">
+            <DialogHeader className="items-center space-y-3 pr-0 text-center">
+              <div className="rounded-full border border-primary/20 bg-primary/5 px-4 py-1 text-sm font-semibold tracking-[0.14em] text-primary uppercase">
+                {batchProcessingCopy.badge}
+              </div>
+              <DialogTitle className="text-2xl font-semibold tracking-tight sm:text-3xl">
+                {batchProcessingCopy.title}
+              </DialogTitle>
+            </DialogHeader>
+
+            <div className="flex flex-col items-center gap-4 text-center">
+              <div className="flex h-16 w-16 items-center justify-center rounded-full border border-primary/20 bg-primary/5">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              </div>
+
+              {batchProgress && batchProgress.total > 0 ? (
+                <div className="w-full space-y-3">
+                  <Progress value={(batchProgress.current / batchProgress.total) * 100} className="h-2.5" />
+                  <p className="text-sm font-medium text-foreground">
+                    {batchStatus
+                      ? batchProcessingCopy.progressLabel(batchStatus.current, batchStatus.total)
+                      : batchProcessingCopy.title}
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    {batchStatus
+                      ? batchProcessingCopy.phaseLabel(
+                          batchStatus.phase,
+                          batchStatus.optionCount,
+                          batchStatus.suggestedCategoryName,
+                          batchStatus.delayMs,
+                        )
+                      : null}
+                  </p>
+                </div>
+              ) : null}
+            </div>
+
+            <div className="rounded-xl bg-muted/20 px-3 py-3">
+              <div className="flex flex-wrap justify-center gap-2">
+                {batchProcessingCategories.map((category, index) => (
+                  <div
+                    key={`${category}-${index}`}
+                    className={`rounded-full px-3 py-1.5 text-xs transition-all duration-500 ${
+                      batchStatus && index === Math.max(0, batchStatus.current - 1) % batchProcessingCategories.length
+                        ? 'bg-foreground text-background shadow-sm'
+                        : 'bg-muted text-muted-foreground'
+                    }`}
+                  >
+                    {category}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <DialogFooter className="sm:justify-center">
+              <Button
+                onClick={handleCancelBatch}
+                variant="outline"
+                className="border-destructive text-destructive hover:bg-destructive/10"
+              >
+                <X className="mr-2 h-4 w-4" />
+                {filterTranslations.stopButton ?? 'Aturar'}
+              </Button>
+            </DialogFooter>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Avís devolucions pendents - flux únic simplificat */}
       {pendingReturns.length > 0 && tableFilter !== 'pendingReturns' && (

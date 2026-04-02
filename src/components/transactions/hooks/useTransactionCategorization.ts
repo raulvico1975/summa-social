@@ -28,6 +28,18 @@ interface UseTransactionCategorizationReturn {
   loadingStates: Record<string, boolean>;
   isBatchCategorizing: boolean;
   batchProgress: { current: number; total: number } | null;
+  batchStatus: {
+    phase: 'preparing' | 'analyzing' | 'applying' | 'waiting';
+    current: number;
+    total: number;
+    appliedCount: number;
+    reviewCount: number;
+    currentDescription: string | null;
+    suggestedCategoryName: string | null;
+    optionCount: number;
+    delayMs: number;
+    source: 'rules' | 'ai' | null;
+  } | null;
 
   // Actions
   handleCategorize: (txId: string) => Promise<void>;
@@ -200,6 +212,7 @@ export function useTransactionCategorization({
   const [loadingStates, setLoadingStates] = React.useState<Record<string, boolean>>({});
   const [isBatchCategorizing, setIsBatchCategorizing] = React.useState(false);
   const [batchProgress, setBatchProgress] = React.useState<{ current: number; total: number } | null>(null);
+  const [batchStatus, setBatchStatus] = React.useState<UseTransactionCategorizationReturn['batchStatus']>(null);
 
   // Cancel·lació
   const cancelRef = React.useRef(false);
@@ -355,6 +368,18 @@ export function useTransactionCategorization({
 
     setIsBatchCategorizing(true);
     setBatchProgress({ current: 0, total: transactionsToCategorize.length });
+    setBatchStatus({
+      phase: 'preparing',
+      current: 0,
+      total: transactionsToCategorize.length,
+      appliedCount: 0,
+      reviewCount: 0,
+      currentDescription: null,
+      suggestedCategoryName: null,
+      optionCount: 0,
+      delayMs: currentDelay,
+      source: null,
+    });
     const startTime = Date.now();
     trackUX('ai.bulk.run.start', { count: transactionsToCategorize.length, bulkMode, sequential: true });
 
@@ -374,7 +399,20 @@ export function useTransactionCategorization({
       if (quotaExceeded) break;
 
       const tx = transactionsToCategorize[i];
+      const optionCount = tx.amount < 0 ? expenseOptions.length : incomeOptions.length;
       setBatchProgress({ current: i + 1, total: transactionsToCategorize.length });
+      setBatchStatus({
+        phase: 'analyzing',
+        current: i + 1,
+        total: transactionsToCategorize.length,
+        appliedCount: successCount,
+        reviewCount: errorCount,
+        currentDescription: tx.description,
+        suggestedCategoryName: null,
+        optionCount,
+        delayMs: currentDelay,
+        source: null,
+      });
 
       try {
         // 1. Comprovar si hi ha categoria forçada per descripció (loteria, voluntariat)
@@ -387,6 +425,18 @@ export function useTransactionCategorization({
           // Categoria forçada - no cal cridar IA
           updateDocumentNonBlocking(doc(transactionsCollection, tx.id), { category: forcedCategoryId });
           successCount++;
+          setBatchStatus({
+            phase: 'applying',
+            current: i + 1,
+            total: transactionsToCategorize.length,
+            appliedCount: successCount,
+            reviewCount: errorCount,
+            currentDescription: tx.description,
+            suggestedCategoryName: getCategoryDisplayName(forcedCategoryId),
+            optionCount,
+            delayMs: currentDelay,
+            source: 'rules',
+          });
           continue; // No cal delay, no hem cridat l'API
         }
 
@@ -404,6 +454,18 @@ export function useTransactionCategorization({
 
           // Marcar com Revisar
           updateDocumentNonBlocking(doc(transactionsCollection, tx.id), { category: 'Revisar' });
+          setBatchStatus({
+            phase: 'applying',
+            current: i + 1,
+            total: transactionsToCategorize.length,
+            appliedCount: successCount,
+            reviewCount: errorCount,
+            currentDescription: tx.description,
+            suggestedCategoryName: 'Revisar',
+            optionCount,
+            delayMs: currentDelay,
+            source: 'ai',
+          });
 
           // Manejar segons tipus d'error
           if (result.code === 'QUOTA_EXCEEDED') {
@@ -425,6 +487,18 @@ export function useTransactionCategorization({
         const categoryToSave = result.categoryId ?? 'Revisar';
         updateDocumentNonBlocking(doc(transactionsCollection, tx.id), { category: categoryToSave });
         successCount++;
+        setBatchStatus({
+          phase: 'applying',
+          current: i + 1,
+          total: transactionsToCategorize.length,
+          appliedCount: successCount,
+          reviewCount: errorCount,
+          currentDescription: tx.description,
+          suggestedCategoryName: getCategoryDisplayName(categoryToSave),
+          optionCount,
+          delayMs: currentDelay,
+          source: 'ai',
+        });
 
         // Reset delay si èxit (opcional: podríem mantenir-lo)
         // currentDelay = bulkMode ? BASE_DELAY_BULK_MS : BASE_DELAY_NORMAL_MS;
@@ -436,6 +510,18 @@ export function useTransactionCategorization({
 
         // Marcar com Revisar
         updateDocumentNonBlocking(doc(transactionsCollection, tx.id), { category: 'Revisar' });
+        setBatchStatus({
+          phase: 'applying',
+          current: i + 1,
+          total: transactionsToCategorize.length,
+          appliedCount: successCount,
+          reviewCount: errorCount,
+          currentDescription: tx.description,
+          suggestedCategoryName: 'Revisar',
+          optionCount,
+          delayMs: currentDelay,
+          source: 'ai',
+        });
 
         // Backoff per errors de xarxa
         currentDelay = Math.min(currentDelay * BACKOFF_MULTIPLIER, MAX_DELAY_MS);
@@ -443,6 +529,18 @@ export function useTransactionCategorization({
 
       // Delay entre crides (excepte l'última)
       if (i < transactionsToCategorize.length - 1 && !quotaExceeded && !cancelRef.current) {
+        setBatchStatus({
+          phase: 'waiting',
+          current: i + 1,
+          total: transactionsToCategorize.length,
+          appliedCount: successCount,
+          reviewCount: errorCount,
+          currentDescription: null,
+          suggestedCategoryName: null,
+          optionCount: 0,
+          delayMs: currentDelay,
+          source: null,
+        });
         await new Promise(resolve => setTimeout(resolve, currentDelay));
       }
     }
@@ -450,6 +548,7 @@ export function useTransactionCategorization({
     const durationMs = Date.now() - startTime;
     setIsBatchCategorizing(false);
     setBatchProgress(null);
+    setBatchStatus(null);
 
     trackUX('ai.bulk.run.done', {
       processedCount: successCount,
@@ -507,6 +606,7 @@ export function useTransactionCategorization({
     loadingStates,
     isBatchCategorizing,
     batchProgress,
+    batchStatus,
 
     // Actions
     handleCategorize,
