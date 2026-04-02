@@ -1861,9 +1861,9 @@ export function DonorManager() {
             <div className="space-y-6">
               <div className="rounded-lg border bg-background px-4 py-4 sm:px-5 sm:py-5">
                   <div className="space-y-1">
-                    <h4 className="text-sm font-semibold">Identitat i fiscal</h4>
+                    <h4 className="text-sm font-semibold">{tr('donors.editModal.sections.identityFiscal.title')}</h4>
                     <p className="text-xs text-muted-foreground">
-                      Dades basiques del donant i camps clau per fiscalitat.
+                      {tr('donors.editModal.sections.identityFiscal.help')}
                     </p>
                   </div>
                   <div className="mt-3 space-y-4">
@@ -1888,10 +1888,10 @@ export function DonorManager() {
                           id="taxId"
                           value={formData.taxId}
                           onChange={(e) => handleFormChange('taxId', e.target.value.toUpperCase())}
-                          placeholder="12345678A o B12345678"
+                          placeholder={tr('donors.editModal.placeholders.taxId')}
                         />
                         <p className="text-xs text-muted-foreground leading-4">
-                          8 digits + lletra (DNI) o lletra + 7 digits + lletra (NIE/CIF).
+                          {tr('donors.editModal.help.taxId')}
                         </p>
                       </div>
 
@@ -1946,9 +1946,9 @@ export function DonorManager() {
 
                 <div className="rounded-lg border bg-background px-4 py-4 sm:px-5 sm:py-5">
                   <div className="space-y-1">
-                    <h4 className="text-sm font-semibold">Contacte i adreca</h4>
+                    <h4 className="text-sm font-semibold">{tr('donors.editModal.sections.contactAddress.title')}</h4>
                     <p className="text-xs text-muted-foreground">
-                      Dades de contacte i localitzacio del donant.
+                      {tr('donors.editModal.sections.contactAddress.help')}
                     </p>
                   </div>
                   <div className="mt-3 space-y-4">
@@ -1960,7 +1960,7 @@ export function DonorManager() {
                           type="email"
                           value={formData.email || ''}
                           onChange={(e) => handleFormChange('email', e.target.value)}
-                          placeholder="correu@exemple.com"
+                          placeholder={tr('donors.editModal.placeholders.email')}
                         />
                       </div>
 
@@ -1970,7 +1970,7 @@ export function DonorManager() {
                           id="phone"
                           value={formData.phone || ''}
                           onChange={(e) => handleFormChange('phone', e.target.value)}
-                          placeholder="600 000 000"
+                          placeholder={tr('donors.editModal.placeholders.phone')}
                         />
                       </div>
 
@@ -1992,7 +1992,7 @@ export function DonorManager() {
                           id="address"
                           value={formData.address || ''}
                           onChange={(e) => handleFormChange('address', e.target.value)}
-                          placeholder="Carrer Major, 15, 2n 1a"
+                          placeholder={tr('donors.editModal.placeholders.address')}
                         />
                       </div>
 
@@ -2005,11 +2005,11 @@ export function DonorManager() {
                           id="zipCode"
                           value={formData.zipCode}
                           onChange={(e) => handleFormChange('zipCode', e.target.value)}
-                          placeholder="08001"
+                          placeholder={tr('donors.editModal.placeholders.zipCode')}
                           maxLength={5}
                         />
                         <p className="text-xs text-muted-foreground leading-4">
-                          5 digits. Obligatori per al Model 182.
+                          {tr('donors.editModal.help.zipCode')}
                         </p>
                       </div>
 
@@ -2019,7 +2019,7 @@ export function DonorManager() {
                           id="city"
                           value={formData.city || ''}
                           onChange={(e) => handleFormChange('city', e.target.value)}
-                          placeholder="Barcelona"
+                          placeholder={tr('donors.editModal.placeholders.city')}
                         />
                       </div>
 
@@ -2029,7 +2029,7 @@ export function DonorManager() {
                           id="province"
                           value={formData.province || ''}
                           onChange={(e) => handleFormChange('province', e.target.value)}
-                          placeholder="Barcelona"
+                          placeholder={tr('donors.editModal.placeholders.province')}
                         />
                       </div>
                     </div>
@@ -2038,9 +2038,9 @@ export function DonorManager() {
 
                 <div className="rounded-lg border bg-background px-4 py-4 sm:px-5 sm:py-5">
                   <div className="space-y-1">
-                    <h4 className="text-sm font-semibold">Relacio amb l'entitat</h4>
+                    <h4 className="text-sm font-semibold">{tr('donors.editModal.sections.relationship.title')}</h4>
                     <p className="text-xs text-muted-foreground">
-                      Configuracio de quota, categoria i dades bancaries si escau.
+                      {tr('donors.editModal.sections.relationship.help')}
                     </p>
                   </div>
                   <div className="mt-3 space-y-4">
@@ -2086,7 +2086,7 @@ export function DonorManager() {
                       {formData.membershipType === 'recurring' && (
                         <>
                           <div className="space-y-1.5 xl:col-span-4">
-                            <Label htmlFor="monthlyAmount">{tr('donors.quotaAmountPerCharge.label', 'Import de quota')}</Label>
+                            <Label htmlFor="monthlyAmount">{tr('donors.editModal.recurring.amountLabel')}</Label>
                             <Input
                               id="monthlyAmount"
                               type="number"
@@ -2094,12 +2094,12 @@ export function DonorManager() {
                               className="h-10"
                               value={formData.monthlyAmount || ''}
                               onChange={(e) => handleFormChange('monthlyAmount', parseFloat(e.target.value) || undefined)}
-                              placeholder="10.00"
+                              placeholder={tr('donors.editModal.placeholders.monthlyAmount')}
                             />
                           </div>
 
                           <div className="space-y-1.5 xl:col-span-4">
-                            <Label htmlFor="periodicityQuota">{tr('donors.periodicityQuota.label', 'Periodicitat')}</Label>
+                            <Label htmlFor="periodicityQuota">{tr('donors.editModal.recurring.periodicityLabel')}</Label>
                             <Select
                               value={formData.periodicityQuota ?? "__none__"}
                               onValueChange={(v) => handleFormChange('periodicityQuota', v === "__none__" ? null : v)}
@@ -2108,12 +2108,12 @@ export function DonorManager() {
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
-                                <SelectItem value="__none__">{tr('donors.periodicityQuota.none', 'Sense periodicitat')}</SelectItem>
-                                <SelectItem value="monthly">{tr('donors.periodicityQuota.monthly', 'Mensual')}</SelectItem>
-                                <SelectItem value="quarterly">{tr('donors.periodicityQuota.quarterly', 'Trimestral')}</SelectItem>
-                                <SelectItem value="semiannual">{tr('donors.periodicityQuota.semiannual', 'Semestral')}</SelectItem>
-                                <SelectItem value="annual">{tr('donors.periodicityQuota.annual', 'Anual')}</SelectItem>
-                                <SelectItem value="manual">{tr('donors.periodicityQuota.manual', 'Manual')}</SelectItem>
+                                <SelectItem value="__none__">{tr('donors.editModal.recurring.periodicity.none')}</SelectItem>
+                                <SelectItem value="monthly">{tr('donors.editModal.recurring.periodicity.monthly')}</SelectItem>
+                                <SelectItem value="quarterly">{tr('donors.editModal.recurring.periodicity.quarterly')}</SelectItem>
+                                <SelectItem value="semiannual">{tr('donors.editModal.recurring.periodicity.semiannual')}</SelectItem>
+                                <SelectItem value="annual">{tr('donors.editModal.recurring.periodicity.annual')}</SelectItem>
+                                <SelectItem value="manual">{tr('donors.editModal.recurring.periodicity.manual')}</SelectItem>
                               </SelectContent>
                             </Select>
                           </div>
@@ -2134,14 +2134,14 @@ export function DonorManager() {
                               id="iban"
                               value={formData.iban || ''}
                               onChange={(e) => handleFormChange('iban', e.target.value.toUpperCase().replace(/\s/g, ''))}
-                              placeholder="ES00 0000 0000 0000 0000 0000"
+                              placeholder={tr('donors.editModal.placeholders.iban')}
                               className="font-mono"
                             />
                           </div>
 
                           <div className="xl:col-span-12">
                             <p className="text-xs text-muted-foreground leading-4">
-                              {tr('donors.quotaAmountPerCharge.hint', "Import per cobrament segons periodicitat.")}
+                              {tr('donors.editModal.recurring.amountHint')}
                             </p>
                           </div>
                         </>
@@ -2154,7 +2154,7 @@ export function DonorManager() {
                   <div className="space-y-1">
                     <h4 className="text-sm font-semibold">{t.donors.notes}</h4>
                     <p className="text-xs text-muted-foreground">
-                      Observacions internes del donant.
+                      {tr('donors.editModal.sections.notes.help')}
                     </p>
                   </div>
                   <div className="mt-3">
