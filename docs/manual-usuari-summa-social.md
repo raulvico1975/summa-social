@@ -1,7 +1,8 @@
 # SUMMA SOCIAL - Manual d'Usuari Complet
 
-**Versió**: 1.46
-**Última actualització**: 12 Març 2026
+**Versió**: 1.47
+**Última actualització**: 27 de Març 2026
+**Alineació**: Sincronitzat amb REFERÈNCIA-COMPLETA.md (27/03/2026)
 
 ---
 
@@ -86,10 +87,11 @@ Si necessites una còpia de les dades de la teva entitat (per exemple, per a una
 
 ## 1.2 Configuració d'Usuari: Idioma de l'aplicació
 
-L'aplicació està disponible en **3 idiomes**:
+L'aplicació està disponible en **4 idiomes**:
 - 🇨🇦 Català
 - 🇪🇸 Espanyol  
 - 🇫🇷 Francès
+- 🇵🇹 Portuguès
 
 ### Com canviar-lo
 
@@ -1047,16 +1049,33 @@ i **bloqueja la generació**.
 5. Clica **"Generar"** i descarrega el fitxer **XML pain.008**
 6. Puja el fitxer al teu banc a l'apartat de **Remeses / Domiciliacions / SEPA Direct Debit**
 
-> **Com sap el sistema quins socis "toca cobrar"?** Per a socis **mensuals**, mira si ja s'ha cobrat aquest mes: si no, el marca com a candidat. Per a socis **trimestrals, semestrals o anuals**, calcula quan tocaria el proper cobrament a partir de la data de l'últim (per exemple, un soci trimestral cobrat al gener no tornarà a aparèixer fins a l'abril). Es compara per mes, sense importar el dia exacte.
->
-> **Últim cobrament SEPA:** Pots informar la data de l'últim cobrament de cada donant a la seva fitxa, o importar-la massivament amb la columna "Últim cobrament SEPA" de l'Excel de donants.
+**Com sap el sistema quins socis "toca cobrar"?**
+
+Per a **socis mensuals**:
+- El sistema verifica si ja s'ha cobrat aquest mes
+- Si no, marca com "toca cobrar"
+- Exemple: soci mensual cobrat el 01-02-2026 → No toca de nou fins al 01-03-2026
+
+Per a **socis trimestrals, semestrals o anuals**:
+- Calcula quant temps ha passat des de l'últim cobrament (`sepaPain008LastRunAt`)
+- Compara el mes de la data de cobrament amb el mes previst
+- Ignora el dia exacte (és a nivell de mes/trimestre, no de dia calendari)
+- Exemples d'intervals:
+  - Trimestral: 3 mesos (gener → abril, abril → juliol, etc.)
+  - Semestral: 6 mesos
+  - Anual: 12 mesos
+
+**Sense data d'últim cobrament?** Si no hi ha data guardada, el sistema suposa que toca cobrar. Apareixerà un avís recomanant informar la data a la fitxa del donant o via Excel.
+
+**Memòria de cobrament:** El sistema guarda automàticament quan vas cobrar cada soci (`sepaPain008LastRunAt`). Pots veure-la a la columna "Darrer cobrament" del wizard, a la fitxa del donant, i en l'Excel de donants.
 
 ---
 
 ### Compatibilitat bancària
 
 Summa genera fitxers SEPA compatibles amb banca espanyola.
-Si el teu banc rebutja un fitxer, contacta amb suport indicant el missatge exacte d'error.
+
+**Atenció amb Santander:** Els fitxers han de tenir el namespace `pain.008.001.02` (no `.08`) i no han de contenir mil·lisegons als timestamps. Si el teu banc rebutja un fitxer, contacta amb suport indicant el missatge exacte d'error del banc.
 
 ---
 
@@ -1439,11 +1458,28 @@ Si t'has equivocat processant una remesa de devolucions (per exemple, has assign
 2. Localitza la remesa de devolucions processada
 3. Clica el badge de la remesa → S'obre el modal de detall
 4. Clica **"Desfer remesa"**
-5. Confirma l'acció
-6. Les filles s'arxiven (no s'esborren)
-7. Pots tornar a processar amb les correccions
+5. Confirma l'acció (No es pot desfer sense confirmació)
+6. Les filles s'arxiven (soft-delete) — no s'esborren
+7. El pare torna al seu estat original
+8. Pots tornar a processar amb les correccions
 
-> ⚠️ **Important:** El sistema no permet processar directament una remesa de devolucions que ja està processada. Has de desfer-la primer. Això és per seguretat: les devolucions tenen impacte fiscal i el sistema vol evitar duplicacions accidentals.
+### Què passa en desfer
+
+- **Les filles NO s'esborren**, es marquen com a arxivades (`archivedAt = timestamp ISO`)
+- Les filles arxivades **NO compten** per Model 182 ni certificats
+- El moviment pare torna a `isRemittance: false`
+- Pots reimportar el fitxer i criar filles noves amb dades correctes
+
+> ⚠️ **Important:** El sistema no permet processar una remesa que ja està processada sense desfer-la primer. Això protegeix contra duplicació accidental de devolucions (que en té impacte fiscal).
+
+### Quan necessites desfer una remesa
+
+| Situació | Acció |
+|----------|-------|
+| Has carregat el fitxer del mes equivocat | Desfer → Processar amb fitxer correcte |
+| Has assignat un donant malament a una filla | Desfer → Corregir dades donant → Processar |
+| El fitxer tenia errors en els imports | Desfer → Processar amb fitxer corregit |
+| Vols tornar a fer el matching des de zero | Desfer → Actualitzar IBANs dels donants → Processar |
 
 ---
 
@@ -2357,19 +2393,25 @@ Abans de sortir de l'app, a Summa tens **tres punts d'ajuda reals**:
 | Terme | Definició |
 |-------|-----------|
 | **Remesa** | Agrupació de quotes de socis en un únic ingrés bancari |
-| **Devolució** | Rebut que el banc no ha pogut cobrar |
+| **Remesa IN** | Remesa d'ingressos (quotes de socis): import positiu |
+| **Remesa OUT** | Remesa de despeses (pagaments a proveïdors): import negatiu |
+| **Devolució** | Rebut que el banc no ha pogut cobrar; sempre import negatiu |
 | **Payout** | Transferència que Stripe envia al banc |
 | **Model 182** | Declaració de donatius (límit 31 gener) |
 | **Model 347** | Operacions amb tercers > 3.005,06€ (límit 28 febrer) |
-| **Soci** | Donant recurrent |
-| **Donant puntual** | Donant esporàdic |
-| **Contrapart** | Entitat sòcia internacional |
+| **Soci** | Donant recurrent amb modalitat `recurring` |
+| **Donant puntual** | Donant esporàdic amb modalitat `one-time` |
+| **Contrapart** | Entitat sòcia internacional (terreny) |
 | **Admin** | Rol d'administració de l'organització |
-| **Matching** | Identificació automàtica de contactes |
-| **Recurrència** | Ha donat 3 anys seguits |
-| **Partida** | Línia del pressupost |
+| **Matching** | Identificació automàtica de contactes (per IBAN, DNI, nom) |
+| **Recurrència** | Ha donat 3+ anys seguits (criteri fiscal) |
+| **Partida** | Línia del pressupost d'un projecte |
 | **Infraexecució** | Gastar menys del pressupostat |
 | **Sobreexecució** | Gastar més del pressupostat |
+| **Soft-delete / Arxivament** | Marca una transacció com arxivada (no esborrada). Les arxivades no compten en Model 182 ni certificats. |
+| **ICS / Creditor ID** | Identificador SEPA de l'entitat per cobrar quotes per domiciliació bancària |
+| **pain.008** | Format XML estàndard per generar remeses de cobrament SEPA (domiciliacions) |
+| **pain.001** | Format XML estàndard per generar remeses de pagaments SEPA (transferències massives) |
 
 ---
 
