@@ -511,7 +511,7 @@ export const TransactionRowMobile = React.memo(function TransactionRowMobile({
                 {t.attachProof}
               </DropdownMenuItem>
             )}
-            {tx.isRemittance && onViewRemittanceDetail && (
+            {tx.isRemittance && tx.remittanceType !== 'returns' && onViewRemittanceDetail && (
               <DropdownMenuItem onClick={handleViewRemittance}>
                 <FolderKanban className="h-4 w-4 mr-2" />
                 {t.viewRemittanceDetail}

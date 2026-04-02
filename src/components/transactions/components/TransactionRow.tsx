@@ -441,8 +441,19 @@ export const TransactionRow = React.memo(function TransactionRow({
   }, [onOpenStripeImputationDetail, tx]);
 
   const handleViewRemittanceDetail = React.useCallback(() => {
-    onViewRemittanceDetail(tx.id, tx);
-  }, [tx, onViewRemittanceDetail]);
+    if (!isActionsMenuOpen) {
+      onViewRemittanceDetail(tx.id, tx);
+      return;
+    }
+
+    setIsActionsMenuOpen(false);
+    setTimeout(() => {
+      if (document.activeElement instanceof HTMLElement) {
+        document.activeElement.blur();
+      }
+      onViewRemittanceDetail(tx.id, tx);
+    }, 100);
+  }, [isActionsMenuOpen, tx, onViewRemittanceDetail]);
 
   const handleOpenSplitDetail = React.useCallback(() => {
     if (!onOpenSplitDetail) return;
@@ -1024,15 +1035,6 @@ export const TransactionRow = React.memo(function TransactionRow({
                     {t.generateReturnEmail || 'Generar correu al soci'}
                   </DropdownMenuItem>
                 )}
-                <DropdownMenuSeparator />
-              </>
-            )}
-            {tx.isRemittance && tx.remittanceType === 'returns' && (
-              <>
-                <DropdownMenuItem onClick={handleViewRemittanceDetail}>
-                  <Eye className="mr-2 h-4 w-4 text-blue-500" />
-                  {t.viewRemittanceDetail}
-                </DropdownMenuItem>
                 <DropdownMenuSeparator />
               </>
             )}
