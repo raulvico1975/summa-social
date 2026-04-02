@@ -3900,7 +3900,7 @@ Bot autenticat, integrat al layout del dashboard, amb recuperació determinista 
 2. L'API valida `verifyIdToken()`, obté `organizationId`, comprova membership i exigeix `requireOperationalAccess()`
 3. Es normalitza idioma: recuperació només en `ca/es`; `fr -> ca`, `pt -> es`
 4. Si la consulta és small talk, es respon directament sense retrieval llarg
-5. Es carrega la KB runtime (filesystem + capa generada + Storage publicat) i s'eliminen les targetes marcades com a esborrades
+5. Es carrega la KB runtime des del bundle de servidor generat a build (`docs/kb/*` + `src/i18n/locales/{ca,es}.json`) i s'eliminen les targetes marcades com a esborrades
 6. Es filtra contingut sensible per a usuaris normals (`superadmin`, `b1_danger`, alguns fallbacks interns)
 7. `orchestrator()` resol retrieval, desambiguació i render final
 8. La resposta torna amb `mode`, `cardId`, `answer`, `guideId`, `uiPaths` i opcionalment `clarifyOptions`
@@ -3910,7 +3910,8 @@ Bot autenticat, integrat al layout del dashboard, amb recuperació determinista 
 
 | Capa | Font | Notes |
 |------|------|-------|
-| **KB repo-only** | `docs/kb/_fallbacks.json` + `docs/kb/cards/**/*.json` | Única font de coneixement operativa del bot en runtime |
+| **Runtime efectiu** | `src/lib/support/kb-bundle.generated.ts` | Dataset que llegeix el bot en execució (App Hosting / server build) |
+| **Font de veritat editorial** | `docs/kb/_fallbacks.json` + `docs/kb/cards/**/*.json` + `src/i18n/locales/{ca,es}.json` | Es compila al bundle runtime; no hi ha lectura live de filesystem en producció |
 
 **Artefactes fora del runtime del bot:**
 - Script: `scripts/help/build-bot-kb.ts`
@@ -3959,6 +3960,7 @@ Bot autenticat, integrat al layout del dashboard, amb recuperació determinista 
 **Fitxers clau de runtime:**
 - `src/app/api/support/bot/route.ts`
 - `src/lib/support/load-kb.ts`
+- `src/lib/support/kb-bundle.generated.ts`
 - `src/lib/support/load-kb-runtime.ts`
 - `src/lib/support/engine/orchestrator.ts`
 - `src/lib/support/engine/retrieval.ts`
@@ -4010,16 +4012,13 @@ La KB del bot està governada per Git. No existeix edició live, draft ni publis
   - `intentTimeoutMs`, `reformatTimeoutMs`
 
 **Contracte actiu sense ambigüitat:**
-- runtime només `docs/kb/*`
+- runtime llegeix només el bundle generat a build a partir de `docs/kb/*` i `src/i18n/locales/{ca,es}.json`
 - `docs/generated/*` no forma part del runtime del bot
 - cap lectura de `support-kb/kb.json`
 - cap lectura de `support-kb/kb-draft.json`
 - Golden set amb llindar mínim per consultes crítiques
 - Verificació que les cards operatives crítiques tenen passos renderitzables
-- Si la KB publicada és corrupta, el runtime cau a:
-  1. filesystem filtrat
-  2. storage filtrat
-  3. dataset d'emergència
+- Si el dataset runtime queda buit, el bot cau directament a dataset d'emergència (5 fallback cards) i evita injectar cards crítiques artificials
 
 
 ### 3.11.16 Exportació de justificació per al finançador

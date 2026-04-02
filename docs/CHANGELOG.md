@@ -10,6 +10,13 @@ Aquest fitxer ja no pretén duplicar el document mestre.
 
 ## Resum dels canvis recents
 
+### 2026-03-30
+
+- codi intern: bot d'ajuda amb KB i guies i18n empaquetades al bundle de servidor (`kb-bundle.generated.ts`) i fallback d'emergència explícit si el dataset queda buit; retrieval reforçat per consultes curtes de "editar soci" sense deriva de context
+- API/integracions: `POST /api/support/bot` detecta runtime en mode emergència i evita injectar cards crítiques artificials per no respondre amb procediments parcials quan falta la KB operativa
+- documentació per usuari: taula de moviments amb badges curts localitzables (`dev.` / `com.`) a desktop i mòbil; fitxa de donant i certificats sense literals fixos en català (placeholders, resum fiscal i errors també traduïts)
+- operativa: nou script `scripts/repo-ecosystem-audit.mjs` per auditar topologia local de repos/branques i documentació associada de diagnòstic/repositori
+
 ### 2026-03-26
 
 - novetats de producte: web públic més descobrible (enllaç visible a home/header), sitemap amb rutes de detall i publicació/despublicació server-to-server més robusta
