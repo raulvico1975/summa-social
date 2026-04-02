@@ -17,6 +17,7 @@
     "dev:restart": "bash scripts/dev-restart.sh",
     "dev:demo": "node scripts/run-demo-dev.mjs",
     "demo:smoke": "node scripts/demo/smoke-demo.mjs",
+    "demo:video-studio:preflight": "node scripts/demo/video-studio-preflight.mjs",
     "demo:up": "node scripts/demo/up.mjs --mode short",
     "demo:up:work": "node scripts/demo/up.mjs --mode work",
     "prepare": "husky",

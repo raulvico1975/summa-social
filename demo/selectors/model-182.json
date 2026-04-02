@@ -1,0 +1,21 @@
+{
+  "slug": "model-182",
+  "route": "/dashboard/informes",
+  "critical": [
+    {
+      "id": "reports-heading",
+      "selector": "h1:has-text(\"Informes\")",
+      "required": true
+    },
+    {
+      "id": "generate-report-button",
+      "selector": "button:has-text(\"Generar Informe\"), button:has-text(\"Generar\")",
+      "required": true
+    },
+    {
+      "id": "year-combobox",
+      "selector": "[role=\"combobox\"]",
+      "required": true
+    }
+  ]
+}

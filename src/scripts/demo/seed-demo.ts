@@ -1254,18 +1254,27 @@ export async function runDemoSeed(
   // ─────────────────────────────────────────────────────────────────────────
   console.log('[seed-demo] Pujant PDFs dummy...');
 
-  for (let i = 0; i < VOLUMES.pdfs; i++) {
-    const pdfBuffer = generateDummyPDF(i);
-    const fileName = `organizations/${DEMO_ORG_ID}/pendingDocuments/${DEMO_ID_PREFIX}doc_${i.toString().padStart(3, '0')}.pdf`;
-    const file = bucket.file(fileName);
-    await file.save(pdfBuffer, {
-      contentType: 'application/pdf',
-      metadata: {
-        [DEMO_DATA_MARKER]: 'true',
-      },
-    });
+  let uploadedPdfCount = 0;
+  let storageUploadsAvailable = true;
+  try {
+    for (let i = 0; i < VOLUMES.pdfs; i++) {
+      const pdfBuffer = generateDummyPDF(i);
+      const fileName = `organizations/${DEMO_ORG_ID}/pendingDocuments/${DEMO_ID_PREFIX}doc_${i.toString().padStart(3, '0')}.pdf`;
+      const file = bucket.file(fileName);
+      await file.save(pdfBuffer, {
+        contentType: 'application/pdf',
+        metadata: {
+          [DEMO_DATA_MARKER]: 'true',
+        },
+      });
+      uploadedPdfCount += 1;
+    }
+  } catch (error) {
+    storageUploadsAvailable = false;
+    console.warn('[seed-demo] Warning pujant PDFs dummy:', error);
+    console.warn('[seed-demo] Continuem el seed sense assets de Storage; la UI demo continua operativa per Video Studio.');
   }
-  console.log(`[seed-demo]   - PDFs: ${VOLUMES.pdfs}`);
+  console.log(`[seed-demo]   - PDFs: ${uploadedPdfCount}/${VOLUMES.pdfs}`);
 
   // ─────────────────────────────────────────────────────────────────────────
   // 6. Retornar comptadors
@@ -1282,7 +1291,7 @@ export async function runDemoSeed(
     projectExpensesFeed: projectExpensesFeed.length,
     offBankExpenses: offBankExpenses.length,
     expenseLinks: expenseLinks.length,
-    pdfs: VOLUMES.pdfs,
+    pdfs: uploadedPdfCount,
   };
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -1305,7 +1314,7 @@ export async function runDemoSeed(
   if (counts.projects !== VOLUMES.projects) {
     invariantErrors.push(`projects: esperats ${VOLUMES.projects}, obtinguts ${counts.projects}`);
   }
-  if (counts.pdfs !== VOLUMES.pdfs) {
+  if (storageUploadsAvailable && counts.pdfs !== VOLUMES.pdfs) {
     invariantErrors.push(`pdfs: esperats ${VOLUMES.pdfs}, obtinguts ${counts.pdfs}`);
   }
   if (counts.offBankExpenses !== 30) {

@@ -1,0 +1,30 @@
+{
+  "slug": "bank-reconciliation",
+  "route": "/dashboard/movimientos",
+  "critical": [
+    {
+      "id": "movements-heading",
+      "selector": "h1:has-text(\"Moviments\")",
+      "required": true,
+      "note": "La pàgina de moviments ha carregat."
+    },
+    {
+      "id": "import-button",
+      "selector": "button:has-text(\"Importar\")",
+      "required": true,
+      "note": "La UI permet importar extractes."
+    },
+    {
+      "id": "filters-search",
+      "selector": "input[placeholder*=\"concepte\"], input[placeholder*=\"importe\"], input[placeholder*=\"nota\"]",
+      "required": true,
+      "note": "El filtre de moviments és visible."
+    },
+    {
+      "id": "ledger-table",
+      "selector": "table",
+      "required": true,
+      "note": "El llistat principal de moviments és present."
+    }
+  ]
+}

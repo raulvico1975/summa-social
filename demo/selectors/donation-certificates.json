@@ -1,0 +1,21 @@
+{
+  "slug": "donation-certificates",
+  "route": "/dashboard/informes/certificats",
+  "critical": [
+    {
+      "id": "certificates-heading",
+      "selector": "h1:has-text(\"Certificats\")",
+      "required": true
+    },
+    {
+      "id": "load-donors-button",
+      "selector": "button:has-text(\"Carregar donants\")",
+      "required": true
+    },
+    {
+      "id": "year-combobox",
+      "selector": "[role=\"combobox\"]",
+      "required": true
+    }
+  ]
+}

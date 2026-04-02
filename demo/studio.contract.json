@@ -1,0 +1,55 @@
+{
+  "productName": "Summa Social",
+  "productSlug": "summa-social",
+  "localBaseUrl": "http://localhost:9002/demo",
+  "stagingBaseUrl": null,
+  "supportedLocales": [
+    "ca"
+  ],
+  "demoUsers": {
+    "ca": {
+      "email": "demo.recorder@summasocial.local",
+      "loginRoute": "/login"
+    }
+  },
+  "recordableRoutes": [
+    {
+      "id": "movements",
+      "route": "/dashboard/movimientos",
+      "description": "Llibre de moviments i conciliació bancària."
+    },
+    {
+      "id": "donors",
+      "route": "/dashboard/donants",
+      "description": "Gestió de donants i seguiment de fitxes."
+    },
+    {
+      "id": "reports",
+      "route": "/dashboard/informes",
+      "description": "Informes fiscals i exportacions."
+    },
+    {
+      "id": "certificates",
+      "route": "/dashboard/informes/certificats",
+      "description": "Certificats de donació."
+    },
+    {
+      "id": "collection-remittances",
+      "route": "/dashboard/donants/remeses-cobrament",
+      "description": "Preparació i exportació de remeses de cobrament."
+    }
+  ],
+  "scenarioPaths": [
+    "demo/scenarios"
+  ],
+  "selectorPaths": [
+    "demo/selectors"
+  ],
+  "visualConstraints": {
+    "theme": "summa-light",
+    "sidebarCollapsed": true,
+    "allowCursor": false,
+    "blockVisibleErrors": true,
+    "targetPresentation": "product-demo-premium"
+  }
+}

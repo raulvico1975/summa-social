@@ -1,0 +1,25 @@
+{
+  "sharedFiles": [
+    {
+      "id": "member-remittance-csv",
+      "path": "public/demo-files/remesa-quotes-demo.csv",
+      "usedBy": [
+        "member-remittance"
+      ]
+    },
+    {
+      "id": "returns-csv",
+      "path": "public/demo-files/devolucions-banc-demo.csv",
+      "usedBy": [
+        "returns-resolution"
+      ]
+    },
+    {
+      "id": "stripe-payout-csv",
+      "path": "public/demo-files/stripe-payout-demo.csv",
+      "usedBy": [
+        "bank-reconciliation"
+      ]
+    }
+  ]
+}

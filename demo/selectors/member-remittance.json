@@ -1,0 +1,21 @@
+{
+  "slug": "member-remittance",
+  "route": "/dashboard/movimientos",
+  "critical": [
+    {
+      "id": "movements-heading",
+      "selector": "h1:has-text(\"Moviments\")",
+      "required": true
+    },
+    {
+      "id": "pending-remittance-row",
+      "selector": "tr:has-text(\"INGRÉS BANCARI REMESA QUOTES SOCIS\")",
+      "required": true
+    },
+    {
+      "id": "row-actions",
+      "selector": "button:has-text(\"Més opcions\")",
+      "required": true
+    }
+  ]
+}

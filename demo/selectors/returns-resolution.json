@@ -1,0 +1,21 @@
+{
+  "slug": "returns-resolution",
+  "route": "/dashboard/movimientos",
+  "critical": [
+    {
+      "id": "movements-heading",
+      "selector": "h1:has-text(\"Moviments\")",
+      "required": true
+    },
+    {
+      "id": "return-row",
+      "selector": "tr:has-text(\"DEVOLUCIÓN RECIBO CUOTA SOCIO\")",
+      "required": true
+    },
+    {
+      "id": "assign-button",
+      "selector": "button:has-text(\"Assignar donant\"), button:has-text(\"Asignar donante\")",
+      "required": true
+    }
+  ]
+}

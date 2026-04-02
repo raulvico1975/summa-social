@@ -1,0 +1,21 @@
+{
+  "slug": "donations-control",
+  "route": "/dashboard/donants",
+  "critical": [
+    {
+      "id": "donors-heading",
+      "selector": "h1:has-text(\"Donants\")",
+      "required": true
+    },
+    {
+      "id": "donor-search",
+      "selector": "input[placeholder*=\"Cercar\"], input[placeholder*=\"Buscar\"]",
+      "required": true
+    },
+    {
+      "id": "summary-panel",
+      "selector": "text=/RESUM|RESUMEN/",
+      "required": false
+    }
+  ]
+}
