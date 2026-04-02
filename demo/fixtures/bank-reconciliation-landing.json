@@ -1,0 +1,11 @@
+{
+  "pieceId": "bank-reconciliation-landing-ca",
+  "expectedArtifacts": [
+    "movements-start.png",
+    "import-account-dialog.png",
+    "import-dedupe.png",
+    "after-ai-categorization.png",
+    "reconciliation-result.png"
+  ],
+  "expectedMasterName": "bank-reconciliation-demo.mp4"
+}

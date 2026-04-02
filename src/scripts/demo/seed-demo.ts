@@ -1253,19 +1253,34 @@ export async function runDemoSeed(
   // 5. Pujar PDFs dummy
   // ─────────────────────────────────────────────────────────────────────────
   console.log('[seed-demo] Pujant PDFs dummy...');
+  let skippedPdfUpload = false;
 
-  for (let i = 0; i < VOLUMES.pdfs; i++) {
-    const pdfBuffer = generateDummyPDF(i);
-    const fileName = `organizations/${DEMO_ORG_ID}/pendingDocuments/${DEMO_ID_PREFIX}doc_${i.toString().padStart(3, '0')}.pdf`;
-    const file = bucket.file(fileName);
-    await file.save(pdfBuffer, {
-      contentType: 'application/pdf',
-      metadata: {
-        [DEMO_DATA_MARKER]: 'true',
-      },
-    });
+  try {
+    for (let i = 0; i < VOLUMES.pdfs; i++) {
+      const pdfBuffer = generateDummyPDF(i);
+      const fileName = `organizations/${DEMO_ORG_ID}/pendingDocuments/${DEMO_ID_PREFIX}doc_${i.toString().padStart(3, '0')}.pdf`;
+      const file = bucket.file(fileName);
+      await file.save(pdfBuffer, {
+        contentType: 'application/pdf',
+        metadata: {
+          [DEMO_DATA_MARKER]: 'true',
+        },
+      });
+    }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    if (
+      message.includes('billing account') ||
+      message.includes('accountDisabled') ||
+      message.includes('state absent')
+    ) {
+      skippedPdfUpload = true;
+      console.warn('[seed-demo] Warning: s\'omet la pujada de PDFs dummy per Storage demo no disponible:', message);
+    } else {
+      throw error;
+    }
   }
-  console.log(`[seed-demo]   - PDFs: ${VOLUMES.pdfs}`);
+  console.log(`[seed-demo]   - PDFs: ${VOLUMES.pdfs}${skippedPdfUpload ? ' (sense pujada a Storage)' : ''}`);
 
   // ─────────────────────────────────────────────────────────────────────────
   // 6. Retornar comptadors
@@ -1305,7 +1320,7 @@ export async function runDemoSeed(
   if (counts.projects !== VOLUMES.projects) {
     invariantErrors.push(`projects: esperats ${VOLUMES.projects}, obtinguts ${counts.projects}`);
   }
-  if (counts.pdfs !== VOLUMES.pdfs) {
+  if (!skippedPdfUpload && counts.pdfs !== VOLUMES.pdfs) {
     invariantErrors.push(`pdfs: esperats ${VOLUMES.pdfs}, obtinguts ${counts.pdfs}`);
   }
   if (counts.offBankExpenses !== 30) {

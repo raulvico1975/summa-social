@@ -7,7 +7,7 @@ import { cn } from '@/lib/utils';
 // TYPES
 // =============================================================================
 
-interface RowDropTargetProps {
+interface RowDropTargetProps extends React.HTMLAttributes<HTMLTableRowElement | HTMLDivElement> {
   /** Desactiva el drop target (per a viewers sense permisos) */
   disabled?: boolean;
   /** Callback quan es deixa anar un fitxer */
@@ -67,6 +67,7 @@ export const RowDropTarget = React.memo(function RowDropTarget({
   className,
   children,
   as = 'tr',
+  ...restProps
 }: RowDropTargetProps) {
   // Comptador per gestionar dragenter/dragleave de children sense flicker
   const dragCounterRef = React.useRef(0);
@@ -145,7 +146,7 @@ export const RowDropTarget = React.memo(function RowDropTarget({
   // Quan disabled, renderitzem sense handlers de drag
   if (disabled) {
     return (
-      <Element className={className}>
+      <Element className={className} {...restProps}>
         {children}
       </Element>
     );
@@ -158,6 +159,7 @@ export const RowDropTarget = React.memo(function RowDropTarget({
         'relative transition-all duration-150',
         isOver && 'ring-2 ring-primary/40 bg-primary/5'
       )}
+      {...restProps}
       onDragEnter={handleDragEnter}
       onDragLeave={handleDragLeave}
       onDragOver={handleDragOver}

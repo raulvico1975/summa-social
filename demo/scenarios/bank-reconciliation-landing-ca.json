@@ -1,0 +1,142 @@
+{
+  "pieceId": "bank-reconciliation-landing-ca",
+  "locale": "ca",
+  "initialRoute": "/dashboard/movimientos",
+  "steps": [
+    {
+      "id": "login",
+      "label": "Entrar amb l'usuari tècnic a /demo/login"
+    },
+    {
+      "id": "import-statement",
+      "label": "Importar un extracte amb un duplicat candidat i tres moviments nous"
+    },
+    {
+      "id": "confirm-dedupe",
+      "label": "Confirmar que només entren els moviments nous"
+    },
+    {
+      "id": "ai-categorization",
+      "label": "Aplicar la categorització amb IA als tres moviments nous"
+    },
+    {
+      "id": "manual-linking",
+      "label": "Assignar donant, proveïdor i empleat als moviments resultants"
+    }
+  ],
+  "expectedFinalState": {
+    "route": "/dashboard/movimientos",
+    "visibleRows": [
+      "Aportacio campanya socies demo conciliacio",
+      "Factura material oficina demo conciliacio",
+      "Reemborsament desplacament equip demo conciliacio"
+    ],
+    "categoryLabels": [
+      "Quotes socis",
+      "Material oficina",
+      "Viatges i dietes"
+    ],
+    "noVisibleErrors": true
+  },
+  "primaryFunctionality": "conciliacio-bancaria",
+  "finalVisualPayoff": "Taula filtrada pel cas demo conciliacio amb els tres moviments nous categoritzats i vinculats dins del mateix llistat",
+  "selectorFile": "selectors/bank-reconciliation.json",
+  "preflightCommand": "node scripts/demo/record-bank-reconciliation.mjs --check-only --quality studio --reseed --output \"{{outputDir}}\"",
+  "recordCommand": "node scripts/demo/record-bank-reconciliation.mjs --quality studio --reseed --output \"{{outputDir}}\"",
+  "scenePlan": {
+    "blocks": [
+      {
+        "id": "bank-reconciliation-core-flow",
+        "title": "Importació i resolució de conciliació",
+        "sceneIds": [
+          "import-statement",
+          "detect-duplicates",
+          "import-new-only",
+          "ai-categorization",
+          "final-ledger-payoff"
+        ]
+      }
+    ],
+    "scenes": [
+      {
+        "id": "import-statement",
+        "title": "Importar extracte bancari",
+        "action": "Pujar un extracte CSV i obrir el flux d'importació",
+        "sourceStart": 1.2,
+        "sourceEnd": 5.2,
+        "reusable": true,
+        "payoff": false,
+        "surface": "light"
+      },
+      {
+        "id": "detect-duplicates",
+        "title": "Detectar duplicats abans d'importar",
+        "action": "Mostrar el resum previ amb duplicats detectats abans de confirmar",
+        "sourceStart": 7.2,
+        "sourceEnd": 11.6,
+        "reusable": true,
+        "payoff": false,
+        "surface": "dark"
+      },
+      {
+        "id": "import-new-only",
+        "title": "Importar només moviments nous",
+        "action": "Confirmar que només entren els moviments nous al llibre major",
+        "sourceStart": 25.6,
+        "sourceEnd": 30.0,
+        "reusable": true,
+        "payoff": false,
+        "surface": "light"
+      },
+      {
+        "id": "ai-categorization",
+        "title": "Categorització IA",
+        "action": "Executar la categorització automàtica sobre els moviments nous",
+        "sourceStart": 30.0,
+        "sourceEnd": 36.0,
+        "reusable": true,
+        "payoff": false,
+        "surface": "light"
+      },
+      {
+        "id": "final-ledger-payoff",
+        "title": "Resultat final",
+        "action": "Ensenyar la taula final amb categories i enllaços resolts",
+        "sourceStart": 56.0,
+        "sourceEnd": 58.2,
+        "reusable": true,
+        "payoff": true,
+        "surface": "light"
+      }
+    ],
+    "derivatives": {
+      "landing": {
+        "output": "landing",
+        "scenes": [
+          "import-statement",
+          "detect-duplicates",
+          "import-new-only",
+          "ai-categorization",
+          "final-ledger-payoff"
+        ]
+      },
+      "features": {
+        "output": "features",
+        "scenes": [
+          "import-statement",
+          "detect-duplicates",
+          "import-new-only",
+          "ai-categorization",
+          "final-ledger-payoff"
+        ]
+      },
+      "homeLoop": {
+        "output": "home-loop",
+        "scenes": [
+          "ai-categorization",
+          "final-ledger-payoff"
+        ]
+      }
+    }
+  }
+}

@@ -944,9 +944,10 @@ export function TransactionImporter({ availableCategories }: TransactionImporter
         accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel"
         className="hidden"
         disabled={isImporting}
+        data-testid="transaction-import-file-input"
       />
       <div className="flex flex-wrap items-center gap-2">
-        <Button disabled={isImporting} onClick={handleImportClick}>
+        <Button disabled={isImporting} onClick={handleImportClick} data-testid="transaction-import-button">
           {isImporting ? (
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
           ) : (
@@ -961,7 +962,7 @@ export function TransactionImporter({ availableCategories }: TransactionImporter
         setIsAccountDialogOpen(open);
         if (!open) setPendingFile(null);
       }}>
-        <DialogContent className="grid max-h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] gap-0 overflow-hidden p-0 sm:max-w-xl">
+        <DialogContent className="grid max-h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] gap-0 overflow-hidden p-0 sm:max-w-xl" data-testid="transaction-import-account-dialog">
           <DialogHeader className="border-b px-4 py-5 pr-10 sm:px-6">
             <DialogTitle>{t.settings.bankAccounts.selectAccount}</DialogTitle>
             <DialogDescription>
@@ -994,7 +995,7 @@ export function TransactionImporter({ availableCategories }: TransactionImporter
                     value={selectedBankAccountId ?? ''}
                     onValueChange={(value) => setSelectedBankAccountId(value)}
                   >
-                    <SelectTrigger id="transaction-bank-account">
+                    <SelectTrigger id="transaction-bank-account" data-testid="transaction-import-account-select">
                       <SelectValue placeholder={t.settings.bankAccounts.selectAccount} />
                     </SelectTrigger>
                     <SelectContent>
@@ -1051,6 +1052,7 @@ export function TransactionImporter({ availableCategories }: TransactionImporter
                         id="overlap-acknowledge"
                         checked={overlapAcknowledged}
                         onCheckedChange={(checked) => setOverlapAcknowledged(checked === true)}
+                        data-testid="transaction-import-overlap-acknowledge"
                       />
                       <div className="space-y-1">
                         <label
@@ -1082,6 +1084,7 @@ export function TransactionImporter({ availableCategories }: TransactionImporter
                 <Button
                   onClick={handleAccountSelected}
                   disabled={!selectedBankAccountId || (lastImportedDate !== null && !overlapAcknowledged)}
+                  data-testid="transaction-import-account-continue"
                 >
                   {t.common.continue}
                 </Button>

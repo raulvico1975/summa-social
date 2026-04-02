@@ -2390,6 +2390,7 @@ export function TransactionsTable({
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="h-11 pl-10 pr-10 text-base"
+              data-testid="movements-search-input"
             />
             {searchQuery && (
               <button
@@ -2719,7 +2720,7 @@ export function TransactionsTable({
           ═══════════════════════════════════════════════════════════════════════ */}
       {!isMobile && (
         <div className="table-scroll-stable w-full overflow-hidden rounded-xl border border-border/60 bg-background/95 shadow-sm [&>div]:overflow-visible [&>div]:overflow-x-hidden">
-          <Table className="w-full table-fixed">
+          <Table className="w-full table-fixed" data-testid="movements-table">
             <TableHeader>
               <TableRow className="h-11 bg-muted/20">
                 {/* Checkbox columna - només visible per admin/user */}

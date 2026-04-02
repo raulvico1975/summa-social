@@ -1134,6 +1134,9 @@ export const TransactionRow = React.memo(function TransactionRow({
         onDropFile={handleFileDrop}
         dropHint={dropHint}
         className={rowClassName}
+        data-testid="movement-row"
+        data-studio-transaction-id={tx.id}
+        data-studio-description={tx.description}
       >
         {rowContent}
       </RowDropTarget>
@@ -1142,7 +1145,12 @@ export const TransactionRow = React.memo(function TransactionRow({
 
   // Sense drag & drop, renderitzem TableRow normal
   return (
-    <TableRow className={rowClassName}>
+    <TableRow
+      className={rowClassName}
+      data-testid="movement-row"
+      data-studio-transaction-id={tx.id}
+      data-studio-description={tx.description}
+    >
       {rowContent}
     </TableRow>
   );

@@ -15,14 +15,27 @@ const DEFAULT_BASE_URL = 'http://localhost:9002/demo';
 const DEFAULT_TMP_DIR = path.join(process.cwd(), 'tmp', 'bank-reconciliation-demo');
 const DEFAULT_EMAIL = 'demo.recorder@summasocial.local';
 const DEFAULT_PASSWORD = 'DemoRecorder!2026';
+const DEFAULT_LOCALE = 'ca-ES';
 const SCENARIO_SLUG = 'bank-reconciliation-demo';
 const DEFAULT_OUTPUT_DIR = path.join(process.cwd(), 'output', 'playwright', SCENARIO_SLUG);
 const DEMO_BANK_ACCOUNT_ID = 'demo_bank_account_main_001';
-const COMMERCIAL_VIEWPORT = {
-  width: 1920,
-  height: 1080,
+const QUALITY_PROFILES = {
+  standard: {
+    viewport: { width: 1440, height: 960 },
+    scale: 0.92,
+    fps: 25,
+  },
+  commercial: {
+    viewport: { width: 1920, height: 1080 },
+    scale: 0.92,
+    fps: 25,
+  },
+  studio: {
+    viewport: { width: 3840, height: 2160 },
+    scale: 1.7,
+    fps: 30,
+  },
 };
-const DEMO_PRESENTATION_SCALE = 0.92;
 
 const SCENARIO_ROWS = {
   candidate: {
@@ -370,7 +383,33 @@ async function moveAndClick(page, locator) {
     await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2, { steps: 12 });
     await sleep(180);
   }
-  await locator.click();
+  await clickWithGeometryFallback(locator);
+}
+
+async function clickWithGeometryFallback(locator) {
+  try {
+    await locator.click();
+    return;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    const geometryFailure =
+      /outside of the viewport|not visible|intercepts pointer events|not enabled|not receiving pointer events/i.test(message);
+
+    if (!geometryFailure) {
+      throw error;
+    }
+  }
+
+  await locator.evaluate((element) => {
+    if (element instanceof HTMLElement) {
+      element.scrollIntoView({ block: 'center', inline: 'center' });
+      element.click();
+      return;
+    }
+
+    element.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, composed: true }));
+  });
+  await sleep(250);
 }
 
 async function setCollapsedSidebarCookie(context, baseUrl) {
@@ -385,15 +424,80 @@ async function setCollapsedSidebarCookie(context, baseUrl) {
   ]);
 }
 
-async function applyStablePresentation(page) {
+async function applyStablePresentation(page, scale) {
   await page.evaluate((scale) => {
     document.documentElement.style.zoom = String(scale);
     if (document.body) {
       document.body.style.zoom = String(scale);
     }
     window.scrollTo({ top: 0, behavior: 'instant' });
-  }, DEMO_PRESENTATION_SCALE);
+  }, scale);
   await sleep(250);
+}
+
+async function assertNoVisibleErrors(page) {
+  const patterns = [
+    /Error de Processament/i,
+    /Error de Procesamiento/i,
+    /Unexpected Application Error/i,
+    /Something went wrong/i,
+    /Sessi[oó] no v[aà]lida/i,
+    /Sesion no valida/i,
+  ];
+
+  for (const pattern of patterns) {
+    const locator = page.getByText(pattern).first();
+    if (await locator.count()) {
+      const visible = await locator.isVisible().catch(() => false);
+      if (visible) {
+        throw new Error(`S'ha detectat un error visible a la UI: ${pattern}`);
+      }
+    }
+  }
+}
+
+async function waitForVisibleAny(locators, timeout = 30000) {
+  let lastError = null;
+  for (const locator of locators) {
+    try {
+      await locator.waitFor({ state: 'visible', timeout });
+      return locator;
+    } catch (error) {
+      lastError = error;
+    }
+  }
+  throw lastError ?? new Error('Cap locator visible.');
+}
+
+async function assertStartState(page) {
+  await waitForVisibleAny([
+    page.getByTestId('transaction-import-button'),
+    page.getByRole('button', { name: /Importar/i }).first(),
+  ], 45000);
+  await page.getByTestId('movements-search-input').waitFor({ state: 'visible', timeout: 30000 });
+  await page.getByTestId('movements-table').waitFor({ state: 'visible', timeout: 30000 });
+  await assertNoVisibleErrors(page);
+}
+
+async function assertFinalState(page) {
+  if (!page.url().includes('/dashboard/movimientos')) {
+    throw new Error(`La ruta final no és Moviments: ${page.url()}`);
+  }
+
+  await page.locator('[data-studio-description]').filter({ hasText: SCENARIO_ROWS.donor.description }).first().waitFor({
+    state: 'visible',
+    timeout: 30000,
+  });
+  await page.locator('[data-studio-description]').filter({ hasText: SCENARIO_ROWS.supplier.description }).first().waitFor({
+    state: 'visible',
+    timeout: 30000,
+  });
+  await page.locator('[data-studio-description]').filter({ hasText: SCENARIO_ROWS.employee.description }).first().waitFor({
+    state: 'visible',
+    timeout: 30000,
+  });
+  await waitForCategoryLabels(page);
+  await assertNoVisibleErrors(page);
 }
 
 async function clickButton(page, pattern, scope = page) {
@@ -412,13 +516,14 @@ async function openMovementsPage(page, credentials, artifactDir) {
   ]);
 
   await page.goto(`${BASE_URL}/dashboard/movimientos`, { waitUntil: 'domcontentloaded' });
-  await page.getByRole('heading', { name: /Moviments/i }).waitFor({ state: 'visible', timeout: 30000 });
+  await page.getByRole('heading', { name: /Moviments|Movimientos/i }).waitFor({ state: 'visible', timeout: 30000 });
   await waitForAppIdle(page);
-  await applyStablePresentation(page);
+  await applyStablePresentation(page, QUALITY_PROFILE.scale);
   await sleep(1400);
 
   const markerPath = path.join(artifactDir, 'movements-start.png');
   await page.screenshot({ path: markerPath, fullPage: false });
+  await assertStartState(page);
 }
 
 async function startImport(page, csvPath) {
@@ -429,9 +534,10 @@ async function startImport(page, csvPath) {
 }
 
 async function confirmBankAccountDialog(page, artifactDir) {
-  const dialog = page.getByRole('dialog');
+  const dialog = page.getByTestId('transaction-import-account-dialog');
   await dialog.waitFor({ state: 'visible', timeout: 30000 });
-  await dialog.getByRole('button', { name: /Continuar|Continue/i }).first().waitFor({
+  const continueButton = dialog.getByTestId('transaction-import-account-continue');
+  await continueButton.waitFor({
     state: 'visible',
     timeout: 30000,
   });
@@ -450,7 +556,10 @@ async function confirmBankAccountDialog(page, artifactDir) {
   const dialogShotPath = path.join(artifactDir, 'import-account-dialog.png');
   await page.screenshot({ path: dialogShotPath, fullPage: false });
 
-  await clickButton(page, /Continuar|Continue/i, dialog);
+  await continueButton.evaluate((element) => {
+    element.scrollIntoView({ block: 'center', inline: 'center' });
+  });
+  await clickWithGeometryFallback(continueButton);
 }
 
 async function handleDedupeSummary(page, artifactDir) {
@@ -458,7 +567,7 @@ async function handleDedupeSummary(page, artifactDir) {
   const precheckPath = path.join(artifactDir, 'after-account-continue.png');
   await page.screenshot({ path: precheckPath, fullPage: false });
 
-  const dialog = page.getByRole('dialog');
+  const dialog = page.getByTestId('transaction-import-dedupe-dialog');
   const dialogCount = await dialog.count().catch(() => 0);
   if (dialogCount > 0) {
     const dialogText = await dialog.first().textContent().catch(() => '');
@@ -468,7 +577,7 @@ async function handleDedupeSummary(page, artifactDir) {
   }
 
   await dialog.waitFor({ state: 'visible', timeout: 30000 });
-  await dialog.getByRole('button', { name: /Importar .*nous|Importar .*nuevos|Importar/i }).first().waitFor({
+  await dialog.getByTestId('transaction-import-dedupe-continue').waitFor({
     state: 'visible',
     timeout: 30000,
   });
@@ -485,7 +594,11 @@ async function handleDedupeSummary(page, artifactDir) {
   const dedupeShotPath = path.join(artifactDir, 'import-dedupe.png');
   await page.screenshot({ path: dedupeShotPath, fullPage: false });
 
-  await clickButton(page, /Importar 3 nous|Importar .*nous/i, dialog);
+  const continueButton = dialog.getByTestId('transaction-import-dedupe-continue');
+  await continueButton.evaluate((element) => {
+    element.scrollIntoView({ block: 'center', inline: 'center' });
+  });
+  await clickWithGeometryFallback(continueButton);
   await dialog.waitFor({ state: 'hidden', timeout: 45000 });
 
   const successToast = page.getByText(
@@ -513,9 +626,7 @@ async function handleDedupeSummary(page, artifactDir) {
 }
 
 async function searchImportedRows(page, searchTerm) {
-  const searchInput = page
-    .locator('input[placeholder*="concepte"], input[placeholder*="concepto"], input[placeholder*="nota"], input[placeholder*="importe"]')
-    .first();
+  const searchInput = page.getByTestId('movements-search-input');
 
   if (!(await searchInput.count())) {
     return;
@@ -546,9 +657,7 @@ async function searchImportedRows(page, searchTerm) {
 }
 
 async function runBatchCategorization(page) {
-  const categorizeButton = page.getByRole('button', {
-    name: /Suggerir categories|Sugerir categorias|Sugerir categorias amb IA/i,
-  }).first();
+  const categorizeButton = page.getByTestId('movements-ai-categorize-button');
 
   await categorizeButton.waitFor({ state: 'visible', timeout: 30000 });
   await moveAndClick(page, categorizeButton);
@@ -592,7 +701,7 @@ async function waitForScenarioCategories(db, timeoutMs = 90000) {
 }
 
 async function getRowByDescription(page, description) {
-  const row = page.locator('tbody tr:visible').filter({ hasText: description }).first();
+  const row = page.locator('[data-testid="movement-row"]').filter({ hasText: description }).first();
   await row.waitFor({ state: 'visible', timeout: 30000 });
   return row;
 }
@@ -654,12 +763,8 @@ async function waitForCategoryLabels(page) {
 }
 
 async function runFlow(page, db, scenarioData, artifactDir) {
-  await page.setViewportSize(
-    QUALITY_MODE === 'commercial'
-      ? { width: COMMERCIAL_VIEWPORT.width, height: COMMERCIAL_VIEWPORT.height }
-      : { width: 1440, height: 960 }
-  );
-  await applyStablePresentation(page);
+  await page.setViewportSize(QUALITY_PROFILE.viewport);
+  await applyStablePresentation(page, QUALITY_PROFILE.scale);
   await sleep(1200);
 
   await startImport(page, scenarioData.csvPath);
@@ -691,9 +796,10 @@ async function runFlow(page, db, scenarioData, artifactDir) {
 
   const resultPath = path.join(artifactDir, 'reconciliation-result.png');
   await page.screenshot({ path: resultPath, fullPage: false });
+  await assertFinalState(page);
 }
 
-function convertVideo(ffmpegPath, inputPath, outputPath, trimStartSeconds, durationSeconds) {
+function convertVideo(ffmpegPath, inputPath, outputPath, trimStartSeconds, durationSeconds, fps) {
   const args = [
     '-y',
     '-ss',
@@ -703,6 +809,8 @@ function convertVideo(ffmpegPath, inputPath, outputPath, trimStartSeconds, durat
     '-t',
     formatSeconds(durationSeconds),
     '-an',
+    '-r',
+    String(fps),
     '-c:v',
     'libx264',
     '-preset',
@@ -733,9 +841,11 @@ if (!projectId) {
 }
 
 const QUALITY_MODE = (parseArg('--quality') || process.env.DEMO_RECORDING_QUALITY || 'commercial').trim();
-if (!['standard', 'commercial'].includes(QUALITY_MODE)) {
+if (!['standard', 'commercial', 'studio'].includes(QUALITY_MODE)) {
   fail(`Qualitat no suportada: ${QUALITY_MODE}`);
 }
+const QUALITY_PROFILE = QUALITY_PROFILES[QUALITY_MODE];
+const CHECK_ONLY = hasFlag('--check-only');
 
 const BASE_URL = parseArg('--base-url') || process.env.DEMO_BASE_URL || DEFAULT_BASE_URL;
 const OUTPUT_DIR = parseArg('--output') || DEFAULT_OUTPUT_DIR;
@@ -744,6 +854,7 @@ const MAX_VIDEO_SECONDS_ARG = parseArg('--duration');
 const MAX_VIDEO_SECONDS = MAX_VIDEO_SECONDS_ARG ? Number(MAX_VIDEO_SECONDS_ARG) : null;
 const EMAIL = process.env.DEMO_RECORDER_EMAIL || DEFAULT_EMAIL;
 const PASSWORD = process.env.DEMO_RECORDER_PASSWORD || DEFAULT_PASSWORD;
+const LOCALE = parseArg('--locale') || process.env.DEMO_RECORDING_LOCALE || DEFAULT_LOCALE;
 
 async function main() {
   resetDir(OUTPUT_DIR);
@@ -784,35 +895,32 @@ async function main() {
   });
 
   const contextOptions = {
-    viewport:
-      QUALITY_MODE === 'commercial'
-        ? { width: COMMERCIAL_VIEWPORT.width, height: COMMERCIAL_VIEWPORT.height }
-        : { width: 1440, height: 960 },
-    locale: 'ca-ES',
+    viewport: QUALITY_PROFILE.viewport,
+    locale: LOCALE,
     acceptDownloads: true,
   };
 
-  const videoDir = path.join(TMP_DIR, 'video-raw');
-  ensureDir(videoDir);
-  contextOptions.recordVideo = {
-    dir: videoDir,
-    size:
-      QUALITY_MODE === 'commercial'
-        ? { width: COMMERCIAL_VIEWPORT.width, height: COMMERCIAL_VIEWPORT.height }
-        : { width: 1440, height: 960 },
-  };
+  if (!CHECK_ONLY) {
+    const videoDir = path.join(TMP_DIR, 'video-raw');
+    ensureDir(videoDir);
+    contextOptions.recordVideo = {
+      dir: videoDir,
+      size: QUALITY_PROFILE.viewport,
+    };
+  }
 
   const context = await browser.newContext(contextOptions);
   context.setDefaultTimeout(30000);
   await setCollapsedSidebarCookie(context, BASE_URL);
 
   const page = await context.newPage();
-  const video = page.video();
+  const video = CHECK_ONLY ? null : page.video();
 
   let trimStartSeconds = 0;
   let finalDurationSeconds = 0;
   let rawVideoPath = null;
   let finalVideoPath = null;
+  let failureMessage = null;
   const recordingStartedAt = Date.now();
 
   try {
@@ -825,9 +933,36 @@ async function main() {
     finalDurationSeconds = MAX_VIDEO_SECONDS
       ? Math.min(MAX_VIDEO_SECONDS, measuredDurationSeconds)
       : measuredDurationSeconds;
+  } catch (error) {
+    failureMessage = error instanceof Error ? error.message : String(error);
   } finally {
     await context.close();
     await browser.close();
+  }
+
+  if (CHECK_ONLY) {
+    const preflightSummary = {
+      scenario: SCENARIO_SLUG,
+      mode: 'check-only',
+      quality: QUALITY_MODE,
+      locale: LOCALE,
+      status: failureMessage ? 'BLOCKED' : 'PASS',
+      baseUrl: BASE_URL,
+      finalRoute: `${BASE_URL}/dashboard/movimientos`,
+      searchTerm: scenarioData.searchTerm,
+      checkedAt: new Date().toISOString(),
+      failureMessage,
+    };
+    fs.writeFileSync(path.join(OUTPUT_DIR, 'studio-preflight.json'), JSON.stringify(preflightSummary, null, 2));
+    if (failureMessage) {
+      fail(failureMessage);
+    }
+    log('Preflight PASS');
+    return;
+  }
+
+  if (failureMessage) {
+    fail(failureMessage);
   }
 
   if (!video) {
@@ -840,11 +975,14 @@ async function main() {
   rawVideoPath = rawTargetPath;
 
   finalVideoPath = path.join(OUTPUT_DIR, `${SCENARIO_SLUG}.mp4`);
-  convertVideo(ffmpegPath, rawTargetPath, finalVideoPath, trimStartSeconds, finalDurationSeconds);
+  convertVideo(ffmpegPath, rawTargetPath, finalVideoPath, trimStartSeconds, finalDurationSeconds, QUALITY_PROFILE.fps);
 
   const summary = {
     scenario: SCENARIO_SLUG,
     quality: QUALITY_MODE,
+    viewport: QUALITY_PROFILE.viewport,
+    fps: QUALITY_PROFILE.fps,
+    locale: LOCALE,
     cursorVisible: false,
     baseUrl: BASE_URL,
     email: credentials.email,

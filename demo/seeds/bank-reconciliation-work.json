@@ -1,0 +1,9 @@
+{
+  "slug": "bank-reconciliation-work",
+  "command": "node --import tsx scripts/demo/seed-cli.ts --mode work",
+  "demoUpCommand": "npm run demo:up:work",
+  "notes": [
+    "Mode work per garantir el cas demo de conciliació",
+    "L'escenari crea o repara l'usuari tècnic de gravació"
+  ]
+}

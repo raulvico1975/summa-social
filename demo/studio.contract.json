@@ -1,0 +1,37 @@
+{
+  "productName": "Summa Social",
+  "productSlug": "summa-social",
+  "localBaseUrl": "http://localhost:9002/demo",
+  "stagingBaseUrl": null,
+  "supportedLocales": [
+    "ca",
+    "es"
+  ],
+  "demoUsers": {
+    "technicalRecorder": {
+      "email": "demo.recorder@summasocial.local",
+      "passwordEnv": "DEMO_RECORDER_PASSWORD",
+      "loginRoute": "/login"
+    }
+  },
+  "recordableRoutes": [
+    {
+      "id": "bank-reconciliation",
+      "route": "/dashboard/movimientos",
+      "description": "Conciliació bancària a la vista real de Moviments"
+    }
+  ],
+  "scenarioPaths": [
+    "scenarios/bank-reconciliation-landing-ca.json"
+  ],
+  "selectorPaths": [
+    "selectors/bank-reconciliation.json"
+  ],
+  "visualConstraints": {
+    "theme": "light",
+    "sidebarCollapsed": true,
+    "allowCursor": false,
+    "blockVisibleErrors": true,
+    "targetPresentation": "studio-v1-4k30"
+  }
+}

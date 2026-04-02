@@ -1,0 +1,62 @@
+{
+  "slug": "bank-reconciliation",
+  "route": "/dashboard/movimientos",
+  "critical": [
+    {
+      "id": "import-trigger",
+      "selector": "[data-testid=\"transaction-import-button\"]",
+      "required": true,
+      "note": "Punt d'entrada de l'extracte bancari"
+    },
+    {
+      "id": "account-dialog",
+      "selector": "[data-testid=\"transaction-import-account-dialog\"]",
+      "required": true
+    },
+    {
+      "id": "account-continue",
+      "selector": "[data-testid=\"transaction-import-account-continue\"]",
+      "required": true
+    },
+    {
+      "id": "dedupe-dialog",
+      "selector": "[data-testid=\"transaction-import-dedupe-dialog\"]",
+      "required": true
+    },
+    {
+      "id": "dedupe-continue",
+      "selector": "[data-testid=\"transaction-import-dedupe-continue\"]",
+      "required": true
+    },
+    {
+      "id": "movements-search",
+      "selector": "[data-testid=\"movements-search-input\"]",
+      "required": true
+    },
+    {
+      "id": "ai-categorize",
+      "selector": "[data-testid=\"movements-ai-categorize-button\"]",
+      "required": true
+    },
+    {
+      "id": "movements-table",
+      "selector": "[data-testid=\"movements-table\"]",
+      "required": true
+    },
+    {
+      "id": "row-donor",
+      "selector": "[data-studio-description=\"Aportacio campanya socies demo conciliacio\"]",
+      "required": true
+    },
+    {
+      "id": "row-supplier",
+      "selector": "[data-studio-description=\"Factura material oficina demo conciliacio\"]",
+      "required": true
+    },
+    {
+      "id": "row-employee",
+      "selector": "[data-studio-description=\"Reemborsament desplacament equip demo conciliacio\"]",
+      "required": true
+    }
+  ]
+}

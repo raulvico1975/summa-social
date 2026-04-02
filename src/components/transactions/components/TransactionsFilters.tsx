@@ -215,12 +215,13 @@ export const TransactionsFilters = React.memo(function TransactionsFilters({
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
-                  onClick={onCancelBatch}
-                  variant="outline"
-                  size="sm"
-                  aria-label={t.stopProcessAriaLabel ?? "Aturar procés"}
-                  className="border-destructive text-destructive hover:bg-destructive/10"
-                >
+                onClick={onCancelBatch}
+                variant="outline"
+                size="sm"
+                aria-label={t.stopProcessAriaLabel ?? "Aturar procés"}
+                className="border-destructive text-destructive hover:bg-destructive/10"
+                data-testid="movements-ai-categorize-stop"
+              >
                   <Square className="mr-2 h-4 w-4" />
                   {t.stopButton ?? "Aturar"}
                 </Button>
@@ -239,6 +240,7 @@ export const TransactionsFilters = React.memo(function TransactionsFilters({
                 variant="default"
                 size="sm"
                 aria-label={t.suggestCategoriesAriaLabel ?? "Suggerir categories amb IA"}
+                data-testid="movements-ai-categorize-button"
               >
                 <Sparkles className="mr-2 h-4 w-4" />
                 {t.categorizeAll}
