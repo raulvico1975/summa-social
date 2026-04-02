@@ -637,15 +637,15 @@ export function StripeImputationModal({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="flex max-h-[calc(100dvh-2rem)] w-[min(97vw,1240px)] max-w-[1240px] flex-col overflow-hidden p-0">
-          <DialogHeader className="shrink-0 border-b bg-background px-6 py-4 pr-10">
+        <DialogContent className="flex max-h-[calc(100dvh-1rem)] w-[calc(100vw-0.75rem)] max-w-[1460px] flex-col overflow-hidden p-0 sm:w-[min(calc(100vw-2rem),1460px)]">
+          <DialogHeader className="shrink-0 border-b bg-background px-4 py-4 pr-10 sm:px-6">
             <DialogTitle>{tr('dialogs.stripeImputation.title', 'Imputar Stripe')}</DialogTitle>
             <DialogDescription className="break-words leading-relaxed">
               {tr('dialogs.stripeImputation.description', 'Pots carregar un CSV de Stripe o completar la imputació manualment. La taula final sempre és editable abans de confirmar.')}
             </DialogDescription>
           </DialogHeader>
 
-          <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-6">
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-4 sm:px-6">
             <div className="min-h-0 flex-1 space-y-4 overflow-y-auto py-4">
               <Alert className="border-primary/20 bg-primary/5">
                 <AlertTitle>{tr('dialogs.stripeImputation.bankPaymentTitle', 'Abonament bancari')}</AlertTitle>
@@ -741,15 +741,94 @@ export function StripeImputationModal({
                 </Alert>
               )}
 
-              <div className="min-h-0 overflow-x-auto overflow-y-visible rounded-md border">
-                <Table className="w-full min-w-[720px] table-fixed lg:min-w-[820px]">
+              <div className="space-y-3 lg:hidden">
+                {editableLines.length === 0 ? (
+                  <div className="rounded-md border px-4 py-8 text-center text-sm text-muted-foreground">
+                    {tr('dialogs.stripeImputation.empty', 'Encara no hi ha línies d\'imputació. Pots començar manualment o carregar un CSV.')}
+                  </div>
+                ) : (
+                  editableLines.map((line) => (
+                    <div key={line.localId} className="space-y-4 rounded-lg border bg-background p-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0 space-y-1">
+                          <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                            {line.imputationOrigin === 'csv' ? 'CSV' : tr('dialogs.stripeImputation.manualOrigin', 'Manual')}
+                          </div>
+                          <div className="break-all text-sm text-foreground">
+                            {line.stripePaymentId || tr('dialogs.stripeImputation.noStripeIdentifier', 'Sense identificador Stripe')}
+                          </div>
+                          {line.customerEmail && (
+                            <div className="break-words text-sm text-muted-foreground">{line.customerEmail}</div>
+                          )}
+                        </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleDeleteLine(line.localId)}
+                          aria-label={tr('dialogs.stripeImputation.deleteLineAria', 'Eliminar línia')}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+
+                      <div className="grid gap-4 sm:grid-cols-[minmax(0,10rem)_minmax(0,1fr)]">
+                        <div className="space-y-2">
+                          <Label className="text-xs uppercase tracking-wide text-muted-foreground">
+                            {tr('dialogs.stripeImputation.grossAmount', 'Import brut')}
+                          </Label>
+                          <Input
+                            type="number"
+                            inputMode="decimal"
+                            min="0"
+                            step="0.01"
+                            value={line.amountGross ?? ''}
+                            onChange={(event) => handleSetLineAmount(line.localId, event.target.value)}
+                            placeholder="0.00"
+                          />
+                        </div>
+
+                        <div className="min-w-0 space-y-2">
+                          <Label className="text-xs uppercase tracking-wide text-muted-foreground">
+                            {tr('dialogs.stripeImputation.donor', 'Donant')}
+                          </Label>
+                          <DonorSearchCombobox
+                            donors={sortedDonors}
+                            value={line.contactId}
+                            onSelect={(donorId) => handleSetLineContact(line.localId, donorId)}
+                            placeholder={tr('dialogs.stripeImputation.assignDonorPlaceholder', 'Assigna donant')}
+                            presentation="dialog"
+                            dialogTitle={tr('dialogs.stripeImputation.donorDialogTitle', 'Selecciona donant o soci')}
+                            createActions={[
+                              {
+                                key: `donor-${line.localId}`,
+                                label: tr('dialogs.stripeImputation.createDonor', 'Donar d\'alta nou donant'),
+                                onSelect: () => handleOpenQuickCreate(line.localId, 'donor'),
+                              },
+                              {
+                                key: `member-${line.localId}`,
+                                label: tr('dialogs.stripeImputation.createMember', 'Donar d\'alta nou soci'),
+                                onSelect: () => handleOpenQuickCreate(line.localId, 'member'),
+                              },
+                            ]}
+                            badgesByDonorId={donorBadgesById}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+
+              <div className="hidden rounded-md border lg:block">
+                <Table className="w-full min-w-[920px]">
                   <TableHeader className="sticky top-0 z-10 bg-background">
                     <TableRow>
-                      <TableHead className="hidden sm:table-cell w-[92px]">{tr('dialogs.stripeImputation.tableOrigin', 'Origen')}</TableHead>
-                      <TableHead className="hidden md:table-cell w-[160px]">{tr('dialogs.stripeImputation.reference', 'Referència')}</TableHead>
-                      <TableHead className="w-[112px]">{tr('dialogs.stripeImputation.grossAmount', 'Import brut')}</TableHead>
-                      <TableHead className="w-[min(36vw,22rem)]">{tr('dialogs.stripeImputation.donor', 'Donant')}</TableHead>
-                      <TableHead className="w-[88px]">{tr('dialogs.stripeImputation.tableActions', 'Accions')}</TableHead>
+                      <TableHead className="w-[92px]">{tr('dialogs.stripeImputation.tableOrigin', 'Origen')}</TableHead>
+                      <TableHead className="w-[280px]">{tr('dialogs.stripeImputation.reference', 'Referència')}</TableHead>
+                      <TableHead className="w-[132px]">{tr('dialogs.stripeImputation.grossAmount', 'Import brut')}</TableHead>
+                      <TableHead>{tr('dialogs.stripeImputation.donor', 'Donant')}</TableHead>
+                      <TableHead className="w-[80px] text-right">{tr('dialogs.stripeImputation.tableActions', 'Accions')}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -762,13 +841,13 @@ export function StripeImputationModal({
                     ) : (
                       editableLines.map((line) => (
                         <TableRow key={line.localId}>
-                          <TableCell className="hidden align-top sm:table-cell">
+                          <TableCell className="align-top">
                             <span className="text-sm">{line.imputationOrigin === 'csv' ? 'CSV' : tr('dialogs.stripeImputation.manualOrigin', 'Manual')}</span>
                           </TableCell>
-                          <TableCell className="hidden align-top text-sm text-muted-foreground md:table-cell">
+                          <TableCell className="align-top text-sm text-muted-foreground">
                             {line.stripePaymentId ? (
-                              <div className="space-y-1 break-words">
-                                <div className="break-all">{line.stripePaymentId}</div>
+                              <div className="space-y-1">
+                                <div className="break-all text-foreground">{line.stripePaymentId}</div>
                                 {line.customerEmail && <div className="break-words">{line.customerEmail}</div>}
                               </div>
                             ) : (
@@ -786,7 +865,7 @@ export function StripeImputationModal({
                               placeholder="0.00"
                             />
                           </TableCell>
-                          <TableCell className="min-w-0 align-top">
+                          <TableCell className="min-w-[320px] align-top">
                             <DonorSearchCombobox
                               donors={sortedDonors}
                               value={line.contactId}
@@ -809,7 +888,7 @@ export function StripeImputationModal({
                               badgesByDonorId={donorBadgesById}
                             />
                           </TableCell>
-                          <TableCell className="align-top">
+                          <TableCell className="align-top text-right">
                             <Button
                               type="button"
                               variant="ghost"

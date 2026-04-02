@@ -51,8 +51,8 @@ export function StripeImputationDetailDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="flex max-h-[85vh] max-w-3xl flex-col overflow-hidden">
-        <DialogHeader className="shrink-0 pr-6">
+      <DialogContent className="flex max-h-[calc(100dvh-1rem)] w-[calc(100vw-0.75rem)] max-w-[1280px] flex-col overflow-hidden p-0 sm:w-[min(calc(100vw-2rem),1280px)]">
+        <DialogHeader className="shrink-0 border-b bg-background px-4 py-4 pr-10 sm:px-6">
           <DialogTitle>{tr('dialogs.stripeImputationDetail.title', 'Detall imputació Stripe')}</DialogTitle>
           <DialogDescription>
             {summary
@@ -62,7 +62,7 @@ export function StripeImputationDetailDialog({
         </DialogHeader>
 
         {summary && parentTransaction ? (
-          <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden">
+          <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden px-4 pb-4 pt-4 sm:px-6">
             <div className="flex flex-wrap items-center gap-2">
               <Badge variant="outline" className="border-blue-300 bg-blue-50 text-blue-700">
                 {tr('dialogs.stripeImputationDetail.badgeImputed', 'Stripe imputat')}
@@ -85,27 +85,90 @@ export function StripeImputationDetailDialog({
               </div>
             </div>
 
-            <div className="min-h-0 overflow-auto rounded-md border">
-              <Table>
+            {summary.donorEntries.length > 0 && (
+              <div className="space-y-3">
+                <div className="text-sm font-medium text-muted-foreground">
+                  {tr('dialogs.stripeImputationDetail.donorSummaryTitle', 'Socis i donants imputats')}
+                </div>
+                <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                  {summary.donorEntries.map((entry) => (
+                    <div key={entry.key} className="rounded-lg border bg-background p-4">
+                      <div className="break-words text-sm font-medium">
+                        {entry.donorDisplayName}
+                      </div>
+                      <div className="mt-3 flex items-end justify-between gap-3">
+                        <div className="text-xl font-semibold">{formatCurrencyEU(entry.totalAmount)}</div>
+                        <div className="text-right text-xs text-muted-foreground">
+                          {entry.donationCount} {tr(
+                            'dialogs.stripeImputationDetail.donationCountLabel',
+                            entry.donationCount === 1 ? 'aportació' : 'aportacions'
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className="space-y-3 lg:hidden">
+              {summary.lines.map((line) => (
+                <div key={line.id} className="rounded-lg border bg-background p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="text-sm font-medium">
+                        {line.donorDisplayName || line.customerEmail || tr('dialogs.stripeImputationDetail.noDonor', 'Sense donant')}
+                      </div>
+                      {line.customerEmail && line.customerEmail !== line.donorDisplayName && (
+                        <div className="break-words text-sm text-muted-foreground">{line.customerEmail}</div>
+                      )}
+                    </div>
+                    <div className="whitespace-nowrap text-right text-sm font-semibold">
+                      {formatCurrencyEU(line.amountGross)}
+                    </div>
+                  </div>
+
+                  <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
+                    <span>{formatDateShort(line.date)}</span>
+                    <span className="hidden sm:inline">·</span>
+                    <span className="break-all">
+                      {line.stripePaymentId || line.description || tr('dialogs.stripeImputationDetail.noStripeIdentifier', 'Sense identificador Stripe')}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="hidden min-h-0 rounded-md border lg:block">
+              <Table className="w-full min-w-[860px]">
                 <TableHeader className="sticky top-0 z-10 bg-background">
-                    <TableRow>
-                    <TableHead>{tr('dialogs.stripeImputationDetail.date', 'Data')}</TableHead>
-                    <TableHead>{tr('dialogs.stripeImputationDetail.donor', 'Donant')}</TableHead>
+                  <TableRow>
+                    <TableHead className="w-[110px]">{tr('dialogs.stripeImputationDetail.date', 'Data')}</TableHead>
+                    <TableHead className="w-[290px]">{tr('dialogs.stripeImputationDetail.donor', 'Donant')}</TableHead>
                     <TableHead>{tr('dialogs.stripeImputationDetail.reference', 'Referència')}</TableHead>
-                    <TableHead className="text-right">{tr('dialogs.stripeImputationDetail.amount', 'Import')}</TableHead>
+                    <TableHead className="w-[120px] text-right">{tr('dialogs.stripeImputationDetail.amount', 'Import')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {summary.lines.map((line) => (
                     <TableRow key={line.id}>
-                      <TableCell>{formatDateShort(line.date)}</TableCell>
-                      <TableCell className="max-w-[220px] truncate">
-                        {line.donorDisplayName || line.customerEmail || tr('dialogs.stripeImputationDetail.noDonor', 'Sense donant')}
+                      <TableCell className="align-top whitespace-nowrap">{formatDateShort(line.date)}</TableCell>
+                      <TableCell className="align-top">
+                        <div className="space-y-1">
+                          <div className="break-words font-medium">
+                            {line.donorDisplayName || line.customerEmail || tr('dialogs.stripeImputationDetail.noDonor', 'Sense donant')}
+                          </div>
+                          {line.customerEmail && line.customerEmail !== line.donorDisplayName && (
+                            <div className="break-words text-sm text-muted-foreground">{line.customerEmail}</div>
+                          )}
+                        </div>
                       </TableCell>
-                      <TableCell className="max-w-[220px] truncate text-muted-foreground">
-                        {line.stripePaymentId || line.description || tr('dialogs.stripeImputationDetail.noStripeIdentifier', 'Sense identificador Stripe')}
+                      <TableCell className="align-top text-muted-foreground">
+                        <div className="break-all">
+                          {line.stripePaymentId || line.description || tr('dialogs.stripeImputationDetail.noStripeIdentifier', 'Sense identificador Stripe')}
+                        </div>
                       </TableCell>
-                      <TableCell className="text-right font-mono">
+                      <TableCell className="whitespace-nowrap text-right font-mono">
                         {formatCurrencyEU(line.amountGross)}
                       </TableCell>
                     </TableRow>
