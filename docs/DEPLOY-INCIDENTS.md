@@ -58,3 +58,4 @@ Registre curt d'incidències de deploy bloquejat o incomplet.
 - Validacio esperada: nou deploy verificat amb smoke real del bot a produccio, sense text residual de `Hub de Guies` i amb respostes operatives per importacio banc, desfer remesa i actualitzacio de dades d'un donant.
 | 2026-03-19 11:28 | Verificacions | ALT | 22acb1a1 | 6f1cbdfa | BLOCKED_SAFE | La verificacio local no ha passat. | Pendent |
 | 2026-04-02 13:58 | Verificacions | MITJA | a3194f32 | 2b136a69 | BLOCKED_SAFE | La verificacio de CI no ha passat. | Pendent |
+| 2026-04-03 08:57 | Verificacions | MITJA | 669391d4 | 46a58657 | BLOCKED_SAFE | La verificacio de CI no ha passat. | Pendent |

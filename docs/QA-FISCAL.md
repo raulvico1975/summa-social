@@ -18,6 +18,24 @@ Aquest checklist assegura que els fluxos fiscals crítics no tenen regressions a
 
 ## 2. Checklist de verificació (PASS/FAIL)
 
+### Registre manual 2026-04-03 — Modals de remeses, Stripe i resum pre-importació
+
+**Context:**
+Ajust de layout i llegibilitat en fluxos sensibles de remeses i importació bancària: `Desglosar importe`, `Configuración del mapeo al dividir remesa`, `Detalle de la remesa`, `Imputar Stripe`, `Detalle imputación Stripe` i `Resum pre-importació` de l'extracte bancari. El canvi amplia modals, redistribueix blocs en desktop, reforça el responsive en pantalles estretes i fa més visible la previsualització sense tocar càlculs, imports ni persistència.
+
+**Comprovacions aplicades:**
+1. Revisió visual a la demo `work` de `dashboard/movimientos`, validant les modals de Stripe i remeses en desktop i comprovant absència d'overflow horitzontal crític.
+2. Revisió manual del pas `Configuración del mapeo al dividir remesa` per confirmar doble columna en desktop (`Configuració bàsica` + `Mapeo de campos`) i previsualització més visible a primer cop d'ull.
+3. Revisió manual del `Resum pre-importació` d'extracte bancari per validar resum superior, preview en targetes a pantalles petites i taula més llegible a desktop.
+4. Verificació tècnica amb `scripts/verify-local.sh` i `scripts/verify-ci.sh` en verd sobre el commit final.
+5. Verificació addicional amb `npm run typecheck` i demo local operativa a `http://127.0.0.1:9002/demo/dashboard/movimientos`.
+
+**Resultat:**
+- [x] El canvi és d'UX/layout i no altera càlculs fiscals, imports, remeses processades ni lògica de conciliació.
+- [x] Les modals sensibles guanyen amplada útil i redueixen la dependència de scroll horitzontal.
+- [x] La previsualització de remesa i d'import bancari és més visible i llegible en desktop i en pantalles estretes.
+- [x] La guardrail fiscal queda coberta amb evidència manual del flux afectat i validació tècnica completa.
+
 ### Registre manual 2026-04-02 — Summa IA assignant categories
 
 **Context:**
