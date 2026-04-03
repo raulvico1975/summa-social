@@ -92,6 +92,10 @@ function getToastShownKey(orgId: string, userId: string): string {
   return `ss.notifications.toastShown.${orgId}.${userId}`;
 }
 
+function getAutoOpenedKey(orgId: string, userId: string): string {
+  return `ss.notifications.autoOpened.${orgId}.${userId}`;
+}
+
 export function getReadNotificationIds(orgId: string, userId: string): string[] {
   if (typeof window === 'undefined') return [];
   try {
@@ -123,6 +127,31 @@ export function markAllNotificationsRead(orgId: string, userId: string, notifica
     const current = getReadNotificationIds(orgId, userId);
     const updated = Array.from(new Set([...current, ...notificationIds]));
     localStorage.setItem(getStorageKey(orgId, userId), JSON.stringify(updated));
+  } catch {
+    // ignore
+  }
+}
+
+export function getAutoOpenedNotificationIds(orgId: string, userId: string): string[] {
+  if (typeof window === 'undefined') return [];
+  try {
+    const stored = localStorage.getItem(getAutoOpenedKey(orgId, userId));
+    if (!stored) return [];
+    const parsed = JSON.parse(stored);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+export function markNotificationAutoOpened(orgId: string, userId: string, notificationId: string): void {
+  if (typeof window === 'undefined') return;
+  try {
+    const current = getAutoOpenedNotificationIds(orgId, userId);
+    if (!current.includes(notificationId)) {
+      const updated = [...current, notificationId];
+      localStorage.setItem(getAutoOpenedKey(orgId, userId), JSON.stringify(updated));
+    }
   } catch {
     // ignore
   }

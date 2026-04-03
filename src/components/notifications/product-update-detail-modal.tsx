@@ -26,26 +26,45 @@ interface ProductUpdateDetailModalProps {
   onOpenChange: (open: boolean) => void;
 }
 
+function isExternalUrl(value?: string | null): value is string {
+  return typeof value === 'string' && /^https?:\/\//.test(value);
+}
+
 export function ProductUpdateDetailModal({
   update,
   open,
   onOpenChange,
 }: ProductUpdateDetailModalProps) {
   const { buildUrl } = useOrgUrl();
-  const { t } = useTranslations();
+  const { t, language } = useTranslations();
 
   if (!update) return null;
 
   const hasContentLong = update.contentLong && update.contentLong.trim().length > 0;
   const hasGuideUrl = update.guideUrl && update.guideUrl.trim().length > 0;
   const hasVideoUrl = update.videoUrl && update.videoUrl.trim().length > 0;
+  const hasPublicSlug = update.publicSlug && update.publicSlug.trim().length > 0;
+  const summary = update.publicExcerpt && update.publicExcerpt.trim().length > 0
+    ? update.publicExcerpt
+    : update.body;
+  const publicHref = hasPublicSlug ? `/${language}/novetats/${update.publicSlug}` : null;
+  const guideHref = hasGuideUrl
+    ? (isExternalUrl(update.guideUrl) ? update.guideUrl : buildUrl(update.guideUrl!))
+    : null;
+  const actionHref = update.href
+    ? (isExternalUrl(update.href) ? update.href : buildUrl(update.href))
+    : null;
+  const primaryHref = publicHref ?? actionHref;
+  const primaryLabel = publicHref
+    ? t.productUpdates.readOnWeb
+    : (update.ctaLabel ?? t.productUpdates.openUpdate);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle>{update.title}</DialogTitle>
-          <DialogDescription>{update.body}</DialogDescription>
+          <DialogDescription>{summary}</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 pt-2">
@@ -59,13 +78,22 @@ export function ProductUpdateDetailModal({
           {/* Links a guia i vídeo */}
           {(hasGuideUrl || hasVideoUrl) && (
             <div className="flex flex-wrap gap-2 pt-2">
-              {hasGuideUrl && (
-                <Button variant="outline" size="sm" asChild>
-                  <Link href={buildUrl(update.guideUrl!)} onClick={() => onOpenChange(false)}>
-                    <BookOpen className="h-4 w-4 mr-2" />
-                    {t.productUpdates.viewGuide}
-                  </Link>
-                </Button>
+              {guideHref && (
+                isExternalUrl(guideHref) ? (
+                  <Button variant="outline" size="sm" asChild>
+                    <a href={guideHref} target="_blank" rel="noopener noreferrer">
+                      <BookOpen className="h-4 w-4 mr-2" />
+                      {t.productUpdates.viewGuide}
+                    </a>
+                  </Button>
+                ) : (
+                  <Button variant="outline" size="sm" asChild>
+                    <Link href={guideHref} onClick={() => onOpenChange(false)}>
+                      <BookOpen className="h-4 w-4 mr-2" />
+                      {t.productUpdates.viewGuide}
+                    </Link>
+                  </Button>
+                )
               )}
               {hasVideoUrl && (
                 <Button variant="outline" size="sm" asChild>
@@ -83,14 +111,23 @@ export function ProductUpdateDetailModal({
           )}
 
           {/* CTA principal si existeix */}
-          {update.href && (
+          {primaryHref && (
             <div className="pt-2 border-t">
-              <Button asChild className="w-full">
-                <Link href={buildUrl(update.href)} onClick={() => onOpenChange(false)}>
-                  {update.ctaLabel ?? t.productUpdates.openUpdate}
-                  <ExternalLink className="h-4 w-4 ml-2" />
-                </Link>
-              </Button>
+              {isExternalUrl(primaryHref) ? (
+                <Button asChild className="w-full">
+                  <a href={primaryHref} target="_blank" rel="noopener noreferrer">
+                    {primaryLabel}
+                    <ExternalLink className="h-4 w-4 ml-2" />
+                  </a>
+                </Button>
+              ) : (
+                <Button asChild className="w-full">
+                  <Link href={primaryHref} onClick={() => onOpenChange(false)}>
+                    {primaryLabel}
+                    <ExternalLink className="h-4 w-4 ml-2" />
+                  </Link>
+                </Button>
+              )}
             </div>
           )}
         </div>

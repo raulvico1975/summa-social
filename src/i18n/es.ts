@@ -3148,6 +3148,7 @@ export const es = {
     noUpdates: "No hay novedades nuevas",
     workingOn: "En lo que estamos trabajando",
     openUpdate: "Ver novedad",
+    readOnWeb: "Leer en la web",
     viewGuide: "Ver guía",
     viewVideo: "Ver vídeo",
   },

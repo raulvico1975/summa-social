@@ -7,7 +7,6 @@ import { useParams, usePathname } from 'next/navigation';
 import { Sidebar, SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import { DashboardSidebarContent } from '@/components/dashboard-sidebar-content';
 import { DashboardHeader } from '@/components/dashboard-header';
-import { ProductUpdatesFab } from '@/components/notifications/product-updates-fab';
 import { BotFab } from '@/components/help/BotFab';
 import { OrganizationProvider, useCurrentOrganization } from '@/hooks/organization-provider';
 import { useInitializeOrganizationData } from '@/hooks/use-initialize-user-data';
@@ -158,7 +157,6 @@ function OrganizationDependentLayout({ children }: { children: React.ReactNode }
 
       {/* FAB rail: a Moviments en pantalles petites va a baix-esquerra per no tapar opcions de fila */}
       <div className={fabRailClass}>
-        <ProductUpdatesFab />
         <BotFab />
       </div>
     </>

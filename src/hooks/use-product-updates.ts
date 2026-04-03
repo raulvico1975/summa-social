@@ -9,7 +9,7 @@ import { useFirebase } from '@/firebase';
 import { type ProductUpdate, PRODUCT_UPDATES } from '@/lib/notifications';
 import { isDemoEnv } from '@/lib/demo/isDemoOrg';
 import type { Language } from '@/i18n';
-import { resolveAppProductUpdateCopy } from '@/lib/product-updates/localized';
+import { resolveAppProductUpdateCopy, resolvePublicProductUpdateCopy } from '@/lib/product-updates/localized';
 
 /**
  * Tipus ampliat per incloure camps nous de Firestore.
@@ -19,6 +19,8 @@ export type FirestoreProductUpdate = ProductUpdate & {
   contentLong?: string | null;
   guideUrl?: string | null;
   videoUrl?: string | null;
+  publicSlug?: string | null;
+  publicExcerpt?: string | null;
 };
 
 export type UseProductUpdatesResult = {
@@ -39,6 +41,7 @@ function toFirestoreProductUpdate(
 ): FirestoreProductUpdate | null {
   const source = entry.data as Record<string, unknown>;
   const resolvedCopy = resolveAppProductUpdateCopy(source, language);
+  const resolvedPublicCopy = resolvePublicProductUpdateCopy(source, language);
   if (!resolvedCopy) return null;
 
   const createdAtRaw = source?.createdAt;
@@ -61,6 +64,12 @@ function toFirestoreProductUpdate(
   const videoUrl = typeof source?.videoUrl === 'string' && source.videoUrl.trim()
     ? source.videoUrl
     : null;
+  const web = typeof source?.web === 'object' && source.web !== null
+    ? source.web as Record<string, unknown>
+    : null;
+  const publicSlug = typeof web?.slug === 'string' && web.slug.trim()
+    ? web.slug
+    : null;
 
   return {
     id: entry.id,
@@ -72,6 +81,8 @@ function toFirestoreProductUpdate(
     contentLong: resolvedCopy.contentLong,
     guideUrl,
     videoUrl,
+    publicSlug,
+    publicExcerpt: resolvedPublicCopy?.excerpt ?? null,
   };
 }
 

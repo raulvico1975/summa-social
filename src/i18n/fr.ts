@@ -3156,6 +3156,7 @@ export const fr = {
     noUpdates: "Aucune nouveauté",
     workingOn: "Ce sur quoi nous travaillons",
     openUpdate: "Voir la nouveauté",
+    readOnWeb: "Lire sur le web",
     viewGuide: "Voir le guide",
     viewVideo: "Voir la vidéo",
   },

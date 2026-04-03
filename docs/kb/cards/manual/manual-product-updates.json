@@ -25,11 +25,11 @@
   },
   "guideId": null,
   "answer": {
-    "ca": "Les novetats es consulten a la campaneta (o FAB) del header.\n\nQuè fer:\n1. Mira si hi ha badge numèric a la icona.\n2. Clica la icona per obrir la safata de novetats.\n3. Llegeix-les i marca-les com a llegides.\n\nNo apareixen pop-ups automàtics mentre treballes: tu decideixes quan revisar-les.",
-    "es": "Las novedades se consultan en la campanita (o FAB) del header.\n\nQué hacer:\n1. Mira si hay badge numérico en el icono.\n2. Haz clic en el icono para abrir la bandeja de novedades.\n3. Léelas y márcalas como leídas.\n\nNo aparecen pop-ups automáticos mientras trabajas: tú decides cuándo revisarlas."
+    "ca": "Les novetats es consulten a la campaneta del header.\n\nQuè fer:\n1. Mira si hi ha badge numèric a la icona.\n2. Si hi ha una novetat nova, la safata es pot obrir un instant per fer-la visible.\n3. Clica la icona per obrir la safata de novetats quan vulguis.\n4. Llegeix-les i marca-les com a llegides.\n\nNo apareixen pop-ups grans mentre treballes: tu decideixes quan revisar-les.",
+    "es": "Las novedades se consultan en la campanita del header.\n\nQué hacer:\n1. Mira si hay badge numérico en el icono.\n2. Si hay una novedad nueva, la bandeja puede abrirse un instante para hacerla visible.\n3. Haz clic en el icono para abrir la bandeja de novedades cuando quieras.\n4. Léelas y márcalas como leídas.\n\nNo aparecen pop-ups grandes mientras trabajas: tú decides cuándo revisarlas."
   },
   "uiPaths": [
-    "Header > Campaneta/FAB de novetats"
+    "Header > Campaneta de novetats"
   ],
   "needsSnapshot": false,
   "keywords": [

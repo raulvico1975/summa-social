@@ -3153,6 +3153,7 @@ export const ca = {
     noUpdates: "No hi ha novetats noves",
     workingOn: "En què estem treballant",
     openUpdate: "Veure novetat",
+    readOnWeb: "Llegir al web",
     viewGuide: "Veure guia",
     viewVideo: "Veure vídeo",
   },

@@ -214,10 +214,11 @@ Summa Social guarda automàticament molts canvis mentre treballes. Si estaves ed
 
 ### 7¾. Com em puc assabentar de les novetats i millores de Summa Social?
 
-**Trobaràs totes les novetats a la campaneta o FAB** que veuràs al header de l'aplicació (a la cantonada superior dreta, prop del teu nom).
+**Trobaràs totes les novetats a la campaneta** que veuràs al header de l'aplicació (a la cantonada superior dreta).
 
 **Com funciona:**
 - Quan hi ha novetats noves, veuràs un badge numèric sobre la icona (1, 2, 3...)
+- La safata es pot obrir un instant per fer visible una novetat nova, però sense quedar-se oberta
 - Clica la icona per obrir l'inbox de novetats
 - Llegeix les que t'interessin, marca-les com llegides, i el badge desapareix
 

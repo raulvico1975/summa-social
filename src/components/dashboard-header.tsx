@@ -9,6 +9,7 @@ import Link from 'next/link';
 import { useTranslations } from '@/i18n';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
 import { HelpSheet } from '@/components/help/HelpSheet';
+import { ProductUpdatesInbox } from '@/components/notifications/notification-bell';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { isDemoEnv } from '@/lib/demo/isDemoOrg';
@@ -171,6 +172,7 @@ export function DashboardHeader() {
       </div>
       {/* Bloc dreta: fix (icones sempre visibles) */}
       <div className="flex shrink-0 items-center gap-2">
+        <ProductUpdatesInbox />
         <HelpSheet />
       </div>
     </header>
