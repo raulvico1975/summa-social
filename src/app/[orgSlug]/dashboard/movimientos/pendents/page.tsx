@@ -995,7 +995,7 @@ export default function PendingDocsPage() {
               <>
                 {/* Taula desktop (lg+) */}
                 <div className="hidden lg:block">
-                  <Table>
+                  <Table className="w-full table-fixed">
                     <TableHeader>
                       <TableRow>
                         {/* Checkbox per selecció múltiple */}
