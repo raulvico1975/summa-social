@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import Link from 'next/link';
-import { DollarSign, TrendingUp, TrendingDown, Rocket, Heart, AlertTriangle, FolderKanban, CalendarClock, Share2, Copy, Mail, PartyPopper, Info, FileSpreadsheet, FileText, RefreshCcw, Pencil, Settings, Loader2 } from 'lucide-react';
+import { DollarSign, TrendingUp, TrendingDown, Rocket, Heart, AlertTriangle, FolderKanban, CalendarClock, Share2, Copy, Mail, PartyPopper, Info, FileSpreadsheet, Pencil, Settings, Loader2, FileText, Files, Undo2 } from 'lucide-react';
 import type { Transaction, Contact, Project, Donor, Category, OrganizationMember } from '@/lib/data';
 import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
 import { collection, query, where } from 'firebase/firestore';
@@ -31,7 +31,6 @@ import {
   type NarrativeDraft,
 } from '@/lib/exports/economic-report';
 import * as XLSX from 'xlsx';
-import Papa from 'papaparse';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { toPeriodQuery } from '@/lib/period-query';
@@ -56,6 +55,45 @@ const TAX_OBLIGATIONS: TaxObligation[] = [
 ];
 
 const NARRATIVE_ORDER: (keyof NarrativeDraft)[] = ['summary', 'income', 'expenses', 'transfers'];
+const NARRATIVE_CARD_META = {
+  summary: {
+    icon: FileText,
+    accentClass: 'border-sky-200 bg-sky-50 text-sky-700',
+    surfaceClass: 'from-sky-50/80 via-background to-background',
+    lineClass: 'from-sky-300/80 via-emerald-300/60 to-transparent',
+    helper: 'Relat base del període',
+  },
+  income: {
+    icon: TrendingUp,
+    accentClass: 'border-emerald-200 bg-emerald-50 text-emerald-700',
+    surfaceClass: 'from-emerald-50/80 via-background to-background',
+    lineClass: 'from-emerald-300/80 via-lime-300/60 to-transparent',
+    helper: 'Fonts d’ingrés destacades',
+  },
+  expenses: {
+    icon: TrendingDown,
+    accentClass: 'border-amber-200 bg-amber-50 text-amber-700',
+    surfaceClass: 'from-amber-50/80 via-background to-background',
+    lineClass: 'from-amber-300/80 via-orange-300/60 to-transparent',
+    helper: 'Despesa i focus operatiu',
+  },
+  transfers: {
+    icon: FolderKanban,
+    accentClass: 'border-indigo-200 bg-indigo-50 text-indigo-700',
+    surfaceClass: 'from-indigo-50/80 via-background to-background',
+    lineClass: 'from-indigo-300/80 via-sky-300/60 to-transparent',
+    helper: 'Projectes i imputacions',
+  },
+} satisfies Record<
+  keyof NarrativeDraft,
+  {
+    icon: React.ComponentType<{ className?: string }>;
+    accentClass: string;
+    surfaceClass: string;
+    lineClass: string;
+    helper: string;
+  }
+>;
 const EMPTY_AGGREGATE: AggregateResult = { aggregated: [], complete: [], total: 0 };
 
 interface Celebration {
@@ -963,10 +1001,85 @@ export default function DashboardPage() {
   const summaryOrgPeriodText = shareModalTexts.summaryOrgPeriod({ organization: organizationName, period: periodLabel });
   const summaryHeaderText = shareModalTexts.summaryHeader({ organization: organizationName, period: periodLabel });
   const emailSubjectText = shareModalTexts.emailSubject({ organization: organizationName });
+  const shareDialogHelperText = React.useMemo(() => {
+    switch (language) {
+      case 'es':
+        return 'Revisa, edita o exporta el texto antes de compartirlo';
+      case 'ca':
+        return 'Revisa, edita o exporta el text abans de compartir-lo';
+      case 'fr':
+        return 'Relisez, modifiez ou exportez le texte avant de le partager';
+      case 'pt':
+        return 'Revise, edite ou exporte o texto antes de partilhá-lo';
+      default:
+        return 'Review, edit, or export the text before sharing it';
+    }
+  }, [language]);
+  const sharePlainHeaderText = React.useMemo(() => {
+    switch (language) {
+      case 'es':
+        return `Resumen ${organizationName}`;
+      case 'ca':
+        return `Resum ${organizationName}`;
+      case 'fr':
+        return `Résumé ${organizationName}`;
+      case 'pt':
+        return `Resumo ${organizationName}`;
+      default:
+        return `Summary ${organizationName}`;
+    }
+  }, [language, organizationName]);
+  const shareSummarySections = React.useMemo(() => {
+    switch (language) {
+      case 'es':
+        return {
+          finance: 'INGRESOS Y BALANCE',
+          community: 'BASE SOCIAL',
+          bullet: '•',
+        };
+      case 'ca':
+        return {
+          finance: 'INGRESSOS I BALANÇ',
+          community: 'BASE SOCIAL',
+          bullet: '•',
+        };
+      case 'fr':
+        return {
+          finance: 'REVENUS ET ÉQUILIBRE',
+          community: 'BASE ASSOCIATIVE',
+          bullet: '•',
+        };
+      case 'pt':
+        return {
+          finance: 'RECEITAS E SALDO',
+          community: 'BASE SOCIAL',
+          bullet: '•',
+        };
+      default:
+        return {
+          finance: 'INCOME AND BALANCE',
+          community: 'COMMUNITY BASE',
+          bullet: '•',
+        };
+    }
+  }, [language]);
+  const shareGeneratedWithPrefix = React.useMemo(() => {
+    switch (language) {
+      case 'es':
+        return 'Generado con';
+      case 'ca':
+        return 'Generat amb';
+      case 'fr':
+        return 'Généré avec';
+      case 'pt':
+        return 'Gerado com';
+      default:
+        return 'Generated with';
+    }
+  }, [language]);
 
   // Funció per generar el text de resum
   const generateSummaryText = (): string => {
-    const orgName = organizationName;
     const period = periodLabel;
 
     // Comparativa amb any anterior
@@ -983,18 +1096,16 @@ export default function DashboardPage() {
       ? ` (${formatCurrencyEU(prevMemberFees)} ${tr("dashboard.vsPreviousYear")})`
       : '';
 
-    return `${summaryHeaderText}
+    return `${shareSummarySections.finance}
+${shareSummarySections.bullet} ${tr("dashboard.totalIncome")}: ${formatCurrencyEU(totalIncome)}
+${shareSummarySections.bullet} ${tr("dashboard.operatingExpenses")}: ${formatCurrencyEU(Math.abs(totalExpenses))}
+${shareSummarySections.bullet} ${tr("dashboard.operatingBalance")}: ${formatCurrencyEU(netBalance)}
 
-💰 ${tr("dashboard.totalIncome")}: ${formatCurrencyEU(totalIncome)}
-💸 ${tr("dashboard.operatingExpenses")}: ${formatCurrencyEU(Math.abs(totalExpenses))}
-📈 ${tr("dashboard.operatingBalance")}: ${formatCurrencyEU(netBalance)}
-
-❤️ ${tr("dashboard.activeDonors")}: ${uniqueDonors}${donorsComparison}
-🎁 ${tr("dashboard.donations")}: ${formatCurrencyEU(totalDonations)}${donationsComparison}
-👥 ${tr("dashboard.activeMembers")}: ${activeMembers}${membersComparison}
-💳 ${tr("dashboard.memberFees")}: ${formatCurrencyEU(memberFees)}${feesComparison}
-
-${tr("dashboard.generatedWith")}`;
+${shareSummarySections.community}
+${shareSummarySections.bullet} ${tr("dashboard.activeDonors")}: ${uniqueDonors}${donorsComparison}
+${shareSummarySections.bullet} ${tr("dashboard.donations")}: ${formatCurrencyEU(totalDonations)}${donationsComparison}
+${shareSummarySections.bullet} ${tr("dashboard.activeMembers")}: ${activeMembers}${membersComparison}
+${shareSummarySections.bullet} ${tr("dashboard.memberFees")}: ${formatCurrencyEU(memberFees)}${feesComparison}`;
   };
 
   // Funció per copiar al portapapers
@@ -1140,40 +1251,6 @@ ${tr("dashboard.generatedWith")}`;
     const organizationSlug = organization?.slug || 'org';
     const excelFileName = shareModalExports.excelFileName({ organizationSlug, date: dateStamp });
     XLSX.writeFile(workbook, excelFileName);
-  };
-
-  const downloadCsv = (rows: AggregateRow[], filename: string) => {
-    const columns = shareModalExports.columns;
-    const data = rows.map((row) => [
-      row.id,
-      row.name,
-      Number(row.amount.toFixed(2)),
-      Number(row.percentage.toFixed(2)),
-      row.count,
-    ]);
-    const csv = Papa.unparse({
-      fields: [columns.id, columns.name, columns.amount, columns.percentage, columns.operations],
-      data,
-    });
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = filename;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-  };
-
-  const handleExportEconomicCsv = () => {
-    if (!canViewFinancial) return;
-    const dateStamp = new Date().toISOString().split('T')[0];
-    const organizationSlug = organization?.slug || 'org';
-    const csvFiles = shareModalExports.csvFileNames;
-    downloadCsv(incomeAggregates.complete, csvFiles.income({ organizationSlug, date: dateStamp }));
-    downloadCsv(expenseAggregates.complete, csvFiles.expenses({ organizationSlug, date: dateStamp }));
-    downloadCsv(transferAggregates.complete, csvFiles.transfers({ organizationSlug, date: dateStamp }));
   };
 
   // Map de contactes per ID amb el seu membershipType
@@ -2056,110 +2133,141 @@ ${tr("dashboard.generatedWith")}`;
 
       {canViewFinancial && (
         <Dialog open={shareDialogOpen} onOpenChange={setShareDialogOpen}>
-          <DialogContent className="!w-[min(calc(100vw-1.5rem),94rem)] !max-w-[94rem] p-0 sm:!w-[min(calc(100vw-3rem),94rem)]">
-            <div className="flex h-[min(92vh,980px)] min-h-0 flex-col">
-              <DialogHeader className="px-5 pt-5 md:px-8 md:pt-7">
-                <DialogTitle>{tr("dashboard.shareSummary")}</DialogTitle>
-                <DialogDescription>{tr("dashboard.shareSummaryDescription")}</DialogDescription>
+          <DialogContent className="!w-[min(calc(100vw-1.5rem),94rem)] !max-w-[94rem] overflow-hidden p-0 sm:!w-[min(calc(100vw-3rem),94rem)]">
+            <div className="relative flex h-[min(92vh,980px)] min-h-0 flex-col overflow-hidden">
+              <div className="pointer-events-none absolute bottom-0 right-0 h-40 w-40 rounded-full bg-amber-100/10 blur-3xl" />
+              <DialogHeader className="flex-row items-center justify-between gap-3 space-y-0 px-5 pt-5 md:px-8 md:pt-7">
+                <DialogTitle className="text-base sm:text-lg">{tr("dashboard.shareSummary")}</DialogTitle>
+                <DialogDescription className="max-w-sm text-right text-xs leading-5 sm:text-sm">
+                  {shareDialogHelperText}
+                </DialogDescription>
               </DialogHeader>
 
-              <div className="grid min-h-0 flex-1 gap-5 overflow-hidden px-4 pb-4 pt-4 md:grid-cols-[minmax(0,1.4fr)_minmax(340px,0.95fr)] md:px-6 md:pb-6 md:pt-5 xl:grid-cols-[minmax(0,1.55fr)_minmax(360px,0.9fr)]">
-                <div className="flex min-h-0 flex-col gap-4 overflow-hidden">
-                  <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-                    <div className="rounded-xl border bg-muted/20 p-3 shadow-sm">
-                      <p className="text-xs uppercase tracking-wide text-muted-foreground">{tr("dashboard.totalIncome")}</p>
-                      <p className="mt-1 text-lg font-semibold">{formatCurrencyEU(totalIncome)}</p>
+              <div className="relative grid min-h-0 flex-1 gap-5 overflow-hidden px-4 pb-4 pt-4 md:grid-cols-[minmax(0,0.92fr)_minmax(420px,1.08fr)] md:px-6 md:pb-6 md:pt-5 xl:grid-cols-[minmax(0,0.88fr)_minmax(460px,1.12fr)]">
+                <div className="flex min-h-0 flex-col gap-3 overflow-hidden">
+                  <div className="relative flex min-h-0 flex-1 flex-col gap-3 overflow-hidden rounded-2xl border bg-gradient-to-b from-background via-background to-muted/10 p-4 shadow-sm md:p-5">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex shrink-0 flex-wrap justify-end gap-2">
+                        <Button size="sm" variant="outline" className="h-8 px-2.5 text-xs" onClick={handleCopy}>
+                          <Files className="h-3.5 w-3.5" />
+                          {copySuccess ? tr("dashboard.copied") : 'Copiar text'}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-8 px-2.5 text-xs"
+                          onClick={handleResetNarratives}
+                          disabled={!defaultNarratives}
+                        >
+                          <Undo2 className="h-3.5 w-3.5" />
+                          Reiniciar proposta
+                        </Button>
+                      </div>
                     </div>
-                    <div className="rounded-xl border bg-muted/20 p-3 shadow-sm">
-                      <p className="text-xs uppercase tracking-wide text-muted-foreground">{tr("dashboard.operatingExpenses")}</p>
-                      <p className="mt-1 text-lg font-semibold">{formatCurrencyEU(Math.abs(totalExpenses))}</p>
-                    </div>
-                    <div className="rounded-xl border bg-muted/20 p-3 shadow-sm">
-                      <p className="text-xs uppercase tracking-wide text-muted-foreground">{tr("dashboard.operatingBalance")}</p>
-                      <p className="mt-1 text-lg font-semibold">{formatCurrencyEU(netBalance)}</p>
-                    </div>
-                    <div className="rounded-xl border bg-muted/20 p-3 shadow-sm">
-                      <p className="text-xs uppercase tracking-wide text-muted-foreground">{tr("dashboard.activeDonors")}</p>
-                      <p className="mt-1 text-lg font-semibold">{uniqueDonors}</p>
+                    <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-dashed bg-background/90 px-4 py-3 shadow-inner">
+                      <div className="pb-3">
+                        <p className="text-sm font-bold">{`Resumen ${organizationName}`}</p>
+                        <p className="mt-0.5 text-xs text-muted-foreground">{periodLabel}</p>
+                      </div>
+                      <div className="min-h-0 flex-1 overflow-hidden">
+                        <Textarea
+                          value={summaryText}
+                          onChange={(e) => setSummaryText(e.target.value)}
+                          className="h-full min-h-0 resize-none border-0 bg-transparent px-0 py-0 text-[13px] leading-6 tracking-[0.01em] text-foreground shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 md:text-sm"
+                        />
+                      </div>
+                      <div className="shrink-0 border-t border-dashed pt-2 text-[11px] text-muted-foreground/80">
+                        {shareGeneratedWithPrefix}{' '}
+                        <a
+                          href="https://summasocial.app"
+                          target="_blank"
+                          rel="noreferrer"
+                          className="font-medium text-sky-700/70 underline-offset-2 transition-colors hover:text-sky-700 hover:underline"
+                        >
+                          summasocial.app
+                        </a>
+                      </div>
                     </div>
                   </div>
 
-                  <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden rounded-xl border bg-background/80 p-4 shadow-sm md:p-5">
-                    <div>
-                      <p className="text-xs uppercase tracking-wider text-muted-foreground">{shareModalTexts.summaryBlockTitle}</p>
-                      <p className="text-sm font-semibold">{summaryOrgPeriodText}</p>
-                    </div>
-                    <Textarea
-                      value={summaryText}
-                      onChange={(e) => setSummaryText(e.target.value)}
-                      className="min-h-0 flex-1 resize-none font-mono text-sm leading-6 md:min-h-[420px]"
-                    />
-                  </div>
-
-                  <div className="grid shrink-0 grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-4">
-                    <Button variant="outline" onClick={handleCopy}>
-                      <Copy className="h-4 w-4 mr-2" />
-                      {copySuccess ? tr("dashboard.copied") : tr("dashboard.copy")}
-                    </Button>
-                    <Button variant="outline" onClick={handleResetNarratives} disabled={!defaultNarratives}>
-                      <RefreshCcw className="h-4 w-4 mr-2" />
-                      {shareModalTexts.actions.reset}
-                    </Button>
-                    <Button variant="secondary" onClick={handleExportEconomicExcel}>
-                      <FileSpreadsheet className="h-4 w-4 mr-2" />
-                      {shareModalTexts.actions.exportExcel}
-                    </Button>
-                    <Button variant="secondary" onClick={handleExportEconomicCsv}>
-                      <FileText className="h-4 w-4 mr-2" />
-                      {shareModalTexts.actions.exportCsv}
-                    </Button>
-                  </div>
                 </div>
 
                 {narratives && (
-                  <div className="flex min-h-0 flex-col rounded-xl border bg-muted/10 p-4 shadow-sm md:p-5">
-                    <div>
-                      <p className="text-xs uppercase tracking-wider text-muted-foreground">{shareModalTexts.narrativesHeading}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {shareModalTexts.narrativesDescription}
-                      </p>
-                    </div>
-                    <div className="grid min-h-0 flex-1 grid-cols-1 gap-3 overflow-y-auto pr-1 xl:grid-cols-2">
-                      {NARRATIVE_ORDER.map((field) => (
-                        <div key={field} className="flex h-full flex-col rounded-lg border border-dashed bg-background/90 p-3 shadow-sm">
-                          <div className="flex items-center justify-between gap-2">
-                            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                              {shareModalTexts.cards[field].title}
+                  <div className="relative flex min-h-0 flex-col overflow-hidden rounded-2xl border bg-muted/10 p-4 shadow-sm md:p-5">
+                    <div className="grid min-h-0 flex-1 grid-cols-1 gap-3 overflow-y-auto pr-1 md:grid-cols-2">
+                      {NARRATIVE_ORDER.map((field) => {
+                        const meta = NARRATIVE_CARD_META[field];
+                        const Icon = meta.icon;
+                        const previewText = narratives[field].replace(/\s+/g, ' ').trim();
+
+                        return (
+                          <div key={field} className="relative flex h-full flex-col overflow-hidden rounded-2xl border bg-background/95 px-4 py-3 shadow-sm">
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="min-w-0">
+                                <div className="flex items-center gap-2">
+                                  <span className={`inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border ${meta.accentClass}`}>
+                                    <Icon className="h-4 w-4" />
+                                  </span>
+                                  <div className="min-w-0">
+                                    <p className="text-sm font-semibold text-foreground">
+                                      {shareModalTexts.cards[field].title}
+                                    </p>
+                                    <p className="text-[11px] text-muted-foreground">
+                                      {meta.helper}
+                                    </p>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+
+                            <p className="mt-2 flex-1 overflow-hidden text-[13px] leading-5 text-muted-foreground line-clamp-5">
+                              {previewText}
                             </p>
-                            <div className="flex items-center gap-1 text-muted-foreground">
-                              <button
-                                onClick={() => handleCopyNarrative(field)}
-                                className="text-xs hover:text-foreground"
-                                aria-label={shareModalTexts.actions.copy}
-                              >
-                                📋
-                              </button>
-                              <button
-                                onClick={() => openNarrativeEditor(field)}
-                                className="text-xs hover:text-foreground"
-                                aria-label={shareModalTexts.actions.edit}
-                              >
-                                ✏️
-                              </button>
+
+                            <div className="mt-2 flex items-center justify-end gap-2 border-t border-dashed pt-2">
+                              <div className="flex items-center gap-1">
+                                <button
+                                  onClick={() => handleCopyNarrative(field)}
+                                  className="inline-flex items-center gap-0.5 rounded-full border px-1.5 py-0.5 text-[9px] font-medium text-muted-foreground transition-colors hover:border-foreground/20 hover:text-foreground"
+                                  aria-label={shareModalTexts.actions.copy}
+                                >
+                                  <Copy className="h-2.5 w-2.5" />
+                                  Copiar
+                                </button>
+                                <button
+                                  onClick={() => openNarrativeEditor(field)}
+                                  className="inline-flex items-center gap-0.5 rounded-full border px-1.5 py-0.5 text-[9px] font-medium text-muted-foreground transition-colors hover:border-foreground/20 hover:text-foreground"
+                                  aria-label={shareModalTexts.actions.edit}
+                                >
+                                  <Pencil className="h-2.5 w-2.5" />
+                                  Editar
+                                </button>
+                              </div>
                             </div>
                           </div>
-                          <p className="mt-2 text-sm leading-relaxed text-muted-foreground line-clamp-4">
-                            {narratives[field]}
-                          </p>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
                 )}
               </div>
 
               <DialogFooter className="border-t px-4 py-4 md:px-6">
-                <Button variant="default" onClick={handleEmailShare}>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-9 min-w-[170px] text-xs"
+                  onClick={handleExportEconomicExcel}
+                >
+                  <FileSpreadsheet className="h-4 w-4 mr-2" />
+                  {shareModalTexts.actions.exportExcel}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="default"
+                  className="h-9 min-w-[170px] text-xs"
+                  onClick={handleEmailShare}
+                >
                   <Mail className="h-4 w-4 mr-2" />
                   {tr("dashboard.sendByEmail")}
                 </Button>
