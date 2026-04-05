@@ -17,20 +17,20 @@ Pilot aillat dins del repo de Summa Social per validar, en aquesta iteracio, nom
 voice-agents/
   AGENTS.md
   README.md
-  client/
-  server/
   agents/
+  client/
+  contracts/
   docs/
+  server/
 ```
 
 ## Ordre de lectura
 
-1. `voice-agents/docs/README.md`
+1. `voice-agents/docs/PHASES.md`
 2. `voice-agents/docs/ARCHITECTURE.md`
-3. `voice-agents/docs/PHASES.md`
-4. `voice-agents/docs/WEB-AGENT-CONTRACT.md`
-5. `voice-agents/docs/PRODUCT-GOVERNANCE.md`
-6. `voice-agents/docs/PHASE-REVIEW-TEMPLATE.md`
+3. `voice-agents/docs/IMPLEMENTATION-BLUEPRINT.md`
+4. `voice-agents/docs/AGENTS.md`
+5. `voice-agents/docs/WEB-AGENT-CONTRACT.md`
 
 ## Comandes base
 
@@ -44,7 +44,7 @@ Des del worktree del pilot:
 
 ```bash
 cd voice-agents/server
-python3 app.py
+python3 bot.py
 ```
 
 ```bash
@@ -58,14 +58,16 @@ npm run dev
 
 Fase implementada ara:
 
-- `server/app.py` com a backend Python minim del `web-agent`
+- `server/bot.py` com a backend Python minim del `web-agent`
 - `contracts/` amb contracte JSON explicit entre client i server
 - `client/` amb conversa text-first i `rich UI` minima
+- qualificacio i desqualificacio explicites sense tocar el core de Summa
 
 Fora d'abast explicit de la fase actual:
 
 - veu
 - Gemini Live
+- WebRTC
 - demo-agent
 - support-agent
 - context visual

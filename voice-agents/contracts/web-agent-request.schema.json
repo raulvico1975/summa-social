@@ -37,8 +37,7 @@
         "entity_type",
         "team_size",
         "primary_pain",
-        "urgency",
-        "fit_band"
+        "exclusion_reason"
       ],
       "properties": {
         "entity_type": {
@@ -53,11 +52,7 @@
           "type": ["string", "null"],
           "maxLength": 200
         },
-        "urgency": {
-          "type": ["string", "null"],
-          "maxLength": 200
-        },
-        "fit_band": {
+        "exclusion_reason": {
           "type": ["string", "null"],
           "maxLength": 200
         }

@@ -5,10 +5,12 @@
   "additionalProperties": false,
   "required": [
     "agent_message",
-    "qualification_status",
-    "collected_signals",
-    "ui_action",
-    "next_step"
+    "fit_assessment",
+    "signals_collected",
+    "next_question",
+    "qualification_summary",
+    "recommended_next_step",
+    "ui_action"
   ],
   "properties": {
     "agent_message": {
@@ -16,25 +18,22 @@
       "minLength": 1,
       "maxLength": 1200
     },
-    "qualification_status": {
+    "fit_assessment": {
       "type": "string",
       "enum": [
-        "evaluating",
         "good_fit",
-        "partial_fit",
-        "low_fit",
-        "ready_to_convert"
+        "uncertain_fit",
+        "low_fit"
       ]
     },
-    "collected_signals": {
+    "signals_collected": {
       "type": "object",
       "additionalProperties": false,
       "required": [
         "entity_type",
         "team_size",
         "primary_pain",
-        "urgency",
-        "fit_band"
+        "exclusion_reason"
       ],
       "properties": {
         "entity_type": {
@@ -49,15 +48,29 @@
           "type": ["string", "null"],
           "maxLength": 200
         },
-        "urgency": {
-          "type": ["string", "null"],
-          "maxLength": 200
-        },
-        "fit_band": {
+        "exclusion_reason": {
           "type": ["string", "null"],
           "maxLength": 200
         }
       }
+    },
+    "next_question": {
+      "type": ["string", "null"],
+      "maxLength": 400
+    },
+    "qualification_summary": {
+      "type": ["string", "null"],
+      "maxLength": 600
+    },
+    "recommended_next_step": {
+      "type": "string",
+      "enum": [
+        "ask_more",
+        "show_value",
+        "offer_demo",
+        "capture_contact",
+        "disqualify"
+      ]
     },
     "ui_action": {
       "type": "object",
@@ -82,15 +95,6 @@
           "type": "object"
         }
       }
-    },
-    "next_step": {
-      "type": "string",
-      "enum": [
-        "continue_diagnosis",
-        "offer_demo",
-        "capture_lead",
-        "close_out"
-      ]
     }
   }
 }

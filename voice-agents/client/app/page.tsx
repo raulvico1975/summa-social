@@ -32,31 +32,31 @@ function detectLocale(): string {
   return navigator.language?.slice(0, 2) || "ca";
 }
 
-function statusLabel(status: WebAgentResponse["qualification_status"] | null) {
+function statusLabel(status: WebAgentResponse["fit_assessment"] | null) {
   switch (status) {
     case "good_fit":
       return "Bon encaix";
-    case "partial_fit":
-      return "Encaix parcial";
+    case "uncertain_fit":
+      return "Encaix incert";
     case "low_fit":
       return "Poc encaix";
-    case "ready_to_convert":
-      return "A punt per convertir";
     default:
-      return "En diagnòstic";
+      return "Sense conclusió";
   }
 }
 
-function nextStepLabel(nextStep: WebAgentResponse["next_step"] | null) {
+function nextStepLabel(nextStep: WebAgentResponse["recommended_next_step"] | null) {
   switch (nextStep) {
     case "offer_demo":
       return "Convidar a demo";
-    case "capture_lead":
+    case "capture_contact":
       return "Captar contacte";
-    case "close_out":
-      return "Tancar conversa";
+    case "show_value":
+      return "Aportar valor";
+    case "disqualify":
+      return "Desqualificar";
     default:
-      return "Continuar diagnòstic";
+      return "Demanar més senyal";
   }
 }
 
@@ -65,8 +65,7 @@ function compactProfile(profile: KnownProfile) {
     ["Tipus d'entitat", profile.entity_type],
     ["Equip implicat", profile.team_size],
     ["Dolor principal", profile.primary_pain],
-    ["Urgència", profile.urgency],
-    ["Franja d'encaix", profile.fit_band],
+    ["Motiu d'exclusió", profile.exclusion_reason],
   ].filter(([, value]) => Boolean(value));
 }
 
@@ -81,8 +80,11 @@ export default function HomePage() {
     phone: "",
   });
   const [qualificationStatus, setQualificationStatus] =
-    useState<WebAgentResponse["qualification_status"] | null>(null);
-  const [nextStep, setNextStep] = useState<WebAgentResponse["next_step"] | null>(null);
+    useState<WebAgentResponse["fit_assessment"] | null>(null);
+  const [nextQuestion, setNextQuestion] = useState<string | null>(null);
+  const [qualificationSummary, setQualificationSummary] = useState<string | null>(null);
+  const [nextStep, setNextStep] =
+    useState<WebAgentResponse["recommended_next_step"] | null>(null);
   const [pendingMessage, setPendingMessage] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -128,12 +130,14 @@ export default function HomePage() {
         throw new Error("La resposta del web-agent no compleix el contracte JSON.");
       }
 
-      const nextProfile = mergeKnownProfile(profileRef.current, payload.collected_signals);
+      const nextProfile = mergeKnownProfile(profileRef.current, payload.signals_collected);
       profileRef.current = nextProfile;
       setKnownProfile(nextProfile);
       setMessages((current) => [...current, { role: "assistant", text: payload.agent_message }]);
-      setQualificationStatus(payload.qualification_status);
-      setNextStep(payload.next_step);
+      setQualificationStatus(payload.fit_assessment);
+      setNextQuestion(payload.next_question);
+      setQualificationSummary(payload.qualification_summary);
+      setNextStep(payload.recommended_next_step);
       setActiveAction(payload.ui_action.type === "render_component" ? payload.ui_action : null);
     } catch (caughtError) {
       console.error("web-agent request failed", caughtError);
@@ -301,8 +305,7 @@ export default function HomePage() {
               <div>
                 <h2 style={{ margin: 0 }}>Conversa de qualificació</h2>
                 <p style={{ margin: "6px 0 0", lineHeight: 1.5 }}>
-                  Conversa curta i guiada. Sense micro, sense streaming, sense modes
-                  ocults.
+                  Conversa curta i pragmàtica. No intenta salvar leads dubtosos.
                 </p>
               </div>
               <div
@@ -323,7 +326,7 @@ export default function HomePage() {
                     width: 10,
                   }}
                 />
-                {busy ? "Pensant resposta..." : "Contracte JSON actiu"}
+                {busy ? "Processant..." : "Contracte JSON actiu"}
               </div>
             </header>
 
@@ -388,6 +391,20 @@ export default function HomePage() {
                 </div>
               ) : null}
 
+              {nextQuestion ? (
+                <div
+                  style={{
+                    background: "#f7f3ea",
+                    borderRadius: 18,
+                    lineHeight: 1.55,
+                    marginTop: 18,
+                    padding: "14px 16px",
+                  }}
+                >
+                  <strong>Pregunta següent:</strong> {nextQuestion}
+                </div>
+              ) : null}
+
               {error ? (
                 <div
                   style={{
@@ -445,7 +462,7 @@ export default function HomePage() {
                 }}
               >
                 <p style={{ color: "#4b6352", fontSize: 14, margin: 0 }}>
-                  L&apos;agent ha d&apos;arribar a una conclusió o a una derivació clara.
+                  L&apos;agent ha de qualificar, desqualificar o deixar un següent pas clar.
                 </p>
                 <button
                   type="submit"
@@ -486,6 +503,32 @@ export default function HomePage() {
               >
                 Senyals recollits
               </h3>
+              {qualificationSummary ? (
+                <div
+                  style={{
+                    background:
+                      qualificationStatus === "low_fit" ? "#fff1f0" : "#edf5ee",
+                    borderRadius: 18,
+                    lineHeight: 1.55,
+                    marginBottom: 14,
+                    padding: "12px 14px",
+                  }}
+                >
+                  <p
+                    style={{
+                      fontSize: 12,
+                      fontWeight: 800,
+                      letterSpacing: "0.06em",
+                      margin: "0 0 4px",
+                      opacity: 0.72,
+                      textTransform: "uppercase",
+                    }}
+                  >
+                    Resum de qualificació
+                  </p>
+                  <p style={{ margin: 0 }}>{qualificationSummary}</p>
+                </div>
+              ) : null}
               {profileRows.length === 0 ? (
                 <p style={{ color: "#4b6352", lineHeight: 1.6, margin: 0 }}>
                   Encara no tenim prou senyal. El diagnòstic ha d&apos;omplir aquest
@@ -531,8 +574,8 @@ export default function HomePage() {
             >
               <h3 style={{ margin: "0 0 12px" }}>Límits d&apos;aquesta fase</h3>
               <ul style={{ lineHeight: 1.7, margin: 0, paddingLeft: 20 }}>
-                <li>No hi ha veu ni streaming.</li>
-                <li>No hi ha eines de demo ni context visual.</li>
+                <li>No hi ha veu ni Live real.</li>
+                <li>No hi ha demo-agent ni support-agent.</li>
                 <li>No s&apos;integra amb el suport ni amb el core de Summa.</li>
               </ul>
             </article>
@@ -558,7 +601,7 @@ function RichAction({
   onLeadDraftChange: (draft: LeadDraft) => void;
   onLeadSubmit: (event: FormEvent<HTMLFormElement>) => void;
   onQuickReply: (text: string) => Promise<void>;
-  qualificationStatus: WebAgentResponse["qualification_status"] | null;
+  qualificationStatus: WebAgentResponse["fit_assessment"] | null;
 }) {
   if (action.component === "ChoiceSelector") {
     const props = action.props as ChoiceSelectorProps;
@@ -609,7 +652,7 @@ function RichAction({
       >
         <h3 style={{ margin: "0 0 8px" }}>{props.title || "Com us podria ajudar Summa"}</h3>
         <p style={{ lineHeight: 1.6, margin: "0 0 12px" }}>
-          {props.body || "Aquesta funcionalitat es pot explicar millor en una demo curta."}
+          {props.body || "Això apunta a un valor concret de Summa per aquest cas."}
         </p>
         {bullets.length > 0 ? (
           <ul style={{ lineHeight: 1.7, margin: "0 0 14px", paddingLeft: 20 }}>
@@ -661,7 +704,7 @@ function RichAction({
             {props.headline || "Si voleu, deixeu les dades i continuem"}
           </h3>
           <p style={{ lineHeight: 1.6, margin: 0 }}>
-            {props.description || "Això només serveix per preparar la següent conversa o una demo."}
+            {props.description || "Això només serveix per deixar el contacte si realment hi ha encaix."}
           </p>
         </div>
 
@@ -757,7 +800,7 @@ function RichAction({
           {props.headline || "Conclusió provisional del diagnòstic"}
         </h3>
         <p style={{ lineHeight: 1.6, margin: "0 0 12px" }}>
-          {props.summary || "L'agent ja té prou senyal per proposar el següent pas."}
+          {props.summary || "L'agent ja té prou senyal per deixar una conclusió útil."}
         </p>
         {bullets.length > 0 ? (
           <ul style={{ lineHeight: 1.7, margin: "0 0 14px", paddingLeft: 20 }}>

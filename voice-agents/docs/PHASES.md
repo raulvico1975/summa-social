@@ -29,19 +29,19 @@ Evita invertir en una via tecnica sense criteri ni govern. No aporta valor d'usu
 
 ### Objectiu
 
-Validar un `web-agent` public que diagnostiqui l'encaix de Summa millor que un formulari o xat generic.
+Validar un `web-agent` public que qualifiqui o desqualifiqui l'encaix de Summa millor que un formulari o xat generic.
 
 ### Valor per Summa
 
-Demostra si una conversa guiada en text amb `rich UI` ajuda a qualificar millor i amb menys friccio.
+Demostra si una conversa guiada en text amb `rich UI` ajuda a filtrar millor, amb menys friccio i sense vendre fum.
 
 ### Scope
 
 - contracte JSON estricte del `web-agent`
 - components minims de `rich UI`
 - estat de qualificacio explicit
+- desqualificacio assertiva fora de l'ICP
 - sortida clara d'encaix i seguent pas
-- eval de qualitat sobre converses representatives
 - backend Python minim separat del client
 - client Next minim que consumeix el backend directament
 
@@ -49,19 +49,23 @@ Demostra si una conversa guiada en text amb `rich UI` ajuda a qualificar millor 
 
 - veu
 - Gemini Live
+- WebRTC
 - integracio al suport
 - automatitzacio de demo guiada
+- demo-agent
+- support-agent
 
 ### Evidencia minima
 
 - el model retorna JSON valid de manera estable
 - el flux no sembla un interrogatori
-- la conversa arriba a `bon encaix`, `encaix parcial` o `poc encaix`
+- la conversa arriba a `good_fit`, `uncertain_fit` o `low_fit`
+- la desqualificacio no intenta salvar leads fora de scope
 
 ### Implementacio activa al worktree
 
 - `voice-agents/contracts/` defineix request i response
-- `voice-agents/server/app.py` exposa `POST /api/web-agent`
+- `voice-agents/server/bot.py` exposa `POST /api/web-agent`
 - `voice-agents/client/app/page.tsx` renderitza la conversa text-first
 - el pilot no toca cap ruta ni runtime de l'app principal
 
@@ -70,16 +74,23 @@ Demostra si una conversa guiada en text amb `rich UI` ajuda a qualificar millor 
 1. Des del worktree, copia les variables locals:
    `cp voice-agents/client/.env.example voice-agents/client/.env.local`
 2. Arrenca el backend:
-   `cd voice-agents/server && python3 app.py`
+   `cd voice-agents/server && python3 bot.py`
 3. En una altra terminal, arrenca el client:
    `cd voice-agents/client && npm install && npm run dev -- --hostname 127.0.0.1 --port 3001`
 4. Comprova salut del backend:
    `curl http://127.0.0.1:8787/health`
 5. Obre `http://127.0.0.1:3001/`.
-6. Verifica aquests punts:
+6. Casos provats en aquesta iteracio:
+   - API text-first: `Som una associacio petita amb moltes quotes i molta feina manual amb el banc.`
+   - resultat validat: `fit_assessment = uncertain_fit`, `recommended_next_step = show_value`, `FeatureCard` visible i `next_question = Quantes persones toqueu aquest flux en el dia a dia?`
+   - navegador, cas de desqualificacio: `Necessitem un ERP complet amb comptabilitat formal, nomines i gestio de voluntariat.`
+   - resultat validat: `fit_assessment = low_fit`, `recommended_next_step = disqualify` i `QualificationSummaryCard` amb motiu d'exclusio
+7. Verifica aquests punts:
    - el client mostra la primera pregunta del diagnostic sense intervenir
    - apareix un `ChoiceSelector` usable
+   - quan es detecta un dolor alineat, pot apareixer una peca de valor abans de la seguent pregunta
    - en clicar una opcio, la conversa avanca i els senyals recollits es refresquen
+   - el resultat final mostra `uncertain_fit` o `low_fit` segons el cas provat
    - el backend retorna JSON valid a `POST /api/web-agent`
 
 ### Go / No-Go

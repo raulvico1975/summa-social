@@ -21,8 +21,7 @@ export type KnownProfile = {
   entity_type: string | null;
   team_size: string | null;
   primary_pain: string | null;
-  urgency: string | null;
-  fit_band: string | null;
+  exclusion_reason: string | null;
 };
 
 export type WebAgentRequest = {
@@ -33,17 +32,16 @@ export type WebAgentRequest = {
 };
 
 export type QualificationStatus =
-  | "evaluating"
   | "good_fit"
-  | "partial_fit"
   | "low_fit"
-  | "ready_to_convert";
+  | "uncertain_fit";
 
 export type NextStep =
-  | "capture_lead"
-  | "close_out"
-  | "continue_diagnosis"
-  | "offer_demo";
+  | "ask_more"
+  | "capture_contact"
+  | "disqualify"
+  | "offer_demo"
+  | "show_value";
 
 export type UiComponent =
   | "ChoiceSelector"
@@ -98,25 +96,26 @@ export type UiAction = {
 
 export type WebAgentResponse = {
   agent_message: string;
-  qualification_status: QualificationStatus;
-  collected_signals: KnownProfile;
+  fit_assessment: QualificationStatus;
+  signals_collected: KnownProfile;
+  next_question: string | null;
+  qualification_summary: string | null;
+  recommended_next_step: NextStep;
   ui_action: UiAction;
-  next_step: NextStep;
 };
 
 const QUALIFICATION_STATUSES: QualificationStatus[] = [
-  "evaluating",
   "good_fit",
-  "partial_fit",
   "low_fit",
-  "ready_to_convert",
+  "uncertain_fit",
 ];
 
 const NEXT_STEPS: NextStep[] = [
-  "capture_lead",
-  "close_out",
-  "continue_diagnosis",
+  "ask_more",
+  "capture_contact",
+  "disqualify",
   "offer_demo",
+  "show_value",
 ];
 
 const UI_COMPONENTS: UiComponent[] = [
@@ -140,8 +139,7 @@ export function createEmptyProfile(): KnownProfile {
     entity_type: null,
     team_size: null,
     primary_pain: null,
-    urgency: null,
-    fit_band: null,
+    exclusion_reason: null,
   };
 }
 
@@ -166,8 +164,7 @@ export function mergeKnownProfile(
     entity_type: update.entity_type ?? current.entity_type,
     team_size: update.team_size ?? current.team_size,
     primary_pain: update.primary_pain ?? current.primary_pain,
-    urgency: update.urgency ?? current.urgency,
-    fit_band: update.fit_band ?? current.fit_band,
+    exclusion_reason: update.exclusion_reason ?? current.exclusion_reason,
   };
 }
 
@@ -178,23 +175,24 @@ export function isWebAgentResponse(value: unknown): value is WebAgentResponse {
 
   if (
     typeof value.agent_message !== "string" ||
-    !QUALIFICATION_STATUSES.includes(value.qualification_status as QualificationStatus) ||
-    !NEXT_STEPS.includes(value.next_step as NextStep)
+    !QUALIFICATION_STATUSES.includes(value.fit_assessment as QualificationStatus) ||
+    !NEXT_STEPS.includes(value.recommended_next_step as NextStep) ||
+    !(typeof value.next_question === "string" || value.next_question === null) ||
+    !(typeof value.qualification_summary === "string" || value.qualification_summary === null)
   ) {
     return false;
   }
 
-  if (!isRecord(value.collected_signals) || !isRecord(value.ui_action)) {
+  if (!isRecord(value.signals_collected) || !isRecord(value.ui_action)) {
     return false;
   }
 
-  const profile = value.collected_signals;
+  const profile = value.signals_collected;
   if (
     !isStringOrNull(profile.entity_type) ||
     !isStringOrNull(profile.team_size) ||
     !isStringOrNull(profile.primary_pain) ||
-    !isStringOrNull(profile.urgency) ||
-    !isStringOrNull(profile.fit_band)
+    !isStringOrNull(profile.exclusion_reason)
   ) {
     return false;
   }

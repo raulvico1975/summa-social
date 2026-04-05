@@ -8,7 +8,8 @@ Aquest directori segueix aquestes regles locals:
 - No es dona una fase per bona sense evidencia minima de valor per Summa.
 - En aquest worktree nomes existeix la Fase 1 del `web-agent`.
 - El `web-agent` public es text-first i no depen de veu per convertir.
-- El `web-agent` pot descobrir necessitats, pero no pot prometre funcionalitats que el pilot no demostri.
+- El `web-agent` pot descobrir necessitats, pero no pot prometre funcionalitats no documentades al producte.
+- El `web-agent` ha de qualificar, desqualificar i deixar senyal util per a una demo comercial.
 - El pilot no implementa `Client -> Gemini` directe.
 - No queda codi preparatori de veu, demo o suport dins aquesta fase.
 

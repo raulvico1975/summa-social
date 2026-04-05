@@ -21,11 +21,14 @@ Next.js client del pilot
 - El client no veu mai la clau de Gemini.
 - El backend viu separat del client i parla amb Gemini via REST.
 - El contracte entre client i server es fixa a `voice-agents/contracts/`.
+- El criteri principal es comercial: qualificar, desqualificar i deixar senyal util.
+- El futur `support-agent`, quan existeixi, tindra la KB real de Summa com a font d'autoritat.
 
 ## Fora d'abast explicit
 
 - mode directe `Client -> Gemini`
 - veu o Gemini Live
+- streaming continu i sessions Live
 - demo-agent
 - support-agent
 - integracio al build o deploy principal
