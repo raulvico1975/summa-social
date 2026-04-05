@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { Logo } from '@/components/logo';
 import { PublicContactForm } from '@/components/public/PublicContactForm';
 import { PublicDirectContact } from '@/components/public/PublicDirectContact';
+import { PUBLIC_SHELL_X } from '@/components/public/public-shell';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Mail } from 'lucide-react';
 import { SUPPORT_EMAIL } from '@/lib/constants';
@@ -49,7 +50,7 @@ export default async function ContactPage({ params }: PageProps) {
 
   return (
     <main className="flex min-h-screen flex-col">
-      <div className="flex flex-1 flex-col items-center justify-center bg-background px-6 py-16 lg:px-20 xl:px-28 2xl:px-32">
+      <div className={`flex flex-1 flex-col items-center justify-center bg-background py-16 ${PUBLIC_SHELL_X}`}>
         <div className="w-full max-w-3xl space-y-8">
           <Logo className="h-12 w-12 mx-auto text-primary" />
 
@@ -114,7 +115,7 @@ export default async function ContactPage({ params }: PageProps) {
       </div>
 
       {/* Footer */}
-      <footer className="border-t px-6 py-6 lg:px-20 xl:px-28 2xl:px-32">
+      <footer className={`border-t py-6 ${PUBLIC_SHELL_X}`}>
         <div className="max-w-lg mx-auto flex items-center justify-center gap-6 text-sm text-muted-foreground">
           <Link href={`/${locale}/privacy`} className="hover:underline">
             {t.common.privacy}

@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { ArrowLeft, Clock3, PlayCircle } from 'lucide-react';
 import { PublicDirectContact } from '@/components/public/PublicDirectContact';
 import { PublicLandingVideo } from '@/components/public/PublicLandingVideo';
+import { PUBLIC_SHELL_X } from '@/components/public/public-shell';
 import { Button } from '@/components/ui/button';
 import { RelatedLandings } from '@/components/public/RelatedLandings';
 import type { PublicLocale } from '@/lib/public-locale';
@@ -91,8 +92,8 @@ export function PublicLandingTemplate({ locale, content, labels }: PublicLanding
   const shouldShowControls = isVideo ? (heroMedia.controls ?? false) : false;
   const hasFeaturedDemo = isVideo && shouldShowControls;
   const articleClassName = hasFeaturedDemo
-    ? 'mx-auto max-w-6xl px-6 py-12 lg:px-20 xl:px-28 2xl:px-32'
-    : 'mx-auto max-w-4xl px-6 py-12 lg:px-20 xl:px-28 2xl:px-32';
+    ? `${PUBLIC_SHELL_X} mx-auto max-w-6xl py-12`
+    : `${PUBLIC_SHELL_X} mx-auto max-w-4xl py-12`;
   const headerShellClass = hasFeaturedDemo
     ? 'rounded-[2rem] border border-sky-200/70 bg-[linear-gradient(135deg,rgba(14,165,233,0.08),rgba(255,255,255,0.98)_52%,rgba(240,249,255,0.94))] p-6 shadow-[0_30px_90px_-56px_rgba(14,165,233,0.34)] sm:p-8 lg:p-10'
     : 'rounded-[1.7rem] border border-border/50 bg-background/95 p-4 shadow-[0_24px_70px_-48px_rgba(15,23,42,0.2)]';
@@ -155,7 +156,7 @@ export function PublicLandingTemplate({ locale, content, labels }: PublicLanding
   return (
     <main className="min-h-screen bg-background">
       <div className="border-b">
-        <div className="mx-auto max-w-4xl px-6 py-4 lg:px-20 xl:px-28 2xl:px-32">
+        <div className={`${PUBLIC_SHELL_X} mx-auto max-w-4xl py-4`}>
           <Button asChild variant="ghost" size="sm">
             <Link href={`/${locale}`}>
               <ArrowLeft className="h-4 w-4 mr-2" />
@@ -317,8 +318,8 @@ export function PublicLandingTemplate({ locale, content, labels }: PublicLanding
         </div>
       </article>
 
-      <footer className="border-t px-6 py-6 lg:px-20 xl:px-28 2xl:px-32">
-        <div className="max-w-lg mx-auto flex items-center justify-center gap-6 text-sm text-muted-foreground">
+      <footer className={`border-t py-6 ${PUBLIC_SHELL_X}`}>
+        <div className="mx-auto flex max-w-lg items-center justify-center gap-6 text-sm text-muted-foreground">
           <Link href={`/${locale}/privacy`} className="hover:underline">
             {labels.privacy}
           </Link>

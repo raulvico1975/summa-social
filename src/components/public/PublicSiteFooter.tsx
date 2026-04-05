@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { PUBLIC_WIDE_SHELL } from '@/components/public/public-shell'
 import { getPublicTranslations } from '@/i18n/public'
 import { SUPPORT_EMAIL } from '@/lib/constants'
 import type { PublicLocale } from '@/lib/public-locale'
@@ -46,8 +47,8 @@ export function PublicSiteFooter({ locale }: PublicSiteFooterProps) {
   const blogHref = `/${locale}/blog`
 
   return (
-    <footer className="border-t bg-muted/20 px-6 py-12">
-      <div className="mx-auto grid max-w-6xl gap-10 md:grid-cols-3">
+    <footer className="border-t bg-muted/20 py-12">
+      <div className={`${PUBLIC_WIDE_SHELL} grid gap-10 md:grid-cols-3`}>
         <div className="space-y-4">
           <Link
             href={`/${locale}`}

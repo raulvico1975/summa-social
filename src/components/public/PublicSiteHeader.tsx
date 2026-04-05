@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { ArrowRight, ChevronDown, Menu } from 'lucide-react'
 import { Logo } from '@/components/logo'
+import { PUBLIC_WIDE_SHELL } from '@/components/public/public-shell'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { getPublicTranslations } from '@/i18n/public'
 import type { PublicLocale } from '@/lib/public-locale'
@@ -21,7 +22,7 @@ export function PublicSiteHeader({ locale, currentSection }: PublicSiteHeaderPro
 
   return (
     <header className="sticky top-0 z-50 border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
-      <div className="mx-auto max-w-6xl px-6 py-4">
+      <div className={`${PUBLIC_WIDE_SHELL} py-4`}>
         <div className="flex items-center justify-between gap-4">
           <Link
             href={`/${locale}`}

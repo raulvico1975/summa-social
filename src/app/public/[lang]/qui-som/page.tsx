@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { ArrowRight } from 'lucide-react';
+import { PUBLIC_SHELL_X } from '@/components/public/public-shell';
 import { PublicSiteHeader } from '@/components/public/PublicSiteHeader';
 import { PublicDirectContact } from '@/components/public/PublicDirectContact';
 import { Button } from '@/components/ui/button';
@@ -50,7 +51,7 @@ export default async function AboutPage({ params }: PageProps) {
     <main className="flex min-h-screen flex-col bg-background">
       <PublicSiteHeader locale={locale} />
 
-      <section className="relative overflow-hidden px-6 py-16 lg:px-20 lg:py-20 xl:px-28 2xl:px-32">
+      <section className={`relative overflow-hidden py-16 lg:py-20 ${PUBLIC_SHELL_X}`}>
         <div className="pointer-events-none absolute inset-0">
           <div className="absolute left-[-4rem] top-[-2rem] h-44 w-44 rounded-full bg-sky-100 blur-3xl" />
           <div className="absolute right-0 top-8 h-56 w-56 rounded-full bg-amber-100/70 blur-3xl" />
@@ -108,7 +109,7 @@ export default async function AboutPage({ params }: PageProps) {
         </div>
       </section>
 
-      <section className="px-6 pb-16 lg:px-20 lg:pb-20 xl:px-28 2xl:px-32">
+      <section className={`pb-16 lg:pb-20 ${PUBLIC_SHELL_X}`}>
         <div className="mx-auto grid max-w-5xl gap-6 lg:grid-cols-[1.1fr_0.9fr]">
           <div className="rounded-[1.75rem] border border-border/60 bg-muted/20 p-8">
             <p className="text-sm font-medium text-primary">{t.home.howWeWork.title}</p>

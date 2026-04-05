@@ -376,6 +376,29 @@ export function PublicFeaturesExplorer({
                                 <ArrowRight className="ml-2 h-4 w-4" />
                               </Link>
                             ) : null}
+                            <div className="mt-4 lg:hidden">
+                              <PublicFeatureDemo
+                                key={`${item.id}-mobile`}
+                                locale={locale}
+                                media={item.media}
+                                variant={layout === 'image-heavy' ? 'airy' : 'default'}
+                                className={cn(
+                                  layout === 'image-heavy'
+                                    ? 'w-full bg-transparent p-0 shadow-none'
+                                    : 'p-3 sm:p-4'
+                                )}
+                                mediaClassName={cn(
+                                  layout === 'image-heavy'
+                                    ? 'aspect-auto h-auto w-full rounded-xl object-contain object-center'
+                                    : 'rounded-[1.25rem]'
+                                )}
+                                showDemoBadge={false}
+                                showCaptionsBadge={false}
+                                expandOnPlay={false}
+                                dialogTitle={item.title}
+                                dialogDescription={item.description}
+                              />
+                            </div>
                           </AccordionContent>
                         </AccordionItem>
                       );
@@ -383,7 +406,7 @@ export function PublicFeaturesExplorer({
                   </Accordion>
                 </div>
 
-                <div className="lg:sticky lg:top-24">
+                <div className="hidden lg:sticky lg:top-24 lg:block">
                   <div
                     className={cn(
                       layout === 'image-heavy' &&
