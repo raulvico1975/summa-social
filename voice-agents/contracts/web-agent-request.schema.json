@@ -1,0 +1,81 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "WebAgentRequest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["locale", "messages", "known_profile", "ui_capabilities"],
+  "properties": {
+    "locale": {
+      "type": "string",
+      "minLength": 2,
+      "maxLength": 10
+    },
+    "messages": {
+      "type": "array",
+      "maxItems": 12,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["role", "text"],
+        "properties": {
+          "role": {
+            "type": "string",
+            "enum": ["user", "assistant"]
+          },
+          "text": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          }
+        }
+      }
+    },
+    "known_profile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "entity_type",
+        "team_size",
+        "primary_pain",
+        "urgency",
+        "fit_band"
+      ],
+      "properties": {
+        "entity_type": {
+          "type": ["string", "null"],
+          "maxLength": 200
+        },
+        "team_size": {
+          "type": ["string", "null"],
+          "maxLength": 200
+        },
+        "primary_pain": {
+          "type": ["string", "null"],
+          "maxLength": 200
+        },
+        "urgency": {
+          "type": ["string", "null"],
+          "maxLength": 200
+        },
+        "fit_band": {
+          "type": ["string", "null"],
+          "maxLength": 200
+        }
+      }
+    },
+    "ui_capabilities": {
+      "type": "array",
+      "uniqueItems": true,
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "enum": [
+          "choice_selector",
+          "feature_card",
+          "lead_capture_form",
+          "qualification_summary"
+        ]
+      }
+    }
+  }
+}

@@ -1,0 +1,96 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "WebAgentResponse",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "agent_message",
+    "qualification_status",
+    "collected_signals",
+    "ui_action",
+    "next_step"
+  ],
+  "properties": {
+    "agent_message": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 1200
+    },
+    "qualification_status": {
+      "type": "string",
+      "enum": [
+        "evaluating",
+        "good_fit",
+        "partial_fit",
+        "low_fit",
+        "ready_to_convert"
+      ]
+    },
+    "collected_signals": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "entity_type",
+        "team_size",
+        "primary_pain",
+        "urgency",
+        "fit_band"
+      ],
+      "properties": {
+        "entity_type": {
+          "type": ["string", "null"],
+          "maxLength": 200
+        },
+        "team_size": {
+          "type": ["string", "null"],
+          "maxLength": 200
+        },
+        "primary_pain": {
+          "type": ["string", "null"],
+          "maxLength": 200
+        },
+        "urgency": {
+          "type": ["string", "null"],
+          "maxLength": 200
+        },
+        "fit_band": {
+          "type": ["string", "null"],
+          "maxLength": 200
+        }
+      }
+    },
+    "ui_action": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "component", "props"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["none", "render_component"]
+        },
+        "component": {
+          "type": "string",
+          "enum": [
+            "None",
+            "ChoiceSelector",
+            "FeatureCard",
+            "LeadCaptureForm",
+            "QualificationSummaryCard"
+          ]
+        },
+        "props": {
+          "type": "object"
+        }
+      }
+    },
+    "next_step": {
+      "type": "string",
+      "enum": [
+        "continue_diagnosis",
+        "offer_demo",
+        "capture_lead",
+        "close_out"
+      ]
+    }
+  }
+}
