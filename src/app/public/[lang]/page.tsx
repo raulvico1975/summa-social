@@ -4,6 +4,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { PublicFeaturesExplorer, type PublicFeaturesExplorerSection } from '@/components/public/PublicFeaturesExplorer';
 import { PublicDirectContact } from '@/components/public/PublicDirectContact';
+import { PublicHeroParticles } from '@/components/public/PublicHeroParticles';
 import { PUBLIC_SHELL_X, PUBLIC_WIDE_SHELL } from '@/components/public/public-shell';
 import { RotatingHeroPhrase } from '@/components/public/RotatingHeroPhrase';
 import { PublicSiteHeader } from '@/components/public/PublicSiteHeader';
@@ -1726,10 +1727,13 @@ export default async function HomePage({ params }: PageProps) {
             </div>
 
             <div className="relative mx-auto w-full max-w-none">
+              <div className="absolute inset-[-10%] hidden sm:block">
+                <PublicHeroParticles className="scale-[1.06]" />
+              </div>
               <div className="pointer-events-none absolute inset-x-10 top-8 h-32 rounded-full bg-sky-100/80 blur-3xl" />
               <div className="pointer-events-none absolute bottom-8 left-8 h-24 w-24 rounded-full bg-amber-100/80 blur-3xl" />
 
-              <div className="relative mx-auto max-w-[60rem] pt-2">
+              <div className="relative z-10 mx-auto max-w-[60rem] pt-2">
                 <div className="overflow-hidden rounded-[1.55rem] border border-slate-200/75 bg-[linear-gradient(180deg,rgba(250,250,250,0.98),rgba(244,246,248,0.94))] p-1.5 shadow-[0_30px_72px_-56px_rgba(15,23,42,0.24)] backdrop-blur">
                   <div className="overflow-hidden rounded-[1.15rem] border border-slate-200/80 bg-white/98">
                     <div className="flex items-center border-b border-slate-200/80 bg-slate-50/90 px-4 py-2">
