@@ -18,6 +18,22 @@ Aquest checklist assegura que els fluxos fiscals crítics no tenen regressions a
 
 ## 2. Checklist de verificació (PASS/FAIL)
 
+### Registre manual 2026-04-05 — Amplada de modals d'importació/exportació sensibles
+
+**Context:**
+Ajust de layout en modals d'importació i exportació relacionades amb `Donants`, `Devolucions`, `Moviments`, `Model 182`, `Certificats`, `Model 347` i altres assistents d'import. El canvi amplia l'espai útil en desktop i manté el comportament responsive sense tocar càlculs, mappings, persistència ni criteris fiscals.
+
+**Comprovacions aplicades:**
+1. Revisió manual del diff per confirmar que els fitxers afectats només canvien classes d'amplada/overflow de `DialogContent` i no modifiquen lògica, dades ni imports.
+2. Verificació tècnica amb `npm run typecheck` en verd sobre el commit candidat.
+3. Verificació tècnica amb `git diff --check` en verd per descartar errors de format al diff.
+4. Validació de build de producció dins del ritual `npm run publica`, comprovant que el projecte compila correctament abans del gate fiscal.
+
+**Resultat:**
+- [x] El canvi és UI-only i no altera imports, totals, remeses, certificats ni cap càlcul fiscal.
+- [x] Les modals sensibles guanyen amplada útil en desktop i mantenen scroll/control d'overflow coherents.
+- [x] El guardrail fiscal queda cobert amb evidència manual específica del flux afectat.
+
 ### Registre manual 2026-04-05 — Amplada de llistats de donants, remeses i fiscalitat
 
 **Context:**
