@@ -39,8 +39,13 @@ Aquest blueprint descriu nomes la implementacio activa del `web-agent` text-firs
 
 ## Fora d'abast
 
-- veu
-- Gemini Live
-- WebRTC
-- demo-agent
 - support-agent
+
+## Demo-agent Live
+
+- backend separat a `server/demo_bot.py`
+- model Live actual configurable per entorn
+- audio per Daily WebRTC
+- context de pantalla enviat via `MutationObserver`
+- function calling limitat a `highlight_element` i `Maps_to`
+- sandbox falsa a `client/app/live/page.tsx` per provar remeses i donants

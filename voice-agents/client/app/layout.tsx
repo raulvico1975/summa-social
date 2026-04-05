@@ -1,8 +1,8 @@
 import type { ReactNode } from "react";
 
 export const metadata = {
-  title: "Summa Voice Agents · Web-Agent",
-  description: "Pilot text-first per diagnosticar l'encaix de Summa Social",
+  title: "Summa Voice Agents",
+  description: "Pilot aillat de web-agent i demo-agent per a Summa Social",
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {

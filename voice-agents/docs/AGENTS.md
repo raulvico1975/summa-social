@@ -14,8 +14,10 @@ En aquesta iteracio nomes hi ha implementacio activa del `web-agent`.
 
 ## Demo-agent
 
-- no implementat en aquesta fase
-- queda explicitament fora
+- prova de concepte Live a `client/app/live/` i `server/demo_bot.py`
+- to calmat, curt i contextual
+- no llegeix pantalles senceres
+- només pot destacar elements o navegar dins la demo falsa
 
 ## Support-agent
 

@@ -101,4 +101,45 @@ Demostra si una conversa guiada en text amb `rich UI` ajuda a filtrar millor, am
 
 ## Nota de tall
 
-Aquest worktree es tanca amb Fase 1. No hi ha preparacio de Fase 2 ni documentacio executable de fases posteriors dins aquest lliurament.
+## Fase 2 - Demo-Agent Live
+
+### Objectiu
+
+Validar una guia de veu en temps real que pugui entendre la pantalla actual d'una demo i ajudar a navegar-la sense refactoritzar l'app principal.
+
+### Valor per Summa
+
+Permet comprovar si una demo guiada oralment redueix friccio i estalvia temps al Raül en demos repetitives de tresoreria, remeses i donants.
+
+### Scope
+
+- backend Live separat a `voice-agents/server/demo_bot.py`
+- Daily WebRTC per a audio bidireccional
+- Gemini Live per a resposta de veu i function calling
+- context DOM enviat de manera silenciosa des de `/live`
+- dues tools nomes: `highlight_element` i `Maps_to`
+- sandbox falsa a `/live` amb pantalles de remeses i donants
+
+### Fora de scope
+
+- integracio al core de Summa
+- suport operatiu real
+- desplegament
+- refactor global de frontend
+
+### Evidencia minima
+
+- la ruta `/live` arrenca i es connecta a una sessio Daily
+- el client envia context `data-ai-*` al backend Live
+- l'agent pot destacar un boto o navegar entre pantalles de la demo
+
+### Validacio esperada
+
+- `python3 -m py_compile voice-agents/server/demo_bot.py`
+- `npm run typecheck`
+- `npm run build`
+- `GET /health` del backend Live
+
+## Nota de tall
+
+Aquest worktree manté Fase 1 i Fase 2 aillades. El `web-agent` i el `demo-agent` viuen separats i no toquen el core de Summa.
