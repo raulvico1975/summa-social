@@ -129,8 +129,7 @@ function LiveDemoClient() {
       if (!currentContext.visibleActions.includes(toolCall.args.element_id)) {
         return {
           ok: false,
-          message:
-            "Aquesta opció no està disponible a la vista actual. Primer posa't a la pantalla correcta i t'ho marco.",
+          message: "Aquesta opció no està disponible aquí.",
         };
       }
 

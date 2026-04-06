@@ -221,6 +221,28 @@ function fallbackToolCall(message: string, domContext: CopilotRequest["dom_conte
   return null;
 }
 
+function missingActionMessage(
+  message: string,
+  domContext: CopilotRequest["dom_context"],
+): string | null {
+  const normalized = normalizeIntent(message);
+  const visibleActions = domContext?.visibleActions || [];
+
+  const asksForRemittanceButton =
+    (normalized.includes("remes") || normalized.includes("sepa")) &&
+    (normalized.includes("boto") ||
+      normalized.includes("genera") ||
+      normalized.includes("generar") ||
+      normalized.includes("trobo") ||
+      normalized.includes("clico"));
+
+  if (asksForRemittanceButton && !visibleActions.includes("generar_sepa")) {
+    return "Aquesta opció no està disponible aquí.";
+  }
+
+  return null;
+}
+
 function singleActionConfirmation(toolCall: ToolCall | null | undefined) {
   if (!toolCall) {
     return null;
@@ -252,6 +274,15 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Falta el missatge de l'usuari." }, { status: 400 });
     }
 
+    const exactMissingActionMessage = missingActionMessage(message, body.dom_context);
+    if (exactMissingActionMessage) {
+      return NextResponse.json({
+        assistantMessage: exactMissingActionMessage,
+        model: DEFAULT_MODEL,
+        toolCall: null,
+      });
+    }
+
     const apiKey = requireGoogleApiKey();
     const response = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/${DEFAULT_MODEL}:generateContent`,
@@ -275,6 +306,7 @@ export async function POST(request: Request) {
                   "Si l'usuari vol anar a una altra seccio, executa Maps_to i respon amb una frase curta i d'accio, per exemple Et porto a la vista de donants.",
                   "Si l'usuari no troba un boto i el tens al context, executa highlight_element i guia'l visualment de forma natural, per exemple El tens just aqui dalt a la dreta il·luminat. Clica'l i ho deixem llest.",
                   "Si et fan una pregunta generica sobre on son les coses, mira primer el dom_context: si ja son a la vista correcta, fes highlight; si no, fes Maps_to.",
+                  "Si l usuari demana una accio sobre un boto que no veus a visibleActions, no utilitzis highlight_element. Respon exclusivament amb aquest text exacte: Aquesta opcio no esta disponible aqui. I atura t.",
                   "No donis instruccions llargues. Sigues invisible i eficient. L'usuari ha de sentir que el programa es condueix sol.",
                   "REGLA D ACCIO UNICA MOLT IMPORTANT: si en aquest torn decideixes executar una eina highlight_element o Maps_to, la teva resposta de text ha de ser exclusivament la confirmacio breu de l accio.",
                   "Esta absolutament prohibit fer preguntes de seguiment, demanar aclariments o continuar la conversa si has disparat una eina en aquell mateix torn. Fes l accio, confirma ho breument, i calla.",
