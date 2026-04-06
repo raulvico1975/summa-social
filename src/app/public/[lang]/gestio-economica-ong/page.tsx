@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { ArrowLeft, ArrowRight } from 'lucide-react';
 import { PublicDirectContact } from '@/components/public/PublicDirectContact';
+import { PUBLIC_SHELL_X } from '@/components/public/public-shell';
 import { PublicSiteFooter } from '@/components/public/PublicSiteFooter';
 import { PublicSiteHeader } from '@/components/public/PublicSiteHeader';
 import { Button } from '@/components/ui/button';
@@ -203,7 +204,7 @@ export default async function GestioEconomicaOngHubPage({ params }: PageProps) {
     <main className={pageShellClass}>
       <PublicSiteHeader locale={locale} currentSection="features" />
 
-      <section className="px-6 pb-10 pt-8 lg:pt-12">
+      <section className={`pb-10 pt-8 lg:pt-12 ${PUBLIC_SHELL_X}`}>
         <div className="mx-auto max-w-6xl">
           <Button asChild variant="ghost" size="sm" className="rounded-full px-4 text-muted-foreground hover:text-foreground">
             <Link href={`/${locale}`}>
@@ -265,7 +266,7 @@ export default async function GestioEconomicaOngHubPage({ params }: PageProps) {
         </div>
       </section>
 
-      <section className="px-6 pb-8">
+      <section className={`pb-8 ${PUBLIC_SHELL_X}`}>
         <div className="mx-auto grid max-w-6xl gap-4 md:grid-cols-3">
           {groups.map((group) => (
             <div
@@ -279,7 +280,7 @@ export default async function GestioEconomicaOngHubPage({ params }: PageProps) {
         </div>
       </section>
 
-      <div className="space-y-6 px-6 pb-10">
+      <div className={`space-y-6 pb-10 ${PUBLIC_SHELL_X}`}>
         {groups.map((group, index) => (
           <section key={group.id} id={group.id} className="mx-auto max-w-6xl scroll-mt-24">
             <div
@@ -317,7 +318,7 @@ export default async function GestioEconomicaOngHubPage({ params }: PageProps) {
         ))}
       </div>
 
-      <section className="px-6 pb-20 pt-4">
+      <section className={`pb-20 pt-4 ${PUBLIC_SHELL_X}`}>
         <div className="mx-auto max-w-6xl rounded-[2rem] border border-sky-200/70 bg-[linear-gradient(135deg,rgba(14,165,233,0.14),rgba(255,255,255,0.96)_45%,rgba(240,249,255,0.92))] p-6 shadow-[0_30px_90px_-56px_rgba(14,165,233,0.42)] sm:p-8 lg:p-10">
           <h2 className="max-w-3xl text-3xl font-semibold tracking-tight text-foreground lg:text-[2.2rem]">
             {copy.finalTitle}

@@ -4,6 +4,8 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { PublicFeaturesExplorer, type PublicFeaturesExplorerSection } from '@/components/public/PublicFeaturesExplorer';
 import { PublicDirectContact } from '@/components/public/PublicDirectContact';
+import { PublicHeroParticles } from '@/components/public/PublicHeroParticles';
+import { PUBLIC_SHELL_X, PUBLIC_WIDE_SHELL } from '@/components/public/public-shell';
 import { RotatingHeroPhrase } from '@/components/public/RotatingHeroPhrase';
 import { PublicSiteHeader } from '@/components/public/PublicSiteHeader';
 import { Button } from '@/components/ui/button';
@@ -19,13 +21,9 @@ import { getPublicTranslations } from '@/i18n/public';
 import { type PublicLandingHeroMedia } from '@/lib/public-landings';
 import { getPublicFeaturesHref } from '@/lib/public-site-paths';
 
-const frameClass =
-  'overflow-hidden rounded-[1.75rem] border border-border/60 bg-white/90 shadow-[0_28px_80px_-44px_rgba(15,23,42,0.28)] backdrop-blur';
-
 const surfaceClass =
   'rounded-[1.75rem] border border-border/60 bg-white/90 shadow-[0_22px_60px_-40px_rgba(15,23,42,0.18)] backdrop-blur';
 
-const FRAME_CLASS = frameClass;
 const SURFACE_CLASS = surfaceClass;
 
 const HERO_ROTATING_SEGMENTS: Record<PublicLocale, string> = {
@@ -407,13 +405,13 @@ const HOME_REFRESH_COPY: Record<
     },
     fit: {
       eyebrow: 'Per a qui és',
-      title: 'Summa encaixa quan hi ha operativa econòmica real.',
+      title: 'Entitats socials, culturals, esportives i de cooperació',
       fitTitle: 'Encaixa si',
       fitItems: [
-        'Gestioneu quotes o donacions recurrents',
-        'Teniu remeses o devolucions',
-        'Prepareu Model 182 o certificats',
-        'Voleu deixar enrere Excel com a centre de control',
+        'Gestioneu quotes de socis o donacions',
+        'Envieu remeses i teniu devolucions',
+        'Prepareu Model 182 o certificats de donació',
+        "L'Excel se us queda curt i us obliga a molta feina manual",
       ],
       notFitTitle: 'No és per a vosaltres si',
       notFitItems: [
@@ -425,10 +423,10 @@ const HOME_REFRESH_COPY: Record<
     },
     work: {
       eyebrow: 'Com treballem',
-      title: 'Primer mirem si encaixa amb la vostra operativa.',
+      title: 'Primer mirem si us pot ajudar de veritat.',
       description:
         'No comencem amb una demo genèrica. Primer entenem com porteu banc, quotes, devolucions i fiscalitat, i després us ensenyem només allò que us ha de resoldre feina.',
-      note: 'Si no hi ha encaix clar amb la vostra manera de treballar, us ho direm abans de fer-vos perdre temps.',
+      note: 'Si veiem que no és la millor opció per a la vostra manera de treballar, us ho direm abans de fer-vos perdre temps.',
     },
     final: {
       eyebrow: 'Parla amb nosaltres',
@@ -1681,22 +1679,22 @@ export default async function HomePage({ params }: PageProps) {
 
       <PublicSiteHeader locale={locale} />
 
-      <section className="relative overflow-hidden bg-background px-6 pb-12 pt-12 lg:px-20 lg:pb-16 lg:pt-16 xl:px-28 2xl:px-32">
+      <section className={`relative overflow-hidden bg-background pb-6 pt-6 lg:pb-8 lg:pt-8 ${PUBLIC_SHELL_X}`}>
         <div className="pointer-events-none absolute inset-0">
           <div className="absolute left-[-5rem] top-[-4rem] h-52 w-52 rounded-full bg-sky-100/85 blur-3xl" />
           <div className="absolute right-[8%] top-[12%] h-72 w-72 rounded-full bg-amber-100/70 blur-3xl" />
           <div className="absolute bottom-[-5rem] right-[-1rem] h-60 w-60 rounded-full bg-cyan-100/70 blur-3xl" />
         </div>
 
-        <div className="relative mx-auto max-w-6xl">
-          <div className="grid items-center gap-12 lg:grid-cols-[0.8fr_1.2fr] lg:gap-14">
+        <div className="relative mx-auto max-w-[82rem]">
+          <div className="grid items-center gap-12 lg:grid-cols-[0.78fr_1.22fr] lg:gap-10 xl:gap-12 2xl:gap-14">
             <div className="space-y-5 text-center lg:space-y-6 lg:text-left">
               <div className="space-y-5">
-                <p className="mx-auto inline-flex w-fit items-center rounded-full border border-sky-200/80 bg-white/80 px-4 py-2 text-sm font-semibold text-primary/90 shadow-[0_16px_40px_-28px_rgba(14,165,233,0.55)] lg:mx-0">
+                <p className="mx-auto inline-flex w-fit items-center rounded-full border border-sky-200/80 bg-white/80 px-3 py-1.5 text-[10px] font-semibold text-primary/90 shadow-[0_16px_40px_-28px_rgba(14,165,233,0.55)] sm:px-3.5 sm:py-1.5 sm:text-[11px] lg:mx-0 lg:text-xs">
                   {t.home.hero.bridgeLine}
                 </p>
 
-                <h1 className="mx-auto max-w-3xl text-[2.65rem] font-black leading-[0.98] tracking-[-0.04em] text-foreground sm:text-[3.25rem] lg:mx-0 lg:text-[4.1rem] 2xl:text-[4.85rem]">
+                <h1 className="mx-auto max-w-3xl text-[2.95rem] font-black leading-[0.98] tracking-[-0.04em] text-foreground sm:text-[3.6rem] md:text-[3.95rem] lg:mx-0 lg:text-[4.1rem] 2xl:text-[4.85rem]">
                   {headlineParts.highlight ? (
                     <>
                       <span className="block">{headlinePrefix}</span>
@@ -1729,23 +1727,29 @@ export default async function HomePage({ params }: PageProps) {
             </div>
 
             <div className="relative mx-auto w-full max-w-none">
+              <div className="absolute inset-[-10%] hidden sm:block">
+                <PublicHeroParticles className="scale-[1.06]" />
+              </div>
               <div className="pointer-events-none absolute inset-x-10 top-8 h-32 rounded-full bg-sky-100/80 blur-3xl" />
               <div className="pointer-events-none absolute bottom-8 left-8 h-24 w-24 rounded-full bg-amber-100/80 blur-3xl" />
 
-              <div className="relative mx-auto max-w-[60rem] pt-2">
-                <div className={`${FRAME_CLASS} border-white/75 p-2.5 shadow-[0_46px_132px_-58px_rgba(15,23,42,0.4)]`}>
-                  <div className="rounded-[1.45rem] border border-border/50 bg-white/96 px-4 py-3">
-                    <div className="mb-3 flex items-center justify-between text-xs font-medium text-muted-foreground">
-                      <span>Summa Social</span>
-                      <span>{t.home.workflow.title}</span>
+              <div className="relative z-10 mx-auto max-w-[60rem] pt-2">
+                <div className="overflow-hidden rounded-[1.55rem] border border-slate-200/75 bg-[linear-gradient(180deg,rgba(250,250,250,0.98),rgba(244,246,248,0.94))] p-1.5 shadow-[0_30px_72px_-56px_rgba(15,23,42,0.24)] backdrop-blur">
+                  <div className="overflow-hidden rounded-[1.15rem] border border-slate-200/80 bg-white/98">
+                    <div className="flex items-center border-b border-slate-200/80 bg-slate-50/90 px-4 py-2">
+                      <div className="flex items-center gap-1.5">
+                        <span className="h-2.5 w-2.5 rounded-full bg-[#ff5f57]" />
+                        <span className="h-2.5 w-2.5 rounded-full bg-[#febc2e]" />
+                        <span className="h-2.5 w-2.5 rounded-full bg-[#28c840]" />
+                      </div>
                     </div>
-                    <div className="overflow-hidden rounded-[1.35rem] border border-border/50 bg-white">
+                    <div className="overflow-hidden bg-slate-100/80">
                       <Image
                         src="/visuals/web/web_pantalla_summa.webp"
                         alt={t.home.hero.visualAlt}
                         width={1600}
                         height={1000}
-                        sizes="(min-width: 1280px) 60vw, (min-width: 1024px) 58vw, 100vw"
+                        sizes="(min-width: 1536px) 56vw, (min-width: 1280px) 58vw, (min-width: 1024px) 54vw, 100vw"
                         className="h-auto w-full"
                         priority
                       />
@@ -1753,13 +1757,13 @@ export default async function HomePage({ params }: PageProps) {
                   </div>
                 </div>
 
-                <div className="mt-4 hidden sm:grid sm:grid-cols-2 sm:gap-2.5 xl:flex xl:flex-nowrap xl:items-center xl:justify-center">
+                <div className="mt-4 hidden sm:flex sm:flex-wrap sm:items-center sm:justify-center sm:gap-2">
                   {heroHighlights.map((item) => (
                     <div
                       key={item}
-                      className="inline-flex items-center justify-center gap-2 rounded-full border border-slate-200/80 bg-white/88 px-3.5 py-2 text-[13px] font-medium leading-5 text-slate-700 shadow-[0_12px_30px_-28px_rgba(15,23,42,0.18)] backdrop-blur xl:whitespace-nowrap"
+                      className="inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-full border border-slate-200/80 bg-white/82 px-2.5 py-1 text-[11px] font-medium leading-none text-slate-600 shadow-[0_10px_24px_-24px_rgba(15,23,42,0.14)] backdrop-blur"
                     >
-                      <span className="h-1.5 w-1.5 rounded-full bg-primary/75" />
+                      <span className="h-1 w-1 rounded-full bg-primary/70" />
                       <span>{item}</span>
                     </div>
                   ))}
@@ -1804,58 +1808,10 @@ export default async function HomePage({ params }: PageProps) {
         </div>
       </section>
 
-      <section className="px-6 py-16 lg:px-20 lg:py-20 xl:px-28 2xl:px-32">
-        <div className="mx-auto max-w-6xl">
-          <div className="max-w-3xl space-y-4">
-            {copy.beforeAfter.eyebrow ? (
-              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-primary/85">
-                {copy.beforeAfter.eyebrow}
-              </p>
-            ) : null}
-            <h2 className="text-3xl font-semibold tracking-tight text-foreground sm:text-[2.35rem]">
-              {copy.beforeAfter.title}
-            </h2>
-            <p className="text-base leading-7 text-muted-foreground sm:text-lg">
-              {copy.beforeAfter.description}
-            </p>
-          </div>
-
-          <div className="mt-10 grid gap-5 lg:grid-cols-2">
-            <article className={`${SURFACE_CLASS} p-6 sm:p-7`}>
-              <p className="text-sm font-semibold uppercase tracking-[0.16em] text-primary/85">
-                {copy.beforeAfter.beforeTitle}
-              </p>
-              <div className="mt-5 space-y-3">
-                {copy.beforeAfter.beforeItems.map((item) => (
-                  <div key={item} className="flex gap-3 rounded-[1.15rem] bg-slate-50 px-4 py-3">
-                    <span className="mt-2 h-2.5 w-2.5 shrink-0 rounded-full bg-slate-400" />
-                    <p className="text-sm leading-6 text-slate-700">{item}</p>
-                  </div>
-                ))}
-              </div>
-            </article>
-
-            <article className={`${SURFACE_CLASS} p-6 sm:p-7`}>
-              <p className="text-sm font-semibold uppercase tracking-[0.16em] text-primary/85">
-                {copy.beforeAfter.afterTitle}
-              </p>
-              <div className="mt-5 space-y-3">
-                {copy.beforeAfter.afterItems.map((item) => (
-                  <div key={item} className="flex gap-3 rounded-[1.15rem] bg-slate-50 px-4 py-3">
-                    <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
-                    <p className="text-sm leading-6 text-slate-700">{item}</p>
-                  </div>
-                ))}
-              </div>
-            </article>
-          </div>
-        </div>
-      </section>
-
       {/* D) FUNCIONALITATS — EXPLORADOR */}
       <section
         id="capabilities"
-        className="scroll-mt-24 bg-[linear-gradient(180deg,#f8f9fc_0%,#f8f9fc_36%,#ffffff_100%)] px-6 py-16 lg:px-20 lg:py-20 xl:px-28 2xl:px-32"
+        className={`scroll-mt-24 bg-[linear-gradient(180deg,#f8f9fc_0%,#f8f9fc_36%,#ffffff_100%)] py-16 lg:py-20 ${PUBLIC_SHELL_X}`}
       >
         <div className="mx-auto max-w-[96rem]">
           <div className="mx-auto max-w-[42rem] text-center">
@@ -1865,9 +1821,11 @@ export default async function HomePage({ params }: PageProps) {
             <h2 className="mt-3 text-3xl font-semibold tracking-tight text-foreground sm:text-[2.45rem]">
               {t.home.systemOverview.title}
             </h2>
-            <p className="mt-4 text-base leading-7 text-muted-foreground sm:text-lg">
-              {t.home.systemOverview.subtitle}
-            </p>
+            {t.home.systemOverview.subtitle ? (
+              <p className="mt-4 text-base leading-7 text-muted-foreground sm:text-lg">
+                {t.home.systemOverview.subtitle}
+              </p>
+            ) : null}
           </div>
 
           <div className="mt-10 lg:mt-12">
@@ -1886,7 +1844,7 @@ export default async function HomePage({ params }: PageProps) {
         </div>
       </section>
 
-      <section className="px-6 py-16 lg:px-20 lg:py-20 xl:px-28 2xl:px-32">
+      <section className={`py-16 lg:py-20 ${PUBLIC_SHELL_X}`}>
         <div className="mx-auto max-w-6xl">
           <div className="max-w-3xl space-y-4">
             <p className="text-sm font-semibold uppercase tracking-[0.18em] text-primary/85">
@@ -1929,7 +1887,7 @@ export default async function HomePage({ params }: PageProps) {
         </div>
       </section>
 
-      <section id="how-we-work" className="bg-white px-6 py-16 lg:px-20 lg:py-20 xl:px-28 2xl:px-32">
+      <section id="how-we-work" className={`bg-white py-16 lg:py-20 ${PUBLIC_SHELL_X}`}>
         <div className="mx-auto max-w-6xl">
           <div className={`${SURFACE_CLASS} grid gap-8 p-6 sm:p-8 lg:grid-cols-[0.95fr_1.05fr] lg:items-start`}>
             <div className="space-y-6">
@@ -1952,7 +1910,7 @@ export default async function HomePage({ params }: PageProps) {
         </div>
       </section>
 
-      <section data-preview-section="cta-final" className="px-6 pb-20 pt-10 lg:px-20 lg:pt-14 xl:px-28 2xl:px-32">
+      <section data-preview-section="cta-final" className={`pb-20 pt-10 lg:pt-14 ${PUBLIC_SHELL_X}`}>
         <div className="mx-auto max-w-6xl rounded-[2.4rem] border border-sky-200/70 bg-[linear-gradient(135deg,rgba(14,165,233,0.16),rgba(255,255,255,0.96)_45%,rgba(240,249,255,0.92))] p-6 shadow-[0_30px_90px_-56px_rgba(14,165,233,0.45)] sm:p-8 lg:p-10">
           <div className="grid gap-8 lg:grid-cols-[1fr_0.92fr] lg:items-center">
             <div className="space-y-5">
@@ -1981,8 +1939,8 @@ export default async function HomePage({ params }: PageProps) {
         </div>
       </section>
 
-      <footer className="border-t bg-muted/20 px-6 py-12 lg:px-20 xl:px-28 2xl:px-32">
-        <div className="mx-auto grid max-w-6xl gap-10 md:grid-cols-3">
+      <footer className="border-t bg-muted/20 py-12">
+        <div className={`${PUBLIC_WIDE_SHELL} grid gap-10 md:grid-cols-3`}>
           <div className="space-y-4">
             <Link
               href={`/${locale}`}

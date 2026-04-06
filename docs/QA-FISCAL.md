@@ -18,6 +18,54 @@ Aquest checklist assegura que els fluxos fiscals crítics no tenen regressions a
 
 ## 2. Checklist de verificació (PASS/FAIL)
 
+### Registre manual 2026-04-05 — Amplada de modals SEPA i remeses
+
+**Context:**
+Ajust de layout en modals i diàlegs auxiliars de `Remeses SEPA`, conciliació SEPA, desglossament de remeses i devolucions. El canvi amplia l'espai útil en desktop per revisar imports, comptes, llistats i textos llargs sense tocar càlculs, seqüències SEPA, persistència ni regles fiscals.
+
+**Comprovacions aplicades:**
+1. Revisió manual del diff per confirmar que els fitxers afectats només ajusten classes d'amplada/overflow de `DialogContent`.
+2. Revisió específica dels casos `sepa-generation-modal`, `sepa-reconcile-modal`, `remittance-splitter`, `split-detail-dialog` i esborrany de correu de devolució, validant que el canvi és només visual.
+3. Evidència tècnica prevista per deploy: `npm run typecheck`, `git diff --check` i ritual `npm run publica` sobre el commit candidat.
+
+**Resultat:**
+- [x] El canvi és UI-only i no altera generació SEPA, imports, remeses, devolucions ni càlculs fiscals.
+- [x] Els diàlegs de remeses guanyen amplada útil i redueixen dependència de truncaments o scrolls incòmodes.
+- [x] La guardrail fiscal queda coberta amb evidència manual específica del flux SEPA afectat.
+
+### Registre manual 2026-04-05 — Amplada de modals d'importació/exportació sensibles
+
+**Context:**
+Ajust de layout en modals d'importació i exportació relacionades amb `Donants`, `Devolucions`, `Moviments`, `Model 182`, `Certificats`, `Model 347` i altres assistents d'import. El canvi amplia l'espai útil en desktop i manté el comportament responsive sense tocar càlculs, mappings, persistència ni criteris fiscals.
+
+**Comprovacions aplicades:**
+1. Revisió manual del diff per confirmar que els fitxers afectats només canvien classes d'amplada/overflow de `DialogContent` i no modifiquen lògica, dades ni imports.
+2. Verificació tècnica amb `npm run typecheck` en verd sobre el commit candidat.
+3. Verificació tècnica amb `git diff --check` en verd per descartar errors de format al diff.
+4. Validació de build de producció dins del ritual `npm run publica`, comprovant que el projecte compila correctament abans del gate fiscal.
+
+**Resultat:**
+- [x] El canvi és UI-only i no altera imports, totals, remeses, certificats ni cap càlcul fiscal.
+- [x] Les modals sensibles guanyen amplada útil en desktop i mantenen scroll/control d'overflow coherents.
+- [x] El guardrail fiscal queda cobert amb evidència manual específica del flux afectat.
+
+### Registre manual 2026-04-05 — Amplada de llistats de donants, remeses i fiscalitat
+
+**Context:**
+Ajust de layout per aprofitar millor l'amplada disponible en llistats sensibles de `Donants`, pas de configuració/selecció de `Remeses SEPA`, `Model 182` i `Certificats`. El canvi fixa millor les columnes desktop, amplia l'espai útil en pantalles grans i elimina contenidors massa estrets sense tocar càlculs, persistència ni criteris fiscals.
+
+**Comprovacions aplicades:**
+1. Revisió visual del llistat desktop de `/{org}/dashboard/donants`, comprovant que les columnes `Nom`, `NIF`, tipus, modalitat i import aprofiten l'amplada i que els noms llargs es trunquen sense desquadrar la fila.
+2. Revisió visual del pas `Configuració` i del pas `Selecció` de `/{org}/dashboard/donants/remeses-cobrament`, comprovant doble columna en desktop, cercador més ample i taules principals/exclosos sense aparença encaixonada.
+3. Revisió visual dels llistats desktop de `/{org}/dashboard/informes` per `Model 182` i `Certificats`, validant repartiment de columnes, imports alineats i absència d'overflow horitzontal crític.
+4. Verificació tècnica amb `scripts/verify-local.sh` en verd, incloent `npm run build` correcte sobre el commit candidat.
+
+**Resultat:**
+- [x] El canvi és només de layout/taula i no altera imports, totals, remeses, certificats ni regles fiscals.
+- [x] Els llistats sensibles aprofiten més bé l'amplada desktop i mantenen truncat controlat en camps llargs.
+- [x] Remeses SEPA mostra configuració i selecció amb més espai útil, coherent amb la resta de llistats del dashboard.
+- [x] La guardrail fiscal queda coberta amb evidència manual del flux afectat i build de producció correcte.
+
 ### Registre manual 2026-04-03 — Modals de remeses, Stripe i resum pre-importació
 
 **Context:**

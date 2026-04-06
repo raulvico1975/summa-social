@@ -1313,7 +1313,7 @@ const ca: PublicTranslations = {
     },
     systemOverview: {
       title: 'Què pots fer amb Summa Social',
-      subtitle: 'Ordre i control per a la gestió econòmica de la vostra entitat.',
+      subtitle: '',
     },
     capabilities: {
       title: 'Què pots fer amb Summa Social',
@@ -1356,7 +1356,7 @@ const ca: PublicTranslations = {
     howWeWork: {
       title: 'Com treballem',
       lead: "Abans d'activar Summa Social per a la vostra entitat, valorem conjuntament si encaixa amb la vostra manera de treballar i quins són els vostres objectius, per garantir una adopció pràctica i útil.",
-      paragraph1: "Un cop validat l'encaix, us acompanyem en la posada en marxa fins que l'eina estigui operativa i sigui còmoda en el dia a dia.",
+      paragraph1: 'Si veiem que us pot servir, us acompanyem en la posada en marxa fins que l’eina estigui operativa i sigui còmoda en el dia a dia.',
       paragraph2: "El nostre suport està orientat a resoldre dubtes concrets i assegurar estabilitat en l'ús.",
       note: "Treballem amb un nombre limitat d'entitats per mantenir la qualitat de l'acompanyament i preservar criteri professional.",
       cta: 'Parlem del vostre cas',

@@ -7,6 +7,7 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, CalendarDays } from 'lucide-react';
+import { PUBLIC_SHELL_X } from '@/components/public/public-shell';
 import { PublicSiteHeader } from '@/components/public/PublicSiteHeader';
 import { Button } from '@/components/ui/button';
 import {
@@ -88,7 +89,7 @@ export default async function NovetatsDetailPage({ params }: PageProps) {
     <main className={pageShellClass}>
       <PublicSiteHeader locale={locale} />
 
-      <section className="px-6 pb-10 pt-8 lg:px-20 lg:pt-12 xl:px-28 2xl:px-32">
+      <section className={`pb-10 pt-8 lg:pt-12 ${PUBLIC_SHELL_X}`}>
         <div className="mx-auto max-w-5xl">
           <Button asChild variant="ghost" size="sm" className="rounded-full px-4 text-muted-foreground hover:text-foreground">
             <Link href={`/${locale}/novetats`}>
@@ -116,7 +117,7 @@ export default async function NovetatsDetailPage({ params }: PageProps) {
         </div>
       </section>
 
-      <section className="px-6 pb-20 lg:px-20 xl:px-28 2xl:px-32">
+      <section className={`pb-20 ${PUBLIC_SHELL_X}`}>
         <article className="mx-auto max-w-4xl rounded-[2rem] border border-border/60 bg-white/95 p-6 shadow-[0_28px_80px_-56px_rgba(15,23,42,0.22)] sm:p-10">
           {update.content ? (
             <div className="prose prose-neutral max-w-none text-base leading-8 prose-headings:tracking-tight prose-p:text-muted-foreground prose-li:text-muted-foreground">
@@ -128,7 +129,7 @@ export default async function NovetatsDetailPage({ params }: PageProps) {
         </article>
       </section>
 
-      <footer className="border-t py-6 px-4 mt-auto">
+      <footer className={`mt-auto border-t py-6 ${PUBLIC_SHELL_X}`}>
         <div className="max-w-lg mx-auto flex items-center justify-center gap-6 text-sm text-muted-foreground">
           <Link href={`/${locale}/privacy`} className="hover:underline">
             {t.common.privacy}

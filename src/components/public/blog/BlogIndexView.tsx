@@ -1,6 +1,7 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { ArrowRight } from 'lucide-react'
+import { PUBLIC_SHELL_X } from '@/components/public/public-shell'
 import { PublicSiteFooter } from '@/components/public/PublicSiteFooter'
 import { PublicSiteHeader } from '@/components/public/PublicSiteHeader'
 import { getBlogCopy } from '@/lib/blog/copy'
@@ -130,7 +131,7 @@ export async function BlogIndexView({
       <main className={pageShellClass}>
         <PublicSiteHeader locale={locale} currentSection="blog" />
 
-        <section className="px-6 pb-20 pt-12 lg:px-20 lg:pt-16 xl:px-28 2xl:px-32">
+        <section className={`pb-20 pt-12 lg:pt-16 ${PUBLIC_SHELL_X}`}>
           <div className="mx-auto max-w-5xl">
             <div className="max-w-[43rem] space-y-3">
               <h1 className="text-[2.45rem] font-semibold tracking-[-0.05em] text-foreground sm:text-[3.2rem]">
@@ -156,7 +157,7 @@ export async function BlogIndexView({
     <main className={pageShellClass}>
       <PublicSiteHeader locale={locale} currentSection="blog" />
 
-      <section className="px-6 pb-10 pt-12 lg:px-20 lg:pt-16 xl:px-28 2xl:px-32">
+      <section className={`pb-10 pt-12 lg:pt-16 ${PUBLIC_SHELL_X}`}>
         <div className="mx-auto max-w-5xl">
           <div className="max-w-[43rem] space-y-3">
             <h1 className="text-[2.45rem] font-semibold tracking-[-0.05em] text-foreground sm:text-[3.2rem]">
@@ -169,7 +170,7 @@ export async function BlogIndexView({
         </div>
       </section>
 
-      <section className="px-6 pb-20 lg:px-20 xl:px-28 2xl:px-32">
+      <section className={`pb-20 ${PUBLIC_SHELL_X}`}>
         <div className="mx-auto max-w-5xl space-y-7">
           {featuredPost ? (
             <article className={cardClass}>
