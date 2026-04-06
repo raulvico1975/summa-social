@@ -35,6 +35,12 @@ type CopilotResponse = {
   toolCall?: CopilotToolCall | null;
 };
 
+type ToolValidationResult =
+  | { ok: true; toolCall: CopilotToolCall }
+  | { message: string; ok: false };
+
+const ALLOWED_ROUTES = new Set(["/live?view=donants", "/live?view=remeses"]);
+
 function useCurrentDemoView() {
   const searchParams = useSearchParams();
   const view = searchParams.get("view");
@@ -102,6 +108,36 @@ function LiveDemoClient() {
   const addToolLog = useCallback((entry: string) => {
     setToolLog((current) => [entry, ...current].slice(0, 6));
   }, []);
+
+  const validateToolCall = useCallback(
+    (toolCall: CopilotToolCall | null | undefined): ToolValidationResult | null => {
+      if (!toolCall) {
+        return null;
+      }
+
+      if (toolCall.tool === "Maps_to") {
+        if (!ALLOWED_ROUTES.has(toolCall.args.path)) {
+          return {
+            ok: false,
+            message: "Aquesta pantalla no està disponible en aquesta demo. Et guio només per les vistes reals que tenim obertes.",
+          };
+        }
+
+        return { ok: true, toolCall };
+      }
+
+      if (!currentContext.visibleActions.includes(toolCall.args.element_id)) {
+        return {
+          ok: false,
+          message:
+            "Aquesta opció no està disponible a la vista actual. Primer posa't a la pantalla correcta i t'ho marco.",
+        };
+      }
+
+      return { ok: true, toolCall };
+    },
+    [currentContext.visibleActions],
+  );
 
   const triggerHighlight = useCallback(
     (elementId: string) => {
@@ -185,11 +221,18 @@ function LiveDemoClient() {
         }
 
         setActiveModel(payload.model);
+        const validation = validateToolCall(payload.toolCall);
+        const assistantMessage =
+          validation && !validation.ok ? validation.message : payload.assistantMessage;
+
         setMessages((current) => [
           ...current,
-          { content: payload.assistantMessage, role: "assistant" },
+          { content: assistantMessage, role: "assistant" },
         ]);
-        applyToolCall(payload.toolCall);
+
+        if (validation?.ok) {
+          applyToolCall(validation.toolCall);
+        }
       } catch (error) {
         console.error("Copilot submit failed", error);
         const message =
@@ -208,7 +251,7 @@ function LiveDemoClient() {
         setPending(false);
       }
     },
-    [applyToolCall, currentContext, inputValue, messages, pending],
+    [applyToolCall, currentContext, inputValue, messages, pending, validateToolCall],
   );
 
   return (
