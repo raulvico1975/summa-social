@@ -1,6 +1,5 @@
 "use client";
 
-import Script from "next/script";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   Suspense,
@@ -10,65 +9,31 @@ import {
   useRef,
   useState,
   type CSSProperties,
+  type FormEvent,
 } from "react";
 
 import { useAgentObserver, type AgentViewSnapshot } from "./useAgentObserver";
 
-type StartResponse = {
-  model: string;
-  room_url: string;
-  session_id: string;
-  token: string;
-  websocket_url: string;
+type ChatMessage = {
+  content: string;
+  role: "assistant" | "user";
 };
 
-type ToolEvent =
+type CopilotToolCall =
   | {
-      tool: "highlight_element";
-      type: "tool_event";
-      payload: { element_ai_id: string };
+      args: { path: string };
+      tool: "Maps_to";
     }
   | {
-      tool: "Maps_to";
-      type: "tool_event";
-      payload: { route_path: string };
+      args: { element_id: string };
+      tool: "highlight_element";
     };
 
-type DailyEventHandler = (event?: unknown) => void;
-
-type DailyCallObject = {
-  destroy(): void;
-  join(args: { token: string; url: string; userName?: string }): Promise<void>;
-  leave(): Promise<void>;
-  off(eventName: string, handler?: DailyEventHandler): void;
-  on(eventName: string, handler: DailyEventHandler): void;
+type CopilotResponse = {
+  assistantMessage: string;
+  model: string;
+  toolCall?: CopilotToolCall | null;
 };
-
-declare global {
-  interface Window {
-    DailyIframe?: {
-      createCallObject(): DailyCallObject;
-    };
-  }
-}
-
-type LogItem = {
-  label: string;
-  value: string;
-};
-
-function demoStatusLabel(status: string) {
-  switch (status) {
-    case "connected":
-      return "Connectat";
-    case "connecting":
-      return "Connectant";
-    case "error":
-      return "Amb incidència";
-    default:
-      return "Desconnectat";
-  }
-}
 
 function useCurrentDemoView() {
   const searchParams = useSearchParams();
@@ -90,408 +55,436 @@ export default function LiveDemoPage() {
 function LiveDemoClient() {
   const router = useRouter();
   const currentView = useCurrentDemoView();
-  const [status, setStatus] = useState<"connected" | "connecting" | "disconnected" | "error">(
-    "disconnected",
-  );
-  const [scriptReady, setScriptReady] = useState(false);
-  const [sessionInfo, setSessionInfo] = useState<StartResponse | null>(null);
-  const [toolLog, setToolLog] = useState<LogItem[]>([]);
-  const [highlightedAction, setHighlightedAction] = useState<string | null>(null);
+  const observedContext = useAgentObserver(true);
+  const [messages, setMessages] = useState<ChatMessage[]>([
+    {
+      content: "Digues-me on t'has encallat i t'ajudo directament sobre la pantalla.",
+      role: "assistant",
+    },
+  ]);
+  const [inputValue, setInputValue] = useState("");
+  const [pending, setPending] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [lastContext, setLastContext] = useState<AgentViewSnapshot | null>(null);
-  const callObjectRef = useRef<DailyCallObject | null>(null);
-  const socketRef = useRef<WebSocket | null>(null);
-  const connectInfoRef = useRef<StartResponse | null>(null);
+  const [highlightedAction, setHighlightedAction] = useState<string | null>(null);
+  const [toolLog, setToolLog] = useState<string[]>([]);
+  const [activeModel, setActiveModel] = useState<string>("encara no iniciat");
   const highlightTimeoutRef = useRef<number | null>(null);
+  const chatEndRef = useRef<HTMLDivElement | null>(null);
 
-  const addLog = useCallback((label: string, value: string) => {
-    setToolLog((current) => [
-      { label, value },
-      ...current,
-    ].slice(0, 8));
+  const fallbackContext = useMemo<AgentViewSnapshot>(
+    () =>
+      currentView === "donants"
+        ? {
+            currentRoute: "/live?view=donants",
+            currentState: "45_donants_actius",
+            currentView: "llista_donants",
+            summary: "Vista de donants amb 45 registres actius i exportacio disponible.",
+            visibleActions: ["obrir_remeses", "obrir_donants", "exportar_csv"],
+            visibleStates: ["45_donants_actius"],
+          }
+        : {
+            currentRoute: "/live?view=remeses",
+            currentState: "errors_pendents",
+            currentView: "panell_remeses",
+            summary: "Vista de remeses amb una remesa pendent i un error d'exportacio per revisar.",
+            visibleActions: ["obrir_remeses", "obrir_donants", "generar_sepa"],
+            visibleStates: ["errors_pendents"],
+          },
+    [currentView],
+  );
+
+  const currentContext = observedContext || fallbackContext;
+
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+  }, [messages, pending]);
+
+  const addToolLog = useCallback((entry: string) => {
+    setToolLog((current) => [entry, ...current].slice(0, 6));
   }, []);
 
-  const disconnect = useCallback(async () => {
-    if (highlightTimeoutRef.current) {
-      window.clearTimeout(highlightTimeoutRef.current);
-      highlightTimeoutRef.current = null;
-    }
+  const triggerHighlight = useCallback(
+    (elementId: string) => {
+      setHighlightedAction(elementId);
+      addToolLog(`highlight_element(${elementId})`);
 
-    socketRef.current?.close();
-    socketRef.current = null;
+      const node =
+        document.querySelector<HTMLElement>(`[data-ai-action="${elementId}"]`) ||
+        document.getElementById(elementId);
+      node?.scrollIntoView({ behavior: "smooth", block: "center" });
 
-    if (callObjectRef.current) {
-      try {
-        await callObjectRef.current.leave();
-      } catch (error) {
-        console.error("Daily leave failed", error);
+      if (highlightTimeoutRef.current) {
+        window.clearTimeout(highlightTimeoutRef.current);
       }
-      try {
-        callObjectRef.current.destroy();
-      } catch (error) {
-        console.error("Daily destroy failed", error);
-      }
-      callObjectRef.current = null;
-    }
-
-    connectInfoRef.current = null;
-    setHighlightedAction(null);
-    setSessionInfo(null);
-    setStatus("disconnected");
-  }, []);
+      highlightTimeoutRef.current = window.setTimeout(() => {
+        setHighlightedAction(null);
+      }, 2600);
+    },
+    [addToolLog],
+  );
 
   useEffect(() => {
     return () => {
-      void disconnect();
+      if (highlightTimeoutRef.current) {
+        window.clearTimeout(highlightTimeoutRef.current);
+      }
     };
-  }, [disconnect]);
+  }, []);
 
-  const handleToolEvent = useCallback(
-    (event: ToolEvent) => {
-      if (event.tool === "highlight_element") {
-        const elementId = event.payload.element_ai_id;
-        setHighlightedAction(elementId);
-        addLog("Tool", `highlight_element(${elementId})`);
-        if (highlightTimeoutRef.current) {
-          window.clearTimeout(highlightTimeoutRef.current);
+  const applyToolCall = useCallback(
+    (toolCall: CopilotToolCall | null | undefined) => {
+      if (!toolCall) {
+        return;
+      }
+
+      if (toolCall.tool === "Maps_to") {
+        addToolLog(`Maps_to(${toolCall.args.path})`);
+        router.push(toolCall.args.path);
+        return;
+      }
+
+      triggerHighlight(toolCall.args.element_id);
+    },
+    [addToolLog, router, triggerHighlight],
+  );
+
+  const handleSubmit = useCallback(
+    async (event: FormEvent<HTMLFormElement>) => {
+      event.preventDefault();
+      const trimmed = inputValue.trim();
+      if (!trimmed || pending) {
+        return;
+      }
+
+      const nextHistory = [...messages, { content: trimmed, role: "user" as const }];
+      setMessages(nextHistory);
+      setInputValue("");
+      setPending(true);
+      setErrorMessage(null);
+
+      try {
+        const response = await fetch("/api/copilot", {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+          },
+          body: JSON.stringify({
+            dom_context: currentContext,
+            history: messages,
+            message: trimmed,
+          }),
+        });
+
+        const payload = (await response.json()) as CopilotResponse | { error: string };
+        if (!response.ok || "error" in payload) {
+          throw new Error(
+            "error" in payload && payload.error.trim()
+              ? payload.error
+              : "No s'ha pogut executar el copilot.",
+          );
         }
-        highlightTimeoutRef.current = window.setTimeout(() => {
-          setHighlightedAction(null);
-        }, 2800);
-        return;
-      }
 
-      if (event.tool === "Maps_to") {
-        addLog("Tool", `Maps_to(${event.payload.route_path})`);
-        router.push(event.payload.route_path);
-      }
-    },
-    [addLog, router],
-  );
-
-  const sendContext = useCallback(
-    (snapshot: AgentViewSnapshot) => {
-      setLastContext(snapshot);
-      const socket = socketRef.current;
-      if (!socket || socket.readyState !== WebSocket.OPEN) {
-        return;
-      }
-      socket.send(
-        JSON.stringify({
-          payload: snapshot,
-          type: "ui_context",
-        }),
-      );
-    },
-    [],
-  );
-
-  useAgentObserver(status === "connected", sendContext);
-
-  const connect = useCallback(async () => {
-    if (!scriptReady || status === "connecting" || status === "connected") {
-      return;
-    }
-
-    if (!window.DailyIframe) {
-      setStatus("error");
-      setErrorMessage("Daily JS encara no està disponible al navegador.");
-      return;
-    }
-
-    setErrorMessage(null);
-    setStatus("connecting");
-    addLog("Sessió", "Arrencant el demo-agent Live");
-
-    try {
-      const startResponse = await fetch("/api/live/start", {
-        method: "POST",
-        headers: {
-          "content-type": "application/json",
-        },
-      });
-
-      const payload = (await startResponse.json()) as StartResponse | { error: string };
-      if (!startResponse.ok || "error" in payload) {
+        setActiveModel(payload.model);
+        setMessages((current) => [
+          ...current,
+          { content: payload.assistantMessage, role: "assistant" },
+        ]);
+        applyToolCall(payload.toolCall);
+      } catch (error) {
+        console.error("Copilot submit failed", error);
         const message =
-          "error" in payload && typeof payload.error === "string" && payload.error.trim()
-            ? payload.error.trim()
-            : "No s'ha pogut arrencar el demo-agent.";
-        throw new Error(message);
+          error instanceof Error && error.message
+            ? error.message
+            : "No s'ha pogut executar el copilot.";
+        setErrorMessage(message);
+        setMessages((current) => [
+          ...current,
+          {
+            content: "Ara mateix no puc actuar sobre la pantalla. Torna-ho a provar en un moment.",
+            role: "assistant",
+          },
+        ]);
+      } finally {
+        setPending(false);
       }
-
-      connectInfoRef.current = payload;
-      setSessionInfo(payload);
-
-      const socket = new WebSocket(payload.websocket_url);
-      socketRef.current = socket;
-      socket.addEventListener("open", () => {
-        addLog("WebSocket", "Context UI connectat");
-      });
-      socket.addEventListener("message", (event) => {
-        const data = JSON.parse(String(event.data)) as ToolEvent | { type: string };
-        if (data.type === "tool_event") {
-          handleToolEvent(data as ToolEvent);
-        }
-      });
-      socket.addEventListener("close", () => {
-        addLog("WebSocket", "Canal de context tancat");
-      });
-
-      const callObject = window.DailyIframe.createCallObject();
-      callObjectRef.current = callObject;
-
-      callObject.on("joined-meeting", () => {
-        setStatus("connected");
-        addLog("Daily", "Audio bidireccional connectat");
-      });
-      callObject.on("left-meeting", () => {
-        setStatus("disconnected");
-        addLog("Daily", "Sessió Daily tancada");
-      });
-      callObject.on("error", (event) => {
-        console.error("Daily error", event);
-        setStatus("error");
-        setErrorMessage("La sessió Daily ha fallat.");
-      });
-
-      await callObject.join({
-        token: payload.token,
-        url: payload.room_url,
-        userName: "Responsable economic",
-      });
-    } catch (error) {
-      console.error("Live connect failed", error);
-      setStatus("error");
-      setErrorMessage(
-        error instanceof Error && error.message
-          ? error.message
-          : "No s'ha pogut connectar la demo Live.",
-      );
-    }
-  }, [addLog, handleToolEvent, scriptReady, status]);
-
-  const visibleSummary = useMemo(() => {
-    if (currentView === "donants") {
-      return "Vista de donants amb 45 registres actius i exportacio disponible.";
-    }
-    return "Vista de remeses amb una remesa pendent i un error d'exportacio per revisar.";
-  }, [currentView]);
+    },
+    [applyToolCall, currentContext, inputValue, messages, pending],
+  );
 
   return (
-    <>
-      <Script
-        src="https://unpkg.com/@daily-co/daily-js"
-        strategy="afterInteractive"
-        onLoad={() => setScriptReady(true)}
-      />
+    <main
+      style={{
+        minHeight: "100vh",
+        background:
+          "radial-gradient(circle at top right, rgba(225, 237, 225, 0.95), transparent 32%), linear-gradient(180deg, #f6f1e6 0%, #ffffff 48%, #edf4ef 100%)",
+        padding: "32px 18px 72px",
+      }}
+    >
+      <div style={{ margin: "0 auto", maxWidth: 1320 }}>
+        <section
+          style={{
+            display: "grid",
+            gap: 24,
+            gridTemplateColumns: "minmax(0, 1.15fr) minmax(340px, 0.85fr)",
+            marginBottom: 26,
+          }}
+        >
+          <article style={heroCardStyle}>
+            <p style={eyebrowStyle}>Fase 2 · Text Copilot</p>
+            <h1 style={heroTitleStyle}>
+              Copilot contextual per guiar remeses i donants sense manuals ni tours.
+            </h1>
+            <p style={{ fontSize: 18, lineHeight: 1.65, margin: 0, maxWidth: 760 }}>
+              Aquesta prova local manté la sandbox de Summa a l&apos;esquerra i hi afegeix
+              un copilot de text a la dreta. El model llegeix el context del DOM, respon
+              en català i pot canviar de vista o marcar botons directament.
+            </p>
+          </article>
 
-      <main
-        style={{
-          minHeight: "100vh",
-          background:
-            "radial-gradient(circle at top right, rgba(225, 237, 225, 0.95), transparent 32%), linear-gradient(180deg, #f6f1e6 0%, #ffffff 48%, #edf4ef 100%)",
-          padding: "32px 18px 72px",
-        }}
-      >
-        <div style={{ margin: "0 auto", maxWidth: 1240 }}>
-          <section
-            style={{
-              display: "grid",
-              gap: 24,
-              gridTemplateColumns: "minmax(0, 1.2fr) minmax(280px, 0.8fr)",
-              marginBottom: 26,
-            }}
-          >
-            <article style={heroCardStyle}>
-              <p style={eyebrowStyle}>Fase 2 · Demo-Agent Live</p>
-              <h1 style={heroTitleStyle}>
-                Guia de veu calmada per pantalles reals de tresoreria i donants.
-              </h1>
-              <p style={{ fontSize: 18, lineHeight: 1.65, margin: 0, maxWidth: 700 }}>
-                Aquesta prova de concepte manté el pilot aïllat. L&apos;usuari escolta
-                una guia oral sobre el que té davant, mentre el model rep context
-                estructurat del DOM i pot destacar accions o navegar entre pantalles.
-              </p>
-            </article>
-
-            <article style={statusCardStyle}>
-              <p style={eyebrowStyle}>Sessió Live</p>
-              <p style={{ fontSize: 34, fontWeight: 800, margin: "12px 0 8px" }}>
-                {demoStatusLabel(status)}
-              </p>
-              <p style={{ lineHeight: 1.6, margin: "0 0 18px" }}>
-                Model actiu: {sessionInfo?.model || "encara no iniciat"}.
-              </p>
-              <div
-                style={{
-                  display: "flex",
-                  gap: 12,
-                  flexWrap: "wrap",
-                }}
-              >
-                <button
-                  type="button"
-                  disabled={!scriptReady || status === "connecting" || status === "connected"}
-                  onClick={() => void connect()}
-                  style={{
-                    ...actionButtonStyle,
-                    background:
-                      !scriptReady || status === "connecting" || status === "connected"
-                        ? "#9eae9f"
-                        : "#173120",
-                  }}
-                >
-                  Connectar veu
-                </button>
-                <button
-                  type="button"
-                  onClick={() => void disconnect()}
-                  style={{
-                    ...actionButtonStyle,
-                    background: "#e7dfd0",
-                    color: "#173120",
-                  }}
-                >
-                  Tancar sessió
-                </button>
-              </div>
-              {errorMessage ? (
-                <p
-                  style={{
-                    background: "#fff1f0",
-                    borderRadius: 16,
-                    color: "#7a2d20",
-                    lineHeight: 1.5,
-                    margin: "16px 0 0",
-                    padding: "12px 14px",
-                  }}
-                >
-                  {errorMessage}
-                </p>
-              ) : null}
-            </article>
-          </section>
-
-          <section
-            style={{
-              display: "grid",
-              gap: 24,
-              gridTemplateColumns: "minmax(0, 1.5fr) minmax(300px, 0.9fr)",
-            }}
-          >
-            <article
+          <article style={statusCardStyle}>
+            <p style={eyebrowStyle}>Copilot</p>
+            <p style={{ fontSize: 34, fontWeight: 800, margin: "12px 0 8px" }}>
+              Text contextual
+            </p>
+            <p style={{ lineHeight: 1.6, margin: "0 0 18px" }}>
+              Model actiu: {activeModel}.
+            </p>
+            <p
               style={{
-                background: "rgba(255, 255, 255, 0.92)",
-                border: "1px solid rgba(23, 49, 32, 0.12)",
-                borderRadius: 28,
-                boxShadow: "0 24px 70px rgba(33, 42, 35, 0.08)",
-                overflow: "hidden",
+                background: "rgba(255,255,255,0.08)",
+                borderRadius: 16,
+                lineHeight: 1.5,
+                margin: "0 0 18px",
+                padding: "12px 14px",
               }}
             >
+              Escriu què vols fer i el copilot actuarà sobre la sandbox quan tingui clar si
+              ha de navegar o destacar un element.
+            </p>
+            <div
+              style={{
+                background: "rgba(255,255,255,0.08)",
+                borderRadius: 16,
+                display: "grid",
+                gap: 8,
+                padding: "12px 14px",
+              }}
+            >
+              <p style={{ lineHeight: 1.5, margin: 0 }}>
+                <strong>Cas 1</strong>: “Vull anar a fer les remeses”
+              </p>
+              <p style={{ lineHeight: 1.5, margin: 0 }}>
+                <strong>Cas 2</strong>: “No trobo el botó”
+              </p>
+            </div>
+            {errorMessage ? (
+              <p
+                style={{
+                  background: "#fff1f0",
+                  borderRadius: 16,
+                  color: "#7a2d20",
+                  lineHeight: 1.5,
+                  margin: "16px 0 0",
+                  padding: "12px 14px",
+                }}
+              >
+                {errorMessage}
+              </p>
+            ) : null}
+          </article>
+        </section>
+
+        <section
+          style={{
+            display: "grid",
+            gap: 24,
+            gridTemplateColumns: "minmax(0, 1.5fr) minmax(360px, 0.9fr)",
+          }}
+        >
+          <article
+            style={{
+              background: "rgba(255, 255, 255, 0.92)",
+              border: "1px solid rgba(23, 49, 32, 0.12)",
+              borderRadius: 28,
+              boxShadow: "0 24px 70px rgba(33, 42, 35, 0.08)",
+              overflow: "hidden",
+            }}
+          >
+            <header
+              style={{
+                borderBottom: "1px solid rgba(23, 49, 32, 0.08)",
+                display: "flex",
+                justifyContent: "space-between",
+                gap: 12,
+                flexWrap: "wrap",
+                padding: "18px 20px",
+              }}
+            >
+              <div>
+                <h2 style={{ margin: 0 }}>Sandbox de la demo</h2>
+                <p style={{ margin: "6px 0 0", lineHeight: 1.55 }}>
+                  DOM instrumentat amb `data-ai-view`, `data-ai-action` i `data-ai-state`.
+                </p>
+              </div>
+              <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                <button
+                  type="button"
+                  data-ai-action="obrir_remeses"
+                  onClick={() => router.push("/live?view=remeses")}
+                  style={navButtonStyle(currentView === "remeses")}
+                >
+                  Remeses
+                </button>
+                <button
+                  type="button"
+                  data-ai-action="obrir_donants"
+                  onClick={() => router.push("/live?view=donants")}
+                  style={navButtonStyle(currentView === "donants")}
+                >
+                  Donants
+                </button>
+              </div>
+            </header>
+
+            <div style={{ padding: 20 }}>
+              {currentView === "donants" ? (
+                <DonantsView highlightedAction={highlightedAction} />
+              ) : (
+                <RemesesView highlightedAction={highlightedAction} />
+              )}
+            </div>
+          </article>
+
+          <aside style={{ display: "grid", gap: 18 }}>
+            <article style={sideCardStyle}>
+              <h3 style={{ margin: "0 0 10px" }}>Context observat</h3>
+              <p style={{ color: "#4b6352", lineHeight: 1.6, margin: "0 0 12px" }}>
+                {currentContext.summary}
+              </p>
+              <div style={{ display: "grid", gap: 10 }}>
+                <DataPoint label="Ruta" value={currentContext.currentRoute} />
+                <DataPoint label="Vista" value={currentContext.currentView || "Cap"} />
+                <DataPoint
+                  label="Accions visibles"
+                  value={currentContext.visibleActions.join(", ") || "Cap"}
+                />
+                <DataPoint
+                  label="Estats visibles"
+                  value={currentContext.visibleStates.join(", ") || "Cap"}
+                />
+              </div>
+            </article>
+
+            <article style={{ ...sideCardStyle, padding: 0, overflow: "hidden" }}>
               <header
                 style={{
                   borderBottom: "1px solid rgba(23, 49, 32, 0.08)",
-                  display: "flex",
-                  justifyContent: "space-between",
-                  gap: 12,
-                  flexWrap: "wrap",
-                  padding: "18px 20px",
+                  padding: "20px 22px 14px",
                 }}
               >
-                <div>
-                  <h2 style={{ margin: 0 }}>Sandbox de la demo</h2>
-                  <p style={{ margin: "6px 0 0", lineHeight: 1.55 }}>
-                    Dom instrumentat amb `data-ai-view`, `data-ai-action` i `data-ai-state`.
-                  </p>
-                </div>
-                <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-                  <button
-                    type="button"
-                    data-ai-action="obrir_remeses"
-                    onClick={() => router.push("/live?view=remeses")}
-                    style={navButtonStyle(currentView === "remeses")}
-                  >
-                    Remeses
-                  </button>
-                  <button
-                    type="button"
-                    data-ai-action="obrir_donants"
-                    onClick={() => router.push("/live?view=donants")}
-                    style={navButtonStyle(currentView === "donants")}
-                  >
-                    Donants
-                  </button>
-                </div>
+                <h3 style={{ margin: 0 }}>Copilot de text</h3>
+                <p style={{ color: "#4b6352", lineHeight: 1.6, margin: "8px 0 0" }}>
+                  Escriu què vols resoldre. El copilot decideix si ha de navegar o marcar
+                  un element de la UI.
+                </p>
               </header>
 
-              <div style={{ padding: 20 }}>
-                {currentView === "donants" ? (
-                  <DonantsView highlightedAction={highlightedAction} />
+              <div
+                style={{
+                  display: "grid",
+                  gap: 12,
+                  maxHeight: 420,
+                  overflowY: "auto",
+                  padding: "18px 22px",
+                }}
+              >
+                {messages.map((message, index) => (
+                  <div
+                    key={`${message.role}-${index}`}
+                    style={{
+                      background: message.role === "assistant" ? "#eef4ef" : "#f5f0e7",
+                      borderRadius: 18,
+                      justifySelf: message.role === "assistant" ? "stretch" : "end",
+                      maxWidth: "92%",
+                      padding: "12px 14px",
+                    }}
+                  >
+                    <strong>{message.role === "assistant" ? "Copilot" : "Tu"}</strong>:{" "}
+                    {message.content}
+                  </div>
+                ))}
+                {pending ? (
+                  <div
+                    style={{
+                      background: "#eef4ef",
+                      borderRadius: 18,
+                      padding: "12px 14px",
+                    }}
+                  >
+                    <strong>Copilot</strong>: Ho miro i actuo sobre la pantalla.
+                  </div>
+                ) : null}
+                <div ref={chatEndRef} />
+              </div>
+
+              <form
+                onSubmit={handleSubmit}
+                style={{
+                  borderTop: "1px solid rgba(23, 49, 32, 0.08)",
+                  display: "grid",
+                  gap: 12,
+                  padding: "16px 22px 22px",
+                }}
+              >
+                <textarea
+                  value={inputValue}
+                  onChange={(event) => setInputValue(event.target.value)}
+                  placeholder="Ex.: Vull anar a fer les remeses"
+                  rows={3}
+                  style={textareaStyle}
+                />
+                <button
+                  type="submit"
+                  disabled={pending || !inputValue.trim()}
+                  style={{
+                    ...actionButtonStyle,
+                    background: pending || !inputValue.trim() ? "#aab7aa" : "#173120",
+                    justifySelf: "start",
+                  }}
+                >
+                  Enviar
+                </button>
+              </form>
+            </article>
+
+            <article style={sideCardStyle}>
+              <h3 style={{ margin: "0 0 10px" }}>Consola del copilot</h3>
+              <div style={{ display: "grid", gap: 10 }}>
+                {toolLog.length === 0 ? (
+                  <p style={{ color: "#4b6352", lineHeight: 1.6, margin: 0 }}>
+                    Encara no hi ha cap acció executada. Prova de demanar un canvi de vista
+                    o que et marqui un botó.
+                  </p>
                 ) : (
-                  <RemesesView highlightedAction={highlightedAction} />
+                  toolLog.map((entry, index) => (
+                    <div
+                      key={`${entry}-${index}`}
+                      style={{
+                        background: "#f4efe4",
+                        borderRadius: 16,
+                        padding: "10px 12px",
+                      }}
+                    >
+                      {entry}
+                    </div>
+                  ))
                 )}
               </div>
             </article>
-
-            <aside style={{ display: "grid", gap: 18 }}>
-              <article style={sideCardStyle}>
-                <h3 style={{ margin: "0 0 10px" }}>Context observat</h3>
-                <p style={{ color: "#4b6352", lineHeight: 1.6, margin: "0 0 12px" }}>
-                  {lastContext?.summary || visibleSummary}
-                </p>
-                <div style={{ display: "grid", gap: 10 }}>
-                  <DataPoint label="Ruta" value={lastContext?.currentRoute || `/live?view=${currentView}`} />
-                  <DataPoint label="Vista" value={lastContext?.currentView || currentView} />
-                  <DataPoint
-                    label="Accions visibles"
-                    value={(lastContext?.visibleActions || []).join(", ") || "Cap"}
-                  />
-                  <DataPoint
-                    label="Estats visibles"
-                    value={(lastContext?.visibleStates || []).join(", ") || "Cap"}
-                  />
-                </div>
-              </article>
-
-              <article style={sideCardStyle}>
-                <h3 style={{ margin: "0 0 10px" }}>Consola del guia</h3>
-                <div style={{ display: "grid", gap: 10 }}>
-                  {toolLog.length === 0 ? (
-                    <p style={{ color: "#4b6352", lineHeight: 1.6, margin: 0 }}>
-                      Encara no hi ha tools executades. Connecta la sessió i parla amb
-                      l&apos;agent per provar `highlight_element` o `Maps_to`.
-                    </p>
-                  ) : (
-                    toolLog.map((item, index) => (
-                      <div
-                        key={`${item.label}-${index}`}
-                        style={{
-                          background: "#f4efe4",
-                          borderRadius: 16,
-                          padding: "10px 12px",
-                        }}
-                      >
-                        <strong>{item.label}</strong>: {item.value}
-                      </div>
-                    ))
-                  )}
-                </div>
-              </article>
-
-              <article style={sideCardStyle}>
-                <h3 style={{ margin: "0 0 10px" }}>Guardrails</h3>
-                <ul style={{ lineHeight: 1.7, margin: 0, paddingLeft: 18 }}>
-                  <li>Guia de plataforma, no assessor fiscal.</li>
-                  <li>No llegeix pantalles senceres; només resumeix.</li>
-                  <li>Només pot destacar elements o navegar dins `/live`.</li>
-                </ul>
-              </article>
-            </aside>
-          </section>
-        </div>
-      </main>
-    </>
+          </aside>
+        </section>
+      </div>
+    </main>
   );
 }
 
@@ -505,7 +498,7 @@ function LiveDemoFallback() {
         placeItems: "center",
       }}
     >
-      <p style={{ fontSize: 18, margin: 0 }}>Preparant la demo Live…</p>
+      <p style={{ fontSize: 18, margin: 0 }}>Preparant el copilot contextual…</p>
     </main>
   );
 }
@@ -702,6 +695,19 @@ const actionButtonStyle = {
   font: "inherit",
   fontWeight: 800,
   padding: "12px 18px",
+} satisfies CSSProperties;
+
+const textareaStyle = {
+  background: "#fff",
+  border: "1px solid rgba(23, 49, 32, 0.12)",
+  borderRadius: 18,
+  color: "#173120",
+  font: "inherit",
+  lineHeight: 1.6,
+  minHeight: 88,
+  padding: "12px 14px",
+  resize: "vertical",
+  width: "100%",
 } satisfies CSSProperties;
 
 const panelHeaderStyle = {

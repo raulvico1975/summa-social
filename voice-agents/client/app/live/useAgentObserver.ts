@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 export type AgentViewSnapshot = {
   currentRoute: string;
@@ -52,14 +52,13 @@ function buildSnapshot(): AgentViewSnapshot {
   };
 }
 
-export function useAgentObserver(
-  enabled: boolean,
-  onContextChange: (snapshot: AgentViewSnapshot) => void,
-) {
+export function useAgentObserver(enabled: boolean) {
   const lastSnapshotRef = useRef<string>("");
+  const [snapshot, setSnapshot] = useState<AgentViewSnapshot | null>(null);
 
   useEffect(() => {
     if (!enabled || typeof window === "undefined") {
+      setSnapshot(null);
       return;
     }
 
@@ -72,7 +71,7 @@ export function useAgentObserver(
         return;
       }
       lastSnapshotRef.current = serialized;
-      onContextChange(snapshot);
+      setSnapshot(snapshot);
     };
 
     const schedulePublish = () => {
@@ -96,5 +95,7 @@ export function useAgentObserver(
       observer.disconnect();
       window.removeEventListener("popstate", schedulePublish);
     };
-  }, [enabled, onContextChange]);
+  }, [enabled]);
+
+  return snapshot;
 }
