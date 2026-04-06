@@ -442,7 +442,7 @@ const HOME_BLOCKS_CA: PublicTranslations['home']['blocks'] = {
   },
   donorsMembers: {
     title: 'Socis i donants',
-    subtitle: "La base fiscal i relacional de l'entitat",
+    subtitle: '',
     cards: {
       donorProfile: createCard(
         'Fitxa completa amb validació fiscal',
@@ -464,7 +464,7 @@ const HOME_BLOCKS_CA: PublicTranslations['home']['blocks'] = {
   },
   payments: {
     title: 'Cobraments i pagaments',
-    subtitle: 'Quotes, remeses SEPA i donacions online',
+    subtitle: '',
     cards: {
       remittanceSplitter: createCard(
         'Divisor de remeses',
@@ -486,7 +486,7 @@ const HOME_BLOCKS_CA: PublicTranslations['home']['blocks'] = {
   },
   fiscal: {
     title: 'Fiscalitat',
-    subtitle: 'Hisenda a temps, sense errors',
+    subtitle: '',
     cards: {
       model182: createCard(
         'Model 182',
@@ -508,7 +508,7 @@ const HOME_BLOCKS_CA: PublicTranslations['home']['blocks'] = {
   },
   projects: {
     title: 'Projectes',
-    subtitle: 'Cada euro justificat',
+    subtitle: '',
     cards: {
       budgetLines: createCard(
         'Pressupost per partides',
@@ -530,7 +530,7 @@ const HOME_BLOCKS_CA: PublicTranslations['home']['blocks'] = {
   },
   control: {
     title: 'Control i visibilitat',
-    subtitle: 'Dades netes, decisions informades',
+    subtitle: '',
     cards: {
       dashboard: createCard(
         'Dashboard directiu',
@@ -577,7 +577,7 @@ const HOME_BLOCKS_ES: PublicTranslations['home']['blocks'] = {
   },
   donorsMembers: {
     title: 'Socios y donantes',
-    subtitle: 'La base fiscal y relacional de la entidad',
+    subtitle: '',
     cards: {
       donorProfile: createCard(
         'Ficha completa con validación fiscal',
@@ -599,7 +599,7 @@ const HOME_BLOCKS_ES: PublicTranslations['home']['blocks'] = {
   },
   payments: {
     title: 'Cobros y pagos',
-    subtitle: 'Cuotas, remesas SEPA y donaciones online',
+    subtitle: '',
     cards: {
       remittanceSplitter: createCard(
         'Divisor de remesas',
@@ -621,7 +621,7 @@ const HOME_BLOCKS_ES: PublicTranslations['home']['blocks'] = {
   },
   fiscal: {
     title: 'Fiscalidad',
-    subtitle: 'Hacienda a tiempo, sin errores',
+    subtitle: '',
     cards: {
       model182: createCard(
         'Modelo 182',
@@ -643,7 +643,7 @@ const HOME_BLOCKS_ES: PublicTranslations['home']['blocks'] = {
   },
   projects: {
     title: 'Proyectos',
-    subtitle: 'Cada euro justificado',
+    subtitle: '',
     cards: {
       budgetLines: createCard(
         'Presupuesto por partidas',
@@ -665,7 +665,7 @@ const HOME_BLOCKS_ES: PublicTranslations['home']['blocks'] = {
   },
   control: {
     title: 'Control y visibilidad',
-    subtitle: 'Datos limpios, decisiones informadas',
+    subtitle: '',
     cards: {
       dashboard: createCard(
         'Dashboard directivo',
@@ -712,7 +712,7 @@ const HOME_BLOCKS_FR: PublicTranslations['home']['blocks'] = {
   },
   donorsMembers: {
     title: 'Adhérents et donateurs',
-    subtitle: "La base fiscale et relationnelle de l'entité",
+    subtitle: '',
     cards: {
       donorProfile: createCard(
         'Fiche complète avec validation fiscale',
@@ -734,7 +734,7 @@ const HOME_BLOCKS_FR: PublicTranslations['home']['blocks'] = {
   },
   payments: {
     title: 'Encaissements et paiements',
-    subtitle: 'Cotisations, prélèvements SEPA et dons en ligne',
+    subtitle: '',
     cards: {
       remittanceSplitter: createCard(
         'Séparateur de prélèvements',
@@ -756,7 +756,7 @@ const HOME_BLOCKS_FR: PublicTranslations['home']['blocks'] = {
   },
   fiscal: {
     title: 'Fiscalité',
-    subtitle: 'Le fisc à temps, sans erreurs',
+    subtitle: '',
     cards: {
       model182: createCard(
         'Modèle 182',
@@ -778,7 +778,7 @@ const HOME_BLOCKS_FR: PublicTranslations['home']['blocks'] = {
   },
   projects: {
     title: 'Projets',
-    subtitle: 'Chaque euro justifié',
+    subtitle: '',
     cards: {
       budgetLines: createCard(
         'Budget par lignes',
@@ -800,7 +800,7 @@ const HOME_BLOCKS_FR: PublicTranslations['home']['blocks'] = {
   },
   control: {
     title: 'Contrôle et visibilité',
-    subtitle: 'Données propres, décisions éclairées',
+    subtitle: '',
     cards: {
       dashboard: createCard(
         'Tableau de bord directif',
@@ -847,7 +847,7 @@ const HOME_BLOCKS_PT: PublicTranslations['home']['blocks'] = {
   },
   donorsMembers: {
     title: 'Sócios e doadores',
-    subtitle: 'A base fiscal e relacional da entidade',
+    subtitle: '',
     cards: {
       donorProfile: createCard(
         'Ficha completa com validação fiscal',
@@ -869,7 +869,7 @@ const HOME_BLOCKS_PT: PublicTranslations['home']['blocks'] = {
   },
   payments: {
     title: 'Cobranças e pagamentos',
-    subtitle: 'Quotas, remessas SEPA e doações online',
+    subtitle: '',
     cards: {
       remittanceSplitter: createCard(
         'Separador de remessas',
@@ -891,7 +891,7 @@ const HOME_BLOCKS_PT: PublicTranslations['home']['blocks'] = {
   },
   fiscal: {
     title: 'Fiscalidade',
-    subtitle: 'Finanças a tempo, sem erros',
+    subtitle: '',
     cards: {
       model182: createCard(
         'Modelo 182',
@@ -913,7 +913,7 @@ const HOME_BLOCKS_PT: PublicTranslations['home']['blocks'] = {
   },
   projects: {
     title: 'Projetos',
-    subtitle: 'Cada euro justificado',
+    subtitle: '',
     cards: {
       budgetLines: createCard(
         'Orçamento por rubricas',
@@ -935,7 +935,7 @@ const HOME_BLOCKS_PT: PublicTranslations['home']['blocks'] = {
   },
   control: {
     title: 'Controlo e visibilidade',
-    subtitle: 'Dados limpos, decisões informadas',
+    subtitle: '',
     cards: {
       dashboard: createCard(
         'Painel diretivo',

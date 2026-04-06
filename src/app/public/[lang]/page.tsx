@@ -1528,33 +1528,60 @@ export default async function HomePage({ params }: PageProps) {
       t.home.blocks.conciliation.cards.importStatements.screenshotAlt,
       '/visuals/web/features-v3/block1_import_extractes_start_4k.webp'
     ),
+    'conciliation.autoClassification': createVideoMedia(
+      '/visuals/web/features-v3/block1_classificacio_auto_loop_4k.mp4?v=20260406b',
+      t.home.blocks.conciliation.cards.autoClassification.screenshotAlt,
+      '/visuals/web/features-v3/block1_classificacio_auto_start_4k.webp?v=20260406b'
+    ),
+    'conciliation.contactAssignment': createVideoMedia(
+      '/visuals/web/features-v3/block1_assignacio_contactes_loop_4k.mp4?v=20260406b',
+      t.home.blocks.conciliation.cards.contactAssignment.screenshotAlt,
+      '/visuals/web/features-v3/block1_assignacio_contactes_start_4k.webp?v=20260406b'
+    ),
+    'conciliation.multiBankAccount': createVideoMedia(
+      '/visuals/web/features-v3/block1_multi_compte_loop_4k.mp4?v=20260406b',
+      t.home.blocks.conciliation.cards.multiBankAccount.screenshotAlt,
+      '/visuals/web/features-v3/block1_multi_compte_start_4k.webp?v=20260406b'
+    ),
     'donorsMembers.donorProfile': createVideoMedia(
-      locale === 'es'
-        ? '/visuals/landings/control-donacions-ong/animations/control-donacions-demo-es.mp4'
-        : '/visuals/landings/control-donacions-ong/animations/control-donacions-demo-ca.mp4',
+      '/visuals/web/features-v3/block2_fitxa_fiscal_loop_4k.mp4?v=20260406b',
       t.home.blocks.donorsMembers.cards.donorProfile.screenshotAlt,
-      '/visuals/landings/control-donacions-ong/optimized/control-donacions-demo-poster.webp'
+      '/visuals/web/features-v3/block2_fitxa_fiscal_start_4k.webp?v=20260406b'
+    ),
+    'donorsMembers.bulkImport': createVideoMedia(
+      '/visuals/web/features-v3/block2_importacio_massiva_loop_4k.mp4?v=20260406b',
+      t.home.blocks.donorsMembers.cards.bulkImport.screenshotAlt,
+      '/visuals/web/features-v3/block2_importacio_massiva_start_4k.webp?v=20260406b'
     ),
     'donorsMembers.donorHistory': createVideoMedia(
-      locale === 'es'
-        ? '/visuals/landings/control-donacions-ong/animations/control-donacions-demo-es.mp4'
-        : '/visuals/landings/control-donacions-ong/animations/control-donacions-demo-ca.mp4',
+      '/visuals/web/features-v3/block2_historic_donant_loop_4k.mp4?v=20260406b',
       t.home.blocks.donorsMembers.cards.donorHistory.screenshotAlt,
-      '/visuals/landings/control-donacions-ong/optimized/control-donacions-demo-poster.webp'
+      '/visuals/web/features-v3/block2_historic_donant_start_4k.webp?v=20260406b'
+    ),
+    'donorsMembers.operationalStatus': createVideoMedia(
+      '/visuals/web/features-v3/block2_filtres_socis_loop_4k.mp4?v=20260406b',
+      t.home.blocks.donorsMembers.cards.operationalStatus.screenshotAlt,
+      '/visuals/web/features-v3/block2_filtres_socis_start_4k.webp?v=20260406b'
     ),
     'payments.remittanceSplitter': createVideoMedia(
-      locale === 'es'
-        ? '/visuals/landings/remeses-sepa/animations/remeses-sepa-demo-es.mp4'
-        : '/visuals/landings/remeses-sepa/animations/remeses-sepa-demo-ca.mp4',
+      '/visuals/web/features-v3/block3_divisor_remeses_loop_4k.mp4?v=20260406b',
       t.home.blocks.payments.cards.remittanceSplitter.screenshotAlt,
-      '/visuals/landings/remeses-sepa/optimized/remeses-sepa-demo-poster.webp'
+      '/visuals/web/features-v3/block3_divisor_remeses_start_4k.webp?v=20260406b'
+    ),
+    'payments.bankReturns': createVideoMedia(
+      '/visuals/web/features-v3/block3_devolucions_loop_4k.mp4?v=20260406b',
+      t.home.blocks.payments.cards.bankReturns.screenshotAlt,
+      '/visuals/web/features-v3/block3_devolucions_start_4k.webp?v=20260406b'
     ),
     'payments.sepaPayments': createVideoMedia(
-      locale === 'es'
-        ? '/visuals/landings/remeses-sepa/animations/remeses-sepa-demo-es.mp4'
-        : '/visuals/landings/remeses-sepa/animations/remeses-sepa-demo-ca.mp4',
+      '/visuals/web/features-v3/block3_remeses_sepa_loop_4k.mp4?v=20260406b',
       t.home.blocks.payments.cards.sepaPayments.screenshotAlt,
-      '/visuals/landings/remeses-sepa/optimized/remeses-sepa-demo-poster.webp'
+      '/visuals/web/features-v3/block3_remeses_sepa_start_4k.webp?v=20260406b'
+    ),
+    'payments.stripeDonations': createVideoMedia(
+      '/visuals/web/features-v3/block3_stripe_online_loop_4k.mp4?v=20260406b',
+      t.home.blocks.payments.cards.stripeDonations.screenshotAlt,
+      '/visuals/web/features-v3/block3_stripe_online_start_4k.webp?v=20260406b'
     ),
     'fiscal.model182': createVideoMedia(
       '/visuals/web/features-v3/block4_model182_loop_4k.mp4?v=20260406a',
@@ -1565,6 +1592,11 @@ export default async function HomePage({ params }: PageProps) {
       '/visuals/web/features-v3/block4_model347_loop_4k.mp4?v=20260406a',
       t.home.blocks.fiscal.cards.model347.screenshotAlt,
       '/visuals/web/features-v3/block4_model347_start_4k.webp?v=20260406a'
+    ),
+    'fiscal.donationCertificates': createVideoMedia(
+      '/visuals/web/features-v3/block4_certificats_loop_4k.mp4?v=20260406b',
+      t.home.blocks.fiscal.cards.donationCertificates.screenshotAlt,
+      '/visuals/web/features-v3/block4_certificats_start_4k.webp?v=20260406b'
     ),
     'fiscal.cleanExcel': createVideoMedia(
       '/visuals/web/features-v3/block4_excel_gestoria_loop_4k.mp4?v=20260406a',
