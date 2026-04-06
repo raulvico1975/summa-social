@@ -17,11 +17,26 @@ Només hi ha tres veritats operatives:
 Regles del model:
 
 - El repositori de control és `/Users/raulvico/Documents/summa-social`.
-- El repositori de control viu a `main` i s'ha de mantenir net.
+- El repositori de control viu a `main` i s'ha de mantenir sense canvis locals pendents abans d'integrar o publicar.
 - `npm run inicia` crea una branca `codex/*` i un worktree extern a `../summa-social-worktrees/<branch>`.
 - La implementació es fa només dins del worktree de tasca.
 - Treballar directament al repositori de control per fer una feature queda prohibit.
 - `main` és integració; `prod` és producció.
+
+## 1.1 Semàntica obligatòria dels estats
+
+El terme genèric `net` queda prohibit com a estat suficient. A nivell operatiu només existeixen aquests tres estats:
+
+- `NETA_DE_TASCA`: el worktree/branca de la tasca està en estat correcte per tancar-la.
+- `LLESTA_PER_INTEGRAR`: la branca es pot integrar a `main` sense bloqueig.
+- `LLESTA_PER_PUBLICAR`: `main`, `prod`, worktrees, validacions i precondicions permeten publicar ara mateix.
+
+Interpretació obligatòria:
+
+- Una tasca pot estar tancada i no estar llesta per publicar.
+- `Integrable` i `publicable` no són sinònims.
+- `Autoritzo deploy` només es pot dir quan l'estat global és explícitament `llesta per publicar`.
+- Si no ho està, el sistema ha d'explicar el bloqueig en llenguatge operatiu curt.
 
 ## 2. Flux obligatori
 
@@ -59,7 +74,7 @@ La decisió de publicar és separada del tancament i de la integració. Acabar u
 - Corre validacions i, si hi ha canvis locals, fa commit i push.
 - No integra res a `main`.
 - No publica res a `prod`.
-- El resultat correcte és: branca llesta per integrar.
+- El resultat correcte és: tasca tancada i, si no hi ha bloquejos addicionals, branca llesta per integrar.
 
 ### `npm run integra`
 
@@ -72,7 +87,12 @@ La decisió de publicar és separada del tancament i de la integració. Acabar u
 ### `npm run status`
 
 - És la font única d'estat operatiu.
-- Resumeix `WORK`, `MAIN`, `PROD`, el parc de worktrees i l'`ESTAT GLOBAL`.
+- Mostra un resum visible de `TASCA`, `MAIN` i `PUBLICACIÓ`.
+- Ha de distingir clarament entre `neta de tasca`, `llesta per integrar` i `llesta per publicar`.
+- Ha d'acabar amb una decisió binària per al CEO:
+  - `DECISIÓ CEO: POTS DIR "AUTORITZO DEPLOY"`
+  - o `DECISIÓ CEO: NO POTS DIR "AUTORITZO DEPLOY"`
+- Si no està llest per publicar, només ha d'ensenyar 1-3 motius curts i operatius.
 - Si diu `BLOQUEJAT`, ni `integra` ni `publica` poden continuar.
 
 ### `npm run publica`
@@ -111,6 +131,7 @@ Cap d'aquestes comandes substitueix `acabat`, `integra` o `publica`.
 - No treballar sense worktree de tasca.
 - No implementar al repositori de control.
 - No interpretar `npm run acabat` com a integració.
+- No interpretar `neta de tasca` com a sinònim de `publicable`.
 - No fer deploy fora de `npm run publica`.
 - No usar l'estat d'un worktree com a font de veritat per damunt de `npm run status`.
 - No barrejar neteja de repo amb una feature.

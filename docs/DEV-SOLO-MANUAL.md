@@ -144,7 +144,7 @@ Aquest manual no redefineix el contracte. L'autoritat és:
 Checklist pràctica:
 
 1. El repositori de control és `/Users/raulvico/Documents/summa-social`.
-2. Des del control (`main`, net): `npm run inicia` o `npm run implementa`.
+2. Des del control (`main`, sense canvis locals pendents): `npm run inicia` o `npm run implementa`.
 3. El sistema crea branca `codex/*` + worktree extern.
 4. Implementar només dins del worktree.
 5. `npm run acabat` només valida, commita i puja la branca.
@@ -160,6 +160,7 @@ Operacions de manteniment:
 Regla pràctica:
 
 - si `npm run status` diu `BLOQUEJAT`, no interpretis res ni facis deploy; primer diagnostica el repo
+- el terme `net` tot sol no és vàlid: només es pot dir `neta de tasca`, `llesta per integrar` o `llesta per publicar`
 
 ### Bloqueig d’artefactes
 
@@ -219,7 +220,22 @@ Regles pràctiques:
 - `npm run integra` és l'única porta d'entrada a `main`.
 - `npm run publica` és l'única porta d'entrada a `prod`.
 - si `npm run status` diu `BLOQUEJAT`, no es publica
+- una tasca pot estar tancada i no estar llesta per publicar
+- `integrable` i `publicable` no són sinònims
+- `autoritzo deploy` només es pot dir si `npm run status` diu explícitament `DECISIÓ CEO: POTS DIR "AUTORITZO DEPLOY"`
 - si hi ha residus, primer aplica `worktree:close`, `worktree:gc` o el diagnòstic del document de higiene
+
+Lectura humana dels tres estats:
+
+- `NETA_DE_TASCA`: la feina d'aquesta tasca està ben tancada.
+- `LLESTA_PER_INTEGRAR`: aquesta feina ja pot entrar a `main`.
+- `LLESTA_PER_PUBLICAR`: el sistema complet permet publicar ara mateix.
+
+Traducció ràpida per a no tècnics:
+
+- `commit`: tancar un paquet de canvis de la tasca.
+- `push`: pujar aquest paquet al servidor.
+- `deploy` o `publica`: fer visible a producció allò que ja ha passat per `main`.
 
 ---
 
