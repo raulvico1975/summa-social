@@ -26,6 +26,7 @@ const COMMERCIAL_VIEWPORT = {
   height: 1080,
 };
 const DEMO_PRESENTATION_SCALE = 0.92;
+const SCREENSHOTS_ONLY = process.argv.includes('--screenshots-only');
 
 function log(message) {
   console.log(`[record-demo] ${message}`);
@@ -419,7 +420,7 @@ async function main() {
   log(`Obrint navegador a ${BASE_URL}...`);
   const browser = await chromium.launch({
     channel: 'chrome',
-    headless: false,
+    headless: SCREENSHOTS_ONLY,
     slowMo: 180,
   });
 
@@ -433,21 +434,23 @@ async function main() {
   };
 
   const videoDir = path.join(TMP_DIR, 'video-raw');
-  ensureDir(videoDir);
-  contextOptions.recordVideo = {
-    dir: videoDir,
-    size:
-      QUALITY_MODE === 'commercial'
-        ? { width: COMMERCIAL_VIEWPORT.width, height: COMMERCIAL_VIEWPORT.height }
-        : { width: 1440, height: 960 },
-  };
+  if (!SCREENSHOTS_ONLY) {
+    ensureDir(videoDir);
+    contextOptions.recordVideo = {
+      dir: videoDir,
+      size:
+        QUALITY_MODE === 'commercial'
+          ? { width: COMMERCIAL_VIEWPORT.width, height: COMMERCIAL_VIEWPORT.height }
+          : { width: 1440, height: 960 },
+    };
+  }
 
   const context = await browser.newContext(contextOptions);
   context.setDefaultTimeout(30000);
   await setCollapsedSidebarCookie(context, BASE_URL);
 
   const page = await context.newPage();
-  const video = page.video();
+  const video = SCREENSHOTS_ONLY ? null : page.video();
 
   let trimStartSeconds = 0;
   let finalDurationSeconds = 0;

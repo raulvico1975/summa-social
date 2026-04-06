@@ -1493,7 +1493,7 @@ export default async function HomePage({ params }: PageProps) {
     payments: ['remittanceSplitter', 'bankReturns', 'sepaPayments', 'stripeDonations'],
     fiscal: ['model182', 'model347', 'donationCertificates', 'cleanExcel'],
     projects: ['budgetLines', 'expenseAssignment', 'fieldCapture', 'funderExport'],
-    control: ['dashboard', 'smartAlerts', 'boardReport', 'dataExport'],
+    control: ['dashboard', 'boardReport', 'dataExport'],
   };
   const CARD_SCREENSHOTS: Record<string, string> = {
     'conciliation.importStatements': '/visuals/web/features-v3/block1_import_extractes_start_4k.webp',
@@ -1556,21 +1556,54 @@ export default async function HomePage({ params }: PageProps) {
       '/visuals/landings/remeses-sepa/optimized/remeses-sepa-demo-poster.webp'
     ),
     'fiscal.model182': createVideoMedia(
-      locale === 'es'
-        ? '/visuals/landings/model-182/animations/model-182-demo-es.mp4'
-        : '/visuals/landings/model-182/animations/model-182-demo-ca.mp4',
+      '/visuals/web/features-v3/block4_model182_loop_4k.mp4?v=20260406a',
       t.home.blocks.fiscal.cards.model182.screenshotAlt,
-      '/visuals/landings/model-182/optimized/model-182-demo-poster.webp'
+      '/visuals/web/features-v3/block4_model182_start_4k.webp?v=20260406a'
+    ),
+    'fiscal.model347': createVideoMedia(
+      '/visuals/web/features-v3/block4_model347_loop_4k.mp4?v=20260406a',
+      t.home.blocks.fiscal.cards.model347.screenshotAlt,
+      '/visuals/web/features-v3/block4_model347_start_4k.webp?v=20260406a'
+    ),
+    'fiscal.cleanExcel': createVideoMedia(
+      '/visuals/web/features-v3/block4_excel_gestoria_loop_4k.mp4?v=20260406a',
+      t.home.blocks.fiscal.cards.cleanExcel.screenshotAlt,
+      '/visuals/web/features-v3/block4_excel_gestoria_start_4k.webp?v=20260406a'
+    ),
+    'projects.budgetLines': createVideoMedia(
+      '/visuals/web/features-v3/block5_pressupost_partides_loop_4k.mp4?v=20260406a',
+      t.home.blocks.projects.cards.budgetLines.screenshotAlt,
+      '/visuals/web/features-v3/block5_pressupost_partides_start_4k.webp?v=20260406a'
+    ),
+    'projects.expenseAssignment': createVideoMedia(
+      '/visuals/web/features-v3/block5_assignacio_despeses_loop_4k.mp4?v=20260406a',
+      t.home.blocks.projects.cards.expenseAssignment.screenshotAlt,
+      '/visuals/web/features-v3/block5_assignacio_despeses_start_4k.webp?v=20260406a'
+    ),
+    'projects.fieldCapture': createVideoMedia(
+      '/visuals/web/features-v3/block5_captura_terreny_loop_4k.mp4?v=20260406a',
+      t.home.blocks.projects.cards.fieldCapture.screenshotAlt,
+      '/visuals/web/features-v3/block5_captura_terreny_start_4k.webp?v=20260406a'
+    ),
+    'projects.funderExport': createVideoMedia(
+      '/visuals/web/features-v3/block5_export_financador_loop_4k.mp4?v=20260406a',
+      t.home.blocks.projects.cards.funderExport.screenshotAlt,
+      '/visuals/web/features-v3/block5_export_financador_start_4k.webp?v=20260406a'
     ),
     'control.dashboard': createVideoMedia(
-      '/visuals/functionalities/dashboard/animations/dashboard-control-feature-ca.mp4',
+      '/visuals/web/features-v3/block6_dashboard_loop_4k.mp4?v=20260406a',
       t.home.blocks.control.cards.dashboard.screenshotAlt,
-      '/visuals/functionalities/dashboard/optimized/dashboard-control-feature-poster-ca.png'
+      '/visuals/web/features-v3/block6_dashboard_start_4k.webp?v=20260406a'
     ),
-    'control.smartAlerts': createVideoMedia(
-      '/visuals/functionalities/dashboard/animations/dashboard-control-feature-ca.mp4',
-      t.home.blocks.control.cards.smartAlerts.screenshotAlt,
-      '/visuals/functionalities/dashboard/optimized/dashboard-control-feature-poster-ca.png'
+    'control.boardReport': createVideoMedia(
+      '/visuals/web/features-v3/block6_informe_junta_loop_4k.mp4?v=20260406a',
+      t.home.blocks.control.cards.boardReport.screenshotAlt,
+      '/visuals/web/features-v3/block6_informe_junta_start_4k.webp?v=20260406a'
+    ),
+    'control.dataExport': createVideoMedia(
+      '/visuals/web/features-v3/block6_exportacio_dades_loop_4k.mp4?v=20260406a',
+      t.home.blocks.control.cards.dataExport.screenshotAlt,
+      '/visuals/web/features-v3/block6_exportacio_dades_start_4k.webp?v=20260406a'
     ),
   };
 
