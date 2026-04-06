@@ -1513,7 +1513,7 @@ export default function ExpensesInboxPage() {
       {/* Barra de cerca i filtres */}
       <div className="flex flex-col gap-3">
         {/* Cercador */}
-        <div className="relative w-full md:max-w-md">
+        <div className="relative w-full md:max-w-xl">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder={ep.searchPlaceholder}
@@ -1783,8 +1783,8 @@ export default function ExpensesInboxPage() {
         </div>
       ) : (
         /* Vista desktop - Taula amb jerarquia de columnes responsive */
-        <div className="border rounded-lg">
-          <Table>
+        <div className="w-full rounded-lg border">
+          <Table className="w-full table-fixed">
             <TableHeader>
               <TableRow>
                 <TableHead className="w-[36px] px-2">
@@ -1906,13 +1906,13 @@ export default function ExpensesInboxPage() {
                             <Globe className="h-3.5 w-3.5 text-blue-500 shrink-0" />
                           )}
                           <div className="min-w-0 flex-1">
-                            <div className="text-[13px] truncate max-w-[220px]" title={expense.description || undefined}>
+                            <div className="text-[13px] truncate max-w-[min(42vw,36rem)]" title={expense.description || undefined}>
                               {expense.description || '-'}
                             </div>
                             {/* Categoria i contrapart - visible només en < xl */}
                             <div className="xl:hidden flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
                               {expense.counterpartyName && (
-                                <span className="truncate max-w-[100px]">{expense.counterpartyName}</span>
+                                <span className="truncate max-w-[180px]">{expense.counterpartyName}</span>
                               )}
                               {/* Icona document inline en < xl */}
                               {expense.documentUrl && (
@@ -1930,7 +1930,7 @@ export default function ExpensesInboxPage() {
                       </TableCell>
 
                       {/* Proveïdor - visible només en xl+ */}
-                      <TableCell className="hidden xl:table-cell px-2 text-muted-foreground text-[13px] max-w-[160px] truncate">
+                      <TableCell className="hidden xl:table-cell px-2 text-muted-foreground text-[13px] max-w-[260px] truncate">
                         {expense.counterpartyName || '-'}
                       </TableCell>
 
@@ -2065,7 +2065,7 @@ export default function ExpensesInboxPage() {
       {/* Barra inferior per bulk assign */}
       {hasSelection && (
         <div className="fixed bottom-0 left-0 right-0 bg-background border-t p-4 shadow-lg z-50">
-          <div className="max-w-7xl mx-auto flex items-center justify-between">
+          <div className="w-full flex items-center justify-between">
             <div className="flex items-center gap-4">
               <span className="text-sm font-medium">
                 {selectedIds.size} despesa{selectedIds.size > 1 ? 's' : ''} seleccionada{selectedIds.size > 1 ? 'es' : ''}
@@ -2114,7 +2114,7 @@ export default function ExpensesInboxPage() {
 
       {/* Split Modal */}
       <Dialog open={!!splitModalExpense} onOpenChange={(open) => !open && setSplitModalExpense(null)}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] max-w-[min(96vw,72rem)] overflow-y-auto sm:w-[min(calc(100vw-3rem),72rem)]">
           <DialogHeader>
             <DialogTitle>{tr('projectModule.expenses.bulkAssignTitle', 'Assignació múltiple')}</DialogTitle>
             <DialogDescription>
