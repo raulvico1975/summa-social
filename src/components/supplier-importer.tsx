@@ -436,12 +436,14 @@ export function SupplierImporter({
       setImportedCount(imported);
       setStep('complete');
       onImportComplete?.(imported);
-
-      toast({
-        presentation: 'centered-success',
-        title: t.importers.supplier.importSuccess,
-        description: t.importers.supplier.importSuccessDescription(imported),
-      });
+      onOpenChange(false);
+      window.setTimeout(() => {
+        toast({
+          presentation: 'centered-success',
+          title: t.importers.supplier.importSuccess,
+          description: t.importers.supplier.importSuccessDescription(imported),
+        });
+      }, 180);
     } catch (error) {
       console.error('Error important:', error);
       toast({

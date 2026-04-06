@@ -192,15 +192,17 @@ export function CategoryImporter({ open, onOpenChange, onComplete }: CategoryImp
       }
 
       setStep('done');
-      toast({
-        presentation: 'centered-success',
-        title: t.importers.common.importComplete,
-        description: tr('categoryImporter.importSummary', '{created} creades, {updated} actualitzades.')
-          .replace('{created}', String(created))
-          .replace('{updated}', String(updated)),
-      });
-
       onComplete?.();
+      onOpenChange(false);
+      window.setTimeout(() => {
+        toast({
+          presentation: 'centered-success',
+          title: t.importers.common.importComplete,
+          description: tr('categoryImporter.importSummary', '{created} creades, {updated} actualitzades.')
+            .replace('{created}', String(created))
+            .replace('{updated}', String(updated)),
+        });
+      }, 180);
     } catch (error) {
       console.error('Error important:', error);
       toast({

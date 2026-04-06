@@ -158,13 +158,14 @@ export function ClosingBundleDialog({ open, onOpenChange }: ClosingBundleDialogP
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
 
-        toast({
-          presentation: 'centered-success',
-          title: t.reports.closingBundle.done,
-          description: t.reports.closingBundle.doneDescription,
-        });
-
         onOpenChange(false);
+        window.setTimeout(() => {
+          toast({
+            presentation: 'centered-success',
+            title: t.reports.closingBundle.done,
+            description: t.reports.closingBundle.doneDescription,
+          });
+        }, 180);
         return;
       }
 

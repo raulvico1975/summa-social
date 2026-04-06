@@ -50,6 +50,21 @@ Introducció d'una notificació centrada opt-in per a èxits clars d'importació
 - [x] La nova notificació és opt-in i no modifica el comportament global dels toasts actuals.
 - [x] La guardrail fiscal queda coberta amb evidència manual específica del flux afectat.
 
+### Registre manual 2026-04-06 — Tancar modal abans de la notificació centrada
+
+**Context:**
+Retoc de comportament als diàlegs d'importació i al paquet de tancament perquè, quan el procés acaba correctament, la modal es tanqui abans de mostrar la notificació centrada d'èxit. El canvi evita la superposició visual entre modal i confirmació, sense tocar persistència, dades generades ni càlculs fiscals.
+
+**Comprovacions aplicades:**
+1. Revisió manual del diff per validar que només es reordena la seqüència `onOpenChange(false)` -> `toast(centered-success)` als diàlegs afectats.
+2. Verificació tècnica amb `npm run typecheck` i `git diff --check` en verd sobre el commit candidat.
+3. Comprovació visual local en demo d'importació massiva, verificant que la notificació centrada ja no queda muntada sobre la modal oberta.
+
+**Resultat:**
+- [x] El canvi és UI-only i no altera imports, informes, certificats ni cap càlcul fiscal.
+- [x] La modal d'origen es tanca abans de mostrar la confirmació centrada.
+- [x] La notificació centrada manté el mateix contingut i semàntica; només millora el timing visual.
+
 ### Registre manual 2026-04-05 — Amplada de modals d'importació/exportació sensibles
 
 **Context:**

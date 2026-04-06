@@ -970,12 +970,14 @@ export function DonorImporter({
     setUpdatedCount(updated);
     setStep('complete');
     onImportComplete?.(imported + updated);
-
-    toast({
-      presentation: 'centered-success',
-      title: t.importers.donor.importSuccess,
-      description: t.importers.donor.importSuccessDescription(imported + updated),
-    });
+    onOpenChange(false);
+    window.setTimeout(() => {
+      toast({
+        presentation: 'centered-success',
+        title: t.importers.donor.importSuccess,
+        description: t.importers.donor.importSuccessDescription(imported + updated),
+      });
+    }, 180);
   } catch (error: any) {
     console.error('[DonorImporter] import failed:', error?.message);
     toast({

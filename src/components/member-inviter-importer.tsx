@@ -191,13 +191,15 @@ export function MemberInviterImporter({ open, onOpenChange, onComplete }: Member
       }
 
       setStep('done');
-      toast({
-        presentation: 'centered-success',
-        title: tr('memberInviterImporter.importCompleteTitle', 'Invitacions creades'),
-        description: tr('memberInviterImporter.importCompleteDescription', "S'han creat {count} invitacions.").replace('{count}', String(created)),
-      });
-
       onComplete?.();
+      onOpenChange(false);
+      window.setTimeout(() => {
+        toast({
+          presentation: 'centered-success',
+          title: tr('memberInviterImporter.importCompleteTitle', 'Invitacions creades'),
+          description: tr('memberInviterImporter.importCompleteDescription', "S'han creat {count} invitacions.").replace('{count}', String(created)),
+        });
+      }, 180);
     } catch (error) {
       console.error('Error creant invitacions:', error);
       toast({

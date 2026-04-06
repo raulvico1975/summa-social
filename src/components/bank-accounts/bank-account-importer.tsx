@@ -195,18 +195,20 @@ export function BankAccountImporter({ open, onOpenChange, onComplete }: BankAcco
       }
 
       setStep('done');
-      toast({
-        presentation: 'centered-success',
-        title: t.importers.common.importComplete,
-        description: tr(
-          'bankAccountsImporter.importSummary',
-          '{created} creats, {updated} actualitzats.'
-        )
-          .replace('{created}', String(created))
-          .replace('{updated}', String(updated)),
-      });
-
       onComplete?.();
+      onOpenChange(false);
+      window.setTimeout(() => {
+        toast({
+          presentation: 'centered-success',
+          title: t.importers.common.importComplete,
+          description: tr(
+            'bankAccountsImporter.importSummary',
+            '{created} creats, {updated} actualitzats.'
+          )
+            .replace('{created}', String(created))
+            .replace('{updated}', String(updated)),
+        });
+      }, 180);
     } catch (error) {
       console.error('Error important:', error);
       toast({
