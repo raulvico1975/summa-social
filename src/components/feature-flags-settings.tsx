@@ -13,7 +13,7 @@ import { useFirebase } from '@/firebase';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
 import { useTranslations } from '@/i18n';
 import { doc, updateDoc } from 'firebase/firestore';
-import { Puzzle, FolderKanban, Loader2, FileStack } from 'lucide-react';
+import { Puzzle, FolderKanban, Loader2, FileStack, Sparkles } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 export function FeatureFlagsSettings() {
@@ -29,6 +29,7 @@ export function FeatureFlagsSettings() {
   // Feature flags actuals
   const isProjectModuleEnabled = organization?.features?.projectModule ?? false;
   const isPendingDocsEnabled = organization?.features?.pendingDocs ?? false;
+  const isCopilotOnboardingEnabled = organization?.features?.copilotOnboardingPremium ?? false;
 
   const handleToggleProjectModule = async (enabled: boolean) => {
     if (!organizationId || !firestore) return;
@@ -98,6 +99,50 @@ export function FeatureFlagsSettings() {
           : tr(
             'settings.featureFlags.toasts.pendingDocsDisabledDescription',
             'Documents pendents de conciliació desactivat.'
+          ),
+      });
+
+      router.refresh();
+    } catch (error) {
+      console.error('Error actualitzant feature flag:', error);
+      toast({
+        variant: 'destructive',
+        title: tr('settings.featureFlags.toasts.errorTitle', 'Error'),
+        description: tr(
+          'settings.featureFlags.toasts.errorDescription',
+          'No s\'ha pogut actualitzar el mòdul. Torna-ho a intentar.'
+        ),
+      });
+    } finally {
+      setIsUpdating(false);
+      setUpdatingFlag(null);
+    }
+  };
+
+  const handleToggleCopilotOnboarding = async (enabled: boolean) => {
+    if (!organizationId || !firestore) return;
+
+    setIsUpdating(true);
+    setUpdatingFlag('copilotOnboardingPremium');
+    try {
+      const orgRef = doc(firestore, 'organizations', organizationId);
+      await updateDoc(orgRef, {
+        'features.copilotOnboardingPremium': enabled,
+        updatedAt: new Date().toISOString(),
+      });
+
+      toast({
+        title: enabled
+          ? tr('settings.featureFlags.toasts.moduleEnabledTitle', 'Mòdul activat')
+          : tr('settings.featureFlags.toasts.moduleDisabledTitle', 'Mòdul desactivat'),
+        description: enabled
+          ? tr(
+            'settings.featureFlags.toasts.copilotOnboardingEnabledDescription',
+            'El copilot premium d\'onboarding s\'ha activat per a primers fluxos guiats.'
+          )
+          : tr(
+            'settings.featureFlags.toasts.copilotOnboardingDisabledDescription',
+            'El copilot premium d\'onboarding s\'ha desactivat.'
           ),
       });
 
@@ -203,6 +248,44 @@ export function FeatureFlagsSettings() {
               id="pending-docs"
               checked={isPendingDocsEnabled}
               onCheckedChange={handleTogglePendingDocs}
+              disabled={isUpdating}
+            />
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between rounded-lg border p-4">
+          <div className="flex items-start gap-4">
+            <div className="rounded-lg bg-sky-100 p-2">
+              <Sparkles className="h-5 w-5 text-sky-600" />
+            </div>
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <Label htmlFor="copilot-onboarding-premium" className="text-base font-medium cursor-pointer">
+                  {tr('settings.featureFlags.copilotOnboarding.label', 'Copilot onboarding premium')}
+                </Label>
+                <Badge variant="outline" className="bg-sky-50 text-sky-700 border-sky-200">
+                  {tr('settings.featureFlags.badges.experimental', 'Experimental')}
+                </Badge>
+                {isCopilotOnboardingEnabled && (
+                  <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200">
+                    {tr('settings.featureFlags.badges.active', 'Actiu')}
+                  </Badge>
+                )}
+              </div>
+              <p className="text-sm text-muted-foreground">
+                {tr(
+                  'settings.featureFlags.copilotOnboarding.description',
+                  'Guia els usuaris nous en el primer flux de remesa amb ajuda contextual i highlights visuals.'
+                )}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            {updatingFlag === 'copilotOnboardingPremium' && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
+            <Switch
+              id="copilot-onboarding-premium"
+              checked={isCopilotOnboardingEnabled}
+              onCheckedChange={handleToggleCopilotOnboarding}
               disabled={isUpdating}
             />
           </div>

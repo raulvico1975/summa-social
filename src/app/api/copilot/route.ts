@@ -130,6 +130,56 @@ function inferDeterministicAction(body: CopilotRequest): CopilotToolAction | nul
     };
   }
 
+  const isSepaWizardConfig =
+    currentRoute.includes("/dashboard/donants/remeses-cobrament") &&
+    currentRoute.includes("step=config");
+
+  const startSepaIntent =
+    /(primera\s+remesa|generar.*remesa|fer.*remesa|crear.*remesa|preparar.*remesa|vull.*remesa|per on comen[çc]|comen[çc]ar)/i.test(
+      normalizedMessage
+    );
+
+  if (
+    isSepaWizardConfig &&
+    startSepaIntent &&
+    body.visibleActions.includes("sepa-bank-account")
+  ) {
+    return {
+      type: "highlight",
+      elementId: "sepa-bank-account",
+      message: "Comença triant el compte de cobrament.",
+    };
+  }
+
+  const continueIntent =
+    /(i ara|seguent|següent|continuar|continua|despres|després|seguim|quin és el següent pas)/i.test(
+      normalizedMessage
+    );
+
+  if (
+    isSepaWizardConfig &&
+    continueIntent &&
+    body.visibleActions.includes("sepa-next-step-ready")
+  ) {
+    return {
+      type: "highlight",
+      elementId: "sepa-next-step-ready",
+      message: "Ja ho tens preparat. Continua al pas següent.",
+    };
+  }
+
+  if (
+    isSepaWizardConfig &&
+    continueIntent &&
+    body.visibleActions.includes("sepa-collection-date")
+  ) {
+    return {
+      type: "highlight",
+      elementId: "sepa-collection-date",
+      message: "Abans fixa la data de cobrament.",
+    };
+  }
+
   return null;
 }
 
@@ -140,7 +190,19 @@ function inferDeterministicContingency(body: CopilotRequest): string | null {
     return CONTINGENCY_TEXT;
   }
 
+  if (
+    normalizedRoute(body.currentRoute).includes("/dashboard/donants/remeses-cobrament") &&
+    /(exportar|descarregar).*(sepa|remesa)|fitxer.*sepa/i.test(normalizedMessage) &&
+    !body.visibleActions.includes("sepa-next-step-ready")
+  ) {
+    return CONTINGENCY_TEXT;
+  }
+
   return null;
+}
+
+function normalizedRoute(route: string): string {
+  return normalizeRoute(route);
 }
 
 function validateAction(

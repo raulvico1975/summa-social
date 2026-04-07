@@ -8,7 +8,12 @@ Aquest copilot no substitueix el bot de suport ni introdueix un flux funcional n
 
 ## Abast tecnic actual
 
-L'estat actual del pilot queda limitat a la sandbox de `/live` i al cas d'us `primera remesa`.
+L'estat actual del pilot combina:
+
+- sandbox local a `/live`
+- muntatge real preparat darrere de feature flag a `/{orgSlug}/dashboard/donants/remeses-cobrament`
+
+El cas d'us continua sent `primera remesa`.
 
 Peces actuals:
 - `src/app/api/copilot/route.ts`
@@ -21,12 +26,22 @@ Peces actuals:
   Responsabilitat: entorn controlat amb les dues vistes del happy path (`donants` i `remeses`).
 - `src/lib/copilot/track-copilot-event.ts`
   Responsabilitat: facade de telemetria cap a `trackUX`.
+- `src/components/sepa-collection/SepaCollectionWizard.tsx`
+  Responsabilitat: primer punt de muntatge real darrere de flag, només si encara no hi ha runs SEPA previs.
+- `src/components/sepa-collection/StepConfig.tsx`
+  Responsabilitat: exposar punts persistents i visibles del wizard per al highlight del copilot.
+- `src/components/feature-flags-settings.tsx`
+  Responsabilitat: activació controlada del copilot premium per organització.
+- `src/lib/data.ts`
+  Responsabilitat: definició del flag `features.copilotOnboardingPremium`.
 
 Comportament validat localment:
 - des de `donants`, el missatge `Vull generar la remesa` navega a `remeses`
 - en arribar a `remeses`, el copilot continua sol i il.lumina `Generar remesa`
 - el clic al boto ressaltat registra `copilot_goal_achieved`
 - una peticio fora del happy path retorna `Aquesta opcio no esta disponible aqui.`
+- al wizard real de `remeses-cobrament`, `Vull preparar la primera remesa` retorna highlight a `sepa-bank-account`
+- al wizard real de `remeses-cobrament`, `I ara què faig?` retorna highlight a `sepa-next-step-ready` quan el pas ja es pot continuar
 
 ## Fases de rollout
 
@@ -49,9 +64,9 @@ Objectiu:
 - injectar la pill en un punt real d'onboarding sense tocar el layout global
 
 Abast:
-- muntatge exclusiu sobre la pantalla real acordada
+- muntatge exclusiu sobre `donants/remeses-cobrament`
 - gating per usuari nou / cohort controlada
-- mateix abast funcional: navegar a remeses i ressaltar el boto persistent
+- mateix abast funcional: ressaltar camps i CTA persistents del wizard
 
 Sortida:
 - experiment real amb trafic limitat i risc baix

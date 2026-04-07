@@ -4,10 +4,11 @@ import * as React from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { OnboardingPill } from '@/components/copilot/OnboardingPill';
 import { useTranslations } from '@/i18n';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
 import { useFirebase, useCollection, useMemoFirebase, addDocumentNonBlocking } from '@/firebase';
-import { collection, query, where, doc, addDoc, writeBatch, serverTimestamp } from 'firebase/firestore';
+import { collection, query, where, doc, addDoc, writeBatch, serverTimestamp, limit } from 'firebase/firestore';
 import type { Donor, BankAccount, SepaCollectionRun, SepaCollectionItem, SepaSequenceType } from '@/lib/data';
 import { generatePain008Xml, generateMessageId, validateCollectionRun, filterEligibleDonors, determineSequenceType, computeDonorCollectionStatus, type DonorCollectionStatus } from '@/lib/sepa/pain008';
 import { ArrowLeft, ArrowRight, Download, AlertTriangle, CheckCircle2, XCircle } from 'lucide-react';
@@ -50,6 +51,17 @@ export function SepaCollectionWizard() {
     [contactsCollection]
   );
   const { data: donorsRaw, isLoading: isLoadingDonors } = useCollection<Donor & { archivedAt?: string }>(donorsQuery);
+
+  const sepaRunsQuery = useMemoFirebase(
+    () => organizationId
+      ? query(
+          collection(firestore, 'organizations', organizationId, 'sepaCollectionRuns'),
+          limit(1)
+        )
+      : null,
+    [firestore, organizationId]
+  );
+  const { data: sepaRuns, isLoading: isLoadingSepaRuns } = useCollection<SepaCollectionRun>(sepaRunsQuery);
 
   // Filter active recurring donors only
   const donors = React.useMemo(
@@ -350,9 +362,20 @@ export function SepaCollectionWizard() {
   };
 
   const isLoading = isLoadingAccounts || isLoadingDonors;
+  const hasPreviousSepaRuns = (sepaRuns?.length ?? 0) > 0;
+  const copilotOnboardingActive =
+    (organization?.features?.copilotOnboardingPremium ?? false) &&
+    !isLoadingSepaRuns &&
+    !hasPreviousSepaRuns &&
+    currentStep === 'config';
+  const copilotRoute = React.useMemo(
+    () => `/${orgSlug}/dashboard/donants/remeses-cobrament?step=${currentStep}`,
+    [currentStep, orgSlug]
+  );
 
   return (
-    <Card>
+    <>
+    <Card data-ai-action="sepa-collection-wizard">
       <CardHeader>
         <CardTitle className="text-2xl font-bold tracking-tight font-headline">
           {t.sepaCollection.title}
@@ -447,7 +470,11 @@ export function SepaCollectionWizard() {
           </Button>
 
           {currentStep !== 'review' ? (
-            <Button onClick={handleNext} disabled={!canProceed()}>
+            <Button
+              data-ai-action={canProceed() ? 'sepa-next-step-ready' : undefined}
+              onClick={handleNext}
+              disabled={!canProceed()}
+            >
               {t.common.next}
               <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
@@ -460,5 +487,12 @@ export function SepaCollectionWizard() {
         </div>
       </CardContent>
     </Card>
+    {copilotOnboardingActive ? (
+      <OnboardingPill
+        currentRoute={copilotRoute}
+        onboardingActive={copilotOnboardingActive}
+      />
+    ) : null}
+    </>
   );
 }

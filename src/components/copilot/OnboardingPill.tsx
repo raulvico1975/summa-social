@@ -82,6 +82,20 @@ export function OnboardingPill({
 }: OnboardingPillProps) {
   const router = useRouter();
   const { visibleActions } = useCopilotObserver(currentRoute);
+  const storageKey = useMemo(
+    () => `${SESSION_STORAGE_KEY}:${currentRoute.split("?")[0]}`,
+    [currentRoute]
+  );
+  const isSepaWizardRoute = currentRoute.includes("/dashboard/donants/remeses-cobrament");
+  const introMessage = isSepaWizardRoute
+    ? "Explica'm què vols fer amb la remesa i et marco el punt clau."
+    : "Explica'm què vols fer i et guio fins al punt clau.";
+  const helperMessage = isSepaWizardRoute
+    ? "Demana el següent pas i et marcaré el camp o el botó correcte."
+    : "Pregunta pel següent pas i actuaré si toca.";
+  const placeholder = isSepaWizardRoute
+    ? 'Ex: "Vull preparar la primera remesa"'
+    : 'Ex: "Vull generar la remesa"';
 
   const [expanded, setExpanded] = useState(onboardingActive);
   const [dismissed, setDismissed] = useState(false);
@@ -92,7 +106,7 @@ export function OnboardingPill({
   const [messages, setMessages] = useState<CopilotMessage[]>([
     {
       role: "assistant",
-      text: "Explica'm què vols fer i et guio fins al punt clau.",
+      text: introMessage,
     },
   ]);
   const [pendingFollowUp, setPendingFollowUp] = useState<PendingFollowUp>(null);
@@ -111,7 +125,7 @@ export function OnboardingPill({
       return;
     }
 
-    const rawState = window.sessionStorage.getItem(SESSION_STORAGE_KEY);
+    const rawState = window.sessionStorage.getItem(storageKey);
     if (!rawState) {
       return;
     }
@@ -135,9 +149,9 @@ export function OnboardingPill({
       }
       restoredStateRef.current = true;
     } catch {
-      window.sessionStorage.removeItem(SESSION_STORAGE_KEY);
+      window.sessionStorage.removeItem(storageKey);
     }
-  }, []);
+  }, [storageKey]);
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -152,8 +166,17 @@ export function OnboardingPill({
       pendingFollowUp,
     };
 
-    window.sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(snapshot));
-  }, [dismissed, expanded, messages, pendingFollowUp, status]);
+    window.sessionStorage.setItem(storageKey, JSON.stringify(snapshot));
+  }, [dismissed, expanded, messages, pendingFollowUp, status, storageKey]);
+
+  useEffect(() => {
+    setMessages((current) => {
+      if (current.length === 1 && current[0]?.role === "assistant") {
+        return [{ role: "assistant", text: introMessage }];
+      }
+      return current;
+    });
+  }, [introMessage]);
 
   useEffect(() => {
     return () => {
@@ -443,7 +466,7 @@ export function OnboardingPill({
                 {pending ? (
                   <span className="animate-pulse">Analitzant pantalla...</span>
                 ) : (
-                  <span>Pregunta pel següent pas i actuaré si toca.</span>
+                  <span>{helperMessage}</span>
                 )}
               </div>
 
@@ -458,7 +481,7 @@ export function OnboardingPill({
                   className="min-w-0 flex-1 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm text-slate-900 outline-none ring-0 placeholder:text-slate-400 focus:border-sky-300"
                   disabled={pending}
                   onChange={(event) => setDraft(event.target.value)}
-                  placeholder='Ex: "Vull generar la remesa"'
+                  placeholder={placeholder}
                   type="text"
                   value={draft}
                 />

@@ -80,7 +80,10 @@ export function StepConfig({ bankAccounts, configData, onChange, isLoading }: St
               value={configData.bankAccountId}
               onValueChange={(value) => onChange({ ...configData, bankAccountId: value })}
             >
-              <SelectTrigger id="bankAccount">
+              <SelectTrigger
+                data-ai-action="sepa-bank-account"
+                id="bankAccount"
+              >
                 <SelectValue placeholder={t.sepaCollection.config.bankAccountHint} />
               </SelectTrigger>
               <SelectContent>
@@ -138,6 +141,7 @@ export function StepConfig({ bankAccounts, configData, onChange, isLoading }: St
           <div className="space-y-2">
             <Label htmlFor="collectionDate">{t.sepaCollection.config.collectionDate}</Label>
             <Input
+              data-ai-action="sepa-collection-date"
               id="collectionDate"
               type="date"
               value={configData.collectionDate}

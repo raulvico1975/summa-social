@@ -530,6 +530,7 @@ export type OrganizationLanguage = 'ca' | 'es';
 export type OrganizationFeatures = {
   projectModule?: boolean;         // Mòdul de projectes i justificació econòmica
   pendingDocs?: boolean;           // Documents pendents de conciliació (factures/nòmines pre-banc)
+  copilotOnboardingPremium?: boolean; // Copilot premium d'onboarding per primers fluxos guiats
   expenseReports?: {
     kmRateDefault?: number;        // Tarifa €/km per defecte per quilometratge (ex: 0.19)
   };
