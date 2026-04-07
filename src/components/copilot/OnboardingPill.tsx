@@ -1,19 +1,23 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 
 import { trackCopilotEvent } from "@/lib/copilot/track-copilot-event";
 import { useCopilotObserver } from "@/lib/copilot/use-copilot-observer";
 
 const CONTINGENCY_TEXT = "Aquesta opció no està disponible aquí.";
 const GOAL_CLICK_WINDOW_MS = 4000;
+const REQUEST_TIMEOUT_MS = 5000;
+const SESSION_STORAGE_KEY = "copilot-onboarding-pill";
 const HIGHLIGHT_CLASSES = [
+  "relative",
+  "z-30",
   "ring-4",
-  "ring-green-500/50",
-  "shadow-[0_0_28px_rgba(34,197,94,0.3)]",
+  "ring-emerald-400/70",
+  "shadow-[0_0_0_1px_rgba(255,255,255,0.9),0_0_32px_rgba(16,185,129,0.45)]",
   "transition-all",
-  "duration-500",
+  "duration-700",
 ];
 
 type CopilotApiResponse = {
@@ -33,6 +37,33 @@ type CopilotApiResponse = {
     | null;
 };
 
+type CopilotMessage = {
+  role: "user" | "assistant";
+  text: string;
+};
+
+type PendingFollowUp =
+  | {
+      kind: "highlight";
+      route: string;
+      elementId: string;
+      message: string;
+    }
+  | null;
+
+type PersistedPillState = {
+  expanded: boolean;
+  dismissed: boolean;
+  status: string;
+  messages: CopilotMessage[];
+  pendingFollowUp: PendingFollowUp;
+};
+
+type OnboardingPillProps = {
+  currentRoute: string;
+  onboardingActive: boolean;
+};
+
 function resolveActionNode(elementId: string): HTMLElement | null {
   const node = document.querySelector<HTMLElement>(
     `[data-ai-action="${elementId}"]`
@@ -45,22 +76,84 @@ function resolveActionNode(elementId: string): HTMLElement | null {
   return node;
 }
 
-export function OnboardingPill() {
+export function OnboardingPill({
+  currentRoute,
+  onboardingActive,
+}: OnboardingPillProps) {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const { currentRoute, visibleActions } = useCopilotObserver();
+  const { visibleActions } = useCopilotObserver(currentRoute);
 
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(onboardingActive);
   const [dismissed, setDismissed] = useState(false);
   const [pending, setPending] = useState(false);
   const [status, setStatus] = useState("");
+  const [spotlightActive, setSpotlightActive] = useState(false);
+  const [draft, setDraft] = useState("");
+  const [messages, setMessages] = useState<CopilotMessage[]>([
+    {
+      role: "assistant",
+      text: "Explica'm què vols fer i et guio fins al punt clau.",
+    },
+  ]);
+  const [pendingFollowUp, setPendingFollowUp] = useState<PendingFollowUp>(null);
 
   const cleanupRef = useRef<(() => void) | null>(null);
+  const interactionStartedRef = useRef(false);
+  const restoredStateRef = useRef(false);
 
   const shouldRender = useMemo(
-    () => searchParams.get("onboarding") === "true" && !dismissed,
-    [dismissed, searchParams]
+    () => onboardingActive && !dismissed,
+    [dismissed, onboardingActive]
   );
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const rawState = window.sessionStorage.getItem(SESSION_STORAGE_KEY);
+    if (!rawState) {
+      return;
+    }
+
+    try {
+      const parsedState = JSON.parse(rawState) as Partial<PersistedPillState>;
+      if (typeof parsedState.expanded === "boolean") {
+        setExpanded(parsedState.expanded);
+      }
+      if (typeof parsedState.dismissed === "boolean") {
+        setDismissed(parsedState.dismissed);
+      }
+      if (typeof parsedState.status === "string") {
+        setStatus(parsedState.status);
+      }
+      if (Array.isArray(parsedState.messages) && parsedState.messages.length > 0) {
+        setMessages(parsedState.messages as CopilotMessage[]);
+      }
+      if (parsedState.pendingFollowUp) {
+        setPendingFollowUp(parsedState.pendingFollowUp as PendingFollowUp);
+      }
+      restoredStateRef.current = true;
+    } catch {
+      window.sessionStorage.removeItem(SESSION_STORAGE_KEY);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const snapshot: PersistedPillState = {
+      expanded,
+      dismissed,
+      status,
+      messages,
+      pendingFollowUp,
+    };
+
+    window.sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(snapshot));
+  }, [dismissed, expanded, messages, pendingFollowUp, status]);
 
   useEffect(() => {
     return () => {
@@ -69,7 +162,18 @@ export function OnboardingPill() {
     };
   }, []);
 
+  useEffect(() => {
+    if (restoredStateRef.current) {
+      return;
+    }
+
+    if (onboardingActive && !dismissed) {
+      setExpanded(true);
+    }
+  }, [dismissed, onboardingActive]);
+
   const cleanupHighlight = useCallback(() => {
+    setSpotlightActive(false);
     cleanupRef.current?.();
     cleanupRef.current = null;
   }, []);
@@ -78,8 +182,7 @@ export function OnboardingPill() {
     const node = resolveActionNode(elementId);
     if (!node) {
       setStatus(CONTINGENCY_TEXT);
-      setExpanded(false);
-      setDismissed(true);
+      setExpanded(true);
       return;
     }
 
@@ -90,6 +193,7 @@ export function OnboardingPill() {
     node.scrollIntoView({ behavior: "smooth", block: "center" });
 
     const activate = window.setTimeout(() => {
+      setSpotlightActive(true);
       node.classList.add(...HIGHLIGHT_CLASSES);
 
       const onClick = () => {
@@ -110,6 +214,7 @@ export function OnboardingPill() {
 
       cleanupRef.current = () => {
         window.clearTimeout(expire);
+        setSpotlightActive(false);
         node.classList.remove(...HIGHLIGHT_CLASSES);
         node.removeEventListener("click", onClick);
       };
@@ -117,14 +222,71 @@ export function OnboardingPill() {
 
     cleanupRef.current = () => {
       window.clearTimeout(activate);
+      setSpotlightActive(false);
       node.classList.remove(...HIGHLIGHT_CLASSES);
     };
   }, [cleanupHighlight]);
 
-  const handleStart = useCallback(async () => {
+  useEffect(() => {
+    if (
+      !pendingFollowUp ||
+      pendingFollowUp.kind !== "highlight" ||
+      pendingFollowUp.route !== currentRoute ||
+      !visibleActions.includes(pendingFollowUp.elementId)
+    ) {
+      return;
+    }
+
+    setStatus(pendingFollowUp.message);
+    setMessages((currentMessages) => {
+      const lastMessage = currentMessages[currentMessages.length - 1];
+      if (
+        lastMessage?.role === "assistant" &&
+        lastMessage.text === pendingFollowUp.message
+      ) {
+        return currentMessages;
+      }
+
+      return [
+        ...currentMessages,
+        {
+          role: "assistant",
+          text: pendingFollowUp.message,
+        },
+      ];
+    });
+    executeHighlight(pendingFollowUp.elementId);
+    trackCopilotEvent("copilot_action_executed", {
+      action: "highlight",
+      elementId: pendingFollowUp.elementId,
+      source: "post_navigation_followup",
+    });
+    setPendingFollowUp(null);
+    setExpanded(false);
+  }, [currentRoute, executeHighlight, pendingFollowUp, visibleActions]);
+
+  const handleSubmit = useCallback(async () => {
+    const userMessage = draft.trim();
+    if (!userMessage) return;
+
     setPending(true);
     setStatus("");
-    trackCopilotEvent("copilot_interaction_started", { currentRoute });
+    const nextMessages = [
+      ...messages,
+      {
+        role: "user" as const,
+        text: userMessage,
+      },
+    ];
+    setMessages(nextMessages);
+    setDraft("");
+    if (!interactionStartedRef.current) {
+      trackCopilotEvent("copilot_interaction_started", { currentRoute });
+      interactionStartedRef.current = true;
+    }
+
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
 
     try {
       const response = await fetch("/api/copilot", {
@@ -133,21 +295,36 @@ export function OnboardingPill() {
         body: JSON.stringify({
           currentRoute,
           visibleActions,
-          userMessage: "Vull generar una remesa.",
+          userMessage,
+          history: nextMessages.slice(-4),
         }),
+        signal: controller.signal,
       });
 
       const data = (await response.json()) as CopilotApiResponse;
       if (!response.ok || !data.ok) {
         setStatus(data.message || CONTINGENCY_TEXT);
-        setExpanded(false);
+        setMessages((prev) => [
+          ...prev,
+          {
+            role: "assistant",
+            text: data.message || CONTINGENCY_TEXT,
+          },
+        ]);
         return;
       }
 
       setStatus(data.message);
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          text: data.message,
+        },
+      ]);
 
       if (!data.action) {
-        setExpanded(false);
+        setExpanded(true);
         return;
       }
 
@@ -156,9 +333,19 @@ export function OnboardingPill() {
           action: "navigate",
           destination: data.action.path,
         });
-        router.push(data.action.path);
+        const [path, query = ""] = data.action.path.split("?");
+        const merged = new URLSearchParams(query);
+        merged.set("onboarding", "true");
+        if (path === "/live" && merged.get("view") === "remeses") {
+          setPendingFollowUp({
+            kind: "highlight",
+            route: "/live?view=remeses",
+            elementId: "generate-remittance",
+            message: "Ja ets a remeses. T'il·lumino el botó clau.",
+          });
+        }
+        router.push(`${path}?${merged.toString()}`);
         setExpanded(false);
-        setDismissed(true);
         return;
       }
 
@@ -168,80 +355,132 @@ export function OnboardingPill() {
       });
       executeHighlight(data.action.elementId);
       setExpanded(false);
-      setDismissed(true);
-    } catch {
-      setStatus("Ara mateix no puc orientar aquesta pantalla.");
-      setExpanded(false);
+    } catch (error) {
+      const timeoutMessage =
+        error instanceof DOMException && error.name === "AbortError"
+          ? "Problemes de connexió. Torna-ho a provar."
+          : "Ara mateix no puc orientar aquesta pantalla.";
+
+      setStatus(timeoutMessage);
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          text: timeoutMessage,
+        },
+      ]);
     } finally {
+      window.clearTimeout(timeout);
       setPending(false);
     }
-  }, [currentRoute, executeHighlight, router, visibleActions]);
+  }, [currentRoute, draft, executeHighlight, messages, router, visibleActions]);
 
   if (!shouldRender) {
     return null;
   }
 
   return (
-    <div className="fixed bottom-6 right-6 z-50 w-[min(360px,calc(100vw-32px))]">
-      <div className="rounded-2xl border border-white/60 bg-white/80 p-4 shadow-2xl backdrop-blur-md transition-all duration-300">
-        {!expanded ? (
-          <div className="space-y-3">
-            <div className="space-y-1">
-              <p className="text-[11px] font-extrabold uppercase tracking-[0.16em] text-slate-500">
-                Onboarding
-              </p>
-              <p className="text-sm font-medium text-slate-900">
-                ✨ T&apos;ajudo a generar la teva primera remesa.
-              </p>
-              {status ? (
-                <p className="text-xs leading-5 text-slate-600">{status}</p>
+    <>
+      <div
+        aria-hidden="true"
+        className={`pointer-events-none fixed inset-0 z-20 bg-slate-950/20 transition-opacity duration-500 ${
+          spotlightActive ? "opacity-100" : "opacity-0"
+        }`}
+      />
+      <div className="fixed bottom-6 right-6 z-50 w-[min(360px,calc(100vw-32px))]">
+        <div className="rounded-2xl border border-white/60 bg-white/80 p-4 shadow-2xl backdrop-blur-md transition-all duration-300">
+          {!expanded ? (
+            <div className="space-y-3">
+              <div className="space-y-1">
+                <p className="text-[11px] font-extrabold uppercase tracking-[0.16em] text-slate-500">
+                  Onboarding
+                </p>
+                <p className="text-sm font-medium text-slate-900">
+                  ✨ T&apos;ajudo a generar la teva primera remesa.
+                </p>
+                {status ? (
+                  <p className="text-xs leading-5 text-slate-600">{status}</p>
+                ) : null}
+              </div>
+
+              {!dismissed ? (
+                <div className="flex items-center gap-2">
+                  <button
+                    className="inline-flex rounded-full bg-sky-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-sky-500"
+                    onClick={() => setExpanded(true)}
+                    type="button"
+                  >
+                    Guia&apos;m
+                  </button>
+                  <button
+                    className="inline-flex rounded-full border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+                    onClick={() => setDismissed(true)}
+                    type="button"
+                  >
+                    Omet
+                  </button>
+                </div>
               ) : null}
             </div>
+          ) : (
+            <div className="space-y-3">
+              <div className="max-h-44 space-y-2 overflow-y-auto rounded-xl bg-slate-50 p-3">
+                {messages.slice(-3).map((message, index) => (
+                  <div
+                    className={
+                      message.role === "assistant"
+                        ? "rounded-2xl bg-white px-3 py-2 text-sm text-slate-700 shadow-sm"
+                        : "rounded-2xl bg-sky-600 px-3 py-2 text-sm text-white"
+                    }
+                    key={`${message.role}-${index}-${message.text}`}
+                  >
+                    {message.text}
+                  </div>
+                ))}
+              </div>
 
-            {!dismissed ? (
-              <button
-                className="inline-flex rounded-full bg-sky-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-sky-500"
-                onClick={() => setExpanded(true)}
-                type="button"
+              <div className="rounded-xl bg-slate-100 px-3 py-2 text-sm text-slate-600">
+                {pending ? (
+                  <span className="animate-pulse">Analitzant pantalla...</span>
+                ) : (
+                  <span>Pregunta pel següent pas i actuaré si toca.</span>
+                )}
+              </div>
+
+              <form
+                className="flex items-center gap-2"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  void handleSubmit();
+                }}
               >
-                Guia&apos;m
-              </button>
-            ) : null}
-          </div>
-        ) : (
-          <div className="space-y-3">
-            <p className="text-sm leading-6 text-slate-900">
-              Vaig directe al punt clau per deixar la remesa en marxa.
-            </p>
-
-            <div className="rounded-xl bg-slate-100 px-3 py-2 text-sm text-slate-600">
-              {pending ? (
-                <span className="animate-pulse">Analitzant pantalla...</span>
-              ) : (
-                <span>Executaré una sola acció i m&apos;apartaré.</span>
-              )}
+                <input
+                  className="min-w-0 flex-1 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm text-slate-900 outline-none ring-0 placeholder:text-slate-400 focus:border-sky-300"
+                  disabled={pending}
+                  onChange={(event) => setDraft(event.target.value)}
+                  placeholder='Ex: "Vull generar la remesa"'
+                  type="text"
+                  value={draft}
+                />
+                <button
+                  className="inline-flex rounded-full bg-sky-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-sky-500 disabled:cursor-not-allowed disabled:bg-slate-300"
+                  disabled={pending || !draft.trim()}
+                  type="submit"
+                >
+                  Envia
+                </button>
+                <button
+                  className="inline-flex rounded-full border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+                  onClick={() => setExpanded(false)}
+                  type="button"
+                >
+                  Tancar
+                </button>
+              </form>
             </div>
-
-            <div className="flex items-center gap-2">
-              <button
-                className="inline-flex rounded-full bg-sky-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-sky-500 disabled:cursor-not-allowed disabled:bg-slate-300"
-                disabled={pending}
-                onClick={handleStart}
-                type="button"
-              >
-                Començar
-              </button>
-              <button
-                className="inline-flex rounded-full border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
-                onClick={() => setExpanded(false)}
-                type="button"
-              >
-                Tancar
-              </button>
-            </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
-    </div>
+    </>
   );
 }

@@ -1,13 +1,18 @@
 "use client";
 
 import { useMemo } from "react";
-import { useSearchParams } from "next/navigation";
 
 import { OnboardingPill } from "@/components/copilot/OnboardingPill";
 
-export function LiveCopilotSandbox() {
-  const searchParams = useSearchParams();
-  const view = searchParams.get("view") ?? "remittances";
+type LiveCopilotSandboxProps = {
+  onboardingActive: boolean;
+  view: string;
+};
+
+export function LiveCopilotSandbox({
+  onboardingActive,
+  view,
+}: LiveCopilotSandboxProps) {
 
   const content = useMemo(() => {
     if (view === "donants") {
@@ -139,13 +144,13 @@ export function LiveCopilotSandbox() {
               <p>
                 Ruta actual:{" "}
                 <span className="font-semibold text-white">
-                  {view === "donants" ? "/live?view=donants" : "/live?view=remittances"}
+                  {view === "donants" ? "/live?view=donants" : "/live?view=remeses"}
                 </span>
               </p>
               <p>
                 Query d&apos;onboarding:{" "}
                 <span className="font-semibold text-white">
-                  {searchParams.get("onboarding") === "true" ? "activa" : "inactiva"}
+                  {onboardingActive ? "activa" : "inactiva"}
                 </span>
               </p>
               <p className="leading-6 text-slate-300">
@@ -159,7 +164,10 @@ export function LiveCopilotSandbox() {
         </section>
       </div>
 
-      <OnboardingPill />
+      <OnboardingPill
+        currentRoute={`/live?view=${view}`}
+        onboardingActive={onboardingActive}
+      />
     </main>
   );
 }

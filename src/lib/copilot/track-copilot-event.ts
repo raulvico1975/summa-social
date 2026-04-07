@@ -1,3 +1,5 @@
+import { trackUX } from "@/lib/ux/trackUX";
+
 export function trackCopilotEvent(
   event:
     | "copilot_interaction_started"
@@ -5,7 +7,5 @@ export function trackCopilotEvent(
     | "copilot_goal_achieved",
   payload: Record<string, unknown> = {}
 ) {
-  if (process.env.NODE_ENV !== "production") {
-    console.info("[copilot]", event, payload);
-  }
+  trackUX(event, payload);
 }

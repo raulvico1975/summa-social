@@ -1,12 +1,16 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { usePathname, useSearchParams } from "next/navigation";
 
 export type CopilotDomContext = {
   currentRoute: string;
   visibleActions: string[];
 };
+
+function areEqualActions(a: string[], b: string[]): boolean {
+  if (a.length !== b.length) return false;
+  return a.every((value, index) => value === b[index]);
+}
 
 function collectVisibleActions(): string[] {
   const nodes = Array.from(
@@ -21,13 +25,14 @@ function collectVisibleActions(): string[] {
     .map((node) => node.dataset.aiAction!.trim());
 }
 
-export function useCopilotObserver(): CopilotDomContext {
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
+export function useCopilotObserver(currentRoute: string): CopilotDomContext {
   const [visibleActions, setVisibleActions] = useState<string[]>([]);
 
   const refresh = useCallback(() => {
-    setVisibleActions(collectVisibleActions());
+    const nextActions = collectVisibleActions();
+    setVisibleActions((currentActions) =>
+      areEqualActions(currentActions, nextActions) ? currentActions : nextActions
+    );
   }, []);
 
   useEffect(() => {
@@ -45,9 +50,6 @@ export function useCopilotObserver(): CopilotDomContext {
 
     return () => observer.disconnect();
   }, [refresh]);
-
-  const view = searchParams.get("view");
-  const currentRoute = view ? `${pathname}?view=${view}` : pathname;
 
   return {
     currentRoute,

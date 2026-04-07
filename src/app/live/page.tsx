@@ -1,13 +1,20 @@
-import { Suspense } from "react";
-
 import { LiveCopilotSandbox } from "@/components/copilot/LiveCopilotSandbox";
 
-export default function LiveCopilotPage() {
+type LiveCopilotPageProps = {
+  searchParams?: Promise<{
+    onboarding?: string;
+    view?: string;
+  }>;
+};
+
+export default async function LiveCopilotPage({
+  searchParams,
+}: LiveCopilotPageProps) {
+  const params = (await searchParams) ?? {};
+  const onboardingActive = params.onboarding === "true";
+  const view = params.view === "donants" ? "donants" : "remeses";
+
   return (
-    <Suspense
-      fallback={<main className="min-h-screen bg-slate-50 p-8 text-sm text-slate-500">Carregant live sandbox...</main>}
-    >
-      <LiveCopilotSandbox />
-    </Suspense>
+    <LiveCopilotSandbox onboardingActive={onboardingActive} view={view} />
   );
 }

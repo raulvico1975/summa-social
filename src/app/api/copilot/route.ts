@@ -4,12 +4,16 @@ import { resolveGoogleGenAiApiKey } from "@/ai/config";
 
 const MODEL = "gemini-3-pro-preview";
 const CONTINGENCY_TEXT = "Aquesta opció no està disponible aquí.";
-const ALLOWED_PATHS = ["/live", "/live?view=remittances", "/live?view=donants"];
+const ALLOWED_PATHS = ["/live", "/live?view=remeses", "/live?view=donants"];
 
 type CopilotRequest = {
   currentRoute: string;
   visibleActions: string[];
   userMessage: string;
+  history?: Array<{
+    role: "user" | "assistant";
+    text: string;
+  }>;
 };
 
 type CopilotToolAction =
@@ -51,6 +55,94 @@ function sanitizeMessage(text: string | undefined): string {
   return value.split(/\s+/).slice(0, 12).join(" ");
 }
 
+function normalizeRoute(route: string): string {
+  return route.replace("remittances", "remeses");
+}
+
+function inferHappyPathFallback(body: CopilotRequest): CopilotToolAction | null {
+  const message = body.userMessage.toLowerCase();
+  const currentRoute = normalizeRoute(body.currentRoute);
+
+  const asksToCreateRemittance =
+    /(primera\s+remesa|generar.*remesa|fer.*remesa|crear.*remesa|vull.*remesa)/i.test(
+      message
+    );
+
+  if (currentRoute.includes("/live?view=donants") && asksToCreateRemittance) {
+    return {
+      type: "navigate",
+      path: "/live?view=remeses",
+      message: "Et porto a remeses.",
+    };
+  }
+
+  const asksForButton =
+    /(on.*bot[oó]|on és el bot[oó]|on es el bot[oó]|on clico|quin bot[oó]|quina boto|bot[oó].*gener|generar-la)/i.test(
+      message
+    );
+
+  if (
+    currentRoute.includes("/live?view=remeses") &&
+    asksForButton &&
+    body.visibleActions.includes("generate-remittance")
+  ) {
+    return {
+      type: "highlight",
+      elementId: "generate-remittance",
+      message: "Te l'il·lumino ara mateix.",
+    };
+  }
+
+  return null;
+}
+
+function inferDeterministicAction(body: CopilotRequest): CopilotToolAction | null {
+  const currentRoute = normalizeRoute(body.currentRoute);
+  const normalizedMessage = body.userMessage.toLowerCase().trim();
+
+  const firstRemittanceIntent =
+    /(primera\s+remesa|generar.*remesa|fer.*remesa|crear.*remesa|vull.*remesa)/i.test(
+      normalizedMessage
+    );
+
+  if (currentRoute.includes("/live?view=donants") && firstRemittanceIntent) {
+    return {
+      type: "navigate",
+      path: "/live?view=remeses",
+      message: "Et porto a remeses.",
+    };
+  }
+
+  const buttonIntent =
+    /(on.*bot[oó]|on és el bot[oó]|on es el bot[oó]|on clico|quin bot[oó]|quina boto|bot[oó].*gener|generar-la)/i.test(
+      normalizedMessage
+    );
+
+  if (
+    currentRoute.includes("/live?view=remeses") &&
+    buttonIntent &&
+    body.visibleActions.includes("generate-remittance")
+  ) {
+    return {
+      type: "highlight",
+      elementId: "generate-remittance",
+      message: "Te l'il·lumino ara mateix.",
+    };
+  }
+
+  return null;
+}
+
+function inferDeterministicContingency(body: CopilotRequest): string | null {
+  const normalizedMessage = body.userMessage.toLowerCase().trim();
+
+  if (/(cancel·?lar|cancelar).*(remesa)|remesa.*(cancel·?lar|cancelar)/i.test(normalizedMessage)) {
+    return CONTINGENCY_TEXT;
+  }
+
+  return null;
+}
+
 function validateAction(
   functionName: string | undefined,
   args: Record<string, unknown> | undefined,
@@ -83,13 +175,13 @@ function validateAction(
       typeof args.message === "string" ? args.message : "Et porto a la vista correcta."
     );
 
-    if (!path || !ALLOWED_PATHS.includes(path)) {
+    if (!path || !ALLOWED_PATHS.includes(normalizeRoute(path))) {
       return null;
     }
 
     return {
       type: "navigate",
-      path,
+      path: normalizeRoute(path),
       message,
     };
   }
@@ -130,12 +222,33 @@ export async function POST(
     );
   }
 
+  const deterministicAction = inferDeterministicAction(body);
+  if (deterministicAction) {
+    return NextResponse.json({
+      ok: true,
+      action: deterministicAction,
+      message: deterministicAction.message,
+    });
+  }
+
+  const deterministicContingency = inferDeterministicContingency(body);
+  if (deterministicContingency) {
+    return NextResponse.json({
+      ok: true,
+      action: null,
+      message: deterministicContingency,
+    });
+  }
+
   const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${apiKey}`;
 
   const systemInstruction = [
     "Ets un executor d'interfícies per a Summa Social.",
     "Només pots usar aquestes eines: Maps(path) i highlight_element(elementId).",
     "Si has d'executar una eina, fes-ho i respon només amb 1 frase curta.",
+    "Si l'usuari vol fer una acció que pertany a una altra pantalla, usa Maps per portar-lo allà.",
+    "No necessites que el botó final sigui visible per navegar.",
+    "Només usa highlight_element quan l'usuari ja és a la pantalla correcta i l'element és present a visibleActions.",
     "Si l'usuari demana un element que NO és a visibleActions, tens PROHIBIT inventar-lo.",
     `En aquest cas, retorna únicament el text exacte: "${CONTINGENCY_TEXT}".`,
     "No narris passos llargs. No improvisis. No inventis botons ni rutes.",
@@ -147,12 +260,16 @@ export async function POST(
       parts: [{ text: systemInstruction }],
     },
     contents: [
+      ...((body.history ?? []).map((entry) => ({
+        role: entry.role,
+        parts: [{ text: entry.text }],
+      })) as Array<{ role: string; parts: Array<{ text: string }> }>),
       {
         role: "user",
         parts: [
           {
             text: JSON.stringify({
-              currentRoute: body.currentRoute,
+              currentRoute: normalizeRoute(body.currentRoute),
               visibleActions: body.visibleActions,
               userMessage: body.userMessage,
             }),
@@ -250,6 +367,15 @@ export async function POST(
       );
 
       if (!action) {
+        const fallbackAction = inferHappyPathFallback(body);
+        if (fallbackAction) {
+          return NextResponse.json({
+            ok: true,
+            action: fallbackAction,
+            message: fallbackAction.message,
+          });
+        }
+
         return NextResponse.json({
           ok: true,
           action: null,
@@ -269,6 +395,15 @@ export async function POST(
       | undefined;
 
     const text = sanitizeMessage(textPart?.text);
+    const fallbackAction = inferHappyPathFallback(body);
+    if (fallbackAction) {
+      return NextResponse.json({
+        ok: true,
+        action: fallbackAction,
+        message: fallbackAction.message,
+      });
+    }
+
     return NextResponse.json({
       ok: true,
       action: null,
