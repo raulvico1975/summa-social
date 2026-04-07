@@ -516,7 +516,7 @@ const HOME_BLOCKS_CA: PublicTranslations['home']['blocks'] = {
       ),
       expenseAssignment: createCard(
         'Assignació de despeses',
-        'Vincula despeses a partides, senceres o parcials. Amb suggerències intel·ligents.'
+        'Imputa despeses a projectes, senceres o parcials. Amb suggerències intel·ligents.'
       ),
       fieldCapture: createCard(
         'Captura de despeses de terreny',
@@ -546,7 +546,7 @@ const HOME_BLOCKS_CA: PublicTranslations['home']['blocks'] = {
       ),
       dataExport: createCard(
         'Exportació de dades',
-        'Excel, CSV, PDF. Per contacte, projecte o període.'
+        'Genera un Excel, CSV o un PDF amb les dades actualitzades i en temps real de la teva entitat.'
       ),
     },
   },
@@ -681,7 +681,7 @@ const HOME_BLOCKS_ES: PublicTranslations['home']['blocks'] = {
       ),
       dataExport: createCard(
         'Exportación de datos',
-        'Excel, CSV, PDF. Por contacto, proyecto o período.'
+        'Genera un Excel, CSV o un PDF con los datos actualizados y en tiempo real de tu entidad.'
       ),
     },
   },
@@ -816,7 +816,7 @@ const HOME_BLOCKS_FR: PublicTranslations['home']['blocks'] = {
       ),
       dataExport: createCard(
         'Export de données',
-        'Excel, CSV, PDF. Par contact, projet ou période.'
+        'Générez un Excel, CSV ou PDF avec les données actualisées et en temps réel de votre entité.'
       ),
     },
   },
@@ -951,7 +951,7 @@ const HOME_BLOCKS_PT: PublicTranslations['home']['blocks'] = {
       ),
       dataExport: createCard(
         'Exportação de dados',
-        'Excel, CSV, PDF. Por contacto, projeto ou período.'
+        'Gera um Excel, CSV ou PDF com os dados atualizados e em tempo real da tua entidade.'
       ),
     },
   },

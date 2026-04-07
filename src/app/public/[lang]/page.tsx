@@ -1660,14 +1660,14 @@ export default async function HomePage({ params }: PageProps) {
       '/visuals/web/features-v3/block5_pressupost_partides_start_4k.webp?v=20260406a'
     ),
     'projects.expenseAssignment': createVideoMedia(
-      '/visuals/web/features-v3/block5_assignacio_despeses_loop_4k.mp4?v=20260406a',
+      '/visuals/web/features-v3/block5_assignacio_despeses_loop_4k.mp4?v=20260407a',
       t.home.blocks.projects.cards.expenseAssignment.screenshotAlt,
-      '/visuals/web/features-v3/block5_assignacio_despeses_start_4k.webp?v=20260406a'
+      '/visuals/web/features-v3/block5_assignacio_despeses_start_4k.webp?v=20260407a'
     ),
     'projects.fieldCapture': createVideoMedia(
-      '/visuals/web/features-v3/block5_captura_terreny_loop_4k.mp4?v=20260406a',
+      '/visuals/web/features-v3/block5_captura_terreny_loop_4k.mp4?v=20260407a',
       t.home.blocks.projects.cards.fieldCapture.screenshotAlt,
-      '/visuals/web/features-v3/block5_captura_terreny_start_4k.webp?v=20260406a'
+      '/visuals/web/features-v3/block5_captura_terreny_start_4k.webp?v=20260407a'
     ),
     'projects.funderExport': createVideoMedia(
       '/visuals/web/features-v3/block5_export_financador_loop_4k.mp4?v=20260406a',
@@ -1675,9 +1675,9 @@ export default async function HomePage({ params }: PageProps) {
       '/visuals/web/features-v3/block5_export_financador_start_4k.webp?v=20260406a'
     ),
     'control.dashboard': createVideoMedia(
-      '/visuals/web/features-v3/block6_dashboard_loop_4k.mp4?v=20260406a',
+      '/visuals/web/features-v3/block6_dashboard_loop_4k.mp4?v=20260407b',
       t.home.blocks.control.cards.dashboard.screenshotAlt,
-      '/visuals/web/features-v3/block6_dashboard_start_4k.webp?v=20260406a'
+      '/visuals/web/features-v3/block6_dashboard_start_4k.webp?v=20260407b'
     ),
     'control.boardReport': createVideoMedia(
       '/visuals/web/features-v3/block6_informe_junta_loop_4k.mp4?v=20260406a',
@@ -1685,9 +1685,9 @@ export default async function HomePage({ params }: PageProps) {
       '/visuals/web/features-v3/block6_informe_junta_start_4k.webp?v=20260406a'
     ),
     'control.dataExport': createVideoMedia(
-      '/visuals/web/features-v3/block6_exportacio_dades_loop_4k.mp4?v=20260406a',
+      '/visuals/web/features-v3/block6_exportacio_dades_loop_4k.mp4?v=20260407b',
       t.home.blocks.control.cards.dataExport.screenshotAlt,
-      '/visuals/web/features-v3/block6_exportacio_dades_start_4k.webp?v=20260406a'
+      '/visuals/web/features-v3/block6_exportacio_dades_start_4k.webp?v=20260407b'
     ),
   };
 

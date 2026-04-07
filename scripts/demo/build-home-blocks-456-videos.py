@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import math
+import shutil
 import subprocess
 import tempfile
 from pathlib import Path
@@ -21,6 +22,17 @@ MODEL_182_DIR = ROOT / "output" / "playwright" / "model-182-demo"
 MODEL_347_DIR = ROOT / "output" / "playwright" / "model-347-demo"
 HOME_EXTRA_DIR = ROOT / "output" / "playwright" / "home-extra-screens"
 DASHBOARD_DIR = ROOT / "output" / "playwright" / "dashboard-control-demo"
+PROJECT_EXPENSE_ASSIGNMENT_DIR = ROOT / "output" / "playwright" / "project-expense-assignment-home"
+PROJECT_EXPENSE_ASSIGNMENT_VIDEO = PROJECT_EXPENSE_ASSIGNMENT_DIR / "project-expense-assignment-home.mp4"
+PROJECT_EXPENSE_ASSIGNMENT_POSTER = PROJECT_EXPENSE_ASSIGNMENT_DIR / "project-expense-assignment-home-poster.webp"
+PROJECT_EXPENSE_ASSIGNMENT_CLOSED = PROJECT_EXPENSE_ASSIGNMENT_DIR / "project-expense-assignment-closed.png"
+PROJECT_EXPENSE_ASSIGNMENT_OPEN = PROJECT_EXPENSE_ASSIGNMENT_DIR / "project-expense-assignment-open.png"
+FIELD_CAPTURE_HOME_DIR = ROOT / "output" / "playwright" / "field-capture-home"
+FIELD_CAPTURE_HOME_VIDEO = FIELD_CAPTURE_HOME_DIR / "field-capture-home.mp4"
+FIELD_CAPTURE_HOME_POSTER = FIELD_CAPTURE_HOME_DIR / "field-capture-home-poster.webp"
+DATA_EXPORT_HOME_DIR = ROOT / "output" / "playwright" / "data-export-home"
+DATA_EXPORT_HOME_VIDEO = DATA_EXPORT_HOME_DIR / "data-export-home.mp4"
+DATA_EXPORT_HOME_POSTER = DATA_EXPORT_HOME_DIR / "data-export-home-poster.webp"
 
 
 def lerp(a: float, b: float, t: float) -> float:
@@ -92,6 +104,11 @@ def encode_video(frame_dir: Path, output_path: Path) -> None:
         str(output_path),
     ]
     subprocess.run(args, check=True)
+
+
+def copy_recorded_asset(source_path: Path, output_path: Path) -> None:
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(source_path, output_path)
 
 
 def box_from_region(center_x: float, center_y: float, zoom_factor: float) -> tuple[float, float, float, float]:
@@ -229,14 +246,11 @@ def build_report_to_dialog_video(
 def build_dashboard_period_video(
     start_view: Image.Image,
     overview_view: Image.Image,
+    categories_view: Image.Image,
     output_video: Path,
     poster: Path,
 ) -> None:
     save_poster(start_view, poster)
-
-    full_box = (0.0, 0.0, float(TARGET_SIZE[0]), float(TARGET_SIZE[1]))
-    filters_box = box_from_region(TARGET_SIZE[0] * 0.58, TARGET_SIZE[1] * 0.16, 1.16)
-    metrics_box = box_from_region(TARGET_SIZE[0] * 0.46, TARGET_SIZE[1] * 0.42, 1.12)
     frame_index = 0
 
     with tempfile.TemporaryDirectory(prefix=f"{output_video.stem}-") as tmp:
@@ -248,22 +262,23 @@ def build_dashboard_period_video(
                 image.save(frame_dir / f"frame_{frame_index:04d}.png", format="PNG")
                 frame_index += 1
 
+        def write_vertical_slide(top_image: Image.Image, bottom_image: Image.Image, frames: int) -> None:
+            for step in range(frames):
+                progress = ease_in_out(step / max(1, frames - 1))
+                offset = int(round(TARGET_SIZE[1] * progress))
+                frame = Image.new("RGB", TARGET_SIZE, (250, 250, 248))
+                frame.paste(top_image, (0, -offset))
+                frame.paste(bottom_image, (0, TARGET_SIZE[1] - offset))
+                write_frame(frame)
+
         write_frame(start_view, repeat=18)
         for step in range(16):
             alpha = ease_in_out(step / 15)
             write_frame(Image.blend(start_view, overview_view, alpha))
-        write_frame(overview_view, repeat=18)
-        for step in range(18):
-            box = interpolate_box(full_box, filters_box, step / 17)
-            write_frame(crop_to_box(overview_view, box))
-        write_frame(crop_to_box(overview_view, filters_box), repeat=18)
-        for step in range(16):
-            box = interpolate_box(filters_box, metrics_box, step / 15)
-            write_frame(crop_to_box(overview_view, box))
-        write_frame(crop_to_box(overview_view, metrics_box), repeat=24)
-        for step in range(18):
-            box = interpolate_box(metrics_box, full_box, step / 17)
-            write_frame(crop_to_box(overview_view, box))
+        write_frame(overview_view, repeat=24)
+        write_vertical_slide(overview_view, categories_view, 22)
+        write_frame(categories_view, repeat=32)
+        write_vertical_slide(categories_view, overview_view, 18)
         write_frame(overview_view, repeat=12)
         encode_video(frame_dir, output_video)
 
@@ -285,6 +300,7 @@ def main() -> None:
 
     dashboard_start = load_first_existing(DASHBOARD_DIR / "dashboard-start.png", FEATURES_DIR / "block6_dashboard.webp")
     dashboard_overview = load_first_existing(DASHBOARD_DIR / "dashboard-overview.png", FEATURES_DIR / "block6_dashboard.webp")
+    dashboard_categories = load_first_existing(DASHBOARD_DIR / "dashboard-categories.png", FEATURES_DIR / "block6_dashboard.webp")
     dashboard_share = load_first_existing(DASHBOARD_DIR / "dashboard-share-summary.png", FEATURES_DIR / "block6_informe_junta.webp")
     dashboard_pdf = load_first_existing(DASHBOARD_DIR / "dashboard-share-pdf-preview.png", FEATURES_DIR / "block6_exportacio_dades.webp")
 
@@ -329,19 +345,50 @@ def main() -> None:
         focus_box=box_from_region(TARGET_SIZE[0] * 0.54, TARGET_SIZE[1] * 0.36, 1.10),
     )
 
-    build_single_view_zoom_video(
-        view=project_expenses,
-        output_video=OUTPUT_DIR / "block5_assignacio_despeses_loop_4k.mp4",
-        poster=OUTPUT_DIR / "block5_assignacio_despeses_start_4k.webp",
-        focus_box=box_from_region(TARGET_SIZE[0] * 0.48, TARGET_SIZE[1] * 0.42, 1.12),
-    )
+    if PROJECT_EXPENSE_ASSIGNMENT_VIDEO.exists() and PROJECT_EXPENSE_ASSIGNMENT_POSTER.exists():
+        copy_recorded_asset(
+            PROJECT_EXPENSE_ASSIGNMENT_VIDEO,
+            OUTPUT_DIR / "block5_assignacio_despeses_loop_4k.mp4",
+        )
+        copy_recorded_asset(
+            PROJECT_EXPENSE_ASSIGNMENT_POSTER,
+            OUTPUT_DIR / "block5_assignacio_despeses_start_4k.webp",
+        )
+    elif PROJECT_EXPENSE_ASSIGNMENT_CLOSED.exists() and PROJECT_EXPENSE_ASSIGNMENT_OPEN.exists():
+        build_two_state_video(
+            start_view=load_and_resize(PROJECT_EXPENSE_ASSIGNMENT_CLOSED),
+            focus_view=load_and_resize(PROJECT_EXPENSE_ASSIGNMENT_OPEN),
+            output_video=OUTPUT_DIR / "block5_assignacio_despeses_loop_4k.mp4",
+            start_poster=OUTPUT_DIR / "block5_assignacio_despeses_start_4k.webp",
+            focus_poster=None,
+            focus_box=box_from_region(TARGET_SIZE[0] * 0.60, TARGET_SIZE[1] * 0.38, 1.18),
+            hold_start=20,
+            hold_focus=52,
+        )
+    else:
+        build_single_view_zoom_video(
+            view=project_expenses,
+            output_video=OUTPUT_DIR / "block5_assignacio_despeses_loop_4k.mp4",
+            poster=OUTPUT_DIR / "block5_assignacio_despeses_start_4k.webp",
+            focus_box=box_from_region(TARGET_SIZE[0] * 0.48, TARGET_SIZE[1] * 0.42, 1.12),
+        )
 
-    build_single_view_zoom_video(
-        view=field_capture,
-        output_video=OUTPUT_DIR / "block5_captura_terreny_loop_4k.mp4",
-        poster=OUTPUT_DIR / "block5_captura_terreny_start_4k.webp",
-        focus_box=box_from_region(TARGET_SIZE[0] * 0.52, TARGET_SIZE[1] * 0.44, 1.08),
-    )
+    if FIELD_CAPTURE_HOME_VIDEO.exists() and FIELD_CAPTURE_HOME_POSTER.exists():
+        copy_recorded_asset(
+            FIELD_CAPTURE_HOME_VIDEO,
+            OUTPUT_DIR / "block5_captura_terreny_loop_4k.mp4",
+        )
+        copy_recorded_asset(
+            FIELD_CAPTURE_HOME_POSTER,
+            OUTPUT_DIR / "block5_captura_terreny_start_4k.webp",
+        )
+    else:
+        build_single_view_zoom_video(
+            view=field_capture,
+            output_video=OUTPUT_DIR / "block5_captura_terreny_loop_4k.mp4",
+            poster=OUTPUT_DIR / "block5_captura_terreny_start_4k.webp",
+            focus_box=box_from_region(TARGET_SIZE[0] * 0.52, TARGET_SIZE[1] * 0.44, 1.08),
+        )
 
     build_two_state_video(
         start_view=project_budget,
@@ -355,6 +402,7 @@ def main() -> None:
     build_dashboard_period_video(
         start_view=dashboard_start,
         overview_view=dashboard_overview,
+        categories_view=dashboard_categories,
         output_video=OUTPUT_DIR / "block6_dashboard_loop_4k.mp4",
         poster=OUTPUT_DIR / "block6_dashboard_start_4k.webp",
     )
@@ -368,15 +416,25 @@ def main() -> None:
         focus_box=box_from_region(TARGET_SIZE[0] * 0.50, TARGET_SIZE[1] * 0.48, 1.10),
     )
 
-    build_two_state_video(
-        start_view=dashboard_share,
-        focus_view=dashboard_pdf,
-        output_video=OUTPUT_DIR / "block6_exportacio_dades_loop_4k.mp4",
-        start_poster=OUTPUT_DIR / "block6_exportacio_dades_start_4k.webp",
-        focus_poster=OUTPUT_DIR / "block6_exportacio_dades_pdf_4k.webp",
-        focus_box=box_from_region(TARGET_SIZE[0] * 0.50, TARGET_SIZE[1] * 0.48, 1.08),
-        hold_focus=52,
-    )
+    if DATA_EXPORT_HOME_VIDEO.exists() and DATA_EXPORT_HOME_POSTER.exists():
+        copy_recorded_asset(
+            DATA_EXPORT_HOME_VIDEO,
+            OUTPUT_DIR / "block6_exportacio_dades_loop_4k.mp4",
+        )
+        copy_recorded_asset(
+            DATA_EXPORT_HOME_POSTER,
+            OUTPUT_DIR / "block6_exportacio_dades_start_4k.webp",
+        )
+    else:
+        build_two_state_video(
+            start_view=dashboard_share,
+            focus_view=dashboard_pdf,
+            output_video=OUTPUT_DIR / "block6_exportacio_dades_loop_4k.mp4",
+            start_poster=OUTPUT_DIR / "block6_exportacio_dades_start_4k.webp",
+            focus_poster=OUTPUT_DIR / "block6_exportacio_dades_pdf_4k.webp",
+            focus_box=box_from_region(TARGET_SIZE[0] * 0.50, TARGET_SIZE[1] * 0.48, 1.08),
+            hold_focus=52,
+        )
 
 
 if __name__ == "__main__":

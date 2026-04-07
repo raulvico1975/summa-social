@@ -5,6 +5,21 @@ import { execFile as execFileCallback } from 'node:child_process';
 import path from 'node:path';
 import { promisify } from 'node:util';
 
+const args = process.argv.slice(2);
+const forceUpload = args.includes('--force');
+const forceMatches = [];
+
+for (let index = 0; index < args.length; index += 1) {
+  if (args[index] !== '--match') continue;
+  const value = args[index + 1];
+  if (!value) {
+    console.error('Missing value for --match');
+    process.exit(1);
+  }
+  forceMatches.push(value);
+  index += 1;
+}
+
 const accountId = process.env.CF_ACCOUNT_ID ?? process.env.CLOUDFLARE_ACCOUNT_ID;
 const apiToken = process.env.CF_API_TOKEN ?? process.env.CLOUDFLARE_API_TOKEN;
 
@@ -101,7 +116,20 @@ async function uploadVideo(uploadUrl, filePath) {
   ]);
 }
 
-async function createOrReuseReadyVideo(fileName, publicPath, filePath) {
+function shouldForceFile(fileName) {
+  if (!forceUpload) return false;
+  if (forceMatches.length === 0) return true;
+  return forceMatches.some((token) => fileName.includes(token));
+}
+
+async function createOrReuseReadyVideo(fileName, publicPath, filePath, { force = false } = {}) {
+  if (force) {
+    process.stdout.write(`  forcing new upload for ${fileName}\n`);
+    const upload = await createDirectUpload(fileName, publicPath);
+    await uploadVideo(upload.uploadURL, filePath);
+    return await waitUntilReady(upload.uid);
+  }
+
   const existing = await listExistingVideo(fileName);
   if (existing?.readyToStream) {
     return existing;
@@ -190,9 +218,12 @@ let customerCode = null;
 for (const fileName of files) {
   const filePath = path.join(featuresDir, fileName);
   const publicPath = `/visuals/web/features-v3/${fileName}`;
+  const forceThisFile = shouldForceFile(fileName);
 
-  process.stdout.write(`sync ${fileName}\n`);
-  const video = await createOrReuseReadyVideo(fileName, publicPath, filePath);
+  process.stdout.write(`sync ${fileName}${forceThisFile ? ' (force)' : ''}\n`);
+  const video = await createOrReuseReadyVideo(fileName, publicPath, filePath, {
+    force: forceThisFile,
+  });
 
   customerCode ??= extractCustomerCode(video.playback.hls);
   outputEntries[publicPath] = {

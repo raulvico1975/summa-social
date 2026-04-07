@@ -199,6 +199,45 @@ async function moveMouseTo(page, locator) {
   await sleep(220);
 }
 
+async function smoothScrollToCategories(page) {
+  const scrolled = await page.evaluate(async () => {
+    const targetTable = Array.from(document.querySelectorAll('table')).find((table) => {
+      const text = table.textContent?.replace(/\s+/g, ' ').trim() || '';
+      return (
+        text.includes('Categoria') &&
+        (text.includes('% del total') || text.includes('% del total') || text.includes('% du total')) &&
+        (text.includes('Veure') || text.includes('Ver') || text.includes('Voir'))
+      );
+    });
+    const target = targetTable?.closest('.rounded-lg') || targetTable;
+
+    if (!target) return false;
+
+    const scrollContainer = target.closest('main') || document.scrollingElement || document.documentElement;
+    const rect = target.getBoundingClientRect();
+    const containerRect =
+      scrollContainer instanceof HTMLElement ? scrollContainer.getBoundingClientRect() : { top: 0 };
+    const currentScrollTop =
+      scrollContainer instanceof HTMLElement ? scrollContainer.scrollTop : window.scrollY;
+    const targetTop = Math.max(0, rect.top - containerRect.top + currentScrollTop - 96);
+
+    if (scrollContainer instanceof HTMLElement) {
+      scrollContainer.scrollTo({ top: targetTop, behavior: 'smooth' });
+    } else {
+      window.scrollTo({ top: targetTop, behavior: 'smooth' });
+    }
+
+    await new Promise((resolve) => window.setTimeout(resolve, 1300));
+    return true;
+  });
+
+  if (!scrolled) {
+    throw new Error('No he trobat la secció de categories del dashboard.');
+  }
+
+  await sleep(900);
+}
+
 async function createRecordedDashboardContext(browser, storageStatePath, rawDir, targetUrl = `${BASE_URL}/dashboard`) {
   const context = await browser.newContext({
     viewport: CAPTURE_VIEWPORT,
@@ -282,6 +321,32 @@ async function runSettledFlow(page) {
     fullPage: false,
     animations: 'disabled',
   });
+
+  await smoothScrollToCategories(page);
+
+  const categoriesAnchor = page.getByText(/Categoria|Serveis professionals|Transport/i).first();
+  if (await categoriesAnchor.isVisible().catch(() => false)) {
+    await moveMouseTo(page, categoriesAnchor);
+  }
+  await sleep(900);
+
+  await page.screenshot({
+    path: path.join(OUTPUT_DIR, 'dashboard-categories.png'),
+    fullPage: false,
+    animations: 'disabled',
+  });
+
+  await page.evaluate(async () => {
+    const scrollContainer = document.querySelector('main');
+    if (scrollContainer instanceof HTMLElement) {
+      scrollContainer.scrollTo({ top: 0, behavior: 'smooth' });
+    } else {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+    await new Promise((resolve) => window.setTimeout(resolve, 1200));
+  });
+  await sleep(1000);
+  await waitForStableDashboardMetrics(page);
 
   const shareButton = page.getByRole('button', { name: /Compartir resum|Compartir resumen/i });
   await shareButton.click();
