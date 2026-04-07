@@ -18,6 +18,10 @@ import {
   type PublicLocale,
 } from '@/lib/public-locale';
 import { SUPPORT_EMAIL } from '@/lib/constants';
+import {
+  HOME_FEATURE_STREAM_CUSTOMER_CODE,
+  HOME_FEATURE_STREAMS,
+} from '@/data/home-feature-stream-videos';
 import { getPublicTranslations } from '@/i18n/public';
 import { type PublicLandingHeroMedia } from '@/lib/public-landings';
 import { getPublicFeaturesHref } from '@/lib/public-site-paths';
@@ -1291,18 +1295,65 @@ function createImageMedia(src: string, alt: string): PublicLandingHeroMedia {
   };
 }
 
+const HOME_FEATURES_VIDEO_VERSION = '20260406c';
+
+function getHomeFeatureSourcePath(src: string) {
+  return src.split('?')[0] ?? src;
+}
+
+function getHomeFeatureStreamEntry(src: string) {
+  const pathname = getHomeFeatureSourcePath(src);
+  return HOME_FEATURE_STREAMS[pathname as keyof typeof HOME_FEATURE_STREAMS];
+}
+
+function normalizeHomeFeaturePreviewVideoSrc(src: string) {
+  const pathname = getHomeFeatureSourcePath(src);
+  if (!pathname.includes('/visuals/web/features-v3/') || !pathname.endsWith('_loop_4k.mp4')) {
+    return src;
+  }
+
+  const optimizedPath = pathname.replace('_loop_4k.mp4', '_loop_720p.mp4');
+  return `${optimizedPath}?v=${HOME_FEATURES_VIDEO_VERSION}`;
+}
+
 function createVideoMedia(
   src: string,
   alt: string,
   poster?: string,
   mp4FallbackSrc?: string
 ): PublicLandingHeroMedia {
+  const streamEntry = getHomeFeatureStreamEntry(src);
+
+  if (streamEntry) {
+    return createCloudflareStreamMedia(streamEntry.uid, src, alt, poster);
+  }
+
   return {
     type: 'video',
-    src,
+    src: normalizeHomeFeaturePreviewVideoSrc(src),
     alt,
     poster,
     mp4FallbackSrc,
+    autoPlay: true,
+    loop: true,
+    muted: true,
+    controls: false,
+  };
+}
+
+function createCloudflareStreamMedia(
+  videoUid: string,
+  src: string,
+  alt: string,
+  poster?: string
+): PublicLandingHeroMedia {
+  return {
+    type: 'stream',
+    src,
+    alt,
+    poster,
+    streamCustomerCode: HOME_FEATURE_STREAM_CUSTOMER_CODE,
+    streamVideoUid: videoUid,
     autoPlay: true,
     loop: true,
     muted: true,

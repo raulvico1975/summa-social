@@ -41,6 +41,9 @@
     "check": "bash scripts/check.sh",
     "prepush": "bash scripts/prepush.sh",
     "verify:ci": "bash scripts/verify-ci.sh",
+    "cloudflare:credentials:setup": "bash scripts/cloudflare/setup-keychain-credentials.sh",
+    "cloudflare:credentials:test": "bash scripts/cloudflare/with-keychain-cloudflare-env.sh env | rg '^CF_|^CLOUDFLARE_'",
+    "cloudflare:stream:sync-home-videos": "bash scripts/cloudflare/with-keychain-cloudflare-env.sh node scripts/cloudflare/sync-home-feature-stream-videos.mjs",
     "deploy": "bash scripts/deploy.sh",
     "sentinella:telegram2": "node --import tsx scripts/sentinella/write-telegram2-coherence.ts",
     "sentinella:telegram3": "node --import tsx scripts/sentinella/send-telegram3-operational-errors.ts",
@@ -59,6 +62,7 @@
     "perf:analyze": "node scripts/performance/analyze-build-size.mjs --out tmp/performance/performance-latest.json",
     "perf:deps-audit": "node scripts/performance/bundle-deps-audit.mjs --out tmp/performance/deps-audit-latest.json",
     "perf:monthly": "node scripts/performance/monthly-performance-check.mjs",
+    "videos:home:optimize": "node scripts/videos/optimize-home-feature-videos.mjs",
     "migrate:capabilities": "node scripts/migrations/backfill-member-capabilities.mjs",
     "images:landings:optimize": "node scripts/images/optimize-landing-assets.mjs"
     ,

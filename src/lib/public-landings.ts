@@ -35,11 +35,13 @@ export interface PublicLandingContent {
     subtitle: string;
     introParagraphs: string[];
     media?: {
-      type: 'image' | 'video';
+      type: 'image' | 'video' | 'stream';
       src: string;
       alt: string;
       poster?: string;
       mp4FallbackSrc?: string;
+      streamCustomerCode?: string;
+      streamVideoUid?: string;
       captionsSrc?: string;
       captionsLang?: string;
       captionsLabel?: string;

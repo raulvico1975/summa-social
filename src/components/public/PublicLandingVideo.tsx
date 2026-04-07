@@ -126,6 +126,36 @@ export function PublicLandingVideo({
   const [activeCue, setActiveCue] = useState<LandingCaptionCue | null>(null);
   const [hasStartedPlayback, setHasStartedPlayback] = useState(autoPlay);
   const [showPosterOverlay, setShowPosterOverlay] = useState(!autoPlay);
+  const [isVisibleForAutoplay, setIsVisibleForAutoplay] = useState(!autoPlay);
+  const shouldAutoPlay = autoPlay && isVisibleForAutoplay;
+  const effectivePreload = autoPlay ? (shouldAutoPlay ? preload : 'none') : preload;
+
+  useEffect(() => {
+    if (!autoPlay) {
+      setIsVisibleForAutoplay(true);
+      return;
+    }
+
+    const video = videoRef.current;
+    if (!video || typeof IntersectionObserver === 'undefined') {
+      setIsVisibleForAutoplay(true);
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        setIsVisibleForAutoplay(entry?.isIntersecting ?? false);
+      },
+      {
+        threshold: 0.35,
+        rootMargin: '160px 0px',
+      }
+    );
+
+    observer.observe(video);
+
+    return () => observer.disconnect();
+  }, [autoPlay, src, mp4FallbackSrc]);
 
   useEffect(() => {
     if (!captionsSrc || captionsDisplay !== 'overlay') {
@@ -166,7 +196,7 @@ export function PublicLandingVideo({
     }
 
     const syncCue = () => {
-      if (isVideoPosterFrame(video, autoPlay, hasStartedPlayback)) {
+      if (isVideoPosterFrame(video, shouldAutoPlay, hasStartedPlayback)) {
         setActiveCue(null);
         return;
       }
@@ -193,13 +223,13 @@ export function PublicLandingVideo({
       video.removeEventListener('loadedmetadata', syncCue);
       video.removeEventListener('ended', syncCue);
     };
-  }, [autoPlay, captionsDisplay, cues, hasStartedPlayback]);
+  }, [captionsDisplay, cues, hasStartedPlayback, shouldAutoPlay]);
 
   useEffect(() => {
     const video = videoRef.current;
     if (!video) {
-      setHasStartedPlayback(autoPlay);
-      setShowPosterOverlay(!autoPlay);
+      setHasStartedPlayback(shouldAutoPlay);
+      setShowPosterOverlay(!shouldAutoPlay);
       return;
     }
 
@@ -211,7 +241,7 @@ export function PublicLandingVideo({
         setHasStartedPlayback(true);
       }
 
-      const isPosterFrame = isVideoPosterFrame(video, autoPlay, hasStartedPlayback);
+      const isPosterFrame = isVideoPosterFrame(video, shouldAutoPlay, hasStartedPlayback);
       setShowPosterOverlay(isPosterFrame);
     };
 
@@ -232,10 +262,12 @@ export function PublicLandingVideo({
       video.removeEventListener('loadedmetadata', syncPlaybackState);
       video.removeEventListener('timeupdate', syncPlaybackState);
     };
-  }, [autoPlay, hasStartedPlayback]);
+  }, [hasStartedPlayback, shouldAutoPlay]);
 
   useEffect(() => {
-    if (!autoPlay) {
+    if (!shouldAutoPlay) {
+      const video = videoRef.current;
+      video?.pause();
       return;
     }
 
@@ -274,10 +306,10 @@ export function PublicLandingVideo({
       video.removeEventListener('loadeddata', ensurePlayback);
       video.removeEventListener('canplay', ensurePlayback);
     };
-  }, [autoPlay, muted, src, mp4FallbackSrc]);
+  }, [mp4FallbackSrc, muted, shouldAutoPlay, src]);
 
   const shouldRenderOverlay = captionsDisplay === 'overlay' && cues.length > 0;
-  const shouldShowNativeControls = controls && (hasStartedPlayback || autoPlay);
+  const shouldShowNativeControls = controls && (hasStartedPlayback || shouldAutoPlay);
 
   const handlePlayClick = () => {
     const video = videoRef.current;
@@ -299,12 +331,12 @@ export function PublicLandingVideo({
         className={className}
         aria-label={alt}
         poster={poster}
-        autoPlay={autoPlay}
+        autoPlay={shouldAutoPlay}
         muted={muted}
         loop={loop}
         controls={shouldShowNativeControls}
         playsInline
-        preload={preload}
+        preload={effectivePreload}
       >
         <source src={src} type={prefersMp4AsPrimary ? 'video/mp4' : 'video/webm'} />
         {mp4FallbackSrc && mp4FallbackSrc !== src && <source src={mp4FallbackSrc} type="video/mp4" />}

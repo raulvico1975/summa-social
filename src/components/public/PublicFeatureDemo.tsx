@@ -3,6 +3,7 @@
 import Image from 'next/image';
 import { Clock3, Play } from 'lucide-react';
 import { useState } from 'react';
+import { PublicLandingStreamEmbed } from '@/components/public/PublicLandingStreamEmbed';
 import { PublicLandingVideo } from '@/components/public/PublicLandingVideo';
 import {
   Dialog,
@@ -78,7 +79,7 @@ export function PublicFeatureDemo({
   const prefersMp4AsPrimary = media.type === 'video' ? media.src.toLowerCase().endsWith('.mp4') : false;
   const [isModalOpen, setIsModalOpen] = useState(false);
   const showMetaRow = showDemoBadge || Boolean(media.durationLabel) || (showCaptionsBadge && Boolean(media.captionsSrc));
-  const canExpandVideo = expandOnPlay && media.type === 'video';
+  const canExpandVideo = expandOnPlay && media.type !== 'image';
   const isStage = variant === 'stage';
   const isAiry = variant === 'airy';
 
@@ -107,6 +108,22 @@ export function PublicFeatureDemo({
             'aspect-video w-full object-cover transition-transform duration-300 group-hover:scale-[1.01]',
             isStage && 'bg-[#f8fafc]',
             isAiry && 'bg-transparent',
+            mediaClassName
+          )}
+        />
+      ) : media.type === 'stream' ? (
+        <PublicLandingStreamEmbed
+          customerCode={media.streamCustomerCode ?? ''}
+          videoUid={media.streamVideoUid ?? ''}
+          alt={media.alt}
+          poster={media.poster}
+          autoPlay={media.autoPlay ?? false}
+          muted={media.muted ?? false}
+          loop={media.loop ?? false}
+          controls={media.controls ?? true}
+          className={cn(
+            'aspect-video w-full object-cover',
+            isStage ? 'bg-[#f8fafc]' : isAiry ? 'bg-transparent' : 'bg-black',
             mediaClassName
           )}
         />
@@ -195,6 +212,22 @@ export function PublicFeatureDemo({
             mediaClassName
           )}
         />
+      ) : media.type === 'stream' ? (
+        <PublicLandingStreamEmbed
+          customerCode={media.streamCustomerCode ?? ''}
+          videoUid={media.streamVideoUid ?? ''}
+          alt={media.alt}
+          poster={media.poster}
+          autoPlay={media.autoPlay ?? false}
+          muted={media.muted ?? false}
+          loop={media.loop ?? false}
+          controls={media.controls ?? true}
+          className={cn(
+            'aspect-video w-full object-cover',
+            isStage ? 'bg-[#f8fafc]' : isAiry ? 'bg-transparent' : 'bg-black',
+            mediaClassName
+          )}
+        />
       ) : (
         <PublicLandingVideo
           src={media.src}
@@ -210,7 +243,7 @@ export function PublicFeatureDemo({
           muted={media.muted ?? false}
           loop={media.loop ?? false}
           controls={media.controls ?? true}
-          preload={media.autoPlay ? 'auto' : 'none'}
+          preload={media.autoPlay ? 'metadata' : 'none'}
           className={cn(
             'aspect-video w-full object-cover',
             isStage ? 'bg-[#f8fafc]' : isAiry ? 'bg-transparent' : 'bg-black',
@@ -276,24 +309,38 @@ export function PublicFeatureDemo({
             </div>
             <div className="bg-white p-4 sm:p-6">
               <div className="overflow-hidden rounded-[1.4rem] border border-border/60 bg-slate-950">
-                <PublicLandingVideo
-                  src={media.src}
-                  alt={media.alt}
-                  poster={media.poster}
-                  mp4FallbackSrc={media.mp4FallbackSrc}
-                  captionsSrc={media.captionsSrc}
-                  captionsLang={media.captionsLang ?? locale}
-                  captionsLabel={media.captionsLabel ?? labels.demo}
-                  captionsDefault={media.captionsDefault ?? false}
-                  captionsDisplay="native"
-                  autoPlay
-                  muted
-                  loop={false}
-                  controls
-                  preload="metadata"
-                  className="aspect-video w-full bg-black object-cover"
-                  prefersMp4AsPrimary={prefersMp4AsPrimary}
-                />
+                {media.type === 'stream' ? (
+                  <PublicLandingStreamEmbed
+                    customerCode={media.streamCustomerCode ?? ''}
+                    videoUid={media.streamVideoUid ?? ''}
+                    alt={media.alt}
+                    poster={media.poster}
+                    autoPlay
+                    muted
+                    loop={false}
+                    controls
+                    className="aspect-video w-full bg-black object-cover"
+                  />
+                ) : (
+                  <PublicLandingVideo
+                    src={media.src}
+                    alt={media.alt}
+                    poster={media.poster}
+                    mp4FallbackSrc={media.mp4FallbackSrc}
+                    captionsSrc={media.captionsSrc}
+                    captionsLang={media.captionsLang ?? locale}
+                    captionsLabel={media.captionsLabel ?? labels.demo}
+                    captionsDefault={media.captionsDefault ?? false}
+                    captionsDisplay="native"
+                    autoPlay
+                    muted
+                    loop={false}
+                    controls
+                    preload="metadata"
+                    className="aspect-video w-full bg-black object-cover"
+                    prefersMp4AsPrimary={prefersMp4AsPrimary}
+                  />
+                )}
               </div>
             </div>
           </DialogContent>

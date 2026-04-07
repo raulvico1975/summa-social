@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { ArrowLeft, Clock3, PlayCircle } from 'lucide-react';
 import { PublicDirectContact } from '@/components/public/PublicDirectContact';
 import { PublicEditorialMark } from '@/components/public/PublicEditorialMark';
+import { PublicLandingStreamEmbed } from '@/components/public/PublicLandingStreamEmbed';
 import { PublicLandingVideo } from '@/components/public/PublicLandingVideo';
 import { PUBLIC_SHELL_X } from '@/components/public/public-shell';
 import { Button } from '@/components/ui/button';
@@ -86,12 +87,14 @@ export function PublicLandingTemplate({ locale, content, labels }: PublicLanding
   const demoCopy = DEMO_PLACEHOLDER_COPY[locale];
   const heroMedia = content.hero.media;
   const isVideo = heroMedia?.type === 'video';
+  const isStream = heroMedia?.type === 'stream';
+  const isVideoLike = isVideo || isStream;
   const prefersMp4AsPrimary = isVideo ? heroMedia.src.toLowerCase().endsWith('.mp4') : false;
-  const shouldAutoPlay = isVideo ? (heroMedia.autoPlay ?? true) : false;
-  const shouldLoop = isVideo ? (heroMedia.loop ?? shouldAutoPlay) : false;
-  const shouldMute = isVideo ? (heroMedia.muted ?? shouldAutoPlay) : false;
-  const shouldShowControls = isVideo ? (heroMedia.controls ?? false) : false;
-  const hasFeaturedDemo = isVideo && shouldShowControls;
+  const shouldAutoPlay = isVideoLike ? (heroMedia.autoPlay ?? true) : false;
+  const shouldLoop = isVideoLike ? (heroMedia.loop ?? shouldAutoPlay) : false;
+  const shouldMute = isVideoLike ? (heroMedia.muted ?? shouldAutoPlay) : false;
+  const shouldShowControls = isVideoLike ? (heroMedia.controls ?? false) : false;
+  const hasFeaturedDemo = isVideoLike && shouldShowControls;
   const articleClassName = hasFeaturedDemo
     ? `${PUBLIC_SHELL_X} mx-auto max-w-6xl py-12`
     : `${PUBLIC_SHELL_X} mx-auto max-w-4xl py-12`;
@@ -129,6 +132,18 @@ export function PublicLandingTemplate({ locale, content, labels }: PublicLanding
             height={900}
             sizes={hasFeaturedDemo ? '(min-width: 1024px) 1100px, 100vw' : '(min-width: 1024px) 560px, 100vw'}
             className="w-full h-auto"
+          />
+        ) : heroMedia.type === 'stream' ? (
+          <PublicLandingStreamEmbed
+            customerCode={heroMedia.streamCustomerCode ?? ''}
+            videoUid={heroMedia.streamVideoUid ?? ''}
+            alt={heroMedia.alt}
+            poster={heroMedia.poster}
+            autoPlay={shouldAutoPlay}
+            muted={shouldMute}
+            loop={shouldLoop}
+            controls={shouldShowControls}
+            className={mediaClassName}
           />
         ) : (
           <PublicLandingVideo
