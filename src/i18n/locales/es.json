@@ -2517,6 +2517,8 @@
   "memberInviterImporter.importError": "Se ha producido un error durante la creación de invitaciones.",
   "memberInviterImporter.importingDescription": "Esto puede tardar unos segundos",
   "memberInviterImporter.importingTitle": "Creando invitaciones...",
+  "transactionImporter.importingDescription": "Esto puede tardar unos segundos",
+  "transactionImporter.importingTitle": "Importando movimientos bancarios...",
   "memberInviterImporter.mergingHelp": "Las invitaciones se deduplicarán automáticamente. Se omitirán los emails que ya sean miembros o que ya tengan una invitación pendiente.",
   "memberInviterImporter.readError": "No se ha podido leer el archivo Excel.",
   "memberInviterImporter.selectFile": "Seleccionar archivo",

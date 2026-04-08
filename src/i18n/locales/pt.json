@@ -2473,6 +2473,8 @@
   "memberInviterImporter.importError": "Ocorreu um erro durante a criação dos convites.",
   "memberInviterImporter.importingDescription": "Isto pode demorar alguns segundos",
   "memberInviterImporter.importingTitle": "A criar convites...",
+  "transactionImporter.importingDescription": "Isto pode demorar alguns segundos",
+  "transactionImporter.importingTitle": "A importar movimentos bancários...",
   "memberInviterImporter.mergingHelp": "Os convites serão deduplicados automaticamente. Serão ignorados emails que já sejam membros ou que já tenham um convite pendente.",
   "memberInviterImporter.readError": "Não foi possível ler o ficheiro Excel.",
   "memberInviterImporter.selectFile": "Selecionar ficheiro",
