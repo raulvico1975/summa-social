@@ -1,24 +1,24 @@
 # Rollback Plan (auto) — Summa Social
 
-Generat: 2026-04-08 17:02
-Risc: MITJA
+Generat: 2026-04-08 17:52
+Risc: ALT
 Backup curt: NO_REQUIRED
-SHA prod abans de publicar: 51dae3d3
-SHA branca a publicar (codex/i18n-movements-load-prodfix): 93cec7c8
+SHA prod abans de publicar: 4f797cd7
+SHA branca a publicar (codex/fix-expense-unassign-trash-prod-only): 3134e6e2
 
 ## Si cal marxa enrere rapida
 
 Opcio recomanada (preserva historial):
 ```bash
-git checkout codex/i18n-movements-load-prodfix
-git revert 93cec7c8 --no-edit
-git push origin codex/i18n-movements-load-prodfix
-bash scripts/deploy.sh codex/i18n-movements-load-prodfix
+git checkout codex/fix-expense-unassign-trash-prod-only
+git revert 3134e6e2 --no-edit
+git push origin codex/fix-expense-unassign-trash-prod-only
+bash scripts/deploy.sh codex/fix-expense-unassign-trash-prod-only
 ```
 
 Emergencia critica (nomes si la produccio cau i no hi ha alternativa):
 ```bash
 git checkout prod
-git reset --hard 51dae3d3
+git reset --hard 4f797cd7
 git push origin prod --force-with-lease
 ```
