@@ -2517,6 +2517,8 @@
   "memberInviterImporter.importError": "S'ha produït un error durant la creació d'invitacions.",
   "memberInviterImporter.importingDescription": "Això pot trigar uns segons",
   "memberInviterImporter.importingTitle": "Creant invitacions...",
+  "transactionImporter.importingDescription": "Això pot trigar uns segons",
+  "transactionImporter.importingTitle": "Important moviments bancaris...",
   "memberInviterImporter.mergingHelp": "Les invitacions es deduplicaran automàticament. Es saltaran emails que ja siguin membres o que ja tinguin invitació pendent.",
   "memberInviterImporter.readError": "No s'ha pogut llegir el fitxer Excel.",
   "memberInviterImporter.selectFile": "Seleccionar fitxer",
