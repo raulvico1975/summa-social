@@ -35,7 +35,6 @@ export async function POST(request: NextRequest) {
 
     const payload = body as Record<string, unknown>;
     const orgId = typeof payload.orgId === 'string' ? payload.orgId.trim() : '';
-    const mode = request.nextUrl.searchParams.get('debug') === 'true' ? 'full' : 'user';
     if (!orgId) {
       return NextResponse.json(
         { code: 'INVALID_REQUEST', message: 'orgId obligatori' },
@@ -69,10 +68,7 @@ export async function POST(request: NextRequest) {
         'Authorization': authHeader,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        ...payload,
-        mode,
-      }),
+      body: JSON.stringify(body),
     });
 
     // 5. Obtenir headers de la resposta
