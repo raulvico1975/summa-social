@@ -42,8 +42,10 @@ function shouldCheckBacktick(ref) {
 }
 
 function normalizeCodeRef(ref) {
-  const noLine = ref.replace(/:\d+(?::\d+)?$/, '');
-  return noLine;
+  return ref
+    .replace(/:\d+(?::\d+)?$/, '')
+    .replace(/:\d+-\d+$/, '')
+    .replace(/#L\d+(?:-L\d+)?$/, '');
 }
 
 const missing = [];
