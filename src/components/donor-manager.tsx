@@ -58,8 +58,12 @@ import type { DateFilterValue } from '@/components/date-filter';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
 import { useCollection, useFirebase, useMemoFirebase, addDocumentNonBlocking } from '@/firebase';
-import { updateContactViaApi } from '@/services/contacts';
-import { findExistingContact } from '@/lib/contact-matching';
+import {
+  archiveContactViaApi,
+  checkArchiveContactViaApi,
+  restoreContactViaApi,
+  updateContactViaApi,
+} from '@/services/contacts';
 import { collection, query, where, getDocs, orderBy, limit } from 'firebase/firestore';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
 import { DonorImporter } from './donor-importer';
@@ -88,6 +92,8 @@ import { filterValidSelectItems } from '@/lib/ui/safe-select-options';
 import { CannotArchiveContactDialog } from '@/components/contacts/cannot-archive-contact-dialog';
 import { getPeriodicitySuffix } from '@/lib/donors/periodicity-suffix';
 import { usePermissions } from '@/hooks/use-permissions';
+import { ToastAction } from '@/components/ui/toast';
+import { classifyDonorDuplicateMatch } from '@/lib/donors/classify-donor-duplicate-match';
 
 type DonorFormData = Omit<Donor, 'id' | 'createdAt' | 'updatedAt' | 'status' | 'inactiveSince'>;
 
@@ -236,8 +242,8 @@ export function DonorManager() {
   const [showIncompleteOnly, setShowIncompleteOnly] = React.useState(false);
   const [hasUrlFilter, setHasUrlFilter] = React.useState(false);
 
-  // Filtre per estat (actiu/inactiu)
-  const [statusFilter, setStatusFilter] = React.useState<'all' | 'active' | 'inactive'>('active');
+  // Segment visible a la pantalla de donants
+  const [visibilityFilter, setVisibilityFilter] = React.useState<'active' | 'inactive' | 'deleted'>('active');
 
   // Cercador intel·ligent
   const [searchQuery, setSearchQuery] = React.useState('');
@@ -286,10 +292,18 @@ export function DonorManager() {
   );
 
   const { data: donorsRaw, isLoading: isLoadingDonors } = useCollection<Donor & { archivedAt?: string }>(donorsQuery);
-  // Filtrar donants arxivats (soft-deleted)
-  const donors = React.useMemo(
-    () => donorsRaw?.filter(d => !d.archivedAt),
+  const allDonors = React.useMemo(
+    () => donorsRaw ?? [],
     [donorsRaw]
+  );
+  const deletedDonors = React.useMemo(
+    () => allDonors.filter(d => Boolean(d.archivedAt)),
+    [allDonors]
+  );
+  // Donants operatius: visibles fora d'Eliminats
+  const donors = React.useMemo(
+    () => allDonors.filter(d => !d.archivedAt),
+    [allDonors]
   );
 
   // Detectar si hi ha més contactes per carregar
@@ -544,8 +558,8 @@ export function DonorManager() {
   // Efecte separat per obrir el drawer quan hi ha ?id= a la URL (reactiu)
   // PATRÓ: useSearchParams() + useEffect amb deps [urlParam, data] per drawers controlats per URL
   React.useEffect(() => {
-    if (urlDonorId && donors !== undefined) {
-      const donor = donors.find(d => d.id === urlDonorId);
+    if (urlDonorId && allDonors !== undefined) {
+      const donor = allDonors.find(d => d.id === urlDonorId);
       if (donor) {
         setSelectedDonor(donor);
         setIsDetailOpen(true);
@@ -557,10 +571,11 @@ export function DonorManager() {
         window.history.replaceState({}, '', url.toString());
       }
     }
-  }, [urlDonorId, donors]);
+  }, [allDonors, urlDonorId]);
 
   // Funció per netejar el filtre i actualitzar la URL
   const clearFilter = () => {
+    setVisibilityFilter('active');
     setShowIncompleteOnly(false);
     setShowWithReturnsOnly(false);
     setShowWithReturnsThisMonthOnly(false);
@@ -592,26 +607,25 @@ export function DonorManager() {
 
   // Comptadors per estat
   const statusCounts = React.useMemo(() => {
-    if (!donors) return { active: 0, inactive: 0, total: 0 };
+    if (!allDonors) return { active: 0, inactive: 0, deleted: 0, total: 0 };
     const active = donors.filter(d => d.status !== 'inactive').length;
     const inactive = donors.filter(d => d.status === 'inactive').length;
-    return { active, inactive, total: donors.length };
-  }, [donors]);
+    const deleted = deletedDonors.length;
+    return { active, inactive, deleted, total: allDonors.length };
+  }, [allDonors, deletedDonors, donors]);
 
   // Base filtrada: estat + cerca + incomplets + devolucions + activeView
   // (abans d'aplicar donorType i membershipType, per calcular comptadors)
   const baseFilteredDonors = React.useMemo(() => {
-    if (!donors) return [];
+    if (!allDonors) return [];
 
-    let result = donors;
-
-    // Filtre per estat
-    if (statusFilter === 'active') {
-      // "Actius" inclou també pending_return: devolució pendent no és baixa.
-      result = result.filter(donor => donor.status !== 'inactive');
-    } else if (statusFilter === 'inactive') {
-      result = result.filter(donor => donor.status === 'inactive');
-    }
+    let result = visibilityFilter === 'deleted'
+      ? deletedDonors
+      : donors.filter(donor =>
+          visibilityFilter === 'inactive'
+            ? donor.status === 'inactive'
+            : donor.status !== 'inactive'
+        );
 
     // Filtre de cerca intel·ligent
     if (searchQuery.trim()) {
@@ -643,39 +657,41 @@ export function DonorManager() {
     }
 
     // Filtre de donants incomplets
-    if (showIncompleteOnly) {
+    if (visibilityFilter !== 'deleted' && showIncompleteOnly) {
       result = result.filter(donor => !donor.taxId || !donor.zipCode || (donor.membershipType === 'recurring' && !donor.iban));
     }
 
     // Filtre de donants amb devolucions
-    if (showWithReturnsOnly) {
+    if (visibilityFilter !== 'deleted' && showWithReturnsOnly) {
       result = result.filter(donor => donorsWithReturns.has(donor.id));
     }
 
     // Filtre de donants amb devolucions aquest mes
-    if (showWithReturnsThisMonthOnly) {
+    if (visibilityFilter !== 'deleted' && showWithReturnsThisMonthOnly) {
       result = result.filter(donor => donorsWithReturnsThisMonth.has(donor.id));
     }
 
     // Filtre de donants amb 2 devolucions o més
-    if (showWithTwoOrMoreReturnsOnly) {
+    if (visibilityFilter !== 'deleted' && showWithTwoOrMoreReturnsOnly) {
       result = result.filter(donor => donorsWithTwoOrMoreReturns.has(donor.id));
     }
 
     // Filtre per contactes actius (amb transaccions al període)
-    if (activeViewFilter && activeContactIds.size > 0) {
+    if (visibilityFilter !== 'deleted' && activeViewFilter && activeContactIds.size > 0) {
       result = result.filter(donor => activeContactIds.has(donor.id));
     }
 
     return result;
   }, [
+    allDonors,
     donors,
+    deletedDonors,
     showIncompleteOnly,
     showWithReturnsOnly,
     showWithReturnsThisMonthOnly,
     showWithTwoOrMoreReturnsOnly,
     searchQuery,
-    statusFilter,
+    visibilityFilter,
     donorsWithReturns,
     donorsWithReturnsThisMonth,
     donorsWithTwoOrMoreReturns,
@@ -719,9 +735,15 @@ export function DonorManager() {
     return { all: baseFilteredDonors.length, monthly, quarterly, semiannual, annual, manual, none };
   }, [baseFilteredDonors]);
 
+  const isDeletedView = visibilityFilter === 'deleted';
+
   // Filtrar donants (aplica donorType + membershipType sobre la base)
   const filteredDonors = React.useMemo(() => {
     let result = baseFilteredDonors;
+
+    if (isDeletedView) {
+      return result;
+    }
 
     // Filtre per tipus de membre (donant puntual vs soci recurrent)
     if (membershipTypeFilter) {
@@ -744,7 +766,7 @@ export function DonorManager() {
     }
 
     return result;
-  }, [baseFilteredDonors, membershipTypeFilter, donorTypeFilter, periodicityFilter]);
+  }, [baseFilteredDonors, donorTypeFilter, isDeletedView, membershipTypeFilter, periodicityFilter]);
 
   const incompleteDonorsCount = React.useMemo(() => {
     if (!donors) return 0;
@@ -757,6 +779,25 @@ export function DonorManager() {
     : showWithReturnsThisMonthOnly
       ? (t.donorsFilter.noWithReturnsThisMonth || 'No hi ha donants amb devolucions aquest mes')
       : (t.donorsFilter.noWithReturns || 'No hi ha donants amb devolucions');
+
+  const resetOperationalFilters = React.useCallback(() => {
+    setShowIncompleteOnly(false);
+    setShowWithReturnsOnly(false);
+    setShowWithReturnsThisMonthOnly(false);
+    setShowWithTwoOrMoreReturnsOnly(false);
+  }, []);
+
+  const focusDeletedDonor = React.useCallback((donor: Donor) => {
+    setVisibilityFilter('deleted');
+    setSearchQuery(donor.name);
+    setSelectedDonor(donor);
+    setIsDetailOpen(true);
+    setIsDialogOpen(false);
+    setEditingDonor(null);
+    setFormData(emptyFormData);
+    setStatus('active');
+    setInactiveSince(null);
+  }, []);
 
   const handleEdit = (donor: Donor) => {
     const currentStatus: 'active' | 'inactive' = donor.status === 'inactive' ? 'inactive' : 'active';
@@ -786,7 +827,7 @@ export function DonorManager() {
     setIsDialogOpen(true);
   };
 
-  // Estat per modal informatiu "no es pot arxivar"
+  // Estat per modal informatiu "no es pot eliminar"
   const [cannotArchiveOpen, setCannotArchiveOpen] = React.useState(false);
   const [cannotArchiveActiveCount, setCannotArchiveActiveCount] = React.useState(0);
   const [cannotArchiveArchivedCount, setCannotArchiveArchivedCount] = React.useState(0);
@@ -794,38 +835,26 @@ export function DonorManager() {
 
   // Pre-check via API amb dryRun abans d'obrir modal
   const handleDeleteRequest = async (donor: Donor) => {
-    if (!organizationId || !user) return;
+    if (!organizationId || !auth) return;
 
     setDonorToDelete(donor);
     setIsCheckingArchive(true);
 
     try {
-      const idToken = await user.getIdToken();
-      const response = await fetch('/api/contacts/archive', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${idToken}`,
-        },
-        body: JSON.stringify({
-          orgId: organizationId,
-          contactId: donor.id,
-          dryRun: true,
-        }),
+      const result = await checkArchiveContactViaApi({
+        orgId: organizationId,
+        contactId: donor.id,
+        auth,
+        blockIfAnyTransaction: true,
       });
 
-      const result = await response.json();
-
       if (result.canArchive) {
-        // OK: obrir modal de confirmació
         setIsAlertOpen(true);
       } else if (result.code === 'HAS_TRANSACTIONS') {
-        // Té moviments actius: obrir modal informatiu
         setCannotArchiveActiveCount(result.activeCount || 0);
         setCannotArchiveArchivedCount(result.archivedCount || 0);
         setCannotArchiveOpen(true);
       } else {
-        // Error genèric
         toast({
           variant: 'destructive',
           title: t.common.error,
@@ -834,7 +863,7 @@ export function DonorManager() {
         setDonorToDelete(null);
       }
     } catch (err) {
-      console.error('[DonorManager] Error checking archive:', err);
+      console.error('[DonorManager] Error checking delete:', err);
       toast({
         variant: 'destructive',
         title: t.common.error,
@@ -847,43 +876,36 @@ export function DonorManager() {
   };
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // ARXIVAT (v1.36): Flux via API-first per garantir integritat referencial
+  // ELIMINACIÓ (internament soft-delete): Flux via API-first
   // ═══════════════════════════════════════════════════════════════════════════
   const handleDeleteConfirm = async () => {
-    if (!donorToDelete || !organizationId || !user) {
+    if (!donorToDelete || !organizationId || !auth) {
       setIsAlertOpen(false);
       setDonorToDelete(null);
       return;
     }
 
     try {
-      const idToken = await user.getIdToken();
-      const response = await fetch('/api/contacts/archive', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${idToken}`,
-        },
-        body: JSON.stringify({
-          orgId: organizationId,
-          contactId: donorToDelete.id,
-        }),
+      const result = await archiveContactViaApi({
+        orgId: organizationId,
+        contactId: donorToDelete.id,
+        auth,
+        blockIfAnyTransaction: true,
       });
 
-      const result = await response.json();
-
       if (result.success) {
+        if (selectedDonor?.id === donorToDelete.id) {
+          setIsDetailOpen(false);
+          setSelectedDonor(null);
+        }
         toast({
           title: t.donors.donorDeleted,
           description: t.donors.donorDeletedDescription(donorToDelete.name),
         });
       } else if (result.code === 'HAS_TRANSACTIONS') {
-        toast({
-          variant: 'destructive',
-          title: t.contacts?.cannotArchive ?? 'No es pot arxivar',
-          description: t.contacts?.hasTransactionsError?.(result.transactionCount)
-            ?? `Aquest contacte té ${result.transactionCount} moviments associats. No es pot arxivar.`,
-        });
+        setCannotArchiveActiveCount(result.activeCount || 0);
+        setCannotArchiveArchivedCount(result.archivedCount || 0);
+        setCannotArchiveOpen(true);
       } else {
         toast({
           variant: 'destructive',
@@ -892,7 +914,7 @@ export function DonorManager() {
         });
       }
     } catch (err) {
-      console.error('[DonorManager] Error arxivant contacte:', err);
+      console.error('[DonorManager] Error deleting donor:', err);
       toast({
         variant: 'destructive',
         title: t.common.error,
@@ -902,6 +924,37 @@ export function DonorManager() {
 
     setIsAlertOpen(false);
     setDonorToDelete(null);
+  };
+
+  const handleRestore = async (donor: Donor) => {
+    if (!organizationId || !auth) return;
+
+    try {
+      await restoreContactViaApi({
+        orgId: organizationId,
+        contactId: donor.id,
+        auth,
+      });
+
+      if (selectedDonor?.id === donor.id) {
+        setSelectedDonor({
+          ...donor,
+          archivedAt: undefined,
+        });
+      }
+      setVisibilityFilter(donor.status === 'inactive' ? 'inactive' : 'active');
+      setSearchQuery('');
+      toast({
+        title: t.donors.donorRestored,
+        description: t.donors.donorRestoredDescription(donor.name),
+      });
+    } catch (err: any) {
+      toast({
+        variant: 'destructive',
+        title: t.common.error,
+        description: err?.message || t.common.actionError,
+      });
+    }
   };
 
   const handleOpenChange = (open: boolean) => {
@@ -1008,23 +1061,46 @@ export function DonorManager() {
         return;
       }
     } else {
-      // Validar si ja existeix un contacte amb el mateix NIF/IBAN/email
-      const existingMatch = findExistingContact(
-        donors as any[] || [],
+      const allDonorsSnapshot = await getDocs(
+        query(collection(firestore, 'organizations', organizationId!, 'contacts'), where('type', '==', 'donor'))
+      );
+      const existingDonors = allDonorsSnapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      })) as Donor[];
+
+      const duplicate = classifyDonorDuplicateMatch(
+        existingDonors,
         normalized.taxId || undefined,
         normalized.iban || undefined,
         normalized.email || undefined
       );
 
-      if (existingMatch.found && existingMatch.contact) {
-        const existing = existingMatch.contact;
+      if (duplicate.kind === 'active') {
+        const existing = duplicate.match.contact;
         toast({
           variant: 'destructive',
           title: tr('contacts.duplicateDetectedTitle'),
           description: tr('contacts.duplicateDetectedDescription')
             .replace('{name}', existing.name)
-            .replace('{field}', existingMatch.matchedBy === 'taxId' ? 'NIF' : existingMatch.matchedBy === 'iban' ? 'IBAN' : 'email'),
+            .replace('{field}', duplicate.match.matchedBy === 'taxId' ? 'NIF' : duplicate.match.matchedBy === 'iban' ? 'IBAN' : 'email'),
           duration: 8000,
+        });
+        return;
+      }
+
+      if (duplicate.kind === 'deleted') {
+        const existing = duplicate.match.contact;
+        toast({
+          variant: 'destructive',
+          title: t.donors.deletedDuplicateTitle,
+          description: t.donors.deletedDuplicateDescription,
+          duration: 10000,
+          action: (
+            <ToastAction altText={t.donors.viewDeleted} onClick={() => focusDeletedDonor(existing)}>
+              {t.donors.viewDeleted}
+            </ToastAction>
+          ),
         });
         return;
       }
@@ -1187,48 +1263,38 @@ export function DonorManager() {
               {/* Botons de filtre per estat */}
               <div className="flex flex-wrap items-center gap-2">
                 <Button
-                  variant={statusFilter === 'active' && !showIncompleteOnly && !anyReturnsFilterActive ? 'default' : 'outline'}
+                  variant={visibilityFilter === 'active' ? 'default' : 'outline'}
                   size="sm"
                   onClick={() => {
-                    setStatusFilter('active');
-                    setShowIncompleteOnly(false);
-                    setShowWithReturnsOnly(false);
-                    setShowWithReturnsThisMonthOnly(false);
-                    setShowWithTwoOrMoreReturnsOnly(false);
+                    setVisibilityFilter('active');
+                    resetOperationalFilters();
                   }}
                 >
                   {t.donors.allActive} ({statusCounts.active})
                 </Button>
-                {statusCounts.inactive > 0 && (
-                  <Button
-                    variant={statusFilter === 'inactive' ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => {
-                      setStatusFilter('inactive');
-                      setShowIncompleteOnly(false);
-                      setShowWithReturnsOnly(false);
-                      setShowWithReturnsThisMonthOnly(false);
-                      setShowWithTwoOrMoreReturnsOnly(false);
-                    }}
-                    className={statusFilter !== 'inactive' ? 'border-gray-400 text-gray-600' : ''}
-                  >
-                    {t.donors.allInactive} ({statusCounts.inactive})
-                  </Button>
-                )}
                 <Button
-                  variant={statusFilter === 'all' && !showIncompleteOnly && !anyReturnsFilterActive ? 'default' : 'outline'}
+                  variant={visibilityFilter === 'inactive' ? 'default' : 'outline'}
                   size="sm"
                   onClick={() => {
-                    setStatusFilter('all');
-                    setShowIncompleteOnly(false);
-                    setShowWithReturnsOnly(false);
-                    setShowWithReturnsThisMonthOnly(false);
-                    setShowWithTwoOrMoreReturnsOnly(false);
+                    setVisibilityFilter('inactive');
+                    resetOperationalFilters();
                   }}
+                  className={visibilityFilter !== 'inactive' ? 'border-gray-400 text-gray-600' : ''}
                 >
-                  {t.donors.all} ({statusCounts.total})
+                  {t.donors.allInactive} ({statusCounts.inactive})
                 </Button>
-                {incompleteDonorsCount > 0 && (
+                <Button
+                  variant={visibilityFilter === 'deleted' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => {
+                    setVisibilityFilter('deleted');
+                    resetOperationalFilters();
+                  }}
+                  className={visibilityFilter !== 'deleted' ? 'border-rose-300 text-rose-600' : ''}
+                >
+                  {t.donors.deleted} ({statusCounts.deleted})
+                </Button>
+                {visibilityFilter !== 'deleted' && incompleteDonorsCount > 0 && (
                   <Button
                     variant={showIncompleteOnly ? 'default' : 'outline'}
                     size="sm"
@@ -1237,7 +1303,6 @@ export function DonorManager() {
                       setShowWithReturnsOnly(false);
                       setShowWithReturnsThisMonthOnly(false);
                       setShowWithTwoOrMoreReturnsOnly(false);
-                      setStatusFilter('all');
                     }}
                     className={!showIncompleteOnly ? 'border-amber-300 text-amber-600' : ''}
                   >
@@ -1245,7 +1310,7 @@ export function DonorManager() {
                     {t.donors.incomplete} ({incompleteDonorsCount})
                   </Button>
                 )}
-                {donorsWithReturns.size > 0 && (
+                {visibilityFilter !== 'deleted' && donorsWithReturns.size > 0 && (
                   <>
                     <Button
                       variant={showWithReturnsOnly ? 'default' : 'outline'}
@@ -1255,7 +1320,6 @@ export function DonorManager() {
                         setShowWithReturnsOnly(next);
                         if (next) {
                           setShowIncompleteOnly(false);
-                          setStatusFilter('all');
                         }
                       }}
                       className={!showWithReturnsOnly ? 'border-orange-300 text-orange-600' : ''}
@@ -1270,7 +1334,6 @@ export function DonorManager() {
                         setShowWithReturnsThisMonthOnly(next);
                         if (next) {
                           setShowIncompleteOnly(false);
-                          setStatusFilter('all');
                         }
                       }}
                       className={!showWithReturnsThisMonthOnly ? 'border-orange-300 text-orange-600' : ''}
@@ -1285,7 +1348,6 @@ export function DonorManager() {
                         setShowWithTwoOrMoreReturnsOnly(next);
                         if (next) {
                           setShowIncompleteOnly(false);
-                          setStatusFilter('all');
                         }
                       }}
                       className={!showWithTwoOrMoreReturnsOnly ? 'border-orange-300 text-orange-600' : ''}
@@ -1306,6 +1368,7 @@ export function DonorManager() {
               </div>
 
               {/* Filtres secundaris: tipus, modalitat, periodicitat */}
+              {!isDeletedView && (
               <div className="flex flex-wrap items-center gap-3">
                 {/* Bloc Tipus */}
                 <span className="text-xs text-muted-foreground mr-1">{t.donorsFilter.donorTypeLabel}</span>
@@ -1361,10 +1424,11 @@ export function DonorManager() {
                   </SelectContent>
                 </Select>
               </div>
+              )}
             </div>
 
             {/* Avís de filtre actiu des de dashboard */}
-            {hasUrlFilter && showIncompleteOnly && (
+            {hasUrlFilter && !isDeletedView && showIncompleteOnly && (
               <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg flex items-center gap-3">
                 <AlertTriangle className="h-5 w-5 text-blue-500 flex-shrink-0" />
                 <div className="flex-1">
@@ -1387,7 +1451,7 @@ export function DonorManager() {
             )}
 
             {/* Avís de filtre actiu: donants/socis actius al període */}
-            {hasUrlFilter && (membershipTypeFilter !== null || (canReadTransactions && activeViewFilter)) && !showIncompleteOnly && (
+            {hasUrlFilter && !isDeletedView && (membershipTypeFilter !== null || (canReadTransactions && activeViewFilter)) && !showIncompleteOnly && (
               <div className="mb-4 p-3 bg-violet-50 border border-violet-200 rounded-lg flex items-center gap-3">
                 <Heart className="h-5 w-5 text-violet-500 flex-shrink-0" />
                 <div className="flex-1">
@@ -1550,6 +1614,11 @@ export function DonorManager() {
                       ),
                     ]}
                     badges={[
+                      ...(donor.archivedAt ? [
+                        <Badge key="deleted" variant="secondary" className="bg-rose-100 text-rose-700 text-xs py-0 px-1.5">
+                          {t.donors.deletedBadge}
+                        </Badge>
+                      ] : []),
                       ...(donor.status === 'inactive' ? [
                         <Badge key="inactive" variant="secondary" className="bg-gray-200 text-gray-600 text-xs py-0 px-1.5">
                           {t.donors.inactiveBadge}
@@ -1580,25 +1649,34 @@ export function DonorManager() {
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem onClick={() => handleViewDetail(donor)}>
                             <User className="mr-2 h-4 w-4" />
-                            Veure detall
+                            {t.donors.viewDetail}
                           </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleEdit(donor)}>
-                            <Edit className="mr-2 h-4 w-4" />
-                            {t.donors.editDonor ?? 'Editar'}
-                          </DropdownMenuItem>
-                          {donor.status === 'inactive' && (
-                            <DropdownMenuItem onClick={() => handleReactivate(donor)}>
+                          {isDeletedView ? (
+                            <DropdownMenuItem onClick={() => handleRestore(donor)} className="text-emerald-600">
                               <RotateCcw className="mr-2 h-4 w-4" />
-                              {t.donors.reactivate}
+                              {t.donors.restore}
                             </DropdownMenuItem>
+                          ) : (
+                            <>
+                              <DropdownMenuItem onClick={() => handleEdit(donor)}>
+                                <Edit className="mr-2 h-4 w-4" />
+                                {t.donors.editDonor ?? 'Editar'}
+                              </DropdownMenuItem>
+                              {donor.status === 'inactive' && (
+                                <DropdownMenuItem onClick={() => handleReactivate(donor)}>
+                                  <RotateCcw className="mr-2 h-4 w-4" />
+                                  {t.donors.reactivate}
+                                </DropdownMenuItem>
+                              )}
+                              <DropdownMenuItem
+                                onClick={() => handleDeleteRequest(donor)}
+                                className="text-rose-600"
+                              >
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                {t.donors.deleteDonor ?? 'Eliminar'}
+                              </DropdownMenuItem>
+                            </>
                           )}
-                          <DropdownMenuItem
-                            onClick={() => handleDeleteRequest(donor)}
-                            className="text-rose-600"
-                          >
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            {t.donors.deleteDonor ?? 'Eliminar'}
-                          </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
                     }
@@ -1623,6 +1701,8 @@ export function DonorManager() {
                     title={
                       searchQuery
                         ? (t.emptyStates?.donors?.noResults ?? t.donors.noSearchResults)
+                        : isDeletedView
+                          ? t.donors.noDeletedData
                         : showIncompleteOnly
                           ? (t.donors.noIncompleteData || "No hi ha donants amb dades incompletes")
                           : anyReturnsFilterActive
@@ -1632,6 +1712,8 @@ export function DonorManager() {
                     description={
                       searchQuery
                         ? (t.emptyStates?.donors?.noResultsDesc ?? undefined)
+                        : isDeletedView
+                          ? t.donors.noDeletedDataDescription
                         : !showIncompleteOnly && !anyReturnsFilterActive
                           ? (t.emptyStates?.donors?.noDataDesc ?? undefined)
                           : undefined
@@ -1673,8 +1755,13 @@ export function DonorManager() {
                               onClick={() => handleViewDetail(donor)}
                               className="truncate text-left font-medium text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
                             >
-                              {donor.name}
-                            </button>
+                            {donor.name}
+                          </button>
+                            {donor.archivedAt && (
+                              <Badge variant="secondary" className="bg-rose-100 text-rose-700 text-xs py-0 px-1.5">
+                                {t.donors.deletedBadge}
+                              </Badge>
+                            )}
                             {donor.status === 'inactive' && (
                               <Badge variant="secondary" className="bg-gray-200 text-gray-600 text-xs py-0 px-1.5">
                                 {t.donors.inactiveBadge}
@@ -1738,50 +1825,69 @@ export function DonorManager() {
                           </TableCell>
                         )}
                         <TableCell className="text-right py-1">
-                          {donor.status === 'inactive' && (
+                          {isDeletedView ? (
                             <Tooltip>
                               <TooltipTrigger asChild>
                                 <Button
                                   variant="ghost"
                                   size="icon"
                                   className="h-9 w-9 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
-                                  onClick={() => handleReactivate(donor)}
-                                  aria-label={t.donors.reactivate}
+                                  onClick={() => handleRestore(donor)}
+                                  aria-label={t.donors.restore}
                                 >
                                   <RotateCcw className="h-4 w-4" />
                                 </Button>
                               </TooltipTrigger>
-                              <TooltipContent>{t.donors.reactivate}</TooltipContent>
+                              <TooltipContent>{t.donors.restore}</TooltipContent>
                             </Tooltip>
+                          ) : (
+                            <>
+                              {donor.status === 'inactive' && (
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-9 w-9 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
+                                      onClick={() => handleReactivate(donor)}
+                                      aria-label={t.donors.reactivate}
+                                    >
+                                      <RotateCcw className="h-4 w-4" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>{t.donors.reactivate}</TooltipContent>
+                                </Tooltip>
+                              )}
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-9 w-9 text-muted-foreground hover:text-foreground hover:bg-muted/40"
+                                    onClick={() => handleEdit(donor)}
+                                    aria-label={t.donors.editDonor ?? 'Editar donant'}
+                                  >
+                                    <Edit className="h-4 w-4" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>{t.donors.editDonor ?? 'Editar'}</TooltipContent>
+                              </Tooltip>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-9 w-9 text-rose-600 hover:text-rose-700 hover:bg-rose-50"
+                                    onClick={() => handleDeleteRequest(donor)}
+                                    aria-label={t.donors.deleteDonor ?? 'Eliminar donant'}
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>{t.donors.deleteDonor ?? 'Eliminar'}</TooltipContent>
+                              </Tooltip>
+                            </>
                           )}
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-9 w-9 text-muted-foreground hover:text-foreground hover:bg-muted/40"
-                                onClick={() => handleEdit(donor)}
-                                aria-label={t.donors.editDonor ?? 'Editar donant'}
-                              >
-                                <Edit className="h-4 w-4" />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>{t.donors.editDonor ?? 'Editar'}</TooltipContent>
-                          </Tooltip>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-9 w-9 text-rose-600 hover:text-rose-700 hover:bg-rose-50"
-                                onClick={() => handleDeleteRequest(donor)}
-                                aria-label={t.donors.deleteDonor ?? 'Eliminar donant'}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>{t.donors.deleteDonor ?? 'Eliminar'}</TooltipContent>
-                          </Tooltip>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -1808,6 +1914,8 @@ export function DonorManager() {
                             title={
                               searchQuery
                                 ? (t.emptyStates?.donors?.noResults ?? t.donors.noSearchResults)
+                                : isDeletedView
+                                  ? t.donors.noDeletedData
                                 : showIncompleteOnly
                                   ? (t.donors.noIncompleteData || "No hi ha donants amb dades incompletes")
                                   : anyReturnsFilterActive
@@ -1817,6 +1925,8 @@ export function DonorManager() {
                             description={
                               searchQuery
                                 ? (t.emptyStates?.donors?.noResultsDesc ?? undefined)
+                                : isDeletedView
+                                  ? t.donors.noDeletedDataDescription
                                 : !showIncompleteOnly && !anyReturnsFilterActive
                                   ? (t.emptyStates?.donors?.noDataDesc ?? undefined)
                                   : undefined
@@ -2208,6 +2318,8 @@ export function DonorManager() {
         open={isDetailOpen}
         onOpenChange={setIsDetailOpen}
         onEdit={handleEditFromDrawer}
+        onDelete={handleDeleteRequest}
+        onRestore={handleRestore}
       />
 
       <CannotArchiveContactDialog
@@ -2219,6 +2331,7 @@ export function DonorManager() {
         contactName={donorToDelete?.name || ''}
         activeCount={cannotArchiveActiveCount}
         archivedCount={cannotArchiveArchivedCount}
+        description={t.donors.cannotDeleteWithTransactions}
       />
     </TooltipProvider>
   );

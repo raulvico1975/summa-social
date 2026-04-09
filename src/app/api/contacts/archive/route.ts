@@ -22,6 +22,10 @@ import {
   validateUserMembership,
 } from '@/lib/api/admin-sdk';
 import { requireOperationalAccess } from '@/lib/api/require-operational-access';
+import {
+  canArchiveContact,
+  getLinkedTransactionCount,
+} from '@/lib/contacts/archive-contact-policy';
 
 // =============================================================================
 // TIPUS
@@ -31,6 +35,7 @@ interface ArchiveContactRequest {
   orgId: string;
   contactId: string;
   dryRun?: boolean;  // Si true, només compta transaccions sense arxivar
+  blockIfAnyTransaction?: boolean;
 }
 
 interface ArchiveContactResponse {
@@ -77,7 +82,7 @@ export async function POST(
     );
   }
 
-  const { orgId, contactId } = body;
+  const { orgId, contactId, blockIfAnyTransaction = false } = body;
 
   // 3. Validar camps obligatoris
   if (!orgId) {
@@ -141,14 +146,17 @@ export async function POST(
       archivedCount++;
     }
   }
-  const txCount = activeCount + archivedCount;
+  const txCount = getLinkedTransactionCount({ activeCount, archivedCount });
+  const canArchive = canArchiveContact(
+    { activeCount, archivedCount },
+    { blockIfAnyTransaction }
+  );
 
   console.log(`[contacts/archive] Contacte ${contactId} (${contactData?.name || 'sense nom'}) té ${activeCount} actius + ${archivedCount} arxivats${body.dryRun ? ' [dryRun]' : ''}`);
 
   // 8. Mode dryRun: només retornem el comptatge sense arxivar
   if (body.dryRun) {
-    // Bloquejar només si hi ha ACTIUS
-    if (activeCount > 0) {
+    if (!canArchive) {
       return NextResponse.json({
         success: false,
         code: 'HAS_TRANSACTIONS',
@@ -158,24 +166,27 @@ export async function POST(
         canArchive: false,
       });
     }
-    // Permetre arxivar (pot tenir arxivats com a historial)
     return NextResponse.json({
       success: true,
       code: 'OK_TO_ARCHIVE',
-      activeCount: 0,
+      activeCount,
       archivedCount,
       transactionCount: txCount,
       canArchive: true,
     });
   }
 
-  // 9. ENFORCE: bloquejar només per actius
+  // 9. ENFORCE: bloqueig segons política del caller
   // NOTA: NO oferim reassignació per contactes (diferent de categories)
-  if (activeCount > 0) {
+  if (!canArchive) {
+    const message = blockIfAnyTransaction
+      ? `Aquest contacte té ${txCount} moviments associats. No es pot eliminar.`
+      : `Aquest contacte té ${activeCount} moviments actius. No es pot arxivar.`;
+
     return NextResponse.json(
       {
         success: false,
-        error: `Aquest contacte té ${activeCount} moviments actius. No es pot arxivar.`,
+        error: message,
         code: 'HAS_TRANSACTIONS',
         activeCount,
         archivedCount,

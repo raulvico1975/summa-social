@@ -17,6 +17,7 @@ interface CannotArchiveContactDialogProps {
   contactName: string;
   activeCount: number;
   archivedCount: number;
+  description?: string;
 }
 
 export function CannotArchiveContactDialog({
@@ -24,6 +25,7 @@ export function CannotArchiveContactDialog({
   onOpenChange,
   contactName,
   activeCount,
+  description,
 }: CannotArchiveContactDialogProps) {
   const { t } = useTranslations();
 
@@ -35,7 +37,8 @@ export function CannotArchiveContactDialog({
             {t.contacts?.cannotDeleteTitle ?? 'No es pot eliminar'}
           </AlertDialogTitle>
           <AlertDialogDescription>
-            {t.contacts?.cannotDeleteMessage?.(contactName, activeCount)
+            {description
+              ?? t.contacts?.cannotDeleteMessage?.(contactName, activeCount)
               ?? `El contacte "${contactName}" té ${activeCount} moviments associats.`}
           </AlertDialogDescription>
         </AlertDialogHeader>
