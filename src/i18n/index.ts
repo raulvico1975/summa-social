@@ -4,10 +4,11 @@ import { createContext, useContext } from 'react';
 import { ca } from './ca';
 import { es } from './es';
 import { fr } from './fr';
+import { pt } from './pt';
 
 export type Language = 'ca' | 'es' | 'fr' | 'pt';
 
-export const translations = { ca, es, fr };
+export const translations = { ca, es, fr, pt };
 
 /**
  * Tipus per la funció tr() de traduccions JSON planes

@@ -86,7 +86,9 @@ import {
   RefreshCw,
   Loader2,
   Mail,
+  RotateCcw,
   Send,
+  Trash2,
   ExternalLink,
 } from 'lucide-react';
 
@@ -99,13 +101,22 @@ interface DonorDetailDrawerProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onEdit: (donor: Donor) => void;
+  onDelete: (donor: Donor) => void;
+  onRestore: (donor: Donor) => void;
 }
 
 // ════════════════════════════════════════════════════════════════════════════
 // COMPONENT
 // ════════════════════════════════════════════════════════════════════════════
 
-export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDetailDrawerProps) {
+export function DonorDetailDrawer({
+  donor,
+  open,
+  onOpenChange,
+  onEdit,
+  onDelete,
+  onRestore,
+}: DonorDetailDrawerProps) {
   const { firestore, user } = useFirebase();
   const { organizationId, organization, orgSlug } = useCurrentOrganization();
   const { t, tr, language } = useTranslations();
@@ -304,6 +315,7 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
 
   // Helper: dades completes?
   const hasCompleteData = donor?.taxId && donor?.zipCode;
+  const isDeleted = Boolean(donor?.archivedAt);
 
   // Formatar data
   const formatDate = (dateStr: string) => {
@@ -1390,14 +1402,39 @@ export function DonorDetailDrawer({ donor, open, onOpenChange, onEdit }: DonorDe
                 </SheetDescription>
               </div>
             </div>
-            <Button variant="outline" size="sm" onClick={() => onEdit(donor)}>
-              <Edit className="h-4 w-4 mr-1" />
-              {t.common.edit}
-            </Button>
+            <div className="flex items-center gap-2">
+              {isDeleted ? (
+                <Button variant="outline" size="sm" onClick={() => onRestore(donor)}>
+                  <RotateCcw className="h-4 w-4 mr-1" />
+                  {t.donors.restore}
+                </Button>
+              ) : (
+                <>
+                  <Button variant="outline" size="sm" onClick={() => onEdit(donor)}>
+                    <Edit className="h-4 w-4 mr-1" />
+                    {t.common.edit}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-rose-600 hover:text-rose-700"
+                    onClick={() => onDelete(donor)}
+                  >
+                    <Trash2 className="h-4 w-4 mr-1" />
+                    {t.donors.deleteDonor}
+                  </Button>
+                </>
+              )}
+            </div>
           </div>
 
           {/* Badges de modalitat i estat */}
           <div className="flex items-center gap-2 mt-3">
+            {isDeleted && (
+              <Badge variant="secondary" className="bg-rose-100 text-rose-700">
+                {t.donors.deletedBadge}
+              </Badge>
+            )}
             {donor.membershipType === 'recurring' ? (
               <Badge className="bg-green-100 text-green-800">
                 <RefreshCw className="mr-1 h-3 w-3" />
