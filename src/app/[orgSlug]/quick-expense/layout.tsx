@@ -7,6 +7,7 @@
 import { useParams } from 'next/navigation';
 import { OrganizationProvider } from '@/hooks/organization-provider';
 import { useInitializeOrganizationData } from '@/hooks/use-initialize-user-data';
+import { ErrorBoundaryGlobal } from '@/components/ErrorBoundaryGlobal';
 
 function InitializeData({ children }: { children: React.ReactNode }) {
   useInitializeOrganizationData();
@@ -23,11 +24,13 @@ export default function QuickExpenseLayout({
 
   return (
     <OrganizationProvider key={orgSlug} orgSlug={orgSlug}>
-      <InitializeData>
-        <div className="min-h-[100dvh] bg-background">
-          {children}
-        </div>
-      </InitializeData>
+      <ErrorBoundaryGlobal>
+        <InitializeData>
+          <div className="min-h-[100dvh] bg-background">
+            {children}
+          </div>
+        </InitializeData>
+      </ErrorBoundaryGlobal>
     </OrganizationProvider>
   );
 }

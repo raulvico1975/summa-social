@@ -9,6 +9,7 @@ import { DashboardSidebarContent } from '@/components/dashboard-sidebar-content'
 import { DashboardHeader } from '@/components/dashboard-header';
 import { BotFab } from '@/components/help/BotFab';
 import { OrganizationProvider, useCurrentOrganization } from '@/hooks/organization-provider';
+import { ErrorBoundaryGlobal } from '@/components/ErrorBoundaryGlobal';
 import { useInitializeOrganizationData } from '@/hooks/use-initialize-user-data';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -169,9 +170,11 @@ export default function OrgDashboardLayout({ children }: { children: React.React
 
   return (
     <OrganizationProvider key={orgSlug} orgSlug={orgSlug}>
-      <OrganizationDependentLayout>
-        {children}
-      </OrganizationDependentLayout>
+      <ErrorBoundaryGlobal>
+        <OrganizationDependentLayout>
+          {children}
+        </OrganizationDependentLayout>
+      </ErrorBoundaryGlobal>
     </OrganizationProvider>
   );
 }

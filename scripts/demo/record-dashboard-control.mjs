@@ -203,6 +203,7 @@ async function createRecordedDashboardContext(browser, storageStatePath, rawDir,
   const context = await browser.newContext({
     viewport: CAPTURE_VIEWPORT,
     locale: 'ca-ES',
+    acceptDownloads: true,
     storageState: storageStatePath,
     recordVideo: {
       dir: rawDir,
@@ -240,13 +241,26 @@ async function runOpeningFlow(page) {
     animations: 'disabled',
   });
 
-  await sleep(2200);
+  await sleep(1800);
   const combos = page.getByRole('combobox');
   await combos.nth(0).click();
-  await sleep(450);
-  const yearOption = page.getByRole('option', { name: /Any|Año/i });
-  await yearOption.hover().catch(() => {});
-  await sleep(650);
+  await sleep(500);
+  await page.getByRole('option', { name: /^Any$/i }).click();
+  await sleep(1200);
+
+  const yearCombo = page.getByRole('combobox').nth(1);
+  await yearCombo.click();
+  await sleep(500);
+  const previousYear = String(new Date().getFullYear() - 1);
+  await page.getByRole('option', { name: new RegExp(`^${previousYear}$`) }).click();
+  await waitForStableDashboardMetrics(page);
+  await sleep(1800);
+
+  await page.screenshot({
+    path: path.join(OUTPUT_DIR, 'dashboard-year-changed.png'),
+    fullPage: false,
+    animations: 'disabled',
+  });
 
   return {
     startMs,
@@ -263,7 +277,7 @@ async function runSettledFlow(page) {
   if (await moneyBlock.isVisible().catch(() => false)) {
     await moveMouseTo(page, moneyBlock);
   }
-  await sleep(1800);
+  await sleep(1400);
 
   const supportersBlock = page.getByText(/Qui ens sosté|Donants actius|Socis actius/i).first();
   if (await supportersBlock.isVisible().catch(() => false)) {
@@ -275,7 +289,7 @@ async function runSettledFlow(page) {
   if (await fiscalBlock.isVisible().catch(() => false)) {
     await moveMouseTo(page, fiscalBlock);
   }
-  await sleep(700);
+  await sleep(900);
 
   await page.screenshot({
     path: path.join(OUTPUT_DIR, 'dashboard-overview.png'),
@@ -283,11 +297,28 @@ async function runSettledFlow(page) {
     animations: 'disabled',
   });
 
+  await page.mouse.wheel(0, 1050);
+  await sleep(1600);
+  await page.waitForFunction(() => {
+    const body = document.body?.innerText || '';
+    return body.includes('Despeses principals per categoria');
+  }, null, { timeout: 20000 });
+  await sleep(1600);
+
+  await page.screenshot({
+    path: path.join(OUTPUT_DIR, 'dashboard-top-categories.png'),
+    fullPage: false,
+    animations: 'disabled',
+  });
+
+  await page.evaluate(() => window.scrollTo({ top: 0, behavior: 'instant' }));
+  await sleep(1400);
+
   const shareButton = page.getByRole('button', { name: /Compartir resum|Compartir resumen/i });
   await shareButton.click();
   const shareDialog = page.getByRole('dialog');
   await shareDialog.waitFor({ state: 'visible', timeout: 30000 });
-  await sleep(3200);
+  await sleep(2600);
 
   await page.screenshot({
     path: path.join(OUTPUT_DIR, 'dashboard-share-summary.png'),
@@ -295,17 +326,43 @@ async function runSettledFlow(page) {
     animations: 'disabled',
   });
 
-  const exportExcelButton = shareDialog.getByRole('button', { name: /Excel/i }).first();
-  if (await exportExcelButton.isVisible().catch(() => false)) {
-    await moveMouseTo(page, exportExcelButton);
-  }
+  const editButton = shareDialog.getByRole('button', { name: /Editar/i }).first();
+  await editButton.waitFor({ state: 'visible', timeout: 30000 });
+  await editButton.click();
+
+  const editorDialog = page.getByRole('dialog').last();
+  await editorDialog.waitFor({ state: 'visible', timeout: 30000 });
+  const editorTextarea = editorDialog.locator('textarea').first();
+  await editorTextarea.fill(
+    'Resum executiu del període, amb ingressos, balanç i comunitat en una sola vista compartible.'
+  );
+  await sleep(1200);
+  await editorDialog.getByRole('button', { name: /Desar|Guardar|Save/i }).click();
+  await sleep(1800);
+
+  await page.screenshot({
+    path: path.join(OUTPUT_DIR, 'dashboard-share-edited.png'),
+    fullPage: false,
+    animations: 'disabled',
+  });
+
+  const downloadPromise = page.waitForEvent('download', { timeout: 30000 });
+  const exportPdfButton = shareDialog.getByRole('button', { name: /Exportar PDF|Descargar PDF|Descarregar PDF/i }).first();
+  await exportPdfButton.waitFor({ state: 'visible', timeout: 30000 });
+  await exportPdfButton.click();
+  const download = await downloadPromise;
+  const pdfPath = path.join(OUTPUT_DIR, 'dashboard-share-summary.pdf');
+  await download.saveAs(pdfPath);
   await sleep(1200);
 
-  const emailButton = shareDialog.getByRole('button', { name: /Enviar per email|Enviar por email/i }).first();
-  if (await emailButton.isVisible().catch(() => false)) {
-    await moveMouseTo(page, emailButton);
-  }
-  await sleep(3400);
+  await page.goto(`file://${pdfPath}`, { waitUntil: 'domcontentloaded' }).catch(() => {});
+  await sleep(2200);
+
+  await page.screenshot({
+    path: path.join(OUTPUT_DIR, 'dashboard-share-pdf.png'),
+    fullPage: false,
+    animations: 'disabled',
+  });
 
   return {
     startMs,
@@ -360,7 +417,8 @@ async function main() {
   const browser = await chromium.launch({ channel: 'chrome', headless: true });
   const storageStatePath = await createAuthenticatedState(browser);
   const currentYear = new Date().getFullYear();
-  const yearDashboardUrl = `${BASE_URL}/dashboard?periodType=year&periodYear=${currentYear}`;
+  const previousYear = currentYear - 1;
+  const yearDashboardUrl = `${BASE_URL}/dashboard?periodType=year&periodYear=${previousYear}`;
 
   let openingContext = null;
   let settledContext = null;
