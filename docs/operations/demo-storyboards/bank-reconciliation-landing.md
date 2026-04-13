@@ -6,10 +6,10 @@ Peça curta per a la hero de la landing de conciliació bancària. Ha de vendre 
 
 ## Format
 
-- 20-25 segons
+- 35-40 segons
 - sense intro ni outro
 - video net, sense captions cremades
-- captions curtes servides des de la landing
+- sense track de captions servit des de la landing
 - una frase curta per escena
 - focus en el resultat i en la reducció de feina manual
 
@@ -24,5 +24,4 @@ Peça curta per a la hero de la landing de conciliació bancària. Ha de vendre 
 ## Asset web
 
 - video: `public/visuals/landings/conciliacio-bancaria-ong/animations/conciliacio-bancaria-demo-ca.mp4`
-- captions: `public/visuals/landings/conciliacio-bancaria-ong/animations/conciliacio-bancaria-demo-ca.vtt`
 - poster: `public/visuals/landings/conciliacio-bancaria-ong/optimized/conciliacio-bancaria-demo-ca-poster.webp`

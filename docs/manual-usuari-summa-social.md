@@ -1,7 +1,7 @@
 # SUMMA SOCIAL - Manual d'Usuari Complet
 
-**Versió**: 1.46
-**Última actualització**: 12 Març 2026
+**Versió**: 1.47
+**Última actualització**: 10 Abril 2026
 
 ---
 
@@ -486,7 +486,7 @@ Si vols actualitzar dades de donants que ja tens registrats (per exemple, canvis
 
 ---
 
-## 3.5 Gestionar l'estat dels donants (Actiu/Baixa)
+## 3.5 Gestionar l'estat dels donants (Actiu/Baixa/Eliminat)
 
 Quan un donant deixa de col·laborar, **no l'esborris**. Marca'l com a "Baixa". Així conserves tot el seu historial per a informes d'anys anteriors.
 
@@ -501,6 +501,24 @@ Quan un donant deixa de col·laborar, **no l'esborris**. Marca'l com a "Baixa". 
 ### Com reactivar un donant
 
 A la llista de donants (filtra per "Baixes"), clica la icona de **fletxa circular** al costat del donant.
+
+### Com eliminar un donant (sense esborrar historial)
+
+Si un donant ja no s'ha de fer servir, el pots moure a **Eliminats**. És un arxivat operatiu: no es perd l'historial.
+
+1. Ves a ❤️ **Donants**
+2. Obre el detall del donant o el menú de la fila
+3. Clica **"Eliminar"**
+4. Confirma l'acció
+
+> ⚠️ **Important:** Si el donant té qualsevol moviment associat (actiu o arxivat), el sistema **bloqueja l'eliminació** i t'indica el recompte.
+
+### Com restaurar un donant eliminat
+
+1. Ves a ❤️ **Donants**
+2. Clica el segment **"Eliminats"**
+3. Obre el menú del donant i clica **"Restaurar"** (o la icona de fletxa circular)
+4. El donant torna al flux operatiu
 
 ---
 
@@ -559,7 +577,7 @@ A la llista de donants pots combinar diversos filtres per trobar exactament el q
 
 | Filtre | Opcions | Per a què serveix |
 |--------|---------|-------------------|
-| **Estat** | Alta / Baixa | Veure donants actius o donats de baixa |
+| **Visibilitat** | Actius / Baixes / Eliminats | Separar base operativa de registres eliminats |
 | **Tipus** | Particular / Empresa | Separar persones físiques de jurídiques |
 | **Modalitat** | Soci / Puntual | Distingir socis recurrents de donants puntuals |
 | **Periodicitat** | Mensual / Trimestral / Semestral / Anual | Filtrar socis segons la freqüència de quota |

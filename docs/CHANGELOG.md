@@ -10,6 +10,14 @@ Aquest fitxer ja no pretén duplicar el document mestre.
 
 ## Resum dels canvis recents
 
+### 2026-04-09
+
+- documentació per usuari: Donants incorpora segment `Eliminats`, restauració directa i bloqueig d'eliminació quan el contacte té qualsevol moviment associat (actiu o arxivat)
+- codi intern: persistència explícita de `contactType` a moviments i remeses OUT (selector role-aware per contactes multirol + resolució consistent de proveïdor/treballador)
+- API/integracions: `POST /api/contacts/archive` admet política `blockIfAnyTransaction`; nou `POST /api/contacts/restore` per restaurar contactes arxivats
+- operativa: publicat nou vídeo CA de la landing `conciliacio-bancaria-ong` (37 s) i retirada de tracks de captions en landings públiques afectades
+- codi intern: `/api/dashboard/summary` resol `missionTransfers` també en categories legacy sense `systemKey`; `closing-bundle` evita init eager de Firestore en ruta de tests
+
 ### 2026-03-26
 
 - novetats de producte: web públic més descobrible (enllaç visible a home/header), sitemap amb rutes de detall i publicació/despublicació server-to-server més robusta

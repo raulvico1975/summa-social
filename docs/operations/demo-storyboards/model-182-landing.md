@@ -32,5 +32,4 @@ Peça curta per la landing `model-182` i per la capacitat equivalent de la home.
 - landing render:
   - `output/playwright/model-182-demo/model-182-landing.ca.mp4`
   - `output/playwright/model-182-demo/model-182-landing.es.mp4`
-- captions overlay:
-  - `.vtt` per a `ca` i `es`
+- sense track `.vtt` publicat a la landing

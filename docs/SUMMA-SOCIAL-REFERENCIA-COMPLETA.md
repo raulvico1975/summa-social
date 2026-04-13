@@ -1,6 +1,6 @@
 # ═══════════════════════════════════════════════════════════════════════════════
 # SUMMA SOCIAL - REFERÈNCIA COMPLETA DEL PROJECTE
-# Última actualització: 27 Març 2026
+# Última actualització: 10 Abril 2026
 # ═══════════════════════════════════════════════════════════════════════════════
 
 
@@ -4542,7 +4542,7 @@ Guardrails per evitar desactivar comptes bancaris que tenen moviments associats.
 
 ### 3.13.5e Guardrails d'Integritat: Contactes
 
-Guardrails per evitar arxivar contactes (donants/proveïdors/treballadors) amb moviments actius.
+Guardrails per evitar arxivar/eliminar contactes (donants/proveïdors/treballadors) amb polítiques de bloqueig coherents.
 
 **Invariants:**
 
@@ -4550,22 +4550,29 @@ Guardrails per evitar arxivar contactes (donants/proveïdors/treballadors) amb m
 |----|------------|---------|
 | C1 | Prohibit delete físic de contactes | `allow delete: if false` (Firestore Rules) |
 | C2 | Client no pot escriure archivedAt/ByUid/FromAction | Rules bloquegen |
-| C3 | Arxivat bloqueig per moviments ACTIUS | API `/api/contacts/archive` |
-| C4 | Moviments arxivats NO bloquegen | Només `activeCount > 0` bloqueja |
+| C3 | Bloqueig configurable per API | `/api/contacts/archive` |
+| C4 | Mode estricte per Donants (`Eliminats`) | Amb `blockIfAnyTransaction: true`, cap moviment (actiu/arxivat) és permès |
+| C5 | Restauració idempotent de contactes arxivats | API `/api/contacts/restore` |
 
-**Diferència clau:** Un contacte amb 0 moviments actius + N moviments arxivats (historial) SÍ es pot arxivar.
+**Política per defecte (`blockIfAnyTransaction: false`):** un contacte amb 0 moviments actius + N moviments arxivats SÍ es pot arxivar.
+
+**Política estricta (`blockIfAnyTransaction: true`):** qualsevol moviment associat (actiu o arxivat) bloqueja l'eliminació.
 
 **Flux amb dryRun:**
 1. Usuari clica "Eliminar" contacte
-2. UI crida API amb `dryRun: true`
+2. UI crida API amb `dryRun: true` (+ `blockIfAnyTransaction` segons cas d'ús)
 3. API retorna `{ activeCount, archivedCount, canArchive }`
 4. Si `canArchive: false` → Modal informatiu amb desglossament
 5. Si `canArchive: true` → Modal confirmació → API sense dryRun
 
 **API:** `POST /api/contacts/archive`
-- Body: `{ orgId, contactId, dryRun?: boolean }`
+- Body: `{ orgId, contactId, dryRun?: boolean, blockIfAnyTransaction?: boolean }`
 - Resposta dryRun: `{ activeCount, archivedCount, canArchive }`
 - Resposta error: `{ code: 'HAS_TRANSACTIONS', activeCount, archivedCount }`
+
+**API restauració:** `POST /api/contacts/restore`
+- Body: `{ orgId, contactId }`
+- Resposta: `{ success: true, idempotent?: true }`
 
 **Health Check:** Bloc I detecta transaccions amb `contactId` que no existeix a la col·lecció contacts.
 
