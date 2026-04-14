@@ -8,6 +8,7 @@ import { DashboardSidebarContent } from '@/components/dashboard-sidebar-content'
 import { DashboardHeader } from '@/components/dashboard-header';
 import { OrganizationProvider } from '@/hooks/organization-provider';
 import { useInitializeOrganizationData } from '@/hooks/use-initialize-user-data';
+import { ErrorBoundaryGlobal } from '@/components/ErrorBoundaryGlobal';
 
 function OrganizationDependentLayout({ children }: { children: React.ReactNode }) {
   // Aquest hook s'assegura que les dades per defecte (com categories) existeixin.
@@ -44,9 +45,11 @@ function OrganizationDependentLayout({ children }: { children: React.ReactNode }
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (
     <OrganizationProvider>
-      <OrganizationDependentLayout>
-        {children}
-      </OrganizationDependentLayout>
+      <ErrorBoundaryGlobal>
+        <OrganizationDependentLayout>
+          {children}
+        </OrganizationDependentLayout>
+      </ErrorBoundaryGlobal>
     </OrganizationProvider>
   );
 }

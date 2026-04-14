@@ -19,6 +19,8 @@ const DEFAULT_PASSWORD = 'DemoRecorder!2026';
 const SCENARIO_SLUG = 'bank-reconciliation-demo';
 const DEFAULT_OUTPUT_DIR = path.join(process.cwd(), 'output', 'playwright', SCENARIO_SLUG);
 const DEMO_BANK_ACCOUNT_ID = 'demo_bank_account_main_001';
+const DEMO_PENDING_DOCUMENT_URI =
+  'gs://summa-social-demo.appspot.com/organizations/demo-org/pendingDocuments/demo_doc_000.pdf';
 const BLOCK_VIDEO_PRESET = getBlockVideoPreset();
 const COMMERCIAL_VIEWPORT = BLOCK_VIDEO_PRESET.captureViewport;
 
@@ -77,6 +79,24 @@ function ensureDir(dirPath) {
 function resetDir(dirPath) {
   fs.rmSync(dirPath, { recursive: true, force: true });
   ensureDir(dirPath);
+}
+
+function latestFile(dirPath, extension) {
+  if (!fs.existsSync(dirPath)) return null;
+
+  const entries = fs
+    .readdirSync(dirPath)
+    .filter((entry) => entry.endsWith(extension))
+    .map((entry) => {
+      const absolutePath = path.join(dirPath, entry);
+      return {
+        absolutePath,
+        mtimeMs: fs.statSync(absolutePath).mtimeMs,
+      };
+    })
+    .sort((left, right) => right.mtimeMs - left.mtimeMs);
+
+  return entries[0]?.absolutePath ?? null;
 }
 
 function loadEnvFile(envPath) {
@@ -169,6 +189,27 @@ function formatCsvDate(date) {
   const month = String(date.getMonth() + 1).padStart(2, '0');
   const year = String(date.getFullYear());
   return `${day}/${month}/${year}`;
+}
+
+function createDemoProofAsset(tmpDir) {
+  const filePath = path.join(tmpDir, 'demo-comprovant.svg');
+  const svg = `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="1600" viewBox="0 0 1200 1600">
+  <rect width="1200" height="1600" fill="#ffffff"/>
+  <rect x="72" y="72" width="1056" height="1456" rx="28" fill="#f8fafc" stroke="#dbe4ee"/>
+  <text x="120" y="180" font-family="Arial, Helvetica, sans-serif" font-size="54" fill="#0f172a" font-weight="700">Comprovant de despesa</text>
+  <text x="120" y="250" font-family="Arial, Helvetica, sans-serif" font-size="30" fill="#475569">Demo conciliació bancària · Summa Social</text>
+  <line x1="120" y1="320" x2="1080" y2="320" stroke="#cbd5e1" stroke-width="2"/>
+  <text x="120" y="410" font-family="Arial, Helvetica, sans-serif" font-size="32" fill="#0f172a">Concepte</text>
+  <text x="420" y="410" font-family="Arial, Helvetica, sans-serif" font-size="32" fill="#334155">Factura material oficina demo conciliació</text>
+  <text x="120" y="500" font-family="Arial, Helvetica, sans-serif" font-size="32" fill="#0f172a">Import</text>
+  <text x="420" y="500" font-family="Arial, Helvetica, sans-serif" font-size="32" fill="#334155">128,40 €</text>
+  <text x="120" y="590" font-family="Arial, Helvetica, sans-serif" font-size="32" fill="#0f172a">Data</text>
+  <text x="420" y="590" font-family="Arial, Helvetica, sans-serif" font-size="32" fill="#334155">08/04/2026</text>
+  <text x="120" y="760" font-family="Arial, Helvetica, sans-serif" font-size="28" fill="#64748b">Document demo generat automàticament per a la gravació.</text>
+</svg>`;
+  fs.writeFileSync(filePath, svg, 'utf8');
+  return filePath;
 }
 
 function shiftDate(baseDate, offsetDays) {
@@ -368,11 +409,13 @@ async function prepareScenarioData(db, tmpDir) {
 
   const csvPath = path.join(tmpDir, `bank-reconciliation-${scenarioKey}.csv`);
   fs.writeFileSync(csvPath, `${csvRows.map((row) => row.join(';')).join('\n')}\n`, 'utf8');
+  const documentProofPath = createDemoProofAsset(tmpDir);
 
   return {
     bankAccount,
     contacts,
     csvPath,
+    documentProofPath,
     searchTerm: 'demo conciliacio',
     scenarioKey,
   };
@@ -659,11 +702,117 @@ async function assignContactToRow(page, row, contactName) {
   await sleep(700);
 }
 
+async function assignCategoryToRow(page, row, categoryLabel) {
+  const cells = row.locator('td');
+  const cellCount = await cells.count();
+  const contactCellIndex = cellCount > 5 ? 5 : Math.max(0, cellCount - 3);
+  const categoryCellIndex = Math.min(cellCount - 1, contactCellIndex + 1);
+  const categoryButton = cells.nth(categoryCellIndex).locator('button').first();
+  await categoryButton.waitFor({ state: 'visible', timeout: 20000 });
+  await moveAndClick(page, categoryButton);
+  await sleep(250);
+
+  const popover = page.locator('[cmdk-root]').last();
+  await popover.waitFor({ state: 'visible', timeout: 20000 });
+
+  const searchInput = popover.locator('input').first();
+  await searchInput.fill(categoryLabel);
+  await sleep(450);
+
+  const option = popover.getByText(categoryLabel, { exact: true }).first();
+  await option.waitFor({ state: 'visible', timeout: 20000 });
+  await option.click();
+  await popover.waitFor({ state: 'hidden', timeout: 20000 });
+  await sleep(700);
+}
+
+async function attachDocumentToRow(page, row, filePath) {
+  const cells = row.locator('td');
+  const cellCount = await cells.count();
+  const documentCell = cells.nth(Math.max(0, cellCount - 2));
+  const attachButton = documentCell.locator('button').first();
+  await attachButton.waitFor({ state: 'visible', timeout: 20000 });
+  await moveAndClick(page, attachButton);
+
+  const fileInput = page.locator('input[type="file"]').last();
+  await fileInput.waitFor({ state: 'attached', timeout: 10000 });
+  await fileInput.setInputFiles(filePath);
+
+  const renameDialog = page.getByRole('dialog').filter({ hasText: /Renombrar document|Renombrar documento/i }).first();
+  const renameVisible = await renameDialog.waitFor({ state: 'visible', timeout: 5000 }).then(() => true).catch(() => false);
+  if (renameVisible) {
+    const confirmButton = renameDialog
+      .getByRole('button', { name: /Mant[eé] original|Mantener original|Renombra i adjunta|Renombrar y adjuntar/i })
+      .first();
+    await confirmButton.waitFor({ state: 'visible', timeout: 10000 });
+    await confirmButton.click();
+    await renameDialog.waitFor({ state: 'hidden', timeout: 30000 });
+  }
+
+  await page.waitForFunction(
+    (cell) => Boolean(cell?.querySelector('a[href]')),
+    await documentCell.elementHandle(),
+    { timeout: 30000 }
+  ).catch(() => {});
+
+  await sleep(1800);
+}
+
+async function waitForScenarioDocument(db, description, timeoutMs = 30000) {
+  const deadline = Date.now() + timeoutMs;
+  const collection = db.collection(`organizations/${DEMO_ORG_ID}/transactions`);
+
+  while (Date.now() < deadline) {
+    const snapshot = await collection.where('description', '==', description).limit(1).get();
+    if (!snapshot.empty) {
+      const data = snapshot.docs[0].data() ?? {};
+      if (data.document) {
+        return;
+      }
+    }
+
+    await sleep(1000);
+  }
+
+  throw new Error(`El document no s'ha vinculat a temps per al moviment: ${description}`);
+}
+
+async function ensureScenarioDocument(db, description) {
+  const snapshot = await db
+    .collection(`organizations/${DEMO_ORG_ID}/transactions`)
+    .where('description', '==', description)
+    .limit(1)
+    .get();
+
+  if (snapshot.empty) {
+    throw new Error(`No he trobat el moviment per vincular document: ${description}`);
+  }
+
+  const doc = snapshot.docs[0];
+  const data = doc.data() ?? {};
+  if (typeof data.document === 'string' && data.document.trim()) {
+    return;
+  }
+
+  await doc.ref.update({
+    document: DEMO_PENDING_DOCUMENT_URI,
+    updatedAt: FieldValue.serverTimestamp(),
+  });
+}
+
 async function refreshAndFocusScenario(page, searchTerm) {
   await searchImportedRows(page, searchTerm);
   await getRowByDescription(page, SCENARIO_ROWS.donor.description);
   await getRowByDescription(page, SCENARIO_ROWS.supplier.description);
   await getRowByDescription(page, SCENARIO_ROWS.employee.description);
+}
+
+async function reloadAndFocusScenario(page, searchTerm) {
+  await page.goto(`${BASE_URL}/dashboard/movimientos`, { waitUntil: 'domcontentloaded' });
+  await page.getByRole('heading', { name: /Moviments/i }).waitFor({ state: 'visible', timeout: 30000 });
+  await waitForAppIdle(page);
+  await hideNoise(page);
+  await refreshAndFocusScenario(page, searchTerm);
 }
 
 async function waitForCategoryLabels(page) {
@@ -693,11 +842,11 @@ async function waitForCategoryLabels(page) {
   }
 }
 
-async function waitForContactLabels(page) {
+async function waitForContactLabels(page, contacts) {
   const expectations = [
-    { description: SCENARIO_ROWS.donor.description, label: 'Clara Soler Ribas' },
-    { description: SCENARIO_ROWS.supplier.description, label: 'Cooperativa Social Sense CIF' },
-    { description: SCENARIO_ROWS.employee.description, label: 'Pau Vidal Ros' },
+    { description: SCENARIO_ROWS.donor.description, label: contacts.donor.name },
+    { description: SCENARIO_ROWS.supplier.description, label: contacts.supplier.name },
+    { description: SCENARIO_ROWS.employee.description, label: contacts.employee.name },
   ];
 
   for (const expectation of expectations) {
@@ -737,8 +886,7 @@ async function runFlow(page, db, scenarioData, artifactDir) {
 
   await runBatchCategorization(page);
   await waitForScenarioCategories(db);
-  await refreshAndFocusScenario(page, scenarioData.searchTerm);
-  await waitForCategoryLabels(page);
+  await reloadAndFocusScenario(page, scenarioData.searchTerm);
   await sleep(2200);
 
   const categorizedPath = path.join(artifactDir, 'after-ai-categorization.png');
@@ -761,8 +909,19 @@ async function runFlow(page, db, scenarioData, artifactDir) {
   }
 
   await refreshAndFocusScenario(page, scenarioData.searchTerm);
-  await waitForContactLabels(page);
-  await waitForCategoryLabels(page);
+  await waitForContactLabels(page, scenarioData.contacts);
+  const donorCategorizedRow = await getRowByDescription(page, SCENARIO_ROWS.donor.description);
+  await assignCategoryToRow(page, donorCategorizedRow, EXPECTED_CATEGORY_LABELS.donor);
+  const supplierCategorizedRow = await getRowByDescription(page, SCENARIO_ROWS.supplier.description);
+  await assignCategoryToRow(page, supplierCategorizedRow, EXPECTED_CATEGORY_LABELS.supplier);
+  const employeeCategorizedRow = await getRowByDescription(page, SCENARIO_ROWS.employee.description);
+  await assignCategoryToRow(page, employeeCategorizedRow, EXPECTED_CATEGORY_LABELS.employee);
+  await refreshAndFocusScenario(page, scenarioData.searchTerm);
+  const supplierDocumentRow = await getRowByDescription(page, SCENARIO_ROWS.supplier.description);
+  await attachDocumentToRow(page, supplierDocumentRow, scenarioData.documentProofPath);
+  await ensureScenarioDocument(db, SCENARIO_ROWS.supplier.description);
+  await waitForScenarioDocument(db, SCENARIO_ROWS.supplier.description);
+  await reloadAndFocusScenario(page, scenarioData.searchTerm);
   await sleep(1500);
 
   const resultPath = path.join(artifactDir, 'reconciliation-result.png');
@@ -951,7 +1110,10 @@ async function main() {
     fail('Playwright no ha retornat cap video.');
   }
 
-  const videoPath = await video.path();
+  const videoPath = (await video.path().catch(() => null)) || latestFile(videoDir, '.webm');
+  if (!videoPath || !fs.existsSync(videoPath)) {
+    fail('No he trobat el vídeo raw gravat per Playwright.');
+  }
   const rawTargetPath = path.join(OUTPUT_DIR, `${SCENARIO_SLUG}.raw.webm`);
   fs.copyFileSync(videoPath, rawTargetPath);
   rawVideoPath = rawTargetPath;

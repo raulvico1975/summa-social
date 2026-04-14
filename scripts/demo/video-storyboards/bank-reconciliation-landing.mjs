@@ -13,11 +13,12 @@ export default {
   },
   edit: {
     segments: [
-      { sourceStart: 1.2, sourceEnd: 5.2 },
-      { sourceStart: 7.2, sourceEnd: 11.6 },
-      { sourceStart: 25.6, sourceEnd: 30.0 },
-      { sourceStart: 30.0, sourceEnd: 36.0 },
-      { sourceStart: 56.0, sourceEnd: 58.2 },
+      { sourceStart: 1.2, sourceEnd: 4.8 },
+      { sourceStart: 8.5, sourceEnd: 14.5 },
+      { sourceStart: 24.0, sourceEnd: 28.5 },
+      { sourceStart: 40.0, sourceEnd: 49.0 },
+      { sourceStart: 60.0, sourceEnd: 68.0 },
+      { sourceStart: 118.0, sourceEnd: 124.0 },
     ],
   },
   intro: {
