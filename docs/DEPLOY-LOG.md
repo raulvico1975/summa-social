@@ -301,6 +301,7 @@ Registre cronologic de desplegaments a produccio.
 | 2026-04-14 14:26 | 08947956e | ALT | No | 7 | OK |
 | 2026-04-14 14:35 | 739300c2f | ALT | No | 7 | OK |
 | 2026-04-14 15:02 | f4517ec5c | ALT | No | 7 | OK |
+| 2026-04-14 16:28 | f2ab7dde5 | ALT | No | 3 | OK |
 ## Decisions humanes (negoci)
 
 | Data | SHA | human_question_reason | business_impact | decision_taken |
