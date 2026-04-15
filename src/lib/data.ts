@@ -887,6 +887,11 @@ export interface SepaCollectionRun {
   totalAmountCents: number;                // Suma total en cèntims
   totalCount: number;                      // Nombre de cobraments
   messageId: string;                       // MsgId del XML (per traçabilitat)
+  sepaFile?: {
+    storagePath: string;
+    filename: string;
+    messageId: string;
+  } | null;
   createdAt: string;                       // ISO date
   createdBy: string;                       // UID de l'usuari
   exportedAt?: string | null;              // Data d'exportació del XML
@@ -905,8 +910,14 @@ export interface SepaPain008Run {
   id: string;
   createdAt: import('firebase/firestore').Timestamp;  // serverTimestamp()
   createdByUid: string;                               // UID de l'usuari
+  collectionRunId?: string | null;                    // Vincle amb sepaCollectionRuns
   bankAccountId: string;                              // ID del compte bancari creditor
   executionDate: string;                              // Data de cobrament (YYYY-MM-DD)
+  sepaFile?: {
+    storagePath: string;
+    filename: string;
+    messageId: string;
+  } | null;
   includedDonorIds: string[];                         // IDs dels donants inclosos
   counts: {
     shown: number;                                    // Mostrats al wizard

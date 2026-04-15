@@ -6,8 +6,9 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { useTranslations } from '@/i18n';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
-import { useFirebase, useCollection, useMemoFirebase, addDocumentNonBlocking } from '@/firebase';
-import { collection, query, where, doc, addDoc, writeBatch, serverTimestamp } from 'firebase/firestore';
+import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
+import { collection, query, where, doc, addDoc, writeBatch, serverTimestamp, setDoc } from 'firebase/firestore';
+import { ref, uploadString } from 'firebase/storage';
 import type { Donor, BankAccount, SepaCollectionRun, SepaCollectionItem, SepaSequenceType } from '@/lib/data';
 import { generatePain008Xml, generateMessageId, validateCollectionRun, filterEligibleDonors, determineSequenceType, computeDonorCollectionStatus, type DonorCollectionStatus } from '@/lib/sepa/pain008';
 import { ArrowLeft, ArrowRight, Download, AlertTriangle, CheckCircle2, XCircle } from 'lucide-react';
@@ -25,7 +26,7 @@ const STEPS: WizardStep[] = ['config', 'selection', 'review'];
 
 export function SepaCollectionWizard() {
   const router = useRouter();
-  const { firestore, auth } = useFirebase();
+  const { firestore, auth, storage } = useFirebase();
   const { organizationId, organization, orgSlug } = useCurrentOrganization();
   const { toast } = useToast();
   const { t, tr } = useTranslations();
@@ -198,9 +199,14 @@ export function SepaCollectionWizard() {
 
     try {
       const messageId = generateMessageId();
+      const runsCollection = collection(firestore, 'organizations', organizationId, 'sepaCollectionRuns');
+      const runRef = doc(runsCollection);
+      const runId = runRef.id;
+      const dateStr = configData.collectionDate.replace(/-/g, '');
+      const filename = `sepa_cobrament_CORE_${orgSlug}_${dateStr}.xml`;
 
       const run: SepaCollectionRun = {
-        id: '', // Will be set by Firestore
+        id: runId,
         status: 'exported',
         scheme: 'CORE',
         bankAccountId: configData.bankAccountId,
@@ -235,7 +241,12 @@ export function SepaCollectionWizard() {
       // Persist to Firestore (best-effort: no bloqueja l'export XML)
       let persistFailed = false;
       try {
-        const runsCollection = collection(firestore, 'organizations', organizationId, 'sepaCollectionRuns');
+        const storagePath = `organizations/${organizationId}/sepaCollectionRuns/${runId}/${filename}`;
+        const storageRef = ref(storage, storagePath);
+
+        await uploadString(storageRef, xml, 'raw', {
+          contentType: 'application/xml',
+        });
 
         // Build run data for persistence (without items array for Firestore)
         const runForDb = {
@@ -247,6 +258,11 @@ export function SepaCollectionWizard() {
           createdBy: run.createdBy,
           exportedAt: run.exportedAt,
           messageId,
+          sepaFile: {
+            storagePath,
+            filename,
+            messageId,
+          },
           itemCount: collectionItems.length,
           totalCents: totalAmountCents,
           included: collectionItems.map(item => ({
@@ -261,7 +277,7 @@ export function SepaCollectionWizard() {
           })),
         };
 
-        addDocumentNonBlocking(runsCollection, runForDb);
+        await setDoc(runRef, runForDb);
 
         // ═══════════════════════════════════════════════════════════════════════════
         // CREAR REGISTRE OPERATIU sepaPain008Runs (memòria de runs)
@@ -271,8 +287,14 @@ export function SepaCollectionWizard() {
         const pain008RunData = {
           createdAt: serverTimestamp(),
           createdByUid: auth.currentUser.uid,
+          collectionRunId: runId,
           bankAccountId: configData.bankAccountId,
           executionDate: configData.collectionDate,
+          sepaFile: {
+            storagePath,
+            filename,
+            messageId,
+          },
           includedDonorIds: selectedDonors.map(d => d.id),
           counts: {
             shown: eligible.length,
@@ -318,8 +340,7 @@ export function SepaCollectionWizard() {
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      const dateStr = configData.collectionDate.replace(/-/g, '');
-      link.download = `sepa_cobrament_CORE_${orgSlug}_${dateStr}.xml`;
+      link.download = filename;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
