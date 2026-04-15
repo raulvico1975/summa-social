@@ -311,6 +311,7 @@ Registre cronologic de desplegaments a produccio.
 | 2026-04-14 15:02 | f4517ec5c | ALT | No | 7 | OK |
 | 2026-04-14 16:28 | f2ab7dde5 | ALT | No | 3 | OK |
 | 2026-04-14 17:16 | dad5da45d | MITJA | No | 7 | OK |
+| 2026-04-15 11:26 | e266263e6 | ALT | Si | 41 | OK_AMB_AVIS |
 ## Decisions humanes (negoci)
 
 | Data | SHA | human_question_reason | business_impact | decision_taken |
@@ -410,3 +411,6 @@ Registre cronologic de desplegaments a produccio.
 | 2026-04-09 20:10 | c0a1e6ec3 | Risc ALT residual detectat (avís guiat, no bloquejant). | podria alterar imports de donacions o devolucions, i l'entitat podria veure totals incorrectes en certificats o informes fiscals. | AUTO_CONTINUE_GUIDED_WARNING |
 | 2026-04-09 20:10 | c0a1e6ec3 | ALT | podria alterar imports de donacions o devolucions, i l'entitat podria veure totals incorrectes en certificats o informes fiscals. | Recomanacio: validar 1 cas real curt abans de publicar (moviment d'exemple -> resultat final esperat). |
 | 2026-04-09 20:10 | c0a1e6ec3 | SKIPPED_NO_BUCKET | - |
+| 2026-04-15 11:26 | e266263e6 | Risc ALT residual detectat (avís guiat, no bloquejant). | podria alterar imports de donacions o devolucions, i l'entitat podria veure totals incorrectes en certificats o informes fiscals. | AUTO_CONTINUE_GUIDED_WARNING |
+| 2026-04-15 11:26 | e266263e6 | ALT | podria alterar imports de donacions o devolucions, i l'entitat podria veure totals incorrectes en certificats o informes fiscals. | Recomanacio: validar 1 cas real curt abans de publicar (moviment d'exemple -> resultat final esperat). |
+| 2026-04-15 11:26 | e266263e6 | SKIPPED_NO_BUCKET | - |
