@@ -18,6 +18,23 @@ Aquest checklist assegura que els fluxos fiscals crítics no tenen regressions a
 
 ## 2. Checklist de verificació (PASS/FAIL)
 
+### Registre manual 2026-04-15 — Control 182 integrat a la fila i compactació de Moviments
+
+**Context:**
+Retoc visual del llistat de `Moviments` perquè el nou estat/acció `Preparat per comptar al 182 / Fer comptar al 182` no trenqui l'alçada de la fila ni obri una segona línia. El canvi també compacta la capçalera i les files del llistat per guanyar densitat de lectura. No toca càlculs del Model 182, persistència fiscal ni lògica d'imputació; només reubica i compacta la presentació del control visual.
+
+**Comprovacions aplicades:**
+1. Revisió manual del diff per validar que els fitxers afectats (`TransactionRow`, `TransactionRowMobile`, `transactions-table`) només ajusten layout, classes, posició del control `182` i espais verticals.
+2. Revisió específica del comportament del control `182`, confirmant que continua reutilitzant la mateixa acció existent (`markAsDonation`) i que no s'introdueix nova lògica fiscal ni canvi de criteri.
+3. Verificació tècnica amb `npm run typecheck` en verd sobre el canvi candidat.
+4. Verificació tècnica amb `npm run build`, `npm run acabat` i `npm run integra` en verd, incloent `merge de prova`, `next typegen`, `typecheck` i `test:node`.
+
+**Resultat:**
+- [x] El canvi és UI-only i no altera càlculs del 182, criteris fiscals ni persistència de moviments.
+- [x] El control `182` queda integrat dins la mateixa fila i deixa d'augmentar l'alçada del llistat.
+- [x] Desktop i mòbil mostren una presentació més compacta i homogènia del llistat de moviments.
+- [x] La guardrail fiscal queda coberta amb evidència manual i validació tècnica del flux afectat.
+
 ### Registre manual 2026-04-05 — Amplada de modals SEPA i remeses
 
 **Context:**
