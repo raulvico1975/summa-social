@@ -110,7 +110,7 @@ import {
   type UndoOperationType,
 } from '@/lib/fiscal/undoProcessing';
 import { detectLegacyCategoryTransactions, logLegacyCategorySummary } from '@/lib/category-health';
-import { isDonationCandidate } from '@/lib/transactions/is-donation-candidate';
+import { canToggleDonation182 } from '@/lib/transactions/is-donation-candidate';
 import { sortTransactionsForTable } from '@/lib/transactions/sort-transactions-for-table';
 import { isVisibleInMovementsLedger } from '@/lib/transactions/remittance-visibility';
 import {
@@ -813,7 +813,7 @@ export function TransactionsTable({
     handleSetCategory: handleSetCategoryFromHook,
     handleSetContact: handleSetContactFromHook,
     handleSetProject,
-    markAsDonation,
+    toggleDonation182,
     // Document Upload / Delete
     docLoadingStates,
     handleAttachDocumentWithName,
@@ -999,15 +999,16 @@ export function TransactionsTable({
     runInlineTransactionUpdate,
   ]);
 
-  const handleMarkAsDonation = React.useCallback(async (txId: string) => {
+  const handleToggleDonation182 = React.useCallback(async (txId: string) => {
     const tx = allTransactionsById[txId];
     if (!tx || inlineUpdatePendingByTxId[txId]) return;
+    const nextTransactionType = tx.transactionType === 'donation' ? 'normal' : 'donation';
 
     setInlineUpdatePending(txId, 'donation');
-    setPagedTransactions((prev) => applyTransactionPatch(prev, txId, { transactionType: 'donation' }));
+    setPagedTransactions((prev) => applyTransactionPatch(prev, txId, { transactionType: nextTransactionType }));
 
     try {
-      await markAsDonation(txId);
+      await toggleDonation182(txId);
     } catch (error) {
       rollbackInlineTransaction(tx);
 
@@ -1023,7 +1024,7 @@ export function TransactionsTable({
   }, [
     allTransactionsById,
     inlineUpdatePendingByTxId,
-    markAsDonation,
+    toggleDonation182,
     rollbackInlineTransaction,
     setInlineUpdatePending,
     t.common.dbConnectionError,
@@ -2363,6 +2364,7 @@ export function TransactionsTable({
     noContact: t.movements.table.noContact,
     readyToCountIn182: t.movements.table.readyToCountIn182,
     markAsDonation182: t.movements.table.markAsDonation182,
+    removeFrom182: t.movements.table.removeFrom182,
     fiscalDonation: t.movements.table.fiscalDonation,
   }), [t, tr]);
 
@@ -2887,9 +2889,9 @@ export function TransactionsTable({
               onGenerateReturnEmailDraft={handleGenerateReturnEmailDraft}
               onViewRemittanceDetail={handleViewRemittanceDetail}
               onAttachDocument={handleAttachDocumentWithRename}
-              showDonationCandidate={canEditMovements && isDonationCandidate(tx)}
+              showDonationToggle={canEditMovements && canToggleDonation182(tx)}
               isDonationPending={inlineUpdatePendingByTxId[tx.id] === 'donation'}
-              onMarkAsDonation={handleMarkAsDonation}
+              onToggleDonation182={handleToggleDonation182}
               t={rowTranslations}
             />
           ))}
@@ -3010,9 +3012,9 @@ export function TransactionsTable({
                   onOpenSplitDetail={handleOpenSplitDetail}
                   onUndoSplit={handleUndoSplit}
                   onViewRemittanceDetail={handleViewRemittanceDetail}
-                  showDonationCandidate={canEditMovements && isDonationCandidate(tx)}
+                  showDonationToggle={canEditMovements && canToggleDonation182(tx)}
                   isDonationPending={inlineUpdatePendingByTxId[tx.id] === 'donation'}
-                  onMarkAsDonation={handleMarkAsDonation}
+                  onToggleDonation182={handleToggleDonation182}
                   onUndoRemittance={handleUndoRemittance}
                   onCreateNewContact={handleOpenNewContactDialog}
                   onOpenReturnImporter={(parentTx?: Transaction) => {

@@ -136,9 +136,9 @@ interface TransactionRowProps {
   onReconcileSepa?: (tx: Transaction) => void;
   isSplitDeleteBlocked?: boolean;
   deleteBlockedReason?: DeleteTransactionBlockedReason | null;
-  showDonationCandidate?: boolean;
+  showDonationToggle?: boolean;
   isDonationPending?: boolean;
-  onMarkAsDonation?: (txId: string) => void;
+  onToggleDonation182?: (txId: string) => void;
   // Translations
   t: {
     date: string;
@@ -198,6 +198,7 @@ interface TransactionRowProps {
     noContact?: string;
     readyToCountIn182: string;
     markAsDonation182: string;
+    removeFrom182: string;
     fiscalDonation: string;
   };
   getCategoryDisplayName: (category: string | null | undefined) => string;
@@ -256,9 +257,9 @@ export const TransactionRow = React.memo(function TransactionRow({
   onReconcileSepa,
   isSplitDeleteBlocked,
   deleteBlockedReason,
-  showDonationCandidate,
+  showDonationToggle,
   isDonationPending,
-  onMarkAsDonation,
+  onToggleDonation182,
   t,
   getCategoryDisplayName,
 }: TransactionRowProps) {
@@ -322,6 +323,9 @@ export const TransactionRow = React.memo(function TransactionRow({
     tx.transactionType !== 'donation' &&
     tx.transactionType !== 'fee';
   const isFiscalDonation = tx.transactionType === 'donation' && !isReturnedDonation;
+  const donation182Message = isFiscalDonation
+    ? `${t.fiscalDonation}. ${t.removeFrom182}`
+    : `${t.readyToCountIn182}. ${t.markAsDonation182}`;
 
   // Stable callbacks using useCallback to prevent child re-renders
   const handleSelectContact = React.useCallback((nextContactId: string | null, nextContactType: ContactType | null) => {
@@ -331,6 +335,10 @@ export const TransactionRow = React.memo(function TransactionRow({
   const handleCreateNewContact = React.useCallback((type: 'donor' | 'supplier') => {
     onCreateNewContact(tx.id, type);
   }, [tx.id, onCreateNewContact]);
+
+  const handleToggleDonation182 = React.useCallback(() => {
+    onToggleDonation182?.(tx.id);
+  }, [onToggleDonation182, tx.id]);
 
   const handleCategorySelect = React.useCallback((categoryId: string) => {
     onSetCategory(tx.id, categoryId);
@@ -353,11 +361,6 @@ export const TransactionRow = React.memo(function TransactionRow({
   const handleDeleteDocument = React.useCallback(() => {
     onDeleteDocument(tx.id);
   }, [tx.id, onDeleteDocument]);
-
-  const handleMarkAsDonation = React.useCallback(() => {
-    if (!onMarkAsDonation || isDonationPending) return;
-    onMarkAsDonation(tx.id);
-  }, [isDonationPending, onMarkAsDonation, tx.id]);
 
   const handleEdit = React.useCallback(() => {
     // Delay per permetre que el DropdownMenu es tanqui completament
@@ -941,7 +944,7 @@ export const TransactionRow = React.memo(function TransactionRow({
             </Popover>
           </div>
 
-          {showDonationCandidate ? (
+          {showDonationToggle ? (
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
@@ -949,26 +952,30 @@ export const TransactionRow = React.memo(function TransactionRow({
                   variant="outline"
                   size="sm"
                   disabled={isDonationPending}
-                  onClick={handleMarkAsDonation}
-                  aria-label={`${t.readyToCountIn182}. ${t.markAsDonation182}`}
-                  title={`${t.readyToCountIn182}. ${t.markAsDonation182}`}
-                  className="h-6 w-10 shrink-0 justify-center rounded-full border-amber-200 bg-amber-50 px-0 text-[10px] font-semibold text-amber-700 hover:bg-amber-100"
+                  onClick={handleToggleDonation182}
+                  aria-label={donation182Message}
+                  aria-pressed={isFiscalDonation}
+                  className={`h-6 w-10 shrink-0 justify-center rounded-full px-0 text-[10px] font-semibold ${
+                    isFiscalDonation
+                      ? 'border-emerald-300 bg-emerald-200 text-emerald-900 hover:bg-emerald-300'
+                      : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
+                  }`}
                 >
                   {isDonationPending ? <Loader2 className="h-3 w-3 animate-spin" /> : '182'}
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
-                {t.markAsDonation182}
+                {donation182Message}
               </TooltipContent>
             </Tooltip>
           ) : null}
 
-          {!showDonationCandidate && isFiscalDonation ? (
+          {!showDonationToggle && isFiscalDonation ? (
             <Tooltip>
               <TooltipTrigger asChild>
                 <Badge
                   variant="outline"
-                  className="w-10 shrink-0 justify-center rounded-full border-emerald-200 bg-emerald-50 px-0 py-0.5 text-center text-[10px] font-semibold text-emerald-700"
+                  className="w-10 shrink-0 justify-center rounded-full border-emerald-300 bg-emerald-200 px-0 py-0.5 text-center text-[10px] font-semibold text-emerald-900"
                 >
                   182
                 </Badge>

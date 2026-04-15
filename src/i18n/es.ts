@@ -283,6 +283,7 @@ export const es = {
       noContact: "Sin contacto",
       readyToCountIn182: "Listo para contar en el 182",
       markAsDonation182: "Hacer que cuente en el 182",
+      removeFrom182: "Quitar del 182",
       fiscalDonation: "Donación fiscal",
       donationsNoContact: "Donaciones sin contacto",
       pendingFilters: "Pendientes",

@@ -77,9 +77,9 @@ interface TransactionRowMobileProps {
   onGenerateReturnEmailDraft?: (tx: Transaction) => void;
   onViewRemittanceDetail?: (txId: string) => void;
   onAttachDocument?: (txId: string) => void;
-  showDonationCandidate?: boolean;
+  showDonationToggle?: boolean;
   isDonationPending?: boolean;
-  onMarkAsDonation?: (txId: string) => void;
+  onToggleDonation182?: (txId: string) => void;
   t: {
     amount: string;
     balance: string;
@@ -114,6 +114,7 @@ interface TransactionRowMobileProps {
     editNote?: string;
     readyToCountIn182: string;
     markAsDonation182: string;
+    removeFrom182: string;
     fiscalDonation: string;
   };
 }
@@ -139,9 +140,9 @@ export const TransactionRowMobile = React.memo(function TransactionRowMobile({
   onGenerateReturnEmailDraft,
   onViewRemittanceDetail,
   onAttachDocument,
-  showDonationCandidate,
+  showDonationToggle,
   isDonationPending,
-  onMarkAsDonation,
+  onToggleDonation182,
   t,
 }: TransactionRowMobileProps) {
   const [isMenuOpen, setIsMenuOpen] = React.useState(false);
@@ -198,6 +199,9 @@ export const TransactionRowMobile = React.memo(function TransactionRowMobile({
     [tx]
   );
   const isFiscalDonation = tx.transactionType === 'donation' && !isReturnedDonation;
+  const donation182Message = isFiscalDonation
+    ? `${t.fiscalDonation}. ${t.removeFrom182}`
+    : `${t.readyToCountIn182}. ${t.markAsDonation182}`;
   const deleteBlockedMessage = React.useMemo(() => {
     if (deleteBlockedReason === 'parentRemittance') {
       return t.deleteBlockedParentRemittance;
@@ -216,6 +220,10 @@ export const TransactionRowMobile = React.memo(function TransactionRowMobile({
     t.deleteBlockedChildRemittance,
     t.deleteBlockedParentRemittance,
   ]);
+
+  const handleToggleDonation182 = React.useCallback(() => {
+    onToggleDonation182?.(tx.id);
+  }, [onToggleDonation182, tx.id]);
 
   // Background color based on transaction type
   const bgClass = isReturn
@@ -343,11 +351,6 @@ export const TransactionRowMobile = React.memo(function TransactionRowMobile({
     }, 50);
   }, [onOpenStripeImputationDetail, tx]);
 
-  const handleMarkAsDonation = React.useCallback(() => {
-    if (!onMarkAsDonation || isDonationPending) return;
-    onMarkAsDonation(tx.id);
-  }, [isDonationPending, onMarkAsDonation, tx.id]);
-
   return (
     <div className={`rounded-xl border p-3 ${bgClass}`}>
       {/* Line 1: Data · Import · Saldo */}
@@ -440,25 +443,29 @@ export const TransactionRowMobile = React.memo(function TransactionRowMobile({
             )}
           </span>
         </Badge>
-        {showDonationCandidate ? (
+        {showDonationToggle ? (
           <Button
             type="button"
             variant="outline"
             size="sm"
             disabled={isDonationPending}
-            onClick={handleMarkAsDonation}
-            aria-label={`${t.readyToCountIn182}. ${t.markAsDonation182}`}
-            title={`${t.readyToCountIn182}. ${t.markAsDonation182}`}
-            className="h-5 w-10 justify-center rounded-full border-amber-200 bg-amber-50 px-0 text-[10px] font-semibold text-amber-700 hover:bg-amber-100"
+            onClick={handleToggleDonation182}
+            aria-label={donation182Message}
+            aria-pressed={isFiscalDonation}
+            className={`h-5 w-10 justify-center rounded-full px-0 text-[10px] font-semibold ${
+              isFiscalDonation
+                ? 'border-emerald-300 bg-emerald-200 text-emerald-900 hover:bg-emerald-300'
+                : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
+            }`}
           >
             {isDonationPending ? <Loader2 className="h-3 w-3 animate-spin" /> : '182'}
           </Button>
         ) : null}
-        {!showDonationCandidate && isFiscalDonation ? (
+        {!showDonationToggle && isFiscalDonation ? (
           <Badge
             variant="outline"
             title={t.fiscalDonation}
-            className="w-10 justify-center rounded-full border-emerald-200 bg-emerald-50 px-0 py-0.5 text-center text-[10px] font-semibold text-emerald-700"
+            className="w-10 justify-center rounded-full border-emerald-300 bg-emerald-200 px-0 py-0.5 text-center text-[10px] font-semibold text-emerald-900"
           >
             182
           </Badge>
