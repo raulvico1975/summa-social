@@ -25,8 +25,8 @@
   },
   "guideId": null,
   "answer": {
-    "ca": "Per revisar les dades fiscals d'un donant:\n1. Ves a Donants i obre la fitxa del donant.\n2. Si hi veus el badge \"Dades incompletes\", clica \"Editar\".\n3. Revisa com a mínim \"DNI/CIF\" i \"Codi postal\".\n4. Si és un soci recurrent, revisa també l'\"IBAN\".\n5. Clica \"Guardar Donant\".\n\nA Informes > Model 182 també veuràs els donants exclosos i el motiu.",
-    "es": "Para revisar los datos fiscales de un donante:\n1. Ve a Donantes y abre la ficha del donante.\n2. Si ves el badge \"Datos incompletos\", haz clic en \"Editar\".\n3. Revisa como mínimo \"DNI/CIF\" y \"Código postal\".\n4. Si es un socio recurrente, revisa también el \"IBAN\".\n5. Haz clic en \"Guardar Donante\".\n\nEn Informes > Modelo 182 también verás los donantes excluidos y el motivo."
+    "ca": "Per revisar les dades fiscals d'un donant:\n1. Ves a Donants i obre la fitxa del donant.\n2. Si hi veus el badge \"Dades incompletes\", clica \"Editar\".\n3. Revisa com a mínim \"DNI/CIF\" i \"Codi postal\".\n4. Si és un soci recurrent, revisa també l'\"IBAN\".\n5. Clica \"Guardar Donant\".\n\nEn Informes > Model 182 també veuràs els donants exclosos i el motiu. Si la fitxa està bé però el moviment encara no compta, revisa a Moviments si l'ingrés s'ha de marcar amb el 182.",
+    "es": "Para revisar los datos fiscales de un donante:\n1. Ve a Donantes y abre la ficha del donante.\n2. Si ves el badge \"Datos incompletos\", haz clic en \"Editar\".\n3. Revisa como mínimo \"DNI/CIF\" y \"Código postal\".\n4. Si es un socio recurrente, revisa también el \"IBAN\".\n5. Haz clic en \"Guardar Donante\".\n\nEn Informes > Modelo 182 también verás los donantes excluidos y el motivo. Si la ficha está bien pero el movimiento sigue sin contar, revisa en Movimientos si ese ingreso debe marcarse con el 182."
   },
   "uiPaths": [
     "Donants > Nom del donant > Editar",
@@ -48,7 +48,8 @@
   "source_guides": [],
   "related": [
     "ts-donor-incomplete-data",
-    "guide-model-182"
+    "guide-model-182",
+    "howto-mark-donation-182"
   ],
   "error_key": null,
   "symptom": {

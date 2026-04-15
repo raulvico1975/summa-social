@@ -2573,11 +2573,19 @@ Format de longitud fixa per a "Presentació mitjançant fitxer" a la Seu Electr�
 
 **1) Què declara Summa al Model 182**
 
-Només donacions fiscalment vàlides:
-- Voluntàries i sense contraprestació
+Només moviments que arriben al motor fiscal com a donació vàlida dins de l'app:
+- `transactionType === 'donation'`
 - Amb `contactId` assignat
 - No arxivades (`archivedAt` absent)
 - Netes de devolucions (transactionType: 'return' o donationStatus: 'returned')
+
+Les vies actuals perquè un moviment hi arribi són:
+- marcat manual amb el `182` de **Moviments**
+- filles creades en una **remesa IN**
+- donacions **Stripe** imputades a un donant
+- línies de **split manual** creades com a donació
+
+> Summa Social descriu aquí el seu criteri operatiu intern. La qualificació fiscal final d'un cas límit l'ha de validar la gestoria de l'entitat.
 
 **2) Càlcul de recurrència (criteri AEAT)**
 

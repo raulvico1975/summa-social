@@ -25,8 +25,8 @@
   },
   "guideId": null,
   "answer": {
-    "ca": "Per generar el Model 182:\n1. Ves a Informes > Model 182 i selecciona l'any fiscal.\n2. Revisa les alertes abans d'exportar, sobretot dades fiscals i devolucions pendents.\n3. Corregeix el que falti a Donants o Moviments i torna a Informes.\n4. Genera el fitxer només quan els totals siguin coherents i no quedin alertes crítiques.\n\nComprovació final: descarregues el fitxer del 182 sense errors bloquejants.",
-    "es": "Para generar el Modelo 182:\n1. Ve a Informes > Modelo 182 y selecciona el año fiscal.\n2. Revisa las alertas antes de exportar, sobre todo datos fiscales y devoluciones pendientes.\n3. Corrige lo que falte en Donantes o Movimientos y vuelve a Informes.\n4. Genera el archivo solo cuando los totales sean coherentes y no queden alertas críticas.\n\nComprobación final: descargas el fichero del 182 sin errores bloqueantes."
+    "ca": "Per generar el Model 182:\n1. Ves a Informes > Model 182 i selecciona l'any fiscal.\n2. Abans d'exportar, revisa que el que ha de comptar ja estigui resolt: 182 verd als ingressos manuals, remeses IN identificades, Stripe imputat i devolucions assignades.\n3. Revisa les alertes, sobretot dades fiscals de donants i devolucions pendents.\n4. Corregeix el que falti a Donants o Moviments i torna a Informes.\n5. Genera el fitxer només quan els totals siguin coherents i no quedin alertes crítiques.\n\nComprovació final: descarregues el fitxer del 182 sense errors bloquejants.",
+    "es": "Para generar el Modelo 182:\n1. Ve a Informes > Modelo 182 y selecciona el año fiscal.\n2. Antes de exportar, revisa que lo que debe contar ya esté resuelto: 182 verde en ingresos manuales, remesas IN identificadas, Stripe imputado y devoluciones asignadas.\n3. Revisa las alertas, sobre todo datos fiscales de donantes y devoluciones pendientes.\n4. Corrige lo que falte en Donantes o Movimientos y vuelve a Informes.\n5. Genera el archivo solo cuando los totales sean coherentes y no queden alertas críticas.\n\nComprobación final: descargas el fichero del 182 sin errores bloqueantes."
   },
   "uiPaths": [
     "Informes > Model 182"
@@ -49,7 +49,8 @@
   "source_guides": [],
   "related": [
     "guide-model-182",
-    "guide-reports"
+    "guide-reports",
+    "howto-mark-donation-182"
   ],
   "error_key": null,
   "symptom": {
