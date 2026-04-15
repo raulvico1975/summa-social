@@ -115,6 +115,36 @@ C'est le flux pour charger de nouveaux mouvements bancaires dans Summa sans cré
 
 Utilisez le même flux d'import. Avant de confirmer, vérifiez le bloc **Duplicats segurs** et, si besoin, **Veure per què**. Ne confirmez pas tant que vous n'avez pas identifié ce qui est nouveau et ce qui existe déjà.
 
+### 5.2 Marquer un don pour qu'il compte dans le 182 [id:5-4b-marcar-donacio-fiscal-182]
+
+#### Qu'est-ce que c'est
+
+C'est le contrôle qui permet d'indiquer explicitement qu'un encaissement concret doit être traité comme **don fiscal** dans Summa Social.
+
+#### Quand l'utiliser
+
+- quand vous avez un encaissement positif d'un donateur et qu'il doit compter dans sa fiche fiscale
+- quand cet encaissement ne vient pas déjà résolu par Stripe ou par une remise déjà divisée
+- quand vous voulez qu'il apparaisse dans le **Modèle 182** et dans le certificat du donateur
+
+#### Pas à pas
+
+1. Allez dans **Mouvements** et localisez l'encaissement.
+2. Vérifiez que le mouvement a le **bon donateur** attribué.
+3. Si vous voyez le bouton **182** en blanc, cliquez dessus.
+4. Quand il devient **vert**, ce mouvement commence à compter comme don fiscal dans Summa.
+5. Si vous vous êtes trompé, recliquez sur le **182** vert pour le remettre comme mouvement normal.
+
+#### Ce qui compte automatiquement sans toucher ce bouton
+
+- Les cotisations identifiées quand vous **divisez une remise IN**
+- Les dons **Stripe** correctement imputés à un donateur
+- Les lignes d'un **découpage manuel** créées comme don
+
+#### Où le trouver dans Summa
+
+**Mouvements > Tableau > Bouton 182 de la ligne**
+
 ---
 
 ## 6. Diviseur de remises [id:6-divisor-de-remeses]
@@ -265,6 +295,23 @@ C'est le flux pour générer le fichier du **Modèle 182** à partir de données
 3. Corrigez ce qui manque dans **Donants** ou **Mouvements** puis revenez à **Informes**.
 4. Générez le fichier seulement quand les totaux sont cohérents.
 5. Téléchargez-le et envoyez-le au cabinet.
+
+#### D'où vient ce que vous voyez dans le Modèle 182
+
+Dans Summa Social, le Modèle 182 est construit à partir des mouvements que l'application traite comme **don fiscal**. Cela inclut :
+
+- les encaissements de **Mouvements** laissés avec le **182** en vert
+- les lignes filles créées en divisant une **remise IN**
+- les dons **Stripe** déjà imputés à un donateur
+- les lignes créées dans un **découpage manuel** avec le type don
+
+N'entrent pas automatiquement :
+
+- les encaissements normaux qui restent sans le **182** vert
+- les dons Stripe qui n'ont pas encore de donateur attribué
+- les mouvements en attente de révision ou les retours non attribués
+
+> 💡 Ceci décrit le critère opérationnel de Summa dans l'application. Si vous avez un doute sur la qualification fiscale d'un cas concret, consultez le cabinet comptable.
 
 #### Erreurs fréquentes
 

@@ -94,6 +94,7 @@ import card83Raw from '../../../docs/kb/cards/troubleshooting/ts-offline-error.j
 import card84Raw from '../../../docs/kb/cards/troubleshooting/ts-remittance-member-not-identified.json'
 import card85Raw from '../../../docs/kb/cards/troubleshooting/ts-remittance-not-matching.json'
 import card86Raw from '../../../docs/kb/cards/troubleshooting/ts-sepa-validation-error.json'
+import card87Raw from '../../../docs/kb/cards/howto/howto-mark-donation-182.json'
 import caLocaleRaw from '../../i18n/locales/ca.json'
 import esLocaleRaw from '../../i18n/locales/es.json'
 
@@ -187,6 +188,7 @@ export const bundledCardFiles = [
   card84Raw as KBCard,
   card85Raw as KBCard,
   card86Raw as KBCard,
+  card87Raw as KBCard,
 ]
 
 export const bundledAllCards: KBCard[] = [
@@ -200,4 +202,3 @@ export const bundledI18n: Record<string, Record<string, string>> = {
 }
 
 export const bundledCardIds = new Set(bundledAllCards.map(card => card.id))
-

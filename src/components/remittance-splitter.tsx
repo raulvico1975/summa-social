@@ -65,7 +65,7 @@ import { collection, writeBatch, doc, setDoc, deleteDoc, updateDoc } from 'fireb
 import { useCollection, useMemoFirebase } from '@/firebase';
 import { useTranslations } from '@/i18n';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
-import { parsePain001, isPain001File, downloadPain001 } from '@/lib/sepa';
+import { parsePain001, isPain001File, downloadPain001, parsePain008, isPain008File } from '@/lib/sepa';
 import { filterMatchableContacts, filterAllForIbanMatching, isNumericLikeName, maskMatchValue } from '@/lib/contacts/filterActiveContacts';
 import { assertFiscalTxCanBeSaved } from '@/lib/fiscal/assertFiscalInvariant';
 import { acquireProcessLock, releaseProcessLock, getLockFailureMessage } from '@/lib/fiscal/processLocks';
@@ -417,6 +417,11 @@ export function RemittanceSplitter({
     [existingEmployees, existingSuppliers]
   );
 
+  const allDonorsForIbanMatching = React.useMemo(
+    () => filterAllForIbanMatching(existingDonors),
+    [existingDonors]
+  );
+
   const paymentContactOptions = React.useMemo(
     () => buildPaymentContactOptions(paymentContacts),
     [paymentContacts]
@@ -613,31 +618,45 @@ export function RemittanceSplitter({
       const fileName = file.name.toLowerCase();
       const isExcel = fileName.endsWith('.xlsx') || fileName.endsWith('.xls');
       const isXml = fileName.endsWith('.xml');
+      const processImportedText = (text: string, forceXmlHandling: boolean) => {
+        if (isPaymentRemittance && isPain001File(text)) {
+          parseSepaPaymentFile(text);
+          return;
+        }
+
+        if (!isPaymentRemittance && isPain008File(text)) {
+          parseSepaCollectionFile(text);
+          return;
+        }
+
+        if (forceXmlHandling) {
+          toast({
+            variant: 'destructive',
+            title: t.movements.splitter.unknownFormat,
+            description: isPaymentRemittance
+              ? t.movements.splitter.invalidPain001
+              : 'Fitxer XML no compatible amb aquesta remesa de cobrament',
+          });
+          return;
+        }
+
+        processRawText(text);
+      };
 
       if (isExcel) {
         parseExcelFile(file);
       } else if (isXml) {
-        // Potser és un fitxer SEPA pain.001
         const reader = new FileReader();
         reader.onload = (e) => {
           const text = e.target?.result as string;
-          if (isPain001File(text)) {
-            parseSepaFile(text);
-          } else {
-            toast({ variant: 'destructive', title: t.movements.splitter.unknownFormat, description: t.movements.splitter.invalidPain001 });
-          }
+          processImportedText(text, true);
         };
         reader.readAsText(file, 'UTF-8');
       } else {
         const reader = new FileReader();
         reader.onload = (e) => {
           const text = e.target?.result as string;
-          // Comprovar si és pain.001 encara que no tingui extensió .xml
-          if (isPain001File(text)) {
-            parseSepaFile(text);
-          } else {
-            processRawText(text);
-          }
+          processImportedText(text, false);
         };
         reader.readAsText(file, 'UTF-8');
       }
@@ -646,7 +665,7 @@ export function RemittanceSplitter({
   };
 
   // Parser per fitxers SEPA pain.001 (només mode OUT)
-  const parseSepaFile = (xmlContent: string) => {
+  const parseSepaPaymentFile = (xmlContent: string) => {
     if (!isPaymentRemittance) {
       toast({ variant: 'destructive', title: t.movements.splitter.error, description: t.movements.splitter.sepaOnlyImport });
       return;
@@ -710,6 +729,56 @@ export function RemittanceSplitter({
 
     } catch (error: any) {
       console.error('Error parsing SEPA:', error);
+      toast({ variant: 'destructive', title: 'Error llegint SEPA', description: error.message });
+    }
+  };
+
+  const parseSepaCollectionFile = (xmlContent: string) => {
+    if (isPaymentRemittance) {
+      toast({ variant: 'destructive', title: t.movements.splitter.error, description: t.movements.splitter.sepaOnlyImport });
+      return;
+    }
+
+    try {
+      const result = parsePain008(xmlContent);
+
+      if (result.collections.length === 0) {
+        toast({ variant: 'destructive', title: 'Fitxer buit', description: 'No s han trobat cobraments al fitxer SEPA' });
+        return;
+      }
+
+      const parentAbsAmount = Math.abs(transaction.amount);
+      if (Math.abs(parentAbsAmount - result.totalAmount) > 0.02) {
+        toast({
+          variant: 'destructive',
+          title: 'Import no coincideix',
+          description: `El total del fitxer (${result.totalAmount.toFixed(2)} €) no coincideix amb la transacció (${parentAbsAmount.toFixed(2)} €)`,
+          duration: 9000,
+        });
+        return;
+      }
+
+      const donations = result.collections.map((collection, index) =>
+        buildIncomingDonationEntry({
+          rowIndex: index + 1,
+          name: collection.debtorName,
+          taxId: '',
+          iban: collection.debtorIban,
+          amount: collection.amount,
+          idCandidate: collection.mandateId || collection.endToEndId || '',
+        })
+      );
+
+      setParsedDonations(donations);
+      setTotalAmount(result.totalAmount);
+      setStep('preview');
+
+      toast({
+        title: 'Fitxer SEPA importat',
+        description: `${result.collections.length} cobraments carregats`,
+      });
+    } catch (error: any) {
+      console.error('Error parsing SEPA pain.008:', error);
       toast({ variant: 'destructive', title: 'Error llegint SEPA', description: error.message });
     }
   };
@@ -1072,6 +1141,59 @@ export function RemittanceSplitter({
     };
   };
 
+  const buildIncomingDonationEntry = (input: {
+    rowIndex: number;
+    name: string;
+    taxId?: string;
+    iban: string;
+    amount: number;
+    idCandidate?: string;
+  }): ParsedDonation => {
+    const rawTaxId = (input.taxId || '').trim().toUpperCase();
+    const taxIdValid = isValidSpanishTaxId(rawTaxId);
+    const taxIdType = getSpanishTaxIdType(rawTaxId);
+    const normalizedTaxId = taxIdValid ? normalizeTaxId(rawTaxId) : '';
+    const result = matchDonorForRemittance(input.iban, allDonorsForIbanMatching);
+
+    let matchNote = result.matchNote;
+    let suggestedDonorByTaxId: Donor | undefined;
+
+    const matchValueMasked =
+      result.method && result.matchedValue
+        ? maskMatchValue(result.method, result.matchedValue)
+        : undefined;
+
+    if (result.status === 'no_iban_match' && taxIdValid && normalizedTaxId) {
+      const taxIdMatch = matchDonorByTaxId(normalizedTaxId, allDonorsForIbanMatching);
+      if (taxIdMatch.donor) {
+        suggestedDonorByTaxId = taxIdMatch.donor;
+        matchNote = `IBAN no trobat, però DNI coincideix amb ${taxIdMatch.donor.name}`;
+      }
+    }
+
+    return {
+      rowIndex: input.rowIndex,
+      name: input.name,
+      taxId: normalizedTaxId,
+      taxIdValid,
+      taxIdType,
+      idCandidate: input.idCandidate || rawTaxId,
+      iban: input.iban,
+      amount: input.amount,
+      status: result.status,
+      matchedDonor: result.donor,
+      matchedDonorStatus: result.donorStatus,
+      ambiguousDonors: result.donors,
+      matchedContactType: result.donor ? 'donor' : undefined,
+      matchMethod: result.method,
+      matchValueMasked,
+      shouldCreate: false,
+      zipCode: defaultZipCode,
+      matchNote,
+      suggestedDonorByTaxId,
+    };
+  };
+
   // Buscar beneficiari per mode OUT (treballadors i proveïdors)
   // ORDRE IMPORTANT: Treballadors PRIMER (nòmines), Proveïdors DESPRÉS
   // Criteri: 1) IBAN, 2) NIF/CIF, 3) Nom exacte (normalitzat)
@@ -1184,73 +1306,15 @@ export function RemittanceSplitter({
             status = 'new_without_taxid';
           }
         } else {
-          // ═══════════════════════════════════════════════════════════════════
-          // MODE IN: MATCHING IBAN-FIRST (P0)
-          // ═══════════════════════════════════════════════════════════════════
-          // INVARIANTS:
-          // 1. IBAN és el criteri de matching principal i prioritari
-          // 2. L'estat del donant NO bloqueja el match
-          // 3. IBAN duplicat és l'ÚNIC cas que bloqueja l'automatització
-          // 4. DNI/NIF NO és criteri de cobrament
-          // ═══════════════════════════════════════════════════════════════════
-
-          // Usar TOTS els donants per matching IBAN (sense excloure cap estat)
-          const allDonorsForMatching = filterAllForIbanMatching(existingDonors);
-          const result = matchDonorForRemittance(iban, allDonorsForMatching);
-
-          matchedDonor = result.donor;
-          if (result.donor) {
-            matchedContactType = 'donor';
-          }
-          matchMethod = result.method;
-          status = result.status;
-
-          // Variables addicionals per al nou matching
-          let matchedDonorStatus: DonorMatchStatus | undefined = result.donorStatus;
-          let ambiguousDonors: Donor[] | undefined = result.donors;
-          let matchNote: string = result.matchNote;
-
-          // Generar valor emmascarament per mostrar a la UI
-          if (result.method && result.matchedValue) {
-            matchValueMasked = maskMatchValue(result.method, result.matchedValue);
-          }
-
-          // Suggeriment per DNI quan IBAN no trobat
-          let suggestedDonorByTaxId: Donor | undefined;
-          if (status === 'no_iban_match' && taxIdValid && normalizedTaxId) {
-            // Buscar donant amb el mateix DNI (podria ser que l'IBAN no estigui actualitzat)
-            const taxIdMatch = matchDonorByTaxId(normalizedTaxId, allDonorsForMatching);
-            if (taxIdMatch.donor) {
-              suggestedDonorByTaxId = taxIdMatch.donor;
-              matchNote = `IBAN no trobat, però DNI coincideix amb ${taxIdMatch.donor.name}`;
-            }
-          }
-
-          // Push donation amb nous camps
-          donations.push({
+          donations.push(buildIncomingDonationEntry({
             rowIndex: startRow + i + 1,
             name,
-            taxId: normalizedTaxId,
-            taxIdValid,
-            taxIdType,
-            idCandidate,
+            taxId,
             iban,
             amount,
-            status,
-            matchedDonor,
-            matchedDonorStatus,
-            ambiguousDonors,
-            matchedContactType,
-            matchMethod,
-            matchValueMasked,
-            // shouldCreate només per estats que permeten processament automàtic
-            // Els pendents (no_iban_match, ambiguous_iban) NO es creen automàticament
-            shouldCreate: false, // Mai crear automàticament - tot via IBAN
-            zipCode: defaultZipCode,
-            matchNote,
-            suggestedDonorByTaxId,
-          });
-          continue; // Salt el push general de més avall
+            idCandidate,
+          }));
+          continue;
         }
 
         donations.push({

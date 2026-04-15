@@ -1,0 +1,68 @@
+{
+  "id": "howto-mark-donation-182",
+  "type": "howto",
+  "domain": "fiscal",
+  "risk": "guarded",
+  "guardrail": "b1_fiscal",
+  "answerMode": "full",
+  "title": {
+    "ca": "Fer comptar un ingrés al 182",
+    "es": "Hacer que un ingreso cuente en el 182"
+  },
+  "intents": {
+    "ca": [
+      "com marco una donació perquè compti al 182",
+      "què vol dir el 182 verd",
+      "com desmarco el 182",
+      "quines donacions compten al 182",
+      "stripe compta al 182",
+      "si divideixo una remesa compta al 182",
+      "donació fiscal a moviments"
+    ],
+    "es": [
+      "cómo marco una donación para que cuente en el 182",
+      "qué significa el 182 verde",
+      "cómo desmarco el 182",
+      "qué donaciones cuentan en el 182",
+      "stripe cuenta en el 182",
+      "si divido una remesa cuenta en el 182",
+      "donación fiscal en movimientos"
+    ]
+  },
+  "guideId": null,
+  "answer": {
+    "ca": "Per fer comptar un ingrés al 182 dins de Summa:\n1. Ves a Moviments i comprova que l'ingrés és positiu i té el donant correcte assignat.\n2. Si veus el botó 182 en blanc, clica'l: en verd vol dir que aquell moviment passa a comptar com a donació fiscal dins de l'app.\n3. Si t'has equivocat, torna a clicar el 182 verd i el moviment tornarà a quedar com a moviment normal.\n4. No cal tocar aquest botó quan la donació ja ve resolta per un altre flux: remesa IN dividida, Stripe imputat a un donant o línia d'un split manual creada com a donació.\n5. Abans de generar el Model 182, revisa també DNI/CIF, codi postal i devolucions pendents.\n\nComprovació final: a Moviments el 182 manual queda verd, i a Informes > Model 182 el donant hauria de sortir amb el total correcte.\n\nSi el dubte és si legalment un cas concret s'ha de considerar donació fiscal, consulta la gestoria.",
+    "es": "Para hacer que un ingreso cuente en el 182 dentro de Summa:\n1. Ve a Movimientos y comprueba que el ingreso es positivo y tiene el donante correcto asignado.\n2. Si ves el botón 182 en blanco, haz clic: en verde significa que ese movimiento pasa a contar como donación fiscal dentro de la app.\n3. Si te has equivocado, vuelve a hacer clic en el 182 verde y el movimiento volverá a quedar como movimiento normal.\n4. No hace falta tocar este botón cuando la donación ya viene resuelta por otro flujo: remesa IN dividida, Stripe imputado a un donante o línea de un split manual creada como donación.\n5. Antes de generar el Modelo 182, revisa también DNI/CIF, código postal y devoluciones pendientes.\n\nComprobación final: en Movimientos el 182 manual queda verde, y en Informes > Modelo 182 el donante debería salir con el total correcto.\n\nSi la duda es si legalmente un caso concreto debe considerarse donación fiscal, consúltalo con la gestoría."
+  },
+  "uiPaths": [
+    "Moviments > Taula > Botó 182",
+    "Informes > Model 182"
+  ],
+  "needsSnapshot": false,
+  "keywords": [
+    "182",
+    "donació fiscal",
+    "donación fiscal",
+    "moviments",
+    "movimientos",
+    "stripe",
+    "remesa"
+  ],
+  "source_faq": [],
+  "source_manual": [
+    "5.4b",
+    "9.1"
+  ],
+  "source_guides": [],
+  "related": [
+    "guide-model-182-generate",
+    "howto-donor-fiscal-review",
+    "guide-stripe-donations",
+    "guide-split-remittance"
+  ],
+  "error_key": null,
+  "symptom": {
+    "ca": "Tinc un ingrés i no sé si comptarà al Model 182",
+    "es": "Tengo un ingreso y no sé si contará en el Modelo 182"
+  }
+}

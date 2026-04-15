@@ -800,6 +800,43 @@ Clica **directament sobre qualsevol cel·la** per editar-la. Els canvis es guard
 
 ---
 
+## 5.4b Marcar una donació perquè compti al 182
+
+### Què és
+
+És el control que et permet dir explícitament que un ingrés concret s'ha de tractar com a **donació fiscal** dins de Summa Social.
+
+### Quan s'utilitza
+
+- Quan tens un ingrés positiu d'un donant i ha de comptar a la seva fitxa fiscal
+- Quan aquest ingrés no ve ja resolt per Stripe o per una remesa dividida
+- Quan vols que aparegui al **Model 182** i al certificat del donant
+
+### Pas a pas
+
+1. Ves a 💰 **Moviments** i localitza l'ingrés.
+2. Comprova que el moviment té el **donant correcte** assignat.
+3. Si veus el botó **182** en blanc, clica'l.
+4. Quan queda **verd**, aquell moviment passa a comptar com a donació fiscal dins de Summa.
+5. Si t'has equivocat, torna a clicar el **182** verd i el moviment tornarà a quedar com a moviment normal.
+
+### Què compta automàticament sense tocar aquest botó
+
+- Les quotes identificades quan **divideixes una remesa IN**
+- Les donacions de **Stripe** correctament imputades a un donant
+- Les línies d'un **desglossament manual** creades com a donació
+
+### Errors habituals
+
+- Pensar que qualsevol ingrés d'un donant entra automàticament al 182
+- Oblidar revisar **DNI/CIF**, **codi postal** o **devolucions** abans de generar l'informe fiscal
+
+### On trobar-ho a Summa
+
+**Moviments > Taula > Botó 182 de la fila**
+
+---
+
 ## 5.5 Adjuntar documents amb Drag & Drop
 
 Pots arrossegar fitxers (factures, tiquets) directament sobre una fila de la taula per adjuntar-los al moviment.
@@ -1618,6 +1655,23 @@ El Model 182 és la declaració informativa de donatius rebuts. És obligatori s
 6. Envia el fitxer a la teva gestoria
 
 > 💡 Les devolucions es resten automàticament.
+
+### D'on surt el que veus al Model 182
+
+Dins de Summa Social, el Model 182 es construeix a partir dels moviments que l'app tracta com a **donació fiscal**. Això inclou:
+
+- Ingressos de **Moviments** que has deixat amb el **182** en verd
+- Quotes filles creades en dividir una **remesa IN**
+- Donacions de **Stripe** ja imputades a un donant
+- Línies creades en un **desglossament manual** amb tipus donació
+
+No hi entren automàticament:
+
+- Ingressos normals que continuen sense el **182** verd
+- Donacions de Stripe que encara no tenen donant assignat
+- Moviments pendents de revisar o devolucions sense assignar
+
+> 💡 Això descriu el criteri operatiu de Summa dins l'app. Si tens dubte sobre la qualificació fiscal d'un cas concret, consulta la gestoria.
 
 ### Exportació directa a l'AEAT (fitxer oficial)
 

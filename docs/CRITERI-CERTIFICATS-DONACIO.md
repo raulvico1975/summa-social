@@ -12,6 +12,7 @@ Aquest criteri s'aplica a partir de la seva implantació a Summa Social i no mod
 
 Una donació certificable és qualsevol transacció que compleix:
 
+- `transactionType === 'donation'`
 - `amount > 0` (ingrés positiu)
 - `contactId` = ID del donant
 - `date` dins l'any fiscal seleccionat
@@ -21,11 +22,21 @@ Una donació certificable és qualsevol transacció que compleix:
 - Transaccions amb `archivedAt` (arxivades per soft-delete)
 
 **No es filtra per:**
-- `donationStatus` (irrellevant pel càlcul)
 - `category` (qualsevol categoria d'ingrés)
-- `source` (bancària, remesa, manual)
+- `source` (bancària, remesa, Stripe o manual), sempre que el moviment ja hagi quedat marcat com a `donation`
 
-> **Nota:** Aquest criteri s'aplica exclusivament a certificats anuals i Model 182.
+> **Nota:** Aquest criteri s'aplica exclusivament a certificats anuals i Model 182. Un ingrés positiu amb donant assignat no compta automàticament si continua sent `transactionType = 'normal'`.
+
+### Com arriba una transacció a ser `donation` dins de Summa
+
+Les vies operatives actuals són:
+
+- **Marcat manual des de Moviments** amb el botó `182`
+- **Remesa IN** processada, que crea quotes filles ja marcades com a donació fiscal
+- **Stripe** imputat a un donant
+- **Desglossament manual** d'un ingrés amb línies creades com a donació
+
+Per tant, el motor fiscal no decideix per categoria o per origen visible a la taula, sinó per l'estat final del moviment: `transactionType === 'donation'`.
 
 ---
 

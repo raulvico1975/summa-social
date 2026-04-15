@@ -77,9 +77,9 @@ interface TransactionRowMobileProps {
   onGenerateReturnEmailDraft?: (tx: Transaction) => void;
   onViewRemittanceDetail?: (txId: string) => void;
   onAttachDocument?: (txId: string) => void;
-  showDonationCandidate?: boolean;
+  showDonationToggle?: boolean;
   isDonationPending?: boolean;
-  onMarkAsDonation?: (txId: string) => void;
+  onToggleDonation182?: (txId: string) => void;
   t: {
     amount: string;
     balance: string;
@@ -114,6 +114,7 @@ interface TransactionRowMobileProps {
     editNote?: string;
     readyToCountIn182: string;
     markAsDonation182: string;
+    removeFrom182: string;
     fiscalDonation: string;
   };
 }
@@ -139,9 +140,9 @@ export const TransactionRowMobile = React.memo(function TransactionRowMobile({
   onGenerateReturnEmailDraft,
   onViewRemittanceDetail,
   onAttachDocument,
-  showDonationCandidate,
+  showDonationToggle,
   isDonationPending,
-  onMarkAsDonation,
+  onToggleDonation182,
   t,
 }: TransactionRowMobileProps) {
   const [isMenuOpen, setIsMenuOpen] = React.useState(false);
@@ -198,6 +199,9 @@ export const TransactionRowMobile = React.memo(function TransactionRowMobile({
     [tx]
   );
   const isFiscalDonation = tx.transactionType === 'donation' && !isReturnedDonation;
+  const donation182Message = isFiscalDonation
+    ? `${t.fiscalDonation}. ${t.removeFrom182}`
+    : `${t.readyToCountIn182}. ${t.markAsDonation182}`;
   const deleteBlockedMessage = React.useMemo(() => {
     if (deleteBlockedReason === 'parentRemittance') {
       return t.deleteBlockedParentRemittance;
@@ -216,6 +220,10 @@ export const TransactionRowMobile = React.memo(function TransactionRowMobile({
     t.deleteBlockedChildRemittance,
     t.deleteBlockedParentRemittance,
   ]);
+
+  const handleToggleDonation182 = React.useCallback(() => {
+    onToggleDonation182?.(tx.id);
+  }, [onToggleDonation182, tx.id]);
 
   // Background color based on transaction type
   const bgClass = isReturn
@@ -343,13 +351,8 @@ export const TransactionRowMobile = React.memo(function TransactionRowMobile({
     }, 50);
   }, [onOpenStripeImputationDetail, tx]);
 
-  const handleMarkAsDonation = React.useCallback(() => {
-    if (!onMarkAsDonation || isDonationPending) return;
-    onMarkAsDonation(tx.id);
-  }, [isDonationPending, onMarkAsDonation, tx.id]);
-
   return (
-    <div className={`rounded-xl border p-4 ${bgClass}`}>
+    <div className={`rounded-xl border p-3 ${bgClass}`}>
       {/* Line 1: Data · Import · Saldo */}
       <div className="flex flex-wrap items-center gap-1 text-xs">
         <span className="text-muted-foreground whitespace-nowrap">{formatDateShort(displayDate)}</span>
@@ -382,7 +385,7 @@ export const TransactionRowMobile = React.memo(function TransactionRowMobile({
       </div>
 
       {/* Line 3: Contacte + Categoria (chips) */}
-      <div className="mt-2.5 flex flex-wrap items-center gap-2 text-xs">
+      <div className="mt-2 flex flex-wrap items-center gap-1.5 text-xs">
         <Badge variant="secondary" className="max-w-[48%] rounded-full px-2 py-0.5 text-[11px] font-normal">
           <span className="truncate">{categoryDisplayName || '—'}</span>
         </Badge>
@@ -440,39 +443,38 @@ export const TransactionRowMobile = React.memo(function TransactionRowMobile({
             )}
           </span>
         </Badge>
+        {showDonationToggle ? (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={isDonationPending}
+            onClick={handleToggleDonation182}
+            aria-label={donation182Message}
+            aria-pressed={isFiscalDonation}
+            className={`h-5 w-10 justify-center rounded-full px-0 text-[10px] font-semibold ${
+              isFiscalDonation
+                ? 'border-emerald-300 bg-emerald-200 text-emerald-900 hover:bg-emerald-300'
+                : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
+            }`}
+          >
+            {isDonationPending ? <Loader2 className="h-3 w-3 animate-spin" /> : '182'}
+          </Button>
+        ) : null}
+        {!showDonationToggle && isFiscalDonation ? (
+          <Badge
+            variant="outline"
+            title={t.fiscalDonation}
+            className="w-10 justify-center rounded-full border-emerald-300 bg-emerald-200 px-0 py-0.5 text-center text-[10px] font-semibold text-emerald-900"
+          >
+            182
+          </Badge>
+        ) : null}
       </div>
-
-      {(showDonationCandidate || isFiscalDonation) && (
-        <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
-          {showDonationCandidate ? (
-            <>
-              <span className="text-muted-foreground">{t.readyToCountIn182}</span>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                disabled={isDonationPending}
-                onClick={handleMarkAsDonation}
-                className="h-6 rounded-full px-2 text-[11px]"
-              >
-                {isDonationPending ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
-                {t.markAsDonation182}
-              </Button>
-            </>
-          ) : (
-            <Badge
-              variant="outline"
-              className="rounded-full border-emerald-200 bg-emerald-50 px-1.5 py-0.5 text-[10px] text-emerald-700"
-            >
-              ✓ {t.fiscalDonation}
-            </Badge>
-          )}
-        </div>
-      )}
 
       {/* Middle: Badges (type + remittance) */}
       {(isReturn || isReturnFee || isReturnedDonation || tx.isRemittance || canShowUndoSplitAction(tx) || hasStripeImputation) && (
-        <div className="mt-3 flex flex-wrap gap-1.5">
+        <div className="mt-2.5 flex flex-wrap gap-1.5">
           {isReturn && (
             <Badge variant="outline" className="gap-1 rounded-full border-red-200 bg-red-50 px-1.5 py-0.5 text-[10px] font-medium text-red-700">
               <Undo2 className="h-3 w-3" />

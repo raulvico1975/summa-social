@@ -7,6 +7,13 @@ export {
 } from './generate-pain008';
 
 export {
+  parsePain008,
+  isPain008File,
+  type Pain008CollectionItem,
+  type Pain008ParseResult,
+} from './parse-pain008';
+
+export {
   determineSequenceType,
   isEligibleForSepaCollection,
   filterEligibleDonors,

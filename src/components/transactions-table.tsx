@@ -110,7 +110,7 @@ import {
   type UndoOperationType,
 } from '@/lib/fiscal/undoProcessing';
 import { detectLegacyCategoryTransactions, logLegacyCategorySummary } from '@/lib/category-health';
-import { isDonationCandidate } from '@/lib/transactions/is-donation-candidate';
+import { canToggleDonation182 } from '@/lib/transactions/is-donation-candidate';
 import { sortTransactionsForTable } from '@/lib/transactions/sort-transactions-for-table';
 import { isVisibleInMovementsLedger } from '@/lib/transactions/remittance-visibility';
 import {
@@ -813,7 +813,7 @@ export function TransactionsTable({
     handleSetCategory: handleSetCategoryFromHook,
     handleSetContact: handleSetContactFromHook,
     handleSetProject,
-    markAsDonation,
+    toggleDonation182,
     // Document Upload / Delete
     docLoadingStates,
     handleAttachDocumentWithName,
@@ -999,15 +999,16 @@ export function TransactionsTable({
     runInlineTransactionUpdate,
   ]);
 
-  const handleMarkAsDonation = React.useCallback(async (txId: string) => {
+  const handleToggleDonation182 = React.useCallback(async (txId: string) => {
     const tx = allTransactionsById[txId];
     if (!tx || inlineUpdatePendingByTxId[txId]) return;
+    const nextTransactionType = tx.transactionType === 'donation' ? 'normal' : 'donation';
 
     setInlineUpdatePending(txId, 'donation');
-    setPagedTransactions((prev) => applyTransactionPatch(prev, txId, { transactionType: 'donation' }));
+    setPagedTransactions((prev) => applyTransactionPatch(prev, txId, { transactionType: nextTransactionType }));
 
     try {
-      await markAsDonation(txId);
+      await toggleDonation182(txId);
     } catch (error) {
       rollbackInlineTransaction(tx);
 
@@ -1023,7 +1024,7 @@ export function TransactionsTable({
   }, [
     allTransactionsById,
     inlineUpdatePendingByTxId,
-    markAsDonation,
+    toggleDonation182,
     rollbackInlineTransaction,
     setInlineUpdatePending,
     t.common.dbConnectionError,
@@ -2363,6 +2364,7 @@ export function TransactionsTable({
     noContact: t.movements.table.noContact,
     readyToCountIn182: t.movements.table.readyToCountIn182,
     markAsDonation182: t.movements.table.markAsDonation182,
+    removeFrom182: t.movements.table.removeFrom182,
     fiscalDonation: t.movements.table.fiscalDonation,
   }), [t, tr]);
 
@@ -2887,9 +2889,9 @@ export function TransactionsTable({
               onGenerateReturnEmailDraft={handleGenerateReturnEmailDraft}
               onViewRemittanceDetail={handleViewRemittanceDetail}
               onAttachDocument={handleAttachDocumentWithRename}
-              showDonationCandidate={canEditMovements && isDonationCandidate(tx)}
+              showDonationToggle={canEditMovements && canToggleDonation182(tx)}
               isDonationPending={inlineUpdatePendingByTxId[tx.id] === 'donation'}
-              onMarkAsDonation={handleMarkAsDonation}
+              onToggleDonation182={handleToggleDonation182}
               t={rowTranslations}
             />
           ))}
@@ -2924,10 +2926,10 @@ export function TransactionsTable({
         <div className="table-scroll-stable w-full overflow-hidden rounded-xl border border-border/60 bg-background/95 shadow-sm [&>div]:overflow-visible [&>div]:overflow-x-hidden">
           <Table className="w-full table-fixed">
             <TableHeader>
-              <TableRow className="h-11 bg-muted/20">
+              <TableRow className="h-10 bg-muted/20">
                 {/* Checkbox columna - només visible per admin/user */}
                 {canBulkEdit && (
-                  <TableHead className="w-[40px] px-2.5 py-3">
+                  <TableHead className="w-[40px] px-2.5 py-2.5">
                     <Checkbox
                       checked={checkboxState === 'checked'}
                       ref={(el) => {
@@ -2942,7 +2944,7 @@ export function TransactionsTable({
                     />
                   </TableHead>
                 )}
-                <TableHead className="w-[90px] py-3">
+                <TableHead className="w-[90px] py-2.5">
                   <button
                     onClick={() => setSortDateAsc(!sortDateAsc)}
                     className="flex items-center gap-1 hover:text-foreground transition-colors text-xs"
@@ -2955,18 +2957,18 @@ export function TransactionsTable({
                     )}
                   </button>
                 </TableHead>
-                <TableHead className="w-[110px] whitespace-nowrap py-3 text-right">{t.movements.table.amount}</TableHead>
-                <TableHead className="w-[120px] whitespace-nowrap py-3 text-right">{tr('movements.table.balance')}</TableHead>
-                <TableHead className="min-w-0 py-3">{t.movements.table.concept}</TableHead>
-                <TableHead className="hidden w-[180px] py-3 lg:table-cell">{t.movements.table.contact}</TableHead>
-                <TableHead className="hidden w-[160px] py-3 lg:table-cell">{t.movements.table.category}</TableHead>
+                <TableHead className="w-[110px] whitespace-nowrap py-2.5 text-right">{t.movements.table.amount}</TableHead>
+                <TableHead className="w-[120px] whitespace-nowrap py-2.5 text-right">{tr('movements.table.balance')}</TableHead>
+                <TableHead className="min-w-0 py-2.5">{t.movements.table.concept}</TableHead>
+                <TableHead className="hidden w-[180px] py-2.5 lg:table-cell">{t.movements.table.contact}</TableHead>
+                <TableHead className="hidden w-[160px] py-2.5 lg:table-cell">{t.movements.table.category}</TableHead>
                 {showProjectColumn && (
-                  <TableHead className="hidden w-[100px] py-3 lg:table-cell">
+                  <TableHead className="hidden w-[100px] py-2.5 lg:table-cell">
                     {t.movements.table.project}
                   </TableHead>
                 )}
-                <TableHead className="w-10 shrink-0 py-3 text-center"><span className="sr-only">Document</span></TableHead>
-                <TableHead className="w-9 shrink-0 py-3 pr-2 text-right"><span className="sr-only">{t.movements.table.actions}</span></TableHead>
+                <TableHead className="w-10 shrink-0 py-2.5 text-center"><span className="sr-only">Document</span></TableHead>
+                <TableHead className="w-9 shrink-0 py-2.5 pr-2 text-right"><span className="sr-only">{t.movements.table.actions}</span></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -3010,9 +3012,9 @@ export function TransactionsTable({
                   onOpenSplitDetail={handleOpenSplitDetail}
                   onUndoSplit={handleUndoSplit}
                   onViewRemittanceDetail={handleViewRemittanceDetail}
-                  showDonationCandidate={canEditMovements && isDonationCandidate(tx)}
+                  showDonationToggle={canEditMovements && canToggleDonation182(tx)}
                   isDonationPending={inlineUpdatePendingByTxId[tx.id] === 'donation'}
-                  onMarkAsDonation={handleMarkAsDonation}
+                  onToggleDonation182={handleToggleDonation182}
                   onUndoRemittance={handleUndoRemittance}
                   onCreateNewContact={handleOpenNewContactDialog}
                   onOpenReturnImporter={(parentTx?: Transaction) => {

@@ -136,9 +136,9 @@ interface TransactionRowProps {
   onReconcileSepa?: (tx: Transaction) => void;
   isSplitDeleteBlocked?: boolean;
   deleteBlockedReason?: DeleteTransactionBlockedReason | null;
-  showDonationCandidate?: boolean;
+  showDonationToggle?: boolean;
   isDonationPending?: boolean;
-  onMarkAsDonation?: (txId: string) => void;
+  onToggleDonation182?: (txId: string) => void;
   // Translations
   t: {
     date: string;
@@ -198,6 +198,7 @@ interface TransactionRowProps {
     noContact?: string;
     readyToCountIn182: string;
     markAsDonation182: string;
+    removeFrom182: string;
     fiscalDonation: string;
   };
   getCategoryDisplayName: (category: string | null | undefined) => string;
@@ -256,9 +257,9 @@ export const TransactionRow = React.memo(function TransactionRow({
   onReconcileSepa,
   isSplitDeleteBlocked,
   deleteBlockedReason,
-  showDonationCandidate,
+  showDonationToggle,
   isDonationPending,
-  onMarkAsDonation,
+  onToggleDonation182,
   t,
   getCategoryDisplayName,
 }: TransactionRowProps) {
@@ -322,6 +323,9 @@ export const TransactionRow = React.memo(function TransactionRow({
     tx.transactionType !== 'donation' &&
     tx.transactionType !== 'fee';
   const isFiscalDonation = tx.transactionType === 'donation' && !isReturnedDonation;
+  const donation182Message = isFiscalDonation
+    ? `${t.fiscalDonation}. ${t.removeFrom182}`
+    : `${t.readyToCountIn182}. ${t.markAsDonation182}`;
 
   // Stable callbacks using useCallback to prevent child re-renders
   const handleSelectContact = React.useCallback((nextContactId: string | null, nextContactType: ContactType | null) => {
@@ -331,6 +335,10 @@ export const TransactionRow = React.memo(function TransactionRow({
   const handleCreateNewContact = React.useCallback((type: 'donor' | 'supplier') => {
     onCreateNewContact(tx.id, type);
   }, [tx.id, onCreateNewContact]);
+
+  const handleToggleDonation182 = React.useCallback(() => {
+    onToggleDonation182?.(tx.id);
+  }, [onToggleDonation182, tx.id]);
 
   const handleCategorySelect = React.useCallback((categoryId: string) => {
     onSetCategory(tx.id, categoryId);
@@ -353,11 +361,6 @@ export const TransactionRow = React.memo(function TransactionRow({
   const handleDeleteDocument = React.useCallback(() => {
     onDeleteDocument(tx.id);
   }, [tx.id, onDeleteDocument]);
-
-  const handleMarkAsDonation = React.useCallback(() => {
-    if (!onMarkAsDonation || isDonationPending) return;
-    onMarkAsDonation(tx.id);
-  }, [isDonationPending, onMarkAsDonation, tx.id]);
 
   const handleEdit = React.useCallback(() => {
     // Delay per permetre que el DropdownMenu es tanqui completament
@@ -565,7 +568,7 @@ export const TransactionRow = React.memo(function TransactionRow({
     <>
       {/* Checkbox - només si onToggleSelect està definit (canBulkEdit) */}
       {onToggleSelect && (
-        <TableCell className="px-2.5 py-3 align-top">
+        <TableCell className="px-2.5 py-2.5 align-top">
           <Checkbox
             checked={isSelected}
             onCheckedChange={() => {
@@ -579,13 +582,13 @@ export const TransactionRow = React.memo(function TransactionRow({
         </TableCell>
       )}
       {/* Date */}
-      <TableCell className="whitespace-nowrap py-3.5 text-xs text-muted-foreground align-top">
+      <TableCell className="whitespace-nowrap py-2.5 text-xs text-muted-foreground align-top">
         {formatDateShort(displayDate)}
       </TableCell>
 
       {/* Amount */}
       <TableCell
-        className={`whitespace-nowrap py-3.5 text-right font-mono text-[13px] font-medium tabular-nums align-top ${
+        className={`whitespace-nowrap py-2.5 text-right font-mono text-[13px] font-medium tabular-nums align-top ${
           isReturnedDonation ? 'text-gray-400 line-through' :
           tx.amount > 0 ? 'text-green-600' : 'text-foreground'
         }`}
@@ -594,13 +597,13 @@ export const TransactionRow = React.memo(function TransactionRow({
       </TableCell>
 
       {/* Balance */}
-      <TableCell className="w-[120px] whitespace-nowrap py-3.5 text-right font-mono text-[13px] tabular-nums text-foreground align-top">
+      <TableCell className="w-[120px] whitespace-nowrap py-2.5 text-right font-mono text-[13px] tabular-nums text-foreground align-top">
         {balanceText}
       </TableCell>
 
       {/* Concept + Note + Badge + Mobile summary */}
-      <TableCell className="min-w-0 py-3.5">
-        <div className="space-y-1">
+      <TableCell className="min-w-0 py-2.5">
+        <div className="space-y-0.5">
           <div className="flex items-center gap-2">
             <p
               className={`min-w-0 max-w-[320px] truncate text-[13px] leading-5 ${isReturnedDonation ? 'text-gray-400' : ''}`}
@@ -735,7 +738,7 @@ export const TransactionRow = React.memo(function TransactionRow({
       </TableCell>
 
       {/* Contact - hidden on mobile, visible from lg */}
-      <TableCell className="hidden min-w-0 py-3.5 align-top lg:table-cell">
+      <TableCell className="hidden min-w-0 py-2.5 align-top lg:table-cell">
         {/* Cas 1: Pare de remesa de devolucions - mostrar estat, NO "Assignar donant" */}
         {tx.isRemittance && tx.remittanceType === 'returns' ? (
           <div className="flex items-center gap-1">
@@ -884,96 +887,110 @@ export const TransactionRow = React.memo(function TransactionRow({
       </TableCell>
 
       {/* Category - hidden on mobile, visible from lg */}
-      <TableCell className="hidden min-w-0 py-3.5 align-top lg:table-cell">
-        <div className="space-y-1.5">
-          <Popover open={isCategoryPopoverOpen} onOpenChange={setIsCategoryPopoverOpen}>
-            <PopoverTrigger asChild>
-              <Button
-                variant="ghost"
-                role="combobox"
-                disabled={isCategoryLoading || isContactLoading}
-                className={`h-6 w-full min-w-0 justify-start rounded-full border border-border bg-muted/30 px-2 py-0.5 text-xs font-medium gap-0.5 text-foreground/90 hover:bg-muted/50 ${isReturnedDonation ? 'opacity-50' : ''}`}
-              >
-                {isCategoryLoading ? (
-                  <span className="flex items-center gap-1">
-                    <Loader2 className="h-3 w-3 animate-spin" />
-                    <span>{t.categorize}...</span>
-                  </span>
-                ) : (
-                  <span className="flex min-w-0 flex-1 items-center gap-1 truncate">
-                    {tx.category ? getCategoryDisplayName(tx.category) : t.uncategorized}
-                    {isLegacyCategory && <span className="text-[10px] text-amber-600" title={t.legacyCategory ?? 'Cal recategoritzar'}>⚠</span>}
-                  </span>
-                )}
-                <ChevronDown className="ml-0.5 h-3 w-3 shrink-0 opacity-70" />
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-[200px] p-0" align="start">
-              <Command>
-                <CommandInput placeholder={t.searchCategory} />
-                <CommandList>
-                  <CommandEmpty>{t.noResults}</CommandEmpty>
-                  <CommandGroup>
-                    {relevantCategories.map((cat) => (
+      <TableCell className="hidden min-w-0 py-2.5 align-top lg:table-cell">
+        <div className="flex items-center gap-1.5">
+          <div className="min-w-0 flex-1">
+            <Popover open={isCategoryPopoverOpen} onOpenChange={setIsCategoryPopoverOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="ghost"
+                  role="combobox"
+                  disabled={isCategoryLoading || isContactLoading}
+                  className={`h-6 w-full min-w-0 justify-start rounded-full border border-border bg-muted/30 px-2 py-0.5 text-xs font-medium gap-0.5 text-foreground/90 hover:bg-muted/50 ${isReturnedDonation ? 'opacity-50' : ''}`}
+                >
+                  {isCategoryLoading ? (
+                    <span className="flex items-center gap-1">
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                      <span>{t.categorize}...</span>
+                    </span>
+                  ) : (
+                    <span className="flex min-w-0 flex-1 items-center gap-1 truncate">
+                      {tx.category ? getCategoryDisplayName(tx.category) : t.uncategorized}
+                      {isLegacyCategory && <span className="text-[10px] text-amber-600" title={t.legacyCategory ?? 'Cal recategoritzar'}>⚠</span>}
+                    </span>
+                  )}
+                  <ChevronDown className="ml-0.5 h-3 w-3 shrink-0 opacity-70" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[200px] p-0" align="start">
+                <Command>
+                  <CommandInput placeholder={t.searchCategory} />
+                  <CommandList>
+                    <CommandEmpty>{t.noResults}</CommandEmpty>
+                    <CommandGroup>
+                      {relevantCategories.map((cat) => (
+                        <CommandItem
+                          key={cat.id}
+                          value={categoryTranslations[cat.name] || cat.name}
+                          onSelect={() => handleCategorySelect(cat.id)}
+                        >
+                          {categoryTranslations[cat.name] || cat.name}
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                    <CommandGroup>
                       <CommandItem
-                        key={cat.id}
-                        value={categoryTranslations[cat.name] || cat.name}
-                        onSelect={() => handleCategorySelect(cat.id)}
+                        value={t.suggestWithAI}
+                        onSelect={handleCategorizeWithAI}
+                        className="text-primary"
                       >
-                        {categoryTranslations[cat.name] || cat.name}
+                        <Sparkles className="mr-2 h-3 w-3" />
+                        {t.suggestWithAI}
                       </CommandItem>
-                    ))}
-                  </CommandGroup>
-                  <CommandGroup>
-                    <CommandItem
-                      value={t.suggestWithAI}
-                      onSelect={handleCategorizeWithAI}
-                      className="text-primary"
-                    >
-                      <Sparkles className="mr-2 h-3 w-3" />
-                      {t.suggestWithAI}
-                    </CommandItem>
-                  </CommandGroup>
-                </CommandList>
-              </Command>
-            </PopoverContent>
-          </Popover>
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
+          </div>
 
-          {showDonationCandidate && (
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="text-[11px] text-muted-foreground">
-                {t.readyToCountIn182}
-              </span>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                disabled={isDonationPending}
-                onClick={handleMarkAsDonation}
-                className="h-6 rounded-full px-2 text-[11px]"
-              >
-                {isDonationPending ? (
-                  <Loader2 className="h-3 w-3 animate-spin" />
-                ) : null}
-                {t.markAsDonation182}
-              </Button>
-            </div>
-          )}
+          {showDonationToggle ? (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={isDonationPending}
+                  onClick={handleToggleDonation182}
+                  aria-label={donation182Message}
+                  aria-pressed={isFiscalDonation}
+                  className={`h-6 w-10 shrink-0 justify-center rounded-full px-0 text-[10px] font-semibold ${
+                    isFiscalDonation
+                      ? 'border-emerald-300 bg-emerald-200 text-emerald-900 hover:bg-emerald-300'
+                      : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
+                  }`}
+                >
+                  {isDonationPending ? <Loader2 className="h-3 w-3 animate-spin" /> : '182'}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                {donation182Message}
+              </TooltipContent>
+            </Tooltip>
+          ) : null}
 
-          {!showDonationCandidate && isFiscalDonation && (
-            <Badge
-              variant="outline"
-              className="w-fit rounded-full border-emerald-200 bg-emerald-50 px-1.5 py-0.5 text-[10px] text-emerald-700"
-            >
-              ✓ {t.fiscalDonation}
-            </Badge>
-          )}
+          {!showDonationToggle && isFiscalDonation ? (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Badge
+                  variant="outline"
+                  className="w-10 shrink-0 justify-center rounded-full border-emerald-300 bg-emerald-200 px-0 py-0.5 text-center text-[10px] font-semibold text-emerald-900"
+                >
+                  182
+                </Badge>
+              </TooltipTrigger>
+              <TooltipContent>
+                {t.fiscalDonation}
+              </TooltipContent>
+            </Tooltip>
+          ) : null}
         </div>
       </TableCell>
 
       {/* Project - hidden on mobile, visible from lg */}
       {showProjectColumn && (
-        <TableCell className="hidden py-3.5 align-top lg:table-cell">
+        <TableCell className="hidden py-2.5 align-top lg:table-cell">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               {projectName ? (
@@ -1004,7 +1021,7 @@ export const TransactionRow = React.memo(function TransactionRow({
       )}
 
       {/* Document column - always visible */}
-      <TableCell className="w-10 shrink-0 py-3.5 text-center align-top">
+      <TableCell className="w-10 shrink-0 py-2.5 text-center align-top">
         <div className="flex items-center justify-center">
           {isDocumentLoading ? (
             <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
@@ -1043,7 +1060,7 @@ export const TransactionRow = React.memo(function TransactionRow({
       </TableCell>
 
       {/* Actions menu column */}
-      <TableCell className="w-9 shrink-0 py-3 text-right align-top pr-2">
+      <TableCell className="w-9 shrink-0 py-2.5 text-right align-top pr-2">
         <DropdownMenu open={isActionsMenuOpen} onOpenChange={setIsActionsMenuOpen}>
           <DropdownMenuTrigger asChild>
             <Button

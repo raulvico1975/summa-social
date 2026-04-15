@@ -4,6 +4,14 @@ Registre cronologic de desplegaments a produccio.
 
 ## Notes operatives sense deploy
 
+### 2026-04-14 — Govern de deploy App Hosting verificat
+
+- Abans d'aquest canvi, `npm run publica` podia donar verd després del `push` a `prod` sense demostrar canvi real de revisió backend.
+- A partir d'ara, si App Hosting no materialitza sol el backend dins la finestra curta, el ritual força `apphosting:rollouts:create`.
+- El criteri verd queda lligat a canvi de revisió efectiva i a una sonda server-side canònica (`POST /api/contact` invàlid → `400 INVALID_PAYLOAD`).
+- Evidència d'aquesta incidència: revisió backend `studio-build-2026-04-14-007` -> `studio-build-2026-04-14-009`.
+- Pendent menor fora d'incidència: repetir el smoke autenticat de `GET /api/dashboard/summary` en un entorn amb `idToken` reutilitzable.
+
 ### 2026-03-19 — Deploy completat després de tancar el ritual
 
 - SHA main del contingut publicat: `28c1930`.
@@ -302,6 +310,7 @@ Registre cronologic de desplegaments a produccio.
 | 2026-04-14 14:35 | 739300c2f | ALT | No | 7 | OK |
 | 2026-04-14 15:02 | f4517ec5c | ALT | No | 7 | OK |
 | 2026-04-14 16:28 | f2ab7dde5 | ALT | No | 3 | OK |
+| 2026-04-14 17:16 | dad5da45d | MITJA | No | 7 | OK |
 ## Decisions humanes (negoci)
 
 | Data | SHA | human_question_reason | business_impact | decision_taken |

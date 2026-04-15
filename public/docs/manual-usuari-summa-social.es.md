@@ -115,6 +115,36 @@ Es el flujo para cargar nuevos movimientos del banco en Summa sin crear duplicad
 
 Usa el mismo flujo de importación. Antes de confirmar, revisa el bloque **Duplicados seguros** y, si hace falta, **Ver por qué**. No confirmes hasta tener claro qué líneas son nuevas y cuáles ya existían.
 
+### 5.2 Marcar una donación para que cuente en el 182 [id:5-4b-marcar-donacio-fiscal-182]
+
+#### Qué es
+
+Es el control que te permite indicar explícitamente que un ingreso concreto debe tratarse como **donación fiscal** dentro de Summa Social.
+
+#### Cuándo se utiliza
+
+- Cuando tienes un ingreso positivo de un donante y debe contar en su ficha fiscal
+- Cuando ese ingreso no viene ya resuelto por Stripe o por una remesa dividida
+- Cuando quieres que aparezca en el **Modelo 182** y en el certificado del donante
+
+#### Paso a paso
+
+1. Ve a **Movimientos** y localiza el ingreso.
+2. Comprueba que el movimiento tiene el **donante correcto** asignado.
+3. Si ves el botón **182** en blanco, haz clic.
+4. Cuando queda **verde**, ese movimiento pasa a contar como donación fiscal dentro de Summa.
+5. Si te has equivocado, vuelve a hacer clic en el **182** verde y el movimiento volverá a quedar como movimiento normal.
+
+#### Qué cuenta automáticamente sin tocar este botón
+
+- Las cuotas identificadas al **dividir una remesa IN**
+- Las donaciones de **Stripe** correctamente imputadas a un donante
+- Las líneas de un **desglose manual** creadas como donación
+
+#### Dónde encontrarlo en Summa
+
+**Movimientos > Tabla > Botón 182 de la fila**
+
 ---
 
 ## 6. Divisor de remesas [id:6-divisor-de-remeses]
@@ -265,6 +295,23 @@ Es el flujo para generar el fichero del **Modelo 182** a partir de datos fiscale
 3. Corrige lo que falte en **Donantes** o **Movimientos** y vuelve a **Informes**.
 4. Genera el fichero solo cuando los totales sean coherentes.
 5. Descárgalo y envíalo a la gestoría.
+
+#### De dónde sale lo que ves en el Modelo 182
+
+Dentro de Summa Social, el Modelo 182 se construye a partir de los movimientos que la app trata como **donación fiscal**. Esto incluye:
+
+- Ingresos de **Movimientos** que has dejado con el **182** en verde
+- Cuotas hijas creadas al dividir una **remesa IN**
+- Donaciones de **Stripe** ya imputadas a un donante
+- Líneas creadas en un **desglose manual** con tipo donación
+
+No entran automáticamente:
+
+- Ingresos normales que siguen sin el **182** verde
+- Donaciones de Stripe que todavía no tienen donante asignado
+- Movimientos pendientes de revisar o devoluciones sin asignar
+
+> 💡 Esto describe el criterio operativo de Summa dentro de la app. Si tienes dudas sobre la calificación fiscal de un caso concreto, consúltalo con la gestoría.
 
 #### Errores habituales
 

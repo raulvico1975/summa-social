@@ -6,8 +6,9 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { useTranslations } from '@/i18n';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
-import { useFirebase, useCollection, useMemoFirebase, addDocumentNonBlocking } from '@/firebase';
-import { collection, query, where, doc, addDoc, writeBatch, serverTimestamp } from 'firebase/firestore';
+import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
+import { collection, query, where, doc, addDoc, writeBatch, serverTimestamp, setDoc } from 'firebase/firestore';
+import { ref, uploadString } from 'firebase/storage';
 import type { Donor, BankAccount, SepaCollectionRun, SepaCollectionItem, SepaSequenceType } from '@/lib/data';
 import { generatePain008Xml, generateMessageId, validateCollectionRun, filterEligibleDonors, determineSequenceType, computeDonorCollectionStatus, type DonorCollectionStatus } from '@/lib/sepa/pain008';
 import { ArrowLeft, ArrowRight, Download, AlertTriangle, CheckCircle2, XCircle } from 'lucide-react';
@@ -25,7 +26,7 @@ const STEPS: WizardStep[] = ['config', 'selection', 'review'];
 
 export function SepaCollectionWizard() {
   const router = useRouter();
-  const { firestore, auth } = useFirebase();
+  const { firestore, auth, storage } = useFirebase();
   const { organizationId, organization, orgSlug } = useCurrentOrganization();
   const { toast } = useToast();
   const { t, tr } = useTranslations();
@@ -198,9 +199,14 @@ export function SepaCollectionWizard() {
 
     try {
       const messageId = generateMessageId();
+      const runsCollection = collection(firestore, 'organizations', organizationId, 'sepaCollectionRuns');
+      const runRef = doc(runsCollection);
+      const runId = runRef.id;
+      const dateStr = configData.collectionDate.replace(/-/g, '');
+      const filename = `sepa_cobrament_CORE_${orgSlug}_${dateStr}.xml`;
 
       const run: SepaCollectionRun = {
-        id: '', // Will be set by Firestore
+        id: runId,
         status: 'exported',
         scheme: 'CORE',
         bankAccountId: configData.bankAccountId,
@@ -235,7 +241,12 @@ export function SepaCollectionWizard() {
       // Persist to Firestore (best-effort: no bloqueja l'export XML)
       let persistFailed = false;
       try {
-        const runsCollection = collection(firestore, 'organizations', organizationId, 'sepaCollectionRuns');
+        const storagePath = `organizations/${organizationId}/sepaCollectionRuns/${runId}/${filename}`;
+        const storageRef = ref(storage, storagePath);
+
+        await uploadString(storageRef, xml, 'raw', {
+          contentType: 'application/xml',
+        });
 
         // Build run data for persistence (without items array for Firestore)
         const runForDb = {
@@ -247,6 +258,11 @@ export function SepaCollectionWizard() {
           createdBy: run.createdBy,
           exportedAt: run.exportedAt,
           messageId,
+          sepaFile: {
+            storagePath,
+            filename,
+            messageId,
+          },
           itemCount: collectionItems.length,
           totalCents: totalAmountCents,
           included: collectionItems.map(item => ({
@@ -261,7 +277,7 @@ export function SepaCollectionWizard() {
           })),
         };
 
-        addDocumentNonBlocking(runsCollection, runForDb);
+        await setDoc(runRef, runForDb);
 
         // ═══════════════════════════════════════════════════════════════════════════
         // CREAR REGISTRE OPERATIU sepaPain008Runs (memòria de runs)
@@ -271,8 +287,14 @@ export function SepaCollectionWizard() {
         const pain008RunData = {
           createdAt: serverTimestamp(),
           createdByUid: auth.currentUser.uid,
+          collectionRunId: runId,
           bankAccountId: configData.bankAccountId,
           executionDate: configData.collectionDate,
+          sepaFile: {
+            storagePath,
+            filename,
+            messageId,
+          },
           includedDonorIds: selectedDonors.map(d => d.id),
           counts: {
             shown: eligible.length,
@@ -318,8 +340,7 @@ export function SepaCollectionWizard() {
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      const dateStr = configData.collectionDate.replace(/-/g, '');
-      link.download = `sepa_cobrament_CORE_${orgSlug}_${dateStr}.xml`;
+      link.download = filename;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -352,60 +373,69 @@ export function SepaCollectionWizard() {
   const isLoading = isLoadingAccounts || isLoadingDonors;
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-2xl font-bold tracking-tight font-headline">
+    <Card className="overflow-hidden border-border/60 shadow-sm">
+      <CardHeader className="space-y-2 px-4 pb-4 sm:px-6 sm:pb-5">
+        <CardTitle className="text-xl font-bold tracking-tight font-headline sm:text-2xl">
           {t.sepaCollection.title}
         </CardTitle>
-        <CardDescription>
+        <CardDescription className="max-w-3xl text-sm sm:text-base">
           {t.sepaCollection.description}
         </CardDescription>
       </CardHeader>
 
-      <CardContent>
+      <CardContent className="px-4 pb-4 sm:px-6 sm:pb-6">
         {/* Step indicator */}
-        <div className="mb-8">
-          <div className="flex items-center justify-center gap-4">
-            {STEPS.map((step, index) => {
-              const isActive = step === currentStep;
-              const isCompleted = index < currentStepIndex;
-              const stepLabels = {
-                config: t.sepaCollection.steps.config,
-                selection: t.sepaCollection.steps.selection,
-                review: t.sepaCollection.steps.review,
-              };
-              return (
-                <React.Fragment key={step}>
-                  {index > 0 && (
-                    <div className={cn(
-                      'h-0.5 w-12 transition-colors',
-                      isCompleted ? 'bg-primary' : 'bg-muted'
-                    )} />
-                  )}
-                  <div className="flex flex-col items-center gap-1">
-                    <div className={cn(
-                      'flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium transition-colors',
-                      isActive ? 'bg-primary text-primary-foreground' :
-                      isCompleted ? 'bg-primary/20 text-primary' :
-                      'bg-muted text-muted-foreground'
-                    )}>
-                      {isCompleted ? <CheckCircle2 className="h-4 w-4" /> : index + 1}
+        <div className="mb-6 sm:mb-8">
+          <div className="-mx-1 overflow-x-auto pb-1">
+            <div className="mx-1 flex min-w-max items-start gap-2 sm:justify-center sm:gap-4">
+              {STEPS.map((step, index) => {
+                const isActive = step === currentStep;
+                const isCompleted = index < currentStepIndex;
+                const stepLabels = {
+                  config: t.sepaCollection.steps.config,
+                  selection: t.sepaCollection.steps.selection,
+                  review: t.sepaCollection.steps.review,
+                };
+
+                return (
+                  <React.Fragment key={step}>
+                    {index > 0 && (
+                      <div
+                        className={cn(
+                          'mt-4 h-0.5 w-8 shrink-0 transition-colors sm:w-12',
+                          isCompleted ? 'bg-primary' : 'bg-muted'
+                        )}
+                      />
+                    )}
+                    <div className="flex w-[76px] shrink-0 flex-col items-center gap-1.5 text-center sm:w-[92px]">
+                      <div
+                        className={cn(
+                          'flex h-9 w-9 items-center justify-center rounded-full text-sm font-medium transition-colors sm:h-10 sm:w-10',
+                          isActive ? 'bg-primary text-primary-foreground' :
+                          isCompleted ? 'bg-primary/20 text-primary' :
+                          'bg-muted text-muted-foreground'
+                        )}
+                      >
+                        {isCompleted ? <CheckCircle2 className="h-4 w-4" /> : index + 1}
+                      </div>
+                      <span
+                        className={cn(
+                          'text-xs leading-tight',
+                          isActive ? 'text-foreground font-medium' : 'text-muted-foreground'
+                        )}
+                      >
+                        {stepLabels[step]}
+                      </span>
                     </div>
-                    <span className={cn(
-                      'text-xs',
-                      isActive ? 'text-foreground font-medium' : 'text-muted-foreground'
-                    )}>
-                      {stepLabels[step]}
-                    </span>
-                  </div>
-                </React.Fragment>
-              );
-            })}
+                  </React.Fragment>
+                );
+              })}
+            </div>
           </div>
         </div>
 
         {/* Step content */}
-        <div className="min-h-[400px]">
+        <div className="min-h-[320px] sm:min-h-[360px] xl:min-h-[400px]">
           {currentStep === 'config' && (
             <StepConfig
               bankAccounts={bankAccounts || []}
@@ -440,19 +470,19 @@ export function SepaCollectionWizard() {
         </div>
 
         {/* Navigation */}
-        <div className="mt-8 flex justify-between border-t pt-4">
-          <Button variant="outline" onClick={handleBack}>
+        <div className="mt-6 flex flex-col-reverse gap-3 border-t pt-4 sm:mt-8 sm:flex-row sm:items-center sm:justify-between">
+          <Button variant="outline" onClick={handleBack} className="w-full sm:w-auto">
             <ArrowLeft className="mr-2 h-4 w-4" />
             {currentStepIndex === 0 ? t.common.cancel : t.common.back}
           </Button>
 
           {currentStep !== 'review' ? (
-            <Button onClick={handleNext} disabled={!canProceed()}>
+            <Button onClick={handleNext} disabled={!canProceed()} className="w-full sm:w-auto">
               {t.common.next}
               <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
           ) : (
-            <Button onClick={handleExport} disabled={isExporting || !canProceed()}>
+            <Button onClick={handleExport} disabled={isExporting || !canProceed()} className="w-full sm:w-auto">
               <Download className="mr-2 h-4 w-4" />
               {isExporting ? tr('sepaPain008.review.exporting', 'Exportant...') : t.sepaCollection.review.export}
             </Button>

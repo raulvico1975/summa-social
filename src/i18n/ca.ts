@@ -283,6 +283,7 @@ export const ca = {
       noContact: "Sense contacte",
       readyToCountIn182: "Preparat per comptar al 182",
       markAsDonation182: "Fer comptar al 182",
+      removeFrom182: "Treure del 182",
       fiscalDonation: "Donació fiscal",
       donationsNoContact: "Donacions sense contacte",
       pendingFilters: "Pendents",

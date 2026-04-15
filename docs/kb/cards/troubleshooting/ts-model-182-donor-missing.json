@@ -25,8 +25,8 @@
   },
   "guideId": null,
   "answer": {
-    "ca": "Si un donant no surt al Model 182:\n1. Ves a Donants i obre la fitxa del donant.\n2. Revisa com a mínim el nom complet, el DNI/CIF i el codi postal.\n3. Si hi ha devolucions, comprova que el total net de l'any sigui positiu.\n4. Torna a Informes > Model 182 i revisa si surt a exclosos o amb algun avís.\n5. Corregeix el que falti i genera de nou l'informe.\n\nSi després d'aquesta revisió encara no surt, ja estem davant d'un cas concret de dades i no d'un dubte general del procés.",
-    "es": "Si un donante no sale en el Modelo 182:\n1. Ve a Donantes y abre la ficha del donante.\n2. Revisa como mínimo el nombre completo, el DNI/CIF y el código postal.\n3. Si hay devoluciones, comprueba que el total neto del año sea positivo.\n4. Vuelve a Informes > Modelo 182 y revisa si aparece en excluidos o con algún aviso.\n5. Corrige lo que falte y genera de nuevo el informe.\n\nSi después de esta revisión sigue sin salir, ya estamos ante un caso concreto de datos y no ante una duda general del proceso."
+    "ca": "Si un donant no surt al Model 182:\n1. Ves a Donants i obre la fitxa del donant.\n2. Revisa com a mínim el nom complet, el DNI/CIF i el codi postal.\n3. Si és un ingrés manual, comprova a Moviments que el 182 estigui en verd; si ve de remesa o Stripe, revisa que el donant hi estigui ben imputat.\n4. Si hi ha devolucions, comprova que el total net de l'any sigui positiu.\n5. Torna a Informes > Model 182 i revisa si surt a exclosos o amb algun avís.\n6. Corregeix el que falti i genera de nou l'informe.\n\nSi després d'aquesta revisió encara no surt, ja estem davant d'un cas concret de dades i no d'un dubte general del procés.",
+    "es": "Si un donante no sale en el Modelo 182:\n1. Ve a Donantes y abre la ficha del donante.\n2. Revisa como mínimo el nombre completo, el DNI/CIF y el código postal.\n3. Si es un ingreso manual, comprueba en Movimientos que el 182 esté en verde; si viene de remesa o Stripe, revisa que el donante esté bien imputado.\n4. Si hay devoluciones, comprueba que el total neto del año sea positivo.\n5. Vuelve a Informes > Modelo 182 y revisa si aparece en excluidos o con algún aviso.\n6. Corrige lo que falte y genera de nuevo el informe.\n\nSi después de esta revisión sigue sin salir, ya estamos ante un caso concreto de datos y no ante una duda general del proceso."
   },
   "uiPaths": [
     "Donants > Fitxa del donant",
@@ -54,7 +54,8 @@
   "related": [
     "guide-model-182",
     "howto-donor-fiscal-review",
-    "ts-donor-incomplete-data"
+    "ts-donor-incomplete-data",
+    "howto-mark-donation-182"
   ],
   "error_key": null,
   "symptom": {

@@ -61,7 +61,7 @@ interface UseTransactionActionsReturn {
   handleSetCategory: (txId: string, newCategory: string) => void;
   handleSetContact: (txId: string, newContactId: string | null, contactType: ContactType | null) => void;
   handleSetProject: (txId: string, newProjectId: string | null) => void;
-  markAsDonation: (transactionId: string) => Promise<void>;
+  toggleDonation182: (transactionId: string) => Promise<void>;
 
   // ─────────────────────────────────────────────────────────────────────────
   // DOCUMENT UPLOAD / DELETE
@@ -264,7 +264,7 @@ export function useTransactionActions({
     updateDocumentNonBlocking(doc(transactionsCollection, txId), { projectId: newProjectId });
   }, [ensureCanEdit, transactionsCollection]);
 
-  const markAsDonation = React.useCallback(async (transactionId: string) => {
+  const toggleDonation182 = React.useCallback(async (transactionId: string) => {
     if (!ensureCanEdit()) {
       throw new Error('No tens permisos per editar moviments.');
     }
@@ -278,12 +278,8 @@ export function useTransactionActions({
       throw new Error('Moviment no trobat.');
     }
 
-    if (transaction.transactionType === 'donation') {
-      return;
-    }
-
     await updateDoc(doc(transactionsCollection, transactionId), {
-      transactionType: 'donation',
+      transactionType: transaction.transactionType === 'donation' ? 'normal' : 'donation',
     });
   }, [ensureCanEdit, transactions, transactionsCollection]);
 
@@ -756,7 +752,7 @@ export function useTransactionActions({
     handleSetCategory,
     handleSetContact,
     handleSetProject,
-    markAsDonation,
+    toggleDonation182,
 
     // Document Upload / Delete
     docLoadingStates,
