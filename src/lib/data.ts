@@ -900,6 +900,42 @@ export interface SepaCollectionRun {
 }
 
 /**
+ * Snapshot mínim persistit a Firestore per a l'historial de remeses SEPA.
+ * S'emmagatzema a: organizations/{orgId}/sepaCollectionRuns/{runId}
+ */
+export interface SepaCollectionRunRecordIncludedItem {
+  contactId: string;
+  amountCents: number;
+  umr: string;
+  sequenceType: SepaSequenceType;
+}
+
+export interface SepaCollectionRunRecordExcludedItem {
+  contactId: string;
+  reason: string;
+}
+
+export interface SepaCollectionRunRecord {
+  type: 'SEPA_COLLECTION';
+  scheme: SepaScheme;
+  bankAccountId: string;
+  collectionDate: string;                  // YYYY-MM-DD
+  createdAt: string;                       // ISO date
+  createdBy: string;                       // UID usuari
+  exportedAt?: string | null;              // ISO date
+  messageId: string;
+  sepaFile?: {
+    storagePath: string;
+    filename: string;
+    messageId: string;
+  } | null;
+  itemCount?: number | null;
+  totalCents?: number | null;
+  included?: SepaCollectionRunRecordIncludedItem[] | null;
+  excluded?: SepaCollectionRunRecordExcludedItem[] | null;
+}
+
+/**
  * Registre operatiu d'una execució pain.008 (memòria de runs)
  * S'emmagatzema a: organizations/{orgId}/sepaPain008Runs/{runId}
  *

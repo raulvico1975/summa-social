@@ -322,10 +322,12 @@ export const HELP_CONTENT_FR: Partial<Record<HelpRouteKey, HelpContent>> = {
       'Sélectionnez le compte et la date de prélèvement avant de revoir les adhérents inclus.',
       'Vérifiez les adhérents exclus ou avec avertissements avant de générer la remise.',
       'Générez le XML uniquement lorsque le montant total et le nombre d\'adhérents sont cohérents.',
+      'Si vous devez récupérer le fichier plus tard, utilisez l\'onglet Historique sur le même écran.',
       'Déposez ensuite le fichier à la banque hors de Summa : l\'app le génère mais ne l\'envoie pas automatiquement.',
     ],
     tips: [
       'S\'il manque des adhérents, vérifiez IBAN, montant de cotisation et périodicité avant de forcer quoi que ce soit.',
+      'L\'Historique permet de retélécharger des XML déjà générés sans reconstruire la remise.',
       'Un XML bien généré ne remplace pas la revue préalable de la liste.',
       'Si le problème concerne une remise déjà traitée par la banque, ce n\'est pas cet écran.',
     ],
@@ -343,7 +345,7 @@ export const HELP_CONTENT_FR: Partial<Record<HelpRouteKey, HelpContent>> = {
         href: '/dashboard/manual#6a-remeses-sepa-de-cobrament',
       },
     },
-    keywords: ['remises', 'sepa', 'prélèvement', 'pain.008', 'cotisations', 'ics'],
+    keywords: ['remises', 'sepa', 'prélèvement', 'pain.008', 'cotisations', 'ics', 'historique', 'xml'],
   },
 
   '/dashboard/proveidors': {

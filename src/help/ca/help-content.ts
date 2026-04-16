@@ -322,10 +322,12 @@ export const HELP_CONTENT_CA: Record<HelpRouteKey, HelpContent> = {
       'Selecciona compte i data de cobrament abans de revisar els socis inclosos.',
       'Revisa els socis exclosos o amb advertiments abans de generar la remesa.',
       'Genera l\'XML només quan l\'import total i el nombre de socis siguin coherents.',
+      'Si després necessites recuperar el fitxer, fes servir la pestanya Historial de la mateixa pantalla.',
       'Puja el fitxer al banc fora de Summa: l\'app el genera però no l\'envia automàticament.',
     ],
     tips: [
       'Si falten socis, revisa IBAN, quota i periodicitat abans de forçar res.',
+      'L\'Historial et permet tornar a descarregar XML ja generats sense reconstruir la remesa.',
       'Un XML ben generat no substitueix la revisió prèvia del llistat.',
       'Si el problema és una remesa ja processada del banc, no és aquesta pantalla.',
     ],
@@ -343,7 +345,7 @@ export const HELP_CONTENT_CA: Record<HelpRouteKey, HelpContent> = {
         href: '/dashboard/manual#6a-remeses-sepa-de-cobrament',
       },
     },
-    keywords: ['remeses', 'sepa', 'cobrament', 'pain.008', 'quotes', 'ics'],
+    keywords: ['remeses', 'sepa', 'cobrament', 'pain.008', 'quotes', 'ics', 'historial', 'xml'],
   },
   '/dashboard/proveidors': {
     title: 'Ajuda · Proveïdors',

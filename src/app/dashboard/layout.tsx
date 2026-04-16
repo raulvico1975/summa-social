@@ -27,13 +27,13 @@ function OrganizationDependentLayout({ children }: { children: React.ReactNode }
 
   return (
     <SidebarProvider defaultOpen={open} onOpenChange={setOpen}>
-      <div className="flex min-h-screen">
+      <div className="flex min-h-screen w-full">
         <Sidebar>
           <DashboardSidebarContent />
         </Sidebar>
-        <SidebarInset className="flex flex-1 flex-col transition-all duration-300 ease-in-out">
+        <SidebarInset className="flex min-w-0 w-0 flex-1 flex-col transition-all duration-300 ease-in-out">
           <DashboardHeader />
-          <main className="flex-1 overflow-y-auto p-4 md:p-6">{children}</main>
+          <main className="min-w-0 w-full flex-1 overflow-y-auto p-4 md:p-6">{children}</main>
         </SidebarInset>
       </div>
     </SidebarProvider>

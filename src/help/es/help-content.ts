@@ -322,10 +322,12 @@ export const HELP_CONTENT_ES: Partial<Record<HelpRouteKey, HelpContent>> = {
       'Selecciona cuenta y fecha de cobro antes de revisar los socios incluidos.',
       'Revisa los socios excluidos o con avisos antes de generar la remesa.',
       'Genera el XML solo cuando el importe total y el número de socios sean coherentes.',
+      'Si luego necesitas recuperar el fichero, usa la pestaña Historial de esta misma pantalla.',
       'Sube el fichero al banco fuera de Summa: la app lo genera pero no lo envía automáticamente.',
     ],
     tips: [
       'Si faltan socios, revisa IBAN, cuota y periodicidad antes de forzar nada.',
+      'El Historial te permite volver a descargar XML ya generados sin reconstruir la remesa.',
       'Un XML bien generado no sustituye la revisión previa del listado.',
       'Si el problema es una remesa ya procesada del banco, no es esta pantalla.',
     ],
@@ -343,7 +345,7 @@ export const HELP_CONTENT_ES: Partial<Record<HelpRouteKey, HelpContent>> = {
         href: '/dashboard/manual#6a-remeses-sepa-de-cobrament',
       },
     },
-    keywords: ['remesas', 'sepa', 'cobro', 'pain.008', 'cuotas', 'ics'],
+    keywords: ['remesas', 'sepa', 'cobro', 'pain.008', 'cuotas', 'ics', 'historial', 'xml'],
   },
 
   '/dashboard/proveidors': {

@@ -1084,6 +1084,8 @@ i **bloqueja la generació**.
 5. Clica **"Generar"** i descarrega el fitxer **XML pain.008**
 6. Puja el fitxer al teu banc a l'apartat de **Remeses / Domiciliacions / SEPA Direct Debit**
 
+> Si més endavant necessites recuperar el fitxer, a la pestanya **Historial** de la mateixa pantalla trobaràs les remeses desades i podràs tornar a descarregar l'XML.
+
 > **Com sap el sistema quins socis "toca cobrar"?** Per a socis **mensuals**, mira si ja s'ha cobrat aquest mes: si no, el marca com a candidat. Per a socis **trimestrals, semestrals o anuals**, calcula quan tocaria el proper cobrament a partir de la data de l'últim (per exemple, un soci trimestral cobrat al gener no tornarà a aparèixer fins a l'abril). Es compara per mes, sense importar el dia exacte.
 >
 > **Últim cobrament SEPA:** Pots informar la data de l'últim cobrament de cada donant a la seva fitxa, o importar-la massivament amb la columna "Últim cobrament SEPA" de l'Excel de donants.

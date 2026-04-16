@@ -143,14 +143,14 @@ function OrganizationDependentLayout({ children }: { children: React.ReactNode }
     <>
       <SidebarProvider open={sidebarOpen} onOpenChange={handleOpenChange}>
         {/* Shell: sidebar + contingut (header+main) en flex horitzontal */}
-        <div className="flex h-screen overflow-hidden">
+        <div className="flex h-screen w-full overflow-hidden">
           <Sidebar collapsible="icon">
             <DashboardSidebarContent />
           </Sidebar>
-          <SidebarInset className="flex min-w-0 flex-1 flex-col transition-all duration-300 ease-in-out">
+          <SidebarInset className="flex min-w-0 w-0 flex-1 flex-col transition-all duration-300 ease-in-out">
             {/* Header DINS SidebarInset: alineat amb el contingut */}
             <DashboardHeader />
-            <main className="min-w-0 flex-1 overflow-y-auto p-4 pb-24 md:p-6 md:pb-6">{children}</main>
+            <main className="min-w-0 w-full flex-1 overflow-y-auto p-4 pb-24 md:p-6 md:pb-6">{children}</main>
           </SidebarInset>
         </div>
       </SidebarProvider>

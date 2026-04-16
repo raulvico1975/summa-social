@@ -916,6 +916,8 @@ Per generar una remesa SEPA de cobrament:
 4. Genera l'XML `pain.008`
 5. Puja el fitxer al banc fora de Summa
 
+> Si més endavant necessites recuperar el fitxer, a la pestanya **Historial** de la mateixa pantalla trobaràs les remeses desades i podràs tornar a descarregar l'XML.
+
 > Important: aquesta pantalla genera la remesa de cobrament; no serveix per dividir remeses bancàries ja importades.
 
 ---

@@ -1,7 +1,7 @@
 'use client';
 
-import { SepaCollectionWizard } from '@/components/sepa-collection/SepaCollectionWizard';
+import { SepaCollectionWorkspace } from '@/components/sepa-collection/SepaCollectionWorkspace';
 
 export default function SepaCollectionPage() {
-  return <SepaCollectionWizard />;
+  return <SepaCollectionWorkspace />;
 }

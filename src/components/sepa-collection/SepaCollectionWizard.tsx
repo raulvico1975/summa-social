@@ -2,14 +2,13 @@
 
 import * as React from 'react';
 import { useRouter } from 'next/navigation';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useTranslations } from '@/i18n';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
 import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query, where, doc, addDoc, writeBatch, serverTimestamp, setDoc } from 'firebase/firestore';
 import { ref, uploadString } from 'firebase/storage';
-import type { Donor, BankAccount, SepaCollectionRun, SepaCollectionItem, SepaSequenceType } from '@/lib/data';
+import type { Donor, BankAccount, SepaCollectionRun, SepaCollectionRunRecord, SepaCollectionItem, SepaSequenceType } from '@/lib/data';
 import { generatePain008Xml, generateMessageId, validateCollectionRun, filterEligibleDonors, determineSequenceType, computeDonorCollectionStatus, type DonorCollectionStatus } from '@/lib/sepa/pain008';
 import { ArrowLeft, ArrowRight, Download, AlertTriangle, CheckCircle2, XCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
@@ -249,7 +248,7 @@ export function SepaCollectionWizard() {
         });
 
         // Build run data for persistence (without items array for Firestore)
-        const runForDb = {
+        const runForDb: SepaCollectionRunRecord = {
           type: 'SEPA_COLLECTION',
           scheme: 'CORE' as const,
           bankAccountId: configData.bankAccountId,
@@ -350,7 +349,7 @@ export function SepaCollectionWizard() {
         title: t.sepaCollection.toasts.exported,
         description: persistFailed
           ? tr('sepaPain008.toasts.exportedButNotSaved', "Fitxer exportat, però no s'ha pogut desar.")
-          : tr('sepaPain008.toasts.exportedDescription', '{count} cobraments · {amount} €')
+          : tr('sepaPain008.toasts.exportedDescription', '{count} cobraments · {amount} € · guardat a Historial')
               .replace('{count}', String(collectionItems.length))
               .replace('{amount}', (totalAmountCents / 100).toFixed(2)),
       });
@@ -371,61 +370,57 @@ export function SepaCollectionWizard() {
   };
 
   const isLoading = isLoadingAccounts || isLoadingDonors;
+  const stepLabels: Record<WizardStep, string> = {
+    config: t.sepaCollection.steps.config,
+    selection: t.sepaCollection.steps.selection,
+    review: t.sepaCollection.steps.review,
+  };
 
   return (
-    <Card className="overflow-hidden border-border/60 shadow-sm">
-      <CardHeader className="space-y-2 px-4 pb-4 sm:px-6 sm:pb-5">
-        <CardTitle className="text-xl font-bold tracking-tight font-headline sm:text-2xl">
-          {t.sepaCollection.title}
-        </CardTitle>
-        <CardDescription className="max-w-3xl text-sm sm:text-base">
-          {t.sepaCollection.description}
-        </CardDescription>
-      </CardHeader>
+    <section className="w-full space-y-3 lg:space-y-4">
+      <div className="rounded-2xl border border-border/60 bg-muted/20 p-2.5 lg:p-3">
+        <div className="flex flex-col gap-2 xl:flex-row xl:items-center xl:justify-between">
+          <div className="min-w-0">
+            <h2 className="text-base font-semibold text-foreground sm:text-lg">
+              {t.sepaCollection.newCollection}
+            </h2>
+          </div>
 
-      <CardContent className="px-4 pb-4 sm:px-6 sm:pb-6">
-        {/* Step indicator */}
-        <div className="mb-6 sm:mb-8">
-          <div className="-mx-1 overflow-x-auto pb-1">
-            <div className="mx-1 flex min-w-max items-start gap-2 sm:justify-center sm:gap-4">
+          <div className="-mx-1 overflow-x-auto">
+            <div className="mx-1 flex min-w-max items-center gap-2">
               {STEPS.map((step, index) => {
                 const isActive = step === currentStep;
                 const isCompleted = index < currentStepIndex;
-                const stepLabels = {
-                  config: t.sepaCollection.steps.config,
-                  selection: t.sepaCollection.steps.selection,
-                  review: t.sepaCollection.steps.review,
-                };
 
                 return (
                   <React.Fragment key={step}>
                     {index > 0 && (
                       <div
                         className={cn(
-                          'mt-4 h-0.5 w-8 shrink-0 transition-colors sm:w-12',
-                          isCompleted ? 'bg-primary' : 'bg-muted'
+                          'h-px w-5 shrink-0 transition-colors sm:w-8',
+                          isCompleted ? 'bg-primary/60' : 'bg-border'
                         )}
                       />
                     )}
-                    <div className="flex w-[76px] shrink-0 flex-col items-center gap-1.5 text-center sm:w-[92px]">
-                      <div
+                    <div
+                      className={cn(
+                        'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1.5 text-sm transition-colors',
+                        isActive ? 'border-primary/40 bg-primary/10 text-foreground' :
+                        isCompleted ? 'border-primary/30 bg-primary/5 text-foreground' :
+                        'border-border bg-background text-muted-foreground'
+                      )}
+                    >
+                      <span
                         className={cn(
-                          'flex h-9 w-9 items-center justify-center rounded-full text-sm font-medium transition-colors sm:h-10 sm:w-10',
+                          'flex h-5 w-5 items-center justify-center rounded-full text-[11px] font-semibold',
                           isActive ? 'bg-primary text-primary-foreground' :
-                          isCompleted ? 'bg-primary/20 text-primary' :
+                          isCompleted ? 'bg-primary/15 text-primary' :
                           'bg-muted text-muted-foreground'
                         )}
                       >
-                        {isCompleted ? <CheckCircle2 className="h-4 w-4" /> : index + 1}
-                      </div>
-                      <span
-                        className={cn(
-                          'text-xs leading-tight',
-                          isActive ? 'text-foreground font-medium' : 'text-muted-foreground'
-                        )}
-                      >
-                        {stepLabels[step]}
+                        {isCompleted ? <CheckCircle2 className="h-3.5 w-3.5" /> : index + 1}
                       </span>
+                      <span className="whitespace-nowrap">{stepLabels[step]}</span>
                     </div>
                   </React.Fragment>
                 );
@@ -433,9 +428,10 @@ export function SepaCollectionWizard() {
             </div>
           </div>
         </div>
+      </div>
 
-        {/* Step content */}
-        <div className="min-h-[320px] sm:min-h-[360px] xl:min-h-[400px]">
+      <div className="rounded-2xl border border-border/60 bg-background/95 p-3.5 shadow-sm sm:p-4 xl:p-5 2xl:p-6">
+        <div className={cn(currentStep === 'config' ? 'min-h-0' : 'min-h-[280px] sm:min-h-[320px] xl:min-h-[360px]')}>
           {currentStep === 'config' && (
             <StepConfig
               bankAccounts={bankAccounts || []}
@@ -469,7 +465,6 @@ export function SepaCollectionWizard() {
           )}
         </div>
 
-        {/* Navigation */}
         <div className="mt-6 flex flex-col-reverse gap-3 border-t pt-4 sm:mt-8 sm:flex-row sm:items-center sm:justify-between">
           <Button variant="outline" onClick={handleBack} className="w-full sm:w-auto">
             <ArrowLeft className="mr-2 h-4 w-4" />
@@ -488,7 +483,7 @@ export function SepaCollectionWizard() {
             </Button>
           )}
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </section>
   );
 }

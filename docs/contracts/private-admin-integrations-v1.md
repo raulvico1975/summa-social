@@ -1,10 +1,12 @@
 # Integracions privades administratives (v1)
 
-Estat actual: **implementat a backend**.
+Estat actual: **CONSOLIDAT**.
 
 La v1 existeix per donar entrada controlada a agents propis com `baruma-admin-agent` o `flores-admin-agent` sense reutilitzar autenticacio d'usuari ni exposar col.leccions sensibles.
 
 ## Abast tancat
+
+La v1 queda **congelada** en aquest abast. No s'hi afegeixen mes scopes, mes rutes ni mes superfícies d'escriptura fins que existeixi un unic cas d'us v2 definit i validat.
 
 Scopes disponibles:
 
@@ -24,6 +26,43 @@ Fora d'abast en aquesta fase:
 - cap escriptura directa a ledger, fiscalitat o remeses
 - cap consola d'administracio d'integracions
 - cap scope extra
+- cap accés directe al ledger
+- cap canvi sobre fiscalitat
+- cap API publica
+- cap `Claude`/`Codex MCP` directe
+- cap endpoint nou "per si de cas"
+- cap refactor global d'API en aquesta fase
+
+## Validacio real en produccio (2026-04-16)
+
+Validacio feta contra la instancia productiva desplegada, amb tokens temporals separats per org i sense reutilitzar autenticacio d'usuari.
+
+Casos validats:
+
+- `baruma-admin-agent`: lectura real de `5` contactes, lectura real de `5` moviments d'abril 2026, upload real de `1` factura a `pendingDocuments`, prova de `403 ORG_NOT_ALLOWED` contra una altra org i estrès controlat de `10` uploads amb `3` reintents sobre la mateixa `Idempotency-Key`
+- `flores-admin-agent`: lectura real de `5` contactes, lectura real de `4` moviments d'abril 2026 (coincidents amb el volum real existent a l'org en aquell periode), upload real de `1` factura a `pendingDocuments` i prova de `403 ORG_NOT_ALLOWED` contra una altra org
+
+Latencies orientatives observades:
+
+- cerca de contactes: aproximadament `1.5s`
+- cerca de moviments: aproximadament `0.5s`
+- upload nou a `pendingDocuments`: aproximadament `1.7s` a `2.0s`
+- reintent idempotent: aproximadament `0.5s` a `0.65s`
+
+Resultat funcional:
+
+- idempotencia validada en reintents: mateixa `Idempotency-Key` + mateix payload => mateix `pendingDocument.id`
+- aïllament per organitzacio validat: cap dada creuada i `403 ORG_NOT_ALLOWED` correcte
+- Storage coherent durant l'estrès: `1` objecte per `pendingDocument` creat, sense creixement indegut en reintents
+- auditoria coherent a `integrationAuditLogs` sense payloads sensibles complets
+
+Neteja posterior a la validacio:
+
+- tokens temporals de validacio revocats
+- `pendingDocuments` de smoke eliminats
+- claus d'idempotencia de smoke eliminades
+- artefactes temporals de Storage eliminats
+- auditoria conservada com a rastre real d'execucio
 
 ## On viuen els tokens
 
@@ -265,6 +304,15 @@ Resposta:
 - `400 INVALID_DATE`: data invalida
 - `400 MISSING_IDEMPOTENCY_KEY`: falta `Idempotency-Key`
 - `409 IDEMPOTENCY_CONFLICT`: mateixa clau externa amb payload diferent
+
+## v2 candidates
+
+Bloc de possibles extensions futures. Aquest apartat **no** obre contracte nou ni autoritza implementacio automatica.
+
+- `pending_documents.read`
+- `contacts.upsert` molt restringit i acotat
+- `documents.link-to-transaction` nomes si encaixa amb el flux real de Summa
+- `transactions.write` en brut: explicitament fora d'abast
 
 ## Notes de seguretat
 

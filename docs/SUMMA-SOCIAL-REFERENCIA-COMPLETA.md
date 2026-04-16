@@ -1582,18 +1582,28 @@ Quan l'usuari selecciona una periodicitat al Pas 1, el sistema pre-marca automà
 **Col·lecció `sepaCollectionRuns`:**
 
 Cada execució del wizard crea un document amb:
-- `status`: draft | exported | sent | processed
+- `type = SEPA_COLLECTION`
 - `scheme`: CORE | B2B
-- `bankAccountId`, `creditorId`, `creditorName`, `creditorIban`
-- `collectionDate`, `totalAmount`, `itemCount`
-- `items[]`: array amb detall de cada cobrament (amb `needsReview` si forçat)
-- `selectionCriteria`: periodicitat i cerca aplicats
+- `bankAccountId`, `collectionDate`, `createdAt`, `createdBy`, `exportedAt`
+- `messageId` i `sepaFile.storagePath|filename|messageId`
+- `itemCount`, `totalCents`
+- `included[]`: contactId, amountCents, UMR i seqüència
+- `excluded[]`: contactId i motiu d'exclusió
+
+**Historial d'XML generats:**
+
+- La mateixa ruta `Donants → Remeses de cobrament` incorpora una pestanya **Historial**
+- L'historial llegeix `sepaCollectionRuns`, mostra el resum de cada execució i permet **tornar a descarregar el XML** si el `storagePath` continua disponible
+- És un repositori intern de traçabilitat; no envia res al banc ni crea moviments comptables
 
 **Fitxers:**
 - `src/components/sepa-collection/SepaCollectionWizard.tsx` — Wizard principal
+- `src/components/sepa-collection/SepaCollectionRunsHistory.tsx` — Vista d'historial de remeses
+- `src/components/sepa-collection/SepaCollectionWorkspace.tsx` — Pestanyes Nova remesa / Historial
 - `src/components/sepa-collection/StepConfig.tsx` — Pas configuració
 - `src/components/sepa-collection/StepSelection.tsx` — Pas selecció
 - `src/components/sepa-collection/StepReview.tsx` — Pas revisió
+- `src/lib/sepa/pain008/run-history.ts` — Resum i normalització de runs persistits
 - `src/lib/sepa/pain008/generate-pain008.ts` — Generador XML
 - `src/lib/sepa/pain008/donor-collection-status.ts` — Lògica isDueForCollection
 - `src/lib/sepa/pain008/sequence-type.ts` — Lògica SeqTp (FRST/RCUR/OOFF/FNAL)

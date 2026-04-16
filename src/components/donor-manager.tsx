@@ -1219,7 +1219,7 @@ export function DonorManager() {
                 >
                   <Link href={`/${orgSlug}/dashboard/donants/remeses-cobrament`}>
                     <CreditCard className="mr-2 h-4 w-4" />
-                    <span className="sm:inline">{t.sepaCollection?.newCollection ?? 'Remesa SEPA'}</span>
+                    <span className="sm:inline">{tr('sepaPain008.workspace.entryLabel', 'Gestió de remeses')}</span>
                   </Link>
                 </Button>
                 <Button
