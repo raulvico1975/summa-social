@@ -4,6 +4,15 @@ Registre cronologic de desplegaments a produccio.
 
 ## Notes operatives sense deploy
 
+### 2026-04-16 — Validacio real de la private integration API v1 a produccio
+
+- Validacio executada sobre la instancia productiva ja desplegada, sense deploy addicional.
+- `baruma-admin-agent`: lectura real de contactes, lectura real de moviments d'abril, upload real de factura a `pendingDocuments`, prova de `403 ORG_NOT_ALLOWED` i estres controlat de `10` uploads + `3` reintents idempotents.
+- `flores-admin-agent`: lectura real de contactes, lectura real de moviments d'abril disponibles a l'org, upload real de factura a `pendingDocuments` i prova de `403 ORG_NOT_ALLOWED`.
+- Latencies orientatives observades: contactes `~1.5s`, moviments `~0.5s`, upload nou `~1.7s-2.0s`, reintent idempotent `~0.5s-0.65s`.
+- Resultat operatiu: sense dades creuades entre orgs, sense duplicats en reintents, `Storage` coherent i auditoria completa a `integrationAuditLogs` sense payloads sensibles complets.
+- Tancament de la prova: tokens temporals revocats, artefactes de smoke eliminats i auditoria conservada.
+
 ### 2026-04-14 — Govern de deploy App Hosting verificat
 
 - Abans d'aquest canvi, `npm run publica` podia donar verd després del `push` a `prod` sense demostrar canvi real de revisió backend.

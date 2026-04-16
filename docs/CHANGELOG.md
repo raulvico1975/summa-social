@@ -10,6 +10,13 @@ Aquest fitxer ja no pretén duplicar el document mestre.
 
 ## Resum dels canvis recents
 
+### 2026-04-16
+
+- API/integracions: la private integration API v1 queda consolidada i congelada amb abast tancat a `contacts.read`, `transactions.read` i `pending_documents.write`
+- API/integracions: el contracte operatiu de v1 queda limitat a `GET /api/integrations/private/contacts/search`, `GET /api/integrations/private/transactions/search` i `POST /api/integrations/private/pending-documents/upload`, sense mes escriptures ni acces al ledger o a fiscalitat
+- operativa: validacio real feta en produccio amb `baruma-admin-agent` i `flores-admin-agent`, amb idempotencia i aillament per org validats i latencies orientatives dins d'un rang operable
+- operativa: tokens temporals de validacio revocats i artefactes de smoke eliminats despres de la prova
+
 ### 2026-04-14
 
 - codi intern: nou panell d'`/admin` integrant mòduls de Growth i Editorial (Control Tower, cues de leads, drafts de blog i hub de contingut), amb noves capes de dades i hooks de suport
