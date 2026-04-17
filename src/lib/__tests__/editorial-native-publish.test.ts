@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 
-import { buildPublishInputFromNativePost } from '@/lib/editorial-native/publish'
+import { buildPublishInputFromNativePost, prepareNativeBlogPostForPublish } from '@/lib/editorial-native/publish'
 import type { NativeBlogPost } from '@/lib/editorial-native/types'
 
 function buildPost(): NativeBlogPost {
@@ -76,3 +76,36 @@ test('buildPublishInputFromNativePost maps the native draft to the publish contr
   assert.equal(payload.translations?.es?.contentHtml?.includes('<h1>'), true)
 })
 
+test('prepareNativeBlogPostForPublish promotes localhost cover URLs before firestore publish', async () => {
+  const post = buildPost()
+  post.draft.coverImageUrl = 'http://localhost:9002/blog-covers/com-revisar-una-remesa.png'
+  post.draft.coverImageAlt = 'Coberta local'
+
+  const prepared = await prepareNativeBlogPostForPublish(post, {
+    isLocalStorageEnabled: () => false,
+    promoteLocalCoverImage: async ({ coverImageUrl }) => {
+      assert.equal(coverImageUrl, 'http://localhost:9002/blog-covers/com-revisar-una-remesa.png')
+      return 'https://firebasestorage.googleapis.com/v0/b/summa-social.firebasestorage.app/o/blog%2Fcovers%2Fcom-revisar-una-remesa.png?alt=media&token=test'
+    },
+  })
+
+  assert.equal(
+    prepared.draft.coverImageUrl,
+    'https://firebasestorage.googleapis.com/v0/b/summa-social.firebasestorage.app/o/blog%2Fcovers%2Fcom-revisar-una-remesa.png?alt=media&token=test'
+  )
+  assert.equal(prepared.draft.coverImageAlt, 'Coberta local')
+})
+
+test('prepareNativeBlogPostForPublish keeps existing public cover URLs untouched', async () => {
+  const post = buildPost()
+  post.draft.coverImageUrl = 'https://example.com/covers/remesa.png'
+
+  const prepared = await prepareNativeBlogPostForPublish(post, {
+    isLocalStorageEnabled: () => false,
+    promoteLocalCoverImage: async () => {
+      throw new Error('should not be called')
+    },
+  })
+
+  assert.equal(prepared.draft.coverImageUrl, 'https://example.com/covers/remesa.png')
+})
