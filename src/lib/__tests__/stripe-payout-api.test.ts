@@ -109,7 +109,7 @@ test('fetchStripePayout normalizes payout data and assertStripePayoutPaid blocks
   );
 });
 
-test('fetchStripePayoutPayments paginates, filters non-charge rows and maps amounts', async () => {
+test('fetchStripePayoutPayments paginates, keeps charge-like payment rows and maps amounts', async () => {
   const responses = [
     {
       object: 'list',
@@ -117,13 +117,14 @@ test('fetchStripePayoutPayments paginates, filters non-charge rows and maps amou
       data: [
         {
           id: 'txn_1',
-          type: 'charge',
+          type: 'payment',
           fee: 125,
           net: 9875,
           currency: 'eur',
+          reporting_category: 'charge',
           source: {
             object: 'charge',
-            id: 'ch_1',
+            id: 'py_1',
             amount: 10000,
             currency: 'eur',
             created: 1713273600,
@@ -186,7 +187,7 @@ test('fetchStripePayoutPayments paginates, filters non-charge rows and maps amou
 
   assert.equal(payments.length, 2);
   assert.deepEqual(payments[0], {
-    stripePaymentId: 'ch_1',
+    stripePaymentId: 'py_1',
     amountGross: 100,
     fee: 1.25,
     net: 98.75,

@@ -9,6 +9,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -304,6 +305,10 @@ export function StripeImputationModal({
   }), [bankTransaction.amount, editableLines]);
 
   const requiresDifferenceConfirmation = Math.abs(summary.difference) > 0;
+  const pendingAssignmentCount = React.useMemo(
+    () => editableLines.filter((line) => !line.contactId).length,
+    [editableLines]
+  );
   const canConfirm =
     editableLines.length > 0
     && !summary.hasInvalidLines
@@ -894,7 +899,7 @@ export function StripeImputationModal({
           <DialogHeader className="shrink-0 border-b bg-background px-4 py-4 pr-10 sm:px-6">
             <DialogTitle>{tr('dialogs.stripeImputation.title', 'Imputar Stripe')}</DialogTitle>
             <DialogDescription className="break-words leading-relaxed">
-              {tr('dialogs.stripeImputation.descriptionStripeImport', 'Pots carregar un CSV de Stripe, importar un payout des de Stripe o completar la imputació manualment. La taula final sempre és editable abans de confirmar.')}
+              {tr('dialogs.stripeImputation.descriptionStripeImport', 'Aquest moviment bancari correspon a un payout Stripe. Summa en pot carregar el detall directament des de Stripe i deixar-te la imputació preparada. Usa el CSV només si la sync no està disponible.')}
             </DialogDescription>
           </DialogHeader>
 
@@ -909,6 +914,14 @@ export function StripeImputationModal({
               </Alert>
 
               <div className="flex flex-wrap items-center gap-3">
+                <Button
+                  type="button"
+                  onClick={() => { void handleToggleStripeImport(); }}
+                  disabled={isStripeImporting || isStripePayoutsLoading}
+                >
+                  {isStripeImporting || isStripePayoutsLoading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
+                  {tr('dialogs.stripeImputation.importFromStripe', 'Importar des de Stripe')}
+                </Button>
                 <Input
                   ref={inputRef}
                   type="file"
@@ -919,15 +932,6 @@ export function StripeImputationModal({
                 <Button type="button" variant="outline" onClick={() => inputRef.current?.click()} disabled={isParsing}>
                   {isParsing ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Upload className="h-4 w-4 mr-2" />}
                   {tr('dialogs.stripeImputation.uploadCsv', 'Carregar CSV')}
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => { void handleToggleStripeImport(); }}
-                  disabled={isStripeImporting || isStripePayoutsLoading}
-                >
-                  {isStripeImporting || isStripePayoutsLoading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
-                  {tr('dialogs.stripeImputation.importFromStripe', 'Importar des de Stripe')}
                 </Button>
                 <Button type="button" variant="outline" onClick={handleAddManualLine}>
                   <Plus className="h-4 w-4 mr-2" />
@@ -948,6 +952,9 @@ export function StripeImputationModal({
                   </Button>
                 )}
               </div>
+              <p className="text-sm text-muted-foreground">
+                {tr('dialogs.stripeImputation.primaryFlowHint', 'Comença per Stripe Sync. Si no pots carregar el payout des de Stripe, fes servir el CSV com a via alternativa.')}
+              </p>
 
               {isStripeImportVisible && (
                 <div className="flex flex-col gap-3 rounded-md border bg-muted/30 p-4 sm:flex-row sm:items-end">
@@ -1049,7 +1056,7 @@ export function StripeImputationModal({
               <div className="space-y-3 lg:hidden">
                 {editableLines.length === 0 ? (
                   <div className="rounded-md border px-4 py-8 text-center text-sm text-muted-foreground">
-                    {tr('dialogs.stripeImputation.emptyStripeImport', 'Encara no hi ha línies d\'imputació. Pots començar manualment, carregar un CSV o importar un payout des de Stripe.')}
+                    {tr('dialogs.stripeImputation.emptyStripeImport', 'Encara no hi ha línies d\'imputació. Comença important el payout des de Stripe. Usa el CSV només si la sync no està disponible.')}
                   </div>
                 ) : (
                   editableLines.map((line) => (
@@ -1097,6 +1104,16 @@ export function StripeImputationModal({
                           <Label className="text-xs uppercase tracking-wide text-muted-foreground">
                             {tr('dialogs.stripeImputation.donor', 'Donant')}
                           </Label>
+                          {!line.contactId && (
+                            <div className="space-y-1">
+                              <Badge variant="outline" className="border-amber-300 bg-amber-50 text-amber-800">
+                                {tr('dialogs.stripeImputation.pendingAssignmentBadge', 'Pendent d\'assignació')}
+                              </Badge>
+                              <p className="text-xs text-muted-foreground">
+                                {tr('dialogs.stripeImputation.pendingAssignmentDescription', 'Assigna manualment el donant o soci per poder confirmar aquesta línia.')}
+                              </p>
+                            </div>
+                          )}
                           <DonorSearchCombobox
                             donors={sortedDonors}
                             value={line.contactId}
@@ -1140,7 +1157,7 @@ export function StripeImputationModal({
                     {editableLines.length === 0 ? (
                       <TableRow>
                         <TableCell colSpan={5} className="py-8 text-center text-sm text-muted-foreground">
-                          {tr('dialogs.stripeImputation.emptyStripeImport', 'Encara no hi ha línies d\'imputació. Pots començar manualment, carregar un CSV o importar un payout des de Stripe.')}
+                          {tr('dialogs.stripeImputation.emptyStripeImport', 'Encara no hi ha línies d\'imputació. Comença important el payout des de Stripe. Usa el CSV només si la sync no està disponible.')}
                         </TableCell>
                       </TableRow>
                     ) : (
@@ -1171,6 +1188,16 @@ export function StripeImputationModal({
                             />
                           </TableCell>
                           <TableCell className="min-w-[320px] align-top">
+                            {!line.contactId && (
+                              <div className="mb-2 space-y-1">
+                                <Badge variant="outline" className="border-amber-300 bg-amber-50 text-amber-800">
+                                  {tr('dialogs.stripeImputation.pendingAssignmentBadge', 'Pendent d\'assignació')}
+                                </Badge>
+                                <p className="text-xs text-muted-foreground">
+                                  {tr('dialogs.stripeImputation.pendingAssignmentDescription', 'Assigna manualment el donant o soci per poder confirmar aquesta línia.')}
+                                </p>
+                              </div>
+                            )}
                             <DonorSearchCombobox
                               donors={sortedDonors}
                               value={line.contactId}
@@ -1242,7 +1269,9 @@ export function StripeImputationModal({
                   <AlertTriangle className="h-4 w-4" />
                   <AlertTitle>{tr('dialogs.stripeImputation.missingDataTitle', 'Falten dades per completar')}</AlertTitle>
                   <AlertDescription>
-                    {tr('dialogs.stripeImputation.missingDataDescription', 'Cada línia ha de tenir donant i un import brut vàlid abans de confirmar.')}
+                    {pendingAssignmentCount > 0
+                      ? tr('dialogs.stripeImputation.pendingAssignmentsGlobal', 'Hi ha línies pendents d\'assignació manual. Cada línia ha de tenir donant i un import brut vàlid abans de confirmar.')
+                      : tr('dialogs.stripeImputation.missingDataDescription', 'Cada línia ha de tenir donant i un import brut vàlid abans de confirmar.')}
                   </AlertDescription>
                 </Alert>
               )}

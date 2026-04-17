@@ -15,6 +15,7 @@ interface StripeBalanceTransaction {
   fee: number;
   net: number;
   currency?: string | null;
+  reporting_category?: string | null;
   source?: StripeCharge | string | null;
 }
 
@@ -172,7 +173,15 @@ function normalizeStripePayout(payout: StripePayout): StripePayoutDetails | null
 function mapBalanceTransactionToPayment(
   balanceTransaction: StripeBalanceTransaction
 ): StripePayoutPayment | null {
-  if (balanceTransaction.type !== 'charge' || !isStripeCharge(balanceTransaction.source)) {
+  const type = balanceTransaction.type.trim().toLowerCase();
+  const reportingCategory = balanceTransaction.reporting_category?.trim().toLowerCase() ?? null;
+
+  const isChargeLikeBalanceTransaction =
+    type === 'charge' ||
+    type === 'payment' ||
+    reportingCategory === 'charge';
+
+  if (!isChargeLikeBalanceTransaction || !isStripeCharge(balanceTransaction.source)) {
     return null;
   }
 
