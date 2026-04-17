@@ -3,7 +3,11 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getAdminDb, isSuperAdmin, verifyIdToken } from '@/lib/api/admin-sdk'
 import { generateNativeBlogCover } from '@/lib/editorial-native/cover'
 import { generateNativeBlogDraft, translateNativeBlogDraftToEs } from '@/lib/editorial-native/generator'
-import { buildPublishInputFromNativePost, publishNativeBlogPost } from '@/lib/editorial-native/publish'
+import {
+  buildPublishInputFromNativePost,
+  prepareNativeBlogPostForPublish,
+  publishNativeBlogPost,
+} from '@/lib/editorial-native/publish'
 import { renderEditorialMarkdownToHtml, slugifyDraftTitle } from '@/lib/editorial-native/markdown'
 import { unpublishNativeBlogPost } from '@/lib/editorial-native/unpublish'
 import {
@@ -408,6 +412,17 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
         }
       }
       await saveWithRetry(db, publishable)
+    }
+
+    const preparedForPublish = await prepareNativeBlogPostForPublish(publishable)
+    if (preparedForPublish.draft.coverImageUrl !== publishable.draft.coverImageUrl) {
+      publishable = {
+        ...preparedForPublish,
+        updatedAt: new Date().toISOString(),
+      }
+      await saveWithRetry(db, publishable)
+    } else {
+      publishable = preparedForPublish
     }
 
     // Validem el contracte abans de publicar per donar error més clar al panell.
