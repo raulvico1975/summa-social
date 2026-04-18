@@ -1,5 +1,7 @@
 import { randomUUID } from 'node:crypto'
-import { mkdir, writeFile } from 'node:fs/promises'
+import { existsSync, readFileSync } from 'node:fs'
+import { mkdir, readFile, rm, writeFile } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { getStorage } from 'firebase-admin/storage'
 
@@ -8,10 +10,33 @@ import { resolveGoogleGenAiApiKey } from '@/ai/config'
 import { getAdminApp } from '@/lib/api/admin-sdk'
 import { buildBlogUrl } from '@/lib/blog/firestore'
 import { isLocalBlogPublishStorageEnabled } from '@/lib/blog/publish-local-store'
+import { resolveNativeBlogCoverPlan } from '@/lib/editorial-native/cover-plan'
 import type { NativeBlogPost } from '@/lib/editorial-native/types'
 
 const DEFAULT_IMAGE_MODEL = 'gemini-3-pro-image-preview'
 const GEMINI_INTERACTIONS_URL = 'https://generativelanguage.googleapis.com/v1beta/interactions'
+const DEFAULT_IMAGE_ASPECT_RATIO = '16:9'
+const DEFAULT_IMAGE_SIZE = '2K'
+const DEFAULT_IMAGE_TIMEOUT_MS = 90_000
+const DEFAULT_PROMPT_BASE_PATH = path.join(process.cwd(), 'config', 'blog-image-prompt-base.txt')
+const DEFAULT_NANO_BANANA_WRAPPER = path.join(process.cwd(), 'scripts', 'editorial', 'generate_cover.py')
+const SUPPORTED_IMAGE_ASPECT_RATIOS = new Set([
+  '1:1',
+  '1:4',
+  '4:1',
+  '1:8',
+  '8:1',
+  '2:3',
+  '3:2',
+  '3:4',
+  '4:3',
+  '4:5',
+  '5:4',
+  '9:16',
+  '16:9',
+  '21:9',
+])
+const SUPPORTED_IMAGE_SIZES = new Set(['512', '1K', '2K', '4K'])
 
 type GeneratedImageAsset = {
   base64: string
@@ -24,8 +49,36 @@ type StoredCoverAsset = {
   storage: 'local' | 'firebase'
 }
 
+export type NativeBlogCoverProvider = 'nano_banana' | 'gemini' | 'fallback'
+
 function getImageModel(): string {
   return process.env.GOOGLE_GENAI_IMAGE_MODEL?.trim() || DEFAULT_IMAGE_MODEL
+}
+
+function getPromptBasePath(env: NodeJS.ProcessEnv = process.env): string {
+  return env.BLOG_IMAGE_PROMPT_BASE_PATH?.trim() || DEFAULT_PROMPT_BASE_PATH
+}
+
+function getNanoBananaWrapperPath(env: NodeJS.ProcessEnv = process.env): string {
+  return env.BLOG_IMAGE_NANO_BANANA_WRAPPER?.trim() || DEFAULT_NANO_BANANA_WRAPPER
+}
+
+function getImageTimeoutMs(env: NodeJS.ProcessEnv = process.env): number {
+  const raw = Number(env.BLOG_IMAGE_TIMEOUT_MS ?? DEFAULT_IMAGE_TIMEOUT_MS)
+  if (!Number.isFinite(raw) || raw <= 0) {
+    return DEFAULT_IMAGE_TIMEOUT_MS
+  }
+  return raw
+}
+
+function getImageAspectRatio(env: NodeJS.ProcessEnv = process.env): string {
+  const value = env.BLOG_IMAGE_ASPECT_RATIO?.trim()
+  return value && SUPPORTED_IMAGE_ASPECT_RATIOS.has(value) ? value : DEFAULT_IMAGE_ASPECT_RATIO
+}
+
+function getImageSize(env: NodeJS.ProcessEnv = process.env): string {
+  const value = env.BLOG_IMAGE_SIZE?.trim().toUpperCase()
+  return value && SUPPORTED_IMAGE_SIZES.has(value) ? value : DEFAULT_IMAGE_SIZE
 }
 
 function getUploadSecret(): string {
@@ -48,11 +101,164 @@ function asString(value: unknown): string | null {
   return typeof value === 'string' && value.trim() ? value.trim() : null
 }
 
-function deriveImagePrompt(post: NativeBlogPost): string {
-  return (
-    post.draft.imagePrompt?.trim() ||
-    `Editorial illustration, sober nonprofit operations scene, ${post.draft.title || post.idea.prompt || 'Summa Social blog article'}`
-  )
+function stripMarkdown(markdown: string): string {
+  return markdown
+    .replace(/```[\s\S]*?```/g, ' ')
+    .replace(/`[^`]*`/g, ' ')
+    .replace(/!\[[^\]]*\]\([^)]*\)/g, ' ')
+    .replace(/\[[^\]]*\]\([^)]*\)/g, ' ')
+    .replace(/[#>*_~-]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+function truncate(value: string, maxLength: number): string {
+  if (value.length <= maxLength) {
+    return value
+  }
+  return `${value.slice(0, Math.max(0, maxLength - 1)).trimEnd()}...`
+}
+
+function buildReferenceCompositionGuidance(): string {
+  return [
+    'La composicion debe parecer parte de la misma biblioteca visual que otras piezas previas de Summa Social.',
+    'Prioriza una estructura horizontal muy limpia, con 2 a 4 grupos de elementos claramente separados.',
+    'Conecta los grupos con una sola linea fluida, organica y continua, como si guiara el proceso de izquierda a derecha.',
+    'Usa pequeños acentos de azul suave solo para resaltar nodos clave, fondos minimos o puntos de validacion.',
+    'Apoyate en documentos, carpetas, recibos, certificados, movimientos o paneles abstractos, no en interfaces reales.',
+    'Mucho aire en el fondo, pero sin que la imagen parezca vacia o inacabada.',
+  ].join(' ')
+}
+
+function defaultPromptBase(): string {
+  return `Rol
+
+Ets el dissenyador visual oficial de Summa Social, una aplicacio de gestio economica per a ONGs i entitats socials.
+
+La teva tasca es generar il·lustracions coherents entre si, que formin una biblioteca visual estable per a:
+
+- web public
+- xarxes socials
+- materials de marca
+- ocasionalment, producte
+
+No estas creant imatges aillades, sino peces d'un llenguatge visual continu.
+
+Estil visual obligatori
+
+- Minimalist hand-drawn doodle line art
+- Trac fi, continu, organic i lleugerament imperfecte, amb aspecte dibuixat a ma
+- Blanc i negre com a base
+- Nomes 1 o 2 accents molt subtils en blau suau
+- Fons blanc o transparent
+- Sense gradients
+- Sense ombres
+- Sense textures
+- Sense efectes tech
+- Sense estetica SaaS generica
+- No infantil, no caricaturesc
+- To visual: professional, tranquil, madur, de criteri
+
+Contingut de les imatges
+
+- No mostris pantalles, interficies ni botons reals
+- Representa processos, maneres de treballar, ordre al llarg del temps, criteri, calma, preparacio i continuitat
+- Si hi ha persones, que siguin reals i treballant amb informacio, sense detalls facials
+- Les imatges han de funcionar soles, sense necessitat d'explicacio llarga
+
+Text dins la imatge
+
+- Evita text sempre que sigui possible
+- Si hi ha text, ha de ser molt breu
+- El text, si n'hi ha, ha d'estar en espanol
+- Tipografia manuscrita o neutra
+- Mai decoratiu
+
+Nom del fitxer
+
+- Has de proposar explicitament un nom final de fitxer
+- Prefix segons us: web_, social_, brand_, app_
+- Format: [prefix]_[idea_clara_en_castella_sense_accents].png
+- No utilitzis noms generics com image1.png o illustration.png`
+}
+
+function loadPromptBase(env: NodeJS.ProcessEnv = process.env): string {
+  try {
+    const raw = readFileSync(getPromptBasePath(env), 'utf8').trim()
+    return raw || defaultPromptBase()
+  } catch {
+    return defaultPromptBase()
+  }
+}
+
+export function buildNativeBlogImagePrompt(
+  post: NativeBlogPost,
+  env: NodeJS.ProcessEnv = process.env,
+): string {
+  const supportMarkdown = post.draft.contentMarkdown || post.idea.prompt || ''
+  const summary = truncate(stripMarkdown(supportMarkdown), 800)
+  const aspectRatio = getImageAspectRatio(env)
+  const imageSize = getImageSize(env)
+  const plan = resolveNativeBlogCoverPlan(post, env)
+  const promptBase = loadPromptBase(env)
+
+  return `${promptBase}
+
+Composicio especifica d'aquesta generacio
+- Format exacte ${aspectRatio}. El marc ha de ser clarament panoramic.
+- Nom proposat del fitxer final: ${plan.filename}
+
+Direccio d'art
+- ${plan.sceneDirection}
+- ${buildReferenceCompositionGuidance()}
+- Dona profunditat visual amb primer terme, terme mig i suport de fons si ajuda a llegir millor l'escena.
+- Evita qualsevol sensacio de clipart, infografia pobra o visual improvisat.
+- El resultat ha de semblar una portada premium, reutilitzable i estable dins la biblioteca visual de Summa.
+
+Context del post
+- Titol: ${post.draft.title || post.idea.prompt}
+- Categoria: ${post.draft.category || 'criteri-operatiu'}
+- Resum: ${post.draft.excerpt || post.idea.problem || ''}
+- Contingut de suport: ${summary}
+
+Sortida
+- Retorna nomes una imatge final llesta per a portada de blog
+- Format final desitjat: ${aspectRatio}
+- Resolucio objectiu: ${imageSize}
+- Evita text sempre que puguis; si en fas servir, que siguin 2 o 4 etiquetes molt breus en espanol
+- Cap watermark`
+}
+
+function canUseNanoBanana(env: NodeJS.ProcessEnv = process.env): boolean {
+  return existsSync(getNanoBananaWrapperPath(env))
+}
+
+export function resolveNativeBlogCoverProviders(
+  env: NodeJS.ProcessEnv = process.env,
+): NativeBlogCoverProvider[] {
+  const providers: NativeBlogCoverProvider[] = []
+
+  if (canUseNanoBanana(env)) {
+    providers.push('nano_banana')
+  }
+
+  if (resolveGoogleGenAiApiKey(env)) {
+    providers.push('gemini')
+  }
+
+  providers.push('fallback')
+  return providers
+}
+
+export function resolveNativeBlogImageReferences(
+  post: NativeBlogPost,
+  env: NodeJS.ProcessEnv = process.env,
+): string[] {
+  return resolveNativeBlogCoverPlan(post, env).referencePaths
+}
+
+function deriveImagePrompt(post: NativeBlogPost, env: NodeJS.ProcessEnv = process.env): string {
+  return post.draft.imagePrompt?.trim() || buildNativeBlogImagePrompt(post, env)
 }
 
 function deriveCoverAlt(post: NativeBlogPost): string {
@@ -167,6 +373,57 @@ async function saveFallbackSvgCover(post: NativeBlogPost): Promise<StoredCoverAs
   return saveSvgCoverFirebase(slug, svg)
 }
 
+async function generateImageViaNanoBanana(
+  post: NativeBlogPost,
+  env: NodeJS.ProcessEnv = process.env,
+): Promise<GeneratedImageAsset | null> {
+  if (!canUseNanoBanana(env)) {
+    return null
+  }
+
+  const { execFile } = await import('node:child_process')
+  const { promisify } = await import('node:util')
+  const execFileAsync = promisify(execFile)
+  const slug = (post.draft.slug || post.id).slice(0, 40)
+  const promptPath = path.join(tmpdir(), `blog-cover-prompt-${slug}-${Date.now()}.txt`)
+  const outPath = path.join(tmpdir(), `blog-cover-${slug}-${Date.now()}.png`)
+  const apiKey = resolveGoogleGenAiApiKey(env)
+  const referenceImages = resolveNativeBlogImageReferences(post, env)
+
+  try {
+    await writeFile(promptPath, deriveImagePrompt(post, env), 'utf8')
+
+    await execFileAsync('python3', [
+      getNanoBananaWrapperPath(env),
+      '--prompt-file',
+      promptPath,
+      '--filename',
+      outPath,
+      '--aspect-ratio',
+      getImageAspectRatio(env),
+      '--resolution',
+      getImageSize(env),
+      ...(apiKey ? ['--api-key', apiKey] : []),
+      ...referenceImages.flatMap((referenceImage) => ['--input-image', referenceImage]),
+    ], {
+      timeout: getImageTimeoutMs(env),
+      env: { ...process.env, ...env },
+      maxBuffer: 10 * 1024 * 1024,
+    })
+
+    const data = await readFile(outPath)
+    return {
+      base64: data.toString('base64'),
+      mimeType: 'image/png',
+    }
+  } catch {
+    return null
+  } finally {
+    await rm(promptPath, { force: true }).catch(() => {})
+    await rm(outPath, { force: true }).catch(() => {})
+  }
+}
+
 function extractImageFromOutputs(outputs: unknown): GeneratedImageAsset | null {
   if (!Array.isArray(outputs)) return null
 
@@ -238,25 +495,16 @@ function extractGeneratedImage(payload: unknown): GeneratedImageAsset {
   throw new Error("La resposta del model d'imatge no inclou cap imatge.")
 }
 
-export async function generateNativeBlogCover(post: NativeBlogPost): Promise<{
-  coverImageUrl: string
-  path: string
-  storage: 'local' | 'firebase'
-  coverImageAlt: string
-  kind: 'generated' | 'fallback'
-}> {
-  const apiKey = resolveGoogleGenAiApiKey()
+async function generateImageViaGemini(
+  post: NativeBlogPost,
+  env: NodeJS.ProcessEnv = process.env,
+): Promise<GeneratedImageAsset | null> {
+  const apiKey = resolveGoogleGenAiApiKey(env)
   if (!apiKey) {
-    const fallback = await saveFallbackSvgCover(post)
-    return {
-      ...fallback,
-      coverImageAlt: deriveCoverAlt(post),
-      kind: 'fallback',
-    }
+    return null
   }
 
   try {
-    const prompt = deriveImagePrompt(post)
     const response = await fetch(GEMINI_INTERACTIONS_URL, {
       method: 'POST',
       headers: {
@@ -265,11 +513,11 @@ export async function generateNativeBlogCover(post: NativeBlogPost): Promise<{
       },
       body: JSON.stringify({
         model: getImageModel(),
-        input: prompt,
+        input: deriveImagePrompt(post, env),
         response_modalities: ['IMAGE'],
         generation_config: {
           image_config: {
-            aspect_ratio: '16:9',
+            aspect_ratio: getImageAspectRatio(env),
           },
         },
       }),
@@ -288,37 +536,77 @@ export async function generateNativeBlogCover(post: NativeBlogPost): Promise<{
       throw new Error(detail || "El motor d'imatge ha fallat.")
     }
 
-    const image = extractGeneratedImage(raw)
-    const uploadSecret = getUploadSecret()
-    const uploadResponse = await handleBlogCoverUpload({
-      headers: new Headers({
-        Authorization: `Bearer ${uploadSecret}`,
-      }) as unknown as Request['headers'],
-      json: async () => ({
-        slug: post.draft.slug || post.id,
-        imageBase64: image.base64,
-        mimeType: image.mimeType,
-      }),
-    } as never)
-
-    const uploadBody = (await uploadResponse.json()) as UploadBlogCoverResponse
-    if (!uploadResponse.ok || !uploadBody.success) {
-      throw new Error(uploadBody.success ? "No s'ha pogut pujar la portada generada." : uploadBody.error)
-    }
-
-    return {
-      coverImageUrl: uploadBody.coverImageUrl,
-      path: uploadBody.path,
-      storage: uploadBody.storage,
-      coverImageAlt: deriveCoverAlt(post),
-      kind: 'generated',
-    }
+    return extractGeneratedImage(raw)
   } catch {
-    const fallback = await saveFallbackSvgCover(post)
-    return {
-      ...fallback,
-      coverImageAlt: deriveCoverAlt(post),
-      kind: 'fallback',
+    return null
+  }
+}
+
+async function uploadGeneratedCover(
+  post: NativeBlogPost,
+  image: GeneratedImageAsset,
+): Promise<StoredCoverAsset> {
+  const uploadSecret = getUploadSecret()
+  const uploadResponse = await handleBlogCoverUpload({
+    headers: new Headers({
+      Authorization: `Bearer ${uploadSecret}`,
+    }) as unknown as Request['headers'],
+    json: async () => ({
+      slug: post.draft.slug || post.id,
+      imageBase64: image.base64,
+      mimeType: image.mimeType,
+    }),
+  } as never)
+
+  const uploadBody = (await uploadResponse.json()) as UploadBlogCoverResponse
+  if (!uploadResponse.ok || !uploadBody.success) {
+    throw new Error(uploadBody.success ? "No s'ha pogut pujar la portada generada." : uploadBody.error)
+  }
+
+  return {
+    coverImageUrl: uploadBody.coverImageUrl,
+    path: uploadBody.path,
+    storage: uploadBody.storage,
+  }
+}
+
+export async function generateNativeBlogCover(post: NativeBlogPost): Promise<{
+  coverImageUrl: string
+  path: string
+  storage: 'local' | 'firebase'
+  coverImageAlt: string
+  kind: 'generated' | 'fallback'
+}> {
+  for (const provider of resolveNativeBlogCoverProviders()) {
+    try {
+      if (provider === 'fallback') {
+        break
+      }
+
+      const image =
+        provider === 'nano_banana'
+          ? await generateImageViaNanoBanana(post)
+          : await generateImageViaGemini(post)
+
+      if (!image) {
+        continue
+      }
+
+      const uploaded = await uploadGeneratedCover(post, image)
+      return {
+        ...uploaded,
+        coverImageAlt: deriveCoverAlt(post),
+        kind: 'generated',
+      }
+    } catch {
+      continue
     }
+  }
+
+  const fallback = await saveFallbackSvgCover(post)
+  return {
+    ...fallback,
+    coverImageAlt: deriveCoverAlt(post),
+    kind: 'fallback',
   }
 }
