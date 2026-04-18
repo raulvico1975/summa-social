@@ -1,0 +1,14 @@
+{
+  "name": "summa-social-hyperframes",
+  "private": true,
+  "scripts": {
+    "video:preview": "npx hyperframes preview",
+    "video:preview:piece": "node scripts/preview-piece.mjs",
+    "video:render": "npx hyperframes render --output output.mp4",
+    "video:render:piece": "node scripts/render-piece.mjs",
+    "video:lint": "npx hyperframes lint",
+    "video:validate": "npx hyperframes validate",
+    "video:list": "node scripts/list-pieces.mjs",
+    "video:test": "node --test scripts/__tests__/*.test.mjs"
+  }
+}

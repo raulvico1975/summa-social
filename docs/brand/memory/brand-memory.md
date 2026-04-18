@@ -14,3 +14,12 @@ Each approved entry must include:
 - output path or URL
 - approval rationale
 - inheritance notes for future pieces
+
+## Short-video approval rule
+
+A short-video candidate does not enter memory until a human review confirms:
+
+- the problem is recognizable for a social entity
+- the copy is understandable without product jargon
+- the visual language remains within the approved Summa family
+- the piece feels sober and credible, not promotional for its own sake

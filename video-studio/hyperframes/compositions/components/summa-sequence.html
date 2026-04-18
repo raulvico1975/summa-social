@@ -1,0 +1,413 @@
+<template id="summa-sequence-template">
+  <div data-composition-id="summa-sequence" data-width="1920" data-height="1080" data-duration="12">
+    <section
+      class="clip summa-scene scene-hook"
+      data-start="0"
+      data-duration="3"
+      data-track-index="0"
+      data-label="scene-hook"
+    >
+      <div class="summa-scene-layout">
+        <div class="summa-scene-figure" aria-hidden="true">
+          <div class="summa-figure-rail"></div>
+          <div class="summa-figure-paper summa-figure-paper-primary"></div>
+          <div class="summa-figure-paper summa-figure-paper-secondary"></div>
+          <div class="summa-figure-node"></div>
+        </div>
+        <div class="summa-scene-copy">
+          <div class="summa-scene-kicker" data-slot="hook-kicker"></div>
+          <div class="summa-scene-title" data-slot="hook-title"></div>
+          <div class="summa-scene-body" data-slot="hook-body"></div>
+          <div class="summa-scene-chip" data-slot="hook-chip"></div>
+        </div>
+      </div>
+    </section>
+    <section
+      class="clip summa-scene scene-problem"
+      data-start="3"
+      data-duration="3"
+      data-track-index="1"
+      data-label="scene-problem"
+    >
+      <div class="summa-scene-layout">
+        <div class="summa-scene-figure" aria-hidden="true">
+          <div class="summa-figure-rail"></div>
+          <div class="summa-figure-paper summa-figure-paper-primary"></div>
+          <div class="summa-figure-paper summa-figure-paper-secondary"></div>
+          <div class="summa-figure-node"></div>
+        </div>
+        <div class="summa-scene-copy">
+          <div class="summa-scene-kicker" data-slot="problem-kicker"></div>
+          <div class="summa-scene-title" data-slot="problem-title"></div>
+          <div class="summa-scene-body" data-slot="problem-body"></div>
+          <div class="summa-scene-chip" data-slot="problem-chip"></div>
+        </div>
+      </div>
+    </section>
+    <section
+      class="clip summa-scene scene-solution"
+      data-start="6"
+      data-duration="3"
+      data-track-index="2"
+      data-label="scene-solution"
+    >
+      <div class="summa-scene-layout">
+        <div class="summa-scene-figure" aria-hidden="true">
+          <div class="summa-figure-rail"></div>
+          <div class="summa-figure-paper summa-figure-paper-primary"></div>
+          <div class="summa-figure-paper summa-figure-paper-secondary"></div>
+          <div class="summa-figure-node"></div>
+        </div>
+        <div class="summa-scene-copy">
+          <div class="summa-scene-kicker" data-slot="solution-kicker"></div>
+          <div class="summa-scene-title" data-slot="solution-title"></div>
+          <div class="summa-scene-body" data-slot="solution-body"></div>
+          <div class="summa-scene-chip" data-slot="solution-chip"></div>
+        </div>
+      </div>
+    </section>
+    <section
+      class="clip summa-scene scene-outcome"
+      data-start="9"
+      data-duration="3"
+      data-track-index="3"
+      data-label="scene-outcome"
+    >
+      <div class="summa-scene-layout">
+        <div class="summa-scene-figure" aria-hidden="true">
+          <div class="summa-figure-rail"></div>
+          <div class="summa-figure-paper summa-figure-paper-primary"></div>
+          <div class="summa-figure-paper summa-figure-paper-secondary"></div>
+          <div class="summa-figure-node"></div>
+        </div>
+        <div class="summa-scene-copy">
+          <div class="summa-scene-kicker" data-slot="outcome-kicker"></div>
+          <div class="summa-scene-title" data-slot="outcome-title"></div>
+          <div class="summa-scene-body" data-slot="outcome-body"></div>
+          <div class="summa-scene-chip" data-slot="outcome-chip"></div>
+        </div>
+      </div>
+    </section>
+
+    <style>
+      [data-composition-id="summa-sequence"] {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        color: #17171c;
+        font-family: Arial, sans-serif;
+        pointer-events: none;
+      }
+
+      [data-composition-id="summa-sequence"] .summa-scene {
+        position: absolute;
+        inset: 0;
+        opacity: 0;
+      }
+
+      [data-composition-id="summa-sequence"] .summa-scene-layout {
+        position: absolute;
+        display: grid;
+        grid-template-columns: 236px minmax(0, 1fr);
+        gap: 34px;
+        align-items: center;
+        width: 848px;
+      }
+
+      [data-composition-id="summa-sequence"] .summa-scene-copy {
+        display: flex;
+        flex-direction: column;
+        gap: 18px;
+        min-width: 0;
+      }
+
+      [data-composition-id="summa-sequence"] .summa-scene-figure {
+        position: relative;
+        width: 236px;
+        height: 232px;
+      }
+
+      [data-composition-id="summa-sequence"] .summa-figure-rail {
+        position: absolute;
+        top: 116px;
+        left: 18px;
+        width: 176px;
+        height: 2px;
+        background: #d7dde3;
+      }
+
+      [data-composition-id="summa-sequence"] .summa-figure-node {
+        position: absolute;
+        top: 107px;
+        left: 182px;
+        width: 18px;
+        height: 18px;
+        border: 2px solid #74b7d8;
+        border-radius: 999px;
+        background: #f7fcff;
+      }
+
+      [data-composition-id="summa-sequence"] .summa-figure-paper {
+        position: absolute;
+        border: 2px solid #17171c;
+        border-radius: 18px;
+        background: rgba(255, 255, 255, 0.96);
+      }
+
+      [data-composition-id="summa-sequence"] .summa-figure-paper::before,
+      [data-composition-id="summa-sequence"] .summa-figure-paper::after {
+        content: "";
+        position: absolute;
+        left: 18px;
+        right: 18px;
+        height: 2px;
+        background: rgba(23, 23, 28, 0.86);
+      }
+
+      [data-composition-id="summa-sequence"] .summa-figure-paper::before {
+        top: 28px;
+      }
+
+      [data-composition-id="summa-sequence"] .summa-figure-paper::after {
+        top: 54px;
+      }
+
+      [data-composition-id="summa-sequence"] .summa-figure-paper-primary {
+        top: 18px;
+        left: 10px;
+        width: 136px;
+        height: 176px;
+        transform: rotate(-3deg);
+      }
+
+      [data-composition-id="summa-sequence"] .summa-figure-paper-secondary {
+        top: 52px;
+        left: 74px;
+        width: 122px;
+        height: 152px;
+        transform: rotate(4deg);
+      }
+
+      [data-composition-id="summa-sequence"][data-layout="landscape"] .scene-hook .summa-scene-layout,
+      [data-composition-id="summa-sequence"][data-layout="landscape"] .scene-solution .summa-scene-layout {
+        top: 232px;
+        left: 96px;
+      }
+
+      [data-composition-id="summa-sequence"][data-layout="landscape"] .scene-problem .summa-scene-layout,
+      [data-composition-id="summa-sequence"][data-layout="landscape"] .scene-outcome .summa-scene-layout {
+        top: 232px;
+        right: 96px;
+      }
+
+      [data-composition-id="summa-sequence"][data-layout="landscape"] .scene-problem .summa-scene-figure,
+      [data-composition-id="summa-sequence"][data-layout="landscape"] .scene-outcome .summa-scene-figure {
+        order: 2;
+      }
+
+      [data-composition-id="summa-sequence"][data-layout="portrait"] .summa-scene-layout {
+        top: 420px;
+        left: 78px;
+        right: 78px;
+        width: auto;
+        grid-template-columns: 160px minmax(0, 1fr);
+        gap: 24px;
+      }
+
+      [data-composition-id="summa-sequence"][data-layout="portrait"] .summa-scene-figure {
+        width: 160px;
+        height: 184px;
+      }
+
+      [data-composition-id="summa-sequence"][data-layout="portrait"] .summa-figure-paper-primary {
+        width: 96px;
+        height: 132px;
+      }
+
+      [data-composition-id="summa-sequence"][data-layout="portrait"] .summa-figure-paper-secondary {
+        top: 42px;
+        left: 52px;
+        width: 88px;
+        height: 114px;
+      }
+
+      [data-composition-id="summa-sequence"][data-layout="portrait"] .summa-figure-rail {
+        top: 92px;
+        width: 116px;
+      }
+
+      [data-composition-id="summa-sequence"][data-layout="portrait"] .summa-figure-node {
+        top: 83px;
+        left: 120px;
+      }
+
+      [data-composition-id="summa-sequence"] .scene-problem .summa-figure-paper-primary {
+        left: 54px;
+        transform: rotate(3deg);
+      }
+
+      [data-composition-id="summa-sequence"] .scene-problem .summa-figure-paper-secondary {
+        left: 10px;
+        top: 62px;
+        transform: rotate(-5deg);
+      }
+
+      [data-composition-id="summa-sequence"] .scene-problem .summa-figure-node {
+        border-color: #d5a94c;
+        background: #fffaf0;
+      }
+
+      [data-composition-id="summa-sequence"] .scene-solution .summa-figure-paper-primary {
+        border-color: #17171c;
+      }
+
+      [data-composition-id="summa-sequence"] .scene-solution .summa-figure-node {
+        border-color: #74b7d8;
+        background: #e8f7fe;
+      }
+
+      [data-composition-id="summa-sequence"] .scene-outcome .summa-figure-paper-primary {
+        transform: rotate(-1deg);
+      }
+
+      [data-composition-id="summa-sequence"] .scene-outcome .summa-figure-paper-secondary {
+        top: 38px;
+        left: 48px;
+        transform: rotate(2deg);
+      }
+
+      [data-composition-id="summa-sequence"] .scene-outcome .summa-figure-node {
+        border-color: #6aa36d;
+        background: #f5fcf6;
+      }
+
+      [data-composition-id="summa-sequence"] .summa-scene-kicker {
+        color: #586473;
+        font-size: 20px;
+        font-weight: 700;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+      }
+
+      [data-composition-id="summa-sequence"] .summa-scene-title {
+        font-size: 72px;
+        line-height: 0.98;
+        font-weight: 700;
+        letter-spacing: -0.04em;
+      }
+
+      [data-composition-id="summa-sequence"][data-layout="portrait"] .summa-scene-title {
+        font-size: 70px;
+      }
+
+      [data-composition-id="summa-sequence"] .summa-scene-body {
+        color: #2f3944;
+        font-size: 28px;
+        line-height: 1.36;
+      }
+
+      [data-composition-id="summa-sequence"][data-layout="portrait"] .summa-scene-body {
+        font-size: 26px;
+      }
+
+      [data-composition-id="summa-sequence"] .summa-scene-chip {
+        align-self: flex-start;
+        min-height: 42px;
+        padding: 10px 14px;
+        border-radius: 12px;
+        border: 1px solid #ccd5de;
+        background: rgba(255, 255, 255, 0.96);
+        color: #2f3944;
+        font-size: 17px;
+        font-weight: 700;
+      }
+
+      [data-composition-id="summa-sequence"] .summa-scene-chip[data-tone="warning"] {
+        border-color: #fcd34d;
+        background: rgba(251, 191, 36, 0.14);
+        color: #b45309;
+      }
+
+      [data-composition-id="summa-sequence"] .summa-scene-chip[data-tone="success"] {
+        border-color: #86efac;
+        background: rgba(16, 185, 129, 0.12);
+        color: #15803d;
+      }
+
+      [data-composition-id="summa-sequence"] .summa-scene-chip[data-tone="action"] {
+        border-color: #7dd3fc;
+        background: rgba(224, 242, 254, 0.9);
+        color: #075985;
+      }
+    </style>
+
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <script>
+      (function () {
+        const root = document.querySelector('[data-composition-id="summa-sequence"]');
+        if (!root) return;
+
+        const layout = root.getAttribute("data-layout") || "landscape";
+        root.setAttribute("data-layout", layout);
+
+        const scenes = ["hook", "problem", "solution", "outcome"];
+        const sceneEls = Object.fromEntries(
+          scenes.map((sceneKey) => [sceneKey, root.querySelector(`.scene-${sceneKey}`)])
+        );
+
+        scenes.forEach((sceneKey) => {
+          const kicker = root.getAttribute(`data-${sceneKey}-kicker`) || "";
+          const title = root.getAttribute(`data-${sceneKey}-title`) || "";
+          const body = root.getAttribute(`data-${sceneKey}-body`) || "";
+          const chip = root.getAttribute(`data-${sceneKey}-chip`) || "";
+          const tone = root.getAttribute(`data-${sceneKey}-tone`) || "neutral";
+
+          const kickerEl = root.querySelector(`[data-slot="${sceneKey}-kicker"]`);
+          const titleEl = root.querySelector(`[data-slot="${sceneKey}-title"]`);
+          const bodyEl = root.querySelector(`[data-slot="${sceneKey}-body"]`);
+          const chipEl = root.querySelector(`[data-slot="${sceneKey}-chip"]`);
+
+          if (kickerEl) kickerEl.textContent = kicker;
+          if (titleEl) titleEl.textContent = title;
+          if (bodyEl) bodyEl.textContent = body;
+
+          if (chipEl) {
+            chipEl.textContent = chip;
+            chipEl.setAttribute("data-tone", tone);
+            if (!chip) chipEl.style.display = "none";
+          }
+        });
+
+        const tl = gsap.timeline({ paused: true });
+        const sceneWindows = {
+          hook: { start: 0, end: 3 },
+          problem: { start: 3, end: 6 },
+          solution: { start: 6, end: 9 },
+          outcome: { start: 9, end: 12 },
+        };
+
+        tl.set(Object.values(sceneEls).filter(Boolean), { autoAlpha: 0 }, 0);
+
+        scenes.forEach((sceneKey) => {
+          const sceneEl = sceneEls[sceneKey];
+          const cardEl = sceneEl?.querySelector(".summa-scene-layout");
+          const window = sceneWindows[sceneKey];
+          if (!sceneEl || !cardEl) return;
+
+          tl.set(sceneEl, { autoAlpha: 1 }, window.start);
+          tl.fromTo(
+            cardEl,
+            { opacity: 0, y: 22 },
+            { opacity: 1, y: 0, duration: 0.42, ease: "power2.out" },
+            window.start + 0.08
+          );
+          tl.to(sceneEl, { autoAlpha: 0, duration: 0.16, ease: "power1.in" }, window.end - 0.16);
+        });
+
+        window.__timelines = window.__timelines || {};
+        window.__timelines["summa-sequence"] = tl;
+      })();
+    </script>
+  </div>
+</template>
