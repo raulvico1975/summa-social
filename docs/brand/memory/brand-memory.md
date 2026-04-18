@@ -15,11 +15,22 @@ Each approved entry must include:
 - approval rationale
 - inheritance notes for future pieces
 
-## Short-video approval rule
+## Video approval rule
 
-A short-video candidate does not enter memory until a human review confirms:
+Any video candidate does not enter memory until a human review confirms:
 
 - the problem is recognizable for a social entity
 - the copy is understandable without product jargon
 - the visual language remains within the approved Summa family
 - the piece feels sober and credible, not promotional for its own sake
+
+## Prototype rule
+
+Failed prototypes and research-only pilots do not become video precedents.
+
+That means:
+
+- they may remain in the repository as research material
+- they may inform future work during discussion or review
+- they may not be promoted into approved memory
+- they may not be cited as a canonical pattern for new masters or derived cuts

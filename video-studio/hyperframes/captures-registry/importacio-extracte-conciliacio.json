@@ -1,0 +1,86 @@
+{
+  "version": 1,
+  "brief_id": "importacio-extracte-conciliacio",
+  "feature_domain": "importacio d'extractes i conciliacio bancaria",
+  "source": "Summa Social live UI",
+  "upstream_refs": [
+    "docs/operations/demo-storyboards/bank-reconciliation-feature.md",
+    "scripts/demo/record-bank-reconciliation.mjs",
+    "scripts/demo/video-storyboards/bank-reconciliation-intelligent.mjs"
+  ],
+  "screen_family": "Moviments > Importar extracte bancari",
+  "workflow_summary": "Importar un extracte, revisar-lo abans de confirmar i validar l'estat resultant de la conciliacio.",
+  "capture_policy": {
+    "reuse_same_workflow": true,
+    "reuse_narrower_workflow": true,
+    "reuse_broader_workflow": false,
+    "refresh_when_ui_changes": true
+  },
+  "captures": [
+    {
+      "capture_id": "moviments-import-entry",
+      "screen_name": "Moviments > Importar extracte bancari",
+      "workflow_step": "entrada al flux",
+      "why_this_capture_exists": "Situa l'usuari dins del flux real i fa visible l'entrada correcta al recorregut d'importacio.",
+      "safe_reuse": [
+        "obertura del master",
+        "context inicial",
+        "introduccio del problema"
+      ],
+      "status": "required"
+    },
+    {
+      "capture_id": "moviments-import-upload",
+      "screen_name": "Importacio d'extracte",
+      "workflow_step": "pujada del fitxer",
+      "why_this_capture_exists": "Demostra que l'usuari carrega un extracte real i no una il·lustracio.",
+      "safe_reuse": [
+        "escena de proves",
+        "pas operatiu",
+        "cap de problema"
+      ],
+      "status": "required"
+    },
+    {
+      "capture_id": "moviments-import-preview",
+      "screen_name": "Previsualitzacio de l'extracte",
+      "workflow_step": "revisio previa",
+      "why_this_capture_exists": "Permet mostrar columnes, mapping o revisio abans de confirmar l'operacio.",
+      "safe_reuse": [
+        "escena de solucio",
+        "validacio de dades",
+        "explicacio de control"
+      ],
+      "status": "required"
+    },
+    {
+      "capture_id": "moviments-import-warning",
+      "screen_name": "Avis de solapament o duplicat",
+      "workflow_step": "gestio d'alertes",
+      "why_this_capture_exists": "Prova que el flux avisa quan hi ha risc de duplicar o solapar moviments.",
+      "safe_reuse": [
+        "escena de risc",
+        "comparacio abans/despres",
+        "explicacio de seguretat"
+      ],
+      "status": "required"
+    },
+    {
+      "capture_id": "moviments-import-result",
+      "screen_name": "Estat resultant de conciliacio",
+      "workflow_step": "resultat final",
+      "why_this_capture_exists": "Mostra el valor tangible del flux quan la conciliacio queda en estat operatiu.",
+      "safe_reuse": [
+        "tancament del master",
+        "resultat final",
+        "resolucio del problema"
+      ],
+      "status": "required"
+    }
+  ],
+  "notes": [
+    "Aquest registre defineix captures estables per al primer master funcional de conciliacio.",
+    "No substitueix el media storage; nomes fixa els punts de prova i la seva reutilitzacio segura.",
+    "Si la UI de Summa canvia, aquestes captures s'han de revisar abans de tornar-les a usar."
+  ]
+}

@@ -16,6 +16,12 @@
 - `public/brand/video/README.md`
 - `public/brand/summa-logo-full-transparent-inter.png`
 
+## Canonical explainer path
+- `functional-explainer` is the production path for feature explainers.
+- The canonical flow is `brief -> real captures -> shot library -> master template -> derived composition`.
+- `05-devolucions-estat-real-16x9` stays available as research, but it is not the approved template source.
+- If a future explainer needs different proof, the right fix is to add captures, not to normalize a research draft.
+
 ## Prerequisites
 - Node.js 22+
 - FFmpeg on `PATH`
@@ -49,29 +55,25 @@
 - `npm run video:validate`
 
 ## Fixed system
-- Every piece uses the same four-scene order: hook, problem, solution, outcome.
-- Only one main idea enters each scene.
-- Only one overlay may sit on top of a scene.
-- `compositions/components/summa-sequence.html` is the reusable scene skeleton.
-- `compositions/components/summa-caption.html` is the reusable caption system.
-- `compositions/components/summa-lower-third.html` is the reusable lower-third system.
-- Caption components expose `data-timeline-role="captions"` and `data-caption-root="true"` for caption discovery.
-- Lower thirds explain action only. They do not carry branding.
+- The current research scaffold uses a four-scene order: hook, problem, solution, outcome.
+- The canonical explainer system keeps one main idea per scene and one proof layer at a time.
+- `compositions/components/summa-sequence.html` is a reusable scene skeleton for research and early masters.
+- `compositions/components/summa-caption.html` and `compositions/components/summa-lower-third.html` remain available, but they are optional tools, not mandatory layers.
 - Blue is reserved for action. Semantic states stay neutral, amber, or green.
-- No intro/outro block is added unless the repo defines one for the piece.
+- No intro/outro block is added unless the brief or template explicitly defines one.
 
 ## What may vary
 - Copy inside each scene
 - Which state chip appears in each scene
 - Whether the layout is `landscape` or `portrait`
-- The action sentence inside the lower third
-- The short caption lines, as long as they stay 1 to 2 lines and readable without pause
+- Whether the piece uses captions or lower thirds at all
+- The action sentence inside the lower third when that layer is explicitly justified
 
 ## Composition rules that must not be broken
 - Keep the video product-led, sober, and light.
 - Do not add decorative motion.
 - Do not turn captions into auto-subtitle styling.
-- Do not add more than one overlay per scene.
+- Do not add more than one competing overlay per scene.
 - Do not introduce extra accent colors outside the semantic system.
 
 ## Assets
@@ -81,11 +83,24 @@
 
 ## Current pilot
 - `compositions/05-devolucions-estat-real-16x9.html`
+- Research-only. This piece is useful for study, but it is not the canonical explainer pattern.
+
+## Current master direction
+- The first canonical master should come from `briefs/importacio-extracte-conciliacio.md` plus the matching capture registry.
+- The runtime should treat that path as upstream once the first approved master composition exists.
 
 ## Prompt examples
 - `prompts/05-devolucions-estat-real-16x9.md`
 
 ## Documents de producció
+- `briefs/`
+  - Working briefs for canonical explainers
+- `captures-registry/`
+  - Real capture metadata used as proof in explainers
+- `shots/`
+  - Reusable shot-level building blocks
+- `templates/`
+  - Master and derived template contracts
 - `SCRIPT.md`
   - Editorial base for the studio: objective, piece types, fixed sequence, tone, and density rules
 - `STORYBOARD.md`
