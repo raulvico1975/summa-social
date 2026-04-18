@@ -17,8 +17,9 @@
 - `public/brand/summa-logo-full-transparent-inter.png`
 
 ## Canonical explainer path
-- `functional-explainer` is the production path for feature explainers.
-- The canonical flow is `brief -> real captures -> shot library -> master template -> derived composition`.
+- `video-studio/functional-explainers` is the canonical master path for feature explainers.
+- HyperFrames is the consumer runtime for previews, renders, derived cuts, and experimental compositions.
+- The canonical flow is `brief -> storyboard -> real captures -> master contract -> render verification -> derived composition`.
 - `05-devolucions-estat-real-16x9` stays available as research, but it is not the approved template source.
 - If a future explainer needs different proof, the right fix is to add captures, not to normalize a research draft.
 
@@ -57,7 +58,7 @@
 ## Fixed system
 - The current research scaffold uses a four-scene order: hook, problem, solution, outcome.
 - The canonical explainer system keeps one main idea per scene and one proof layer at a time.
-- `compositions/components/summa-sequence.html` is a reusable scene skeleton for research and early masters.
+- `compositions/components/summa-sequence.html` is a reusable scene skeleton for research and early master work, not a canonical source of truth.
 - `compositions/components/summa-caption.html` and `compositions/components/summa-lower-third.html` remain available, but they are optional tools, not mandatory layers.
 - Blue is reserved for action. Semantic states stay neutral, amber, or green.
 - No intro/outro block is added unless the brief or template explicitly defines one.
@@ -86,13 +87,15 @@
 - Research-only. This piece is useful for study, but it is not the canonical explainer pattern.
 
 ## Current master direction
-- The first canonical master should come from `briefs/importacio-extracte-conciliacio.md` plus the matching capture registry.
-- The runtime should treat that path as upstream once the first approved master composition exists.
+- The first canonical master should be authored through `video-studio/functional-explainers` from `briefs/importacio-extracte-conciliacio.md` plus the matching capture registry.
+- HyperFrames should treat that path as upstream once the first approved master composition exists.
 
 ## Prompt examples
 - `prompts/05-devolucions-estat-real-16x9.md`
 
 ## Documents de producció
+- `../functional-explainers/`
+  - Canonical master-path entrypoint for briefs, storyboards, capture references, and approval notes
 - `briefs/`
   - Working briefs for canonical explainers
 - `captures-registry/`

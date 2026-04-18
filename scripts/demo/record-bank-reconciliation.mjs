@@ -787,6 +787,29 @@ async function runImportOnlyFlow(page, artifactDir, scenarioData) {
   await sleep(1800);
 }
 
+async function runImportResultFlow(page, artifactDir, scenarioData) {
+  await page.setViewportSize(
+    QUALITY_MODE === 'commercial'
+      ? { width: COMMERCIAL_VIEWPORT.width, height: COMMERCIAL_VIEWPORT.height }
+      : { width: 1440, height: 960 }
+  );
+  await hideNoise(page);
+  await sleep(1200);
+
+  const markerPath = path.join(artifactDir, 'movements-start.png');
+  await page.screenshot({ path: markerPath, fullPage: false });
+  await sleep(1200);
+
+  await startImport(page, scenarioData.csvPath);
+  await confirmBankAccountDialog(page, artifactDir);
+  await handleDedupeSummary(page, artifactDir);
+  await refreshAndFocusScenario(page, scenarioData.searchTerm);
+  await sleep(2600);
+
+  const resultPath = path.join(artifactDir, 'reconciliation-result.png');
+  await page.screenshot({ path: resultPath, fullPage: false });
+}
+
 function convertVideo(ffmpegPath, inputPath, outputPath, trimStartSeconds, durationSeconds) {
   const args = [
     '-y',
@@ -853,7 +876,7 @@ const PASSWORD = process.env.DEMO_RECORDER_PASSWORD || DEFAULT_PASSWORD;
 const SKIP_FINAL_VIDEO = hasFlag('--skip-final-video');
 const FLOW_MODE = (parseArg('--flow') || 'full').trim();
 
-if (!['full', 'import-only'].includes(FLOW_MODE)) {
+if (!['full', 'import-only', 'import-result'].includes(FLOW_MODE)) {
   fail(`Flow no suportat: ${FLOW_MODE}`);
 }
 
@@ -933,6 +956,8 @@ async function main() {
     const demoStart = Date.now();
     if (FLOW_MODE === 'import-only') {
       await runImportOnlyFlow(page, OUTPUT_DIR, scenarioData);
+    } else if (FLOW_MODE === 'import-result') {
+      await runImportResultFlow(page, OUTPUT_DIR, scenarioData);
     } else {
       await runFlow(page, db, scenarioData, OUTPUT_DIR);
     }

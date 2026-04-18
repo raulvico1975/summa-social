@@ -1,0 +1,99 @@
+{
+  "id": "importacio-extracte-conciliacio",
+  "version": 1,
+  "status": "canonical-input",
+  "briefId": "importacio-extracte-conciliacio",
+  "slug": "importacio-extracte-conciliacio-functional",
+  "featureDomain": "importacio d'extractes i conciliacio bancaria",
+  "audience": "Persona administrativa d'una entitat social",
+  "source": "Summa Social live UI",
+  "upstreamRefs": [
+    "docs/operations/demo-storyboards/bank-reconciliation-feature.md",
+    "scripts/demo/record-bank-reconciliation.mjs",
+    "scripts/demo/video-storyboards/bank-reconciliation-intelligent.mjs"
+  ],
+  "briefPath": "video-studio/hyperframes/briefs/importacio-extracte-conciliacio.md",
+  "captureRegistryPath": "video-studio/hyperframes/captures-registry/importacio-extracte-conciliacio.json",
+  "recordingScript": "scripts/demo/record-bank-reconciliation.mjs",
+  "recordingArgs": [
+    "--quality",
+    "commercial",
+    "--flow",
+    "import-result"
+  ],
+  "recordingSlug": "bank-reconciliation-demo",
+  "storyboardSlug": "importacio-extracte-conciliacio-functional",
+  "storyboardPath": "scripts/demo/video-storyboards/importacio-extracte-conciliacio-functional.mjs",
+  "variant": "ca",
+  "targetMasterFormat": "functional-explainer-master-16x9",
+  "outputDefaults": {
+    "recordingOutputDir": "output/playwright/bank-reconciliation-demo",
+    "recordingVideoPath": "output/playwright/bank-reconciliation-demo/bank-reconciliation-demo.mp4",
+    "finalOutputPath": "output/functional-explainers/importacio-extracte-conciliacio-functional.ca.mp4"
+  },
+  "renderer": {
+    "entrypoint": "scripts/demo/postproduce-demo-video.mjs",
+    "captionStyle": "summa-subtitle",
+    "captionTextMode": "subtitle",
+    "includeIntro": false,
+    "includeOutro": false,
+    "variants": [
+      "ca"
+    ]
+  },
+  "sceneOrder": [
+    "hook",
+    "problem",
+    "solution",
+    "outcome"
+  ],
+  "durationTargetSeconds": {
+    "min": 18,
+    "max": 30,
+    "preferred": 20
+  },
+  "captureSet": [
+    "moviments-import-entry",
+    "moviments-import-upload",
+    "moviments-import-warning",
+    "moviments-import-preview",
+    "moviments-import-result"
+  ],
+  "shotMap": [
+    {
+      "scene": "hook",
+      "captureIds": [
+        "moviments-import-entry",
+        "moviments-import-upload"
+      ],
+      "job": "situa l'usuari dins del flux real d'importacio"
+    },
+    {
+      "scene": "problem",
+      "captureIds": [
+        "moviments-import-warning"
+      ],
+      "job": "fa visible l'avís de possible duplicat abans de confirmar"
+    },
+    {
+      "scene": "solution",
+      "captureIds": [
+        "moviments-import-preview"
+      ],
+      "job": "mostra la previsualitzacio i la importacio neta"
+    },
+    {
+      "scene": "outcome",
+      "captureIds": [
+        "moviments-import-result"
+      ],
+      "job": "deixa el llistat final llest per revisar"
+    }
+  ],
+  "renderNotes": [
+    "Usa el recorder real de bank-reconciliation-demo i el storyboard funcional nou.",
+    "No afegeixis intro ni outro de marca.",
+    "Mantingues un unic subtitol curt per escena.",
+    "Prioritza prova visual real per sobre d'overlays decoratius."
+  ]
+}

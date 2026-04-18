@@ -2,7 +2,7 @@
 
 ## Current studio status
 - Renderable HyperFrames studio with a fixed four-scene sequence
-- Canonical explainer path: `functional-explainer` built from real captures
+- Canonical explainer path: `video-studio/functional-explainers`
 - Current root entry in `index.html`: `05-devolucions-estat-real-16x9`
 - `05-devolucions-estat-real-16x9` is research-only and must not be treated as the approved master template
 - Tested with `npx hyperframes lint`, `npx hyperframes validate`, and project renders
@@ -21,6 +21,7 @@
 - Lower thirds are operational, not branded, when they are used
 - Blue is reserved for action, not decoration
 - The canonical visual proof layer comes from real captures, not from research drafts
+- HyperFrames renders and previews the canonical master path; it does not define it
 
 ## What may vary
 - Composition copy
@@ -58,7 +59,7 @@
 - No audio track, voiceover track, or sync model is defined
 - No proprietary lower-third system exists beyond the current minimal reusable block
 - No transcript ingestion pipeline is wired into captions yet
-- The canonical `functional-explainer` production path still depends on real capture intake for each new feature
+- The canonical `functional-explainers` production path still depends on real capture intake for each new feature
 
 ## Special dependencies
 - Node.js 22+

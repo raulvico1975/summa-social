@@ -2,14 +2,15 @@
 
 ## Purpose
 
-This document defines how the functional explainer channel is executed in practice.
+This document defines how the functional-explainer channel is executed in practice.
 It turns the brand contract into a reviewable production workflow for masters and derived cuts.
 
 ## Runtime
 
+- The canonical master path is `video-studio/functional-explainers`.
 - The studio runtime is `video-studio/hyperframes`.
-- The studio consumes the canon from `docs/brand/`.
-- The studio is not a second source of truth.
+- HyperFrames consumes the canonical master path and render inputs.
+- HyperFrames is not a source of truth.
 
 ## What a master is
 
@@ -18,6 +19,7 @@ A master is the approved upstream explainer for one feature or workflow.
 A master must:
 
 - follow the `functional-explainer` contract
+- be produced through the `functional-explainers` pipeline
 - be built around one feature or one operational workflow
 - use approved capture evidence as the primary proof
 - be readable on its own before any derived distribution cut exists
@@ -44,10 +46,10 @@ A derived cut may not:
 
 ## Production flow
 
-1. Start from an approved brief.
+1. Start from an approved brief and storyboard.
 2. Select the approved capture set.
-3. Assemble the master against the channel contract.
-4. Review the master at exact timestamps.
+3. Assemble the master through `video-studio/functional-explainers`.
+4. Render and review the master at exact timestamps.
 5. Fix any timing, overlap, looping, or readability problems.
 6. Approve the master only after render verification passes.
 7. Derive secondary cuts from the approved master only.
@@ -107,4 +109,4 @@ This matters because the production system must preserve the learning without ca
 
 ## Governance
 
-If a future explainer needs a new execution rule, the rule belongs in this document before the studio runtime treats it as approved behavior.
+If a future explainer needs a new execution rule, the rule belongs in this document before the canonical master path treats it as approved behavior.
