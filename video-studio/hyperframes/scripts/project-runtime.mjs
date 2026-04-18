@@ -76,6 +76,15 @@ async function ensureFileSymlink(targetPath, linkPath) {
   await fs.symlink(targetPath, linkPath, 'file');
 }
 
+async function pathExists(targetPath) {
+  try {
+    await fs.access(targetPath);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 async function readCompositionPiece(projectRoot, filename) {
   const filePath = path.join(projectRoot, 'compositions', filename);
   const html = await fs.readFile(filePath, 'utf8');
@@ -125,9 +134,16 @@ export async function resolveRenderablePiece(projectRoot, pieceId) {
 export async function createRuntimeProject(projectRoot, pieceId) {
   const piece = await resolveRenderablePiece(projectRoot, pieceId);
   const runtimeRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'summa-hyperframes-'));
+  const preferredOutputRoot = path.join(projectRoot, 'output');
+  const fallbackOutputRoot = path.resolve(projectRoot, '..', '..', 'output');
 
   await ensureSymlink(path.join(projectRoot, 'assets'), path.join(runtimeRoot, 'assets'));
   await ensureSymlink(path.join(projectRoot, 'compositions'), path.join(runtimeRoot, 'compositions'));
+  if (await pathExists(preferredOutputRoot)) {
+    await ensureSymlink(preferredOutputRoot, path.join(runtimeRoot, 'output'));
+  } else if (await pathExists(fallbackOutputRoot)) {
+    await ensureSymlink(fallbackOutputRoot, path.join(runtimeRoot, 'output'));
+  }
   await ensureFileSymlink(
     path.join(projectRoot, 'hyperframes.json'),
     path.join(runtimeRoot, 'hyperframes.json'),

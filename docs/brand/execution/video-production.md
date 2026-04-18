@@ -5,6 +5,8 @@
 This document defines how the functional-explainer channel is executed in practice.
 It turns the brand contract into a reviewable production workflow for masters and derived cuts.
 
+For editorial consumer-layer cuts on top of an approved master, also follow `docs/brand/contracts/explainer-edit.md`.
+
 ## Runtime
 
 - The canonical master path is `video-studio/functional-explainers`.
@@ -24,6 +26,7 @@ A master must:
 - use approved capture evidence as the primary proof
 - be readable on its own before any derived distribution cut exists
 - have a clear approval state before it is treated as reusable
+- generate an edit-ready proxy when the downstream explainer layer needs reframing or retiming
 
 ## What a derived cut is
 
@@ -49,10 +52,11 @@ A derived cut may not:
 1. Start from an approved brief and storyboard.
 2. Select the approved capture set.
 3. Assemble the master through `video-studio/functional-explainers`.
-4. Render and review the master at exact timestamps.
-5. Fix any timing, overlap, looping, or readability problems.
-6. Approve the master only after render verification passes.
-7. Derive secondary cuts from the approved master only.
+4. Generate the edit-ready proxy for any downstream `explainer-edit` work.
+5. Render and review the master at exact timestamps.
+6. Fix any timing, overlap, looping, or readability problems.
+7. Approve the master only after render verification passes.
+8. Derive secondary cuts from the approved master only.
 
 ## Review gates
 
@@ -79,6 +83,7 @@ Verification must confirm:
 - no layers overlap in a way that blocks readability
 - text is legible in playback
 - the product proof is present where the contract requires it
+- edit-ready proxies use dense keyframes before HyperFrames reframing consumes them
 
 If a render fails any of these checks, the master is not approved.
 
@@ -87,6 +92,7 @@ If a render fails any of these checks, the master is not approved.
 - Source docs, templates, and scripts are committed.
 - Rendered mp4 files stay untracked.
 - Preview snapshots and thumbnails stay untracked.
+- Edit proxies and edit-asset JSON files stay untracked.
 - The repository should only store durable production inputs and reviewable contracts.
 
 ## Approval gate

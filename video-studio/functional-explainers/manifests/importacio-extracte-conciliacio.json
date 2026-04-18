@@ -29,6 +29,8 @@
   "outputDefaults": {
     "recordingOutputDir": "output/playwright/bank-reconciliation-demo",
     "recordingVideoPath": "output/playwright/bank-reconciliation-demo/bank-reconciliation-demo.mp4",
+    "editProxyPath": "output/playwright/bank-reconciliation-demo/bank-reconciliation-demo.edit-proxy.mp4",
+    "editAssetPath": "output/playwright/bank-reconciliation-demo/bank-reconciliation-demo.edit-asset.json",
     "finalOutputPath": "output/functional-explainers/importacio-extracte-conciliacio-functional.ca.mp4"
   },
   "renderer": {

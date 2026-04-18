@@ -113,3 +113,73 @@ test('buildRenderPlan wires the manifest into deterministic commands', async () 
     },
   ]);
 });
+
+test('buildRenderPlan inserts an edit-proxy step when the manifest declares editorial assets', async () => {
+  const { repoRoot, manifestsDir } = await createWorkspace();
+  await writeJson(path.join(manifestsDir, '03-gamma.json'), {
+    id: 'gamma',
+    recordingScript: 'scripts/demo/record-beta.mjs',
+    recordingArgs: ['--quality', 'commercial'],
+    storyboardSlug: 'gamma-story',
+    outputDefaults: {
+      recordingOutputDir: 'output/playwright/gamma',
+      recordingVideoPath: 'output/playwright/gamma/gamma.mp4',
+      finalOutputPath: 'output/functional-explainers/gamma.ca.mp4',
+      editProxyPath: 'output/playwright/gamma/gamma.edit-proxy.mp4',
+      editAssetPath: 'output/playwright/gamma/gamma.edit-asset.json',
+    },
+  });
+
+  const manifests = await loadExplainerManifests(manifestsDir, repoRoot);
+  const manifest = manifests.find((entry) => entry.id === 'gamma');
+
+  const plan = await buildRenderPlan(manifest, repoRoot);
+
+  assert.deepEqual(plan, [
+    {
+      name: 'recording',
+      description: 'Record gamma',
+      cwd: repoRoot,
+      command: [
+        'node',
+        'scripts/demo/record-beta.mjs',
+        '--quality',
+        'commercial',
+        '--output',
+        'output/playwright/gamma',
+      ],
+    },
+    {
+      name: 'editorial-proxy',
+      description: 'Prepare explainer edit proxy for gamma',
+      cwd: repoRoot,
+      command: [
+        'node',
+        'video-studio/functional-explainers/scripts/prepare-edit-proxy.mjs',
+        '--input',
+        'output/playwright/gamma/gamma.mp4',
+        '--output',
+        'output/playwright/gamma/gamma.edit-proxy.mp4',
+        '--asset',
+        'output/playwright/gamma/gamma.edit-asset.json',
+      ],
+    },
+    {
+      name: 'postproduction',
+      description: 'Postproduce gamma',
+      cwd: repoRoot,
+      command: [
+        'node',
+        'scripts/demo/postproduce-demo-video.mjs',
+        '--storyboard',
+        'gamma-story',
+        '--input',
+        'output/playwright/gamma/gamma.mp4',
+        '--output',
+        'output/functional-explainers/gamma.ca.mp4',
+        '--variant',
+        'ca',
+      ],
+    },
+  ]);
+});

@@ -12,9 +12,10 @@ Canonical product-led video masters live here.
 
 1. Start from the approved brief and storyboard.
 2. Use approved real-capture evidence and the capture registry.
-3. Build the master composition contract.
-4. Render verify before approval.
-5. Derive any secondary cuts after the master is approved.
+3. Generate an edit-ready proxy when the downstream cut needs reframing.
+4. Build the master composition contract.
+5. Render verify before approval.
+6. Derive any secondary cuts after the master is approved.
 
 ## What belongs here
 
@@ -31,3 +32,4 @@ Canonical product-led video masters live here.
 - `npm run video:explainer:render -- importacio-extracte-conciliacio --skip-recording`
 
 `--skip-recording` is the fast path when the base capture already exists and only the postproduction layer changes.
+If the manifest declares `editProxyPath` and `editAssetPath`, the render command also prepares the explainer-edit proxy automatically.

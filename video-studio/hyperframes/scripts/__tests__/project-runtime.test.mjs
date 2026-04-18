@@ -17,7 +17,7 @@ test('listRenderablePieces returns the authored marketing compositions', async (
 
   assert.deepEqual(
     pieces.map((piece) => piece.id),
-    ['05-devolucions-estat-real-16x9'],
+    ['05-devolucions-estat-real-16x9', '06-importacio-extracte-editorial-16x9'],
   );
 });
 
@@ -31,6 +31,9 @@ test('createRuntimeProject builds a temporary render root without mutating the r
 
   const stats = await fs.lstat(path.join(runtimeRoot, 'compositions'));
   assert.equal(stats.isSymbolicLink(), true);
+
+  const outputStats = await fs.lstat(path.join(runtimeRoot, 'output'));
+  assert.equal(outputStats.isSymbolicLink(), true);
 
   assert.equal(runtimeRoot.startsWith(os.tmpdir()), true);
 });

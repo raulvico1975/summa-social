@@ -22,6 +22,9 @@
 - The canonical flow is `brief -> storyboard -> real captures -> master contract -> render verification -> derived composition`.
 - `05-devolucions-estat-real-16x9` stays available as research, but it is not the approved template source.
 - If a future explainer needs different proof, the right fix is to add captures, not to normalize a research draft.
+- `06-importacio-extracte-editorial-16x9` is the first editorial consumer of the functional-explainer master path.
+- Treat 06 as an explainer-edit layer on top of the proof master, not as a replacement for the master contract.
+- 06 consumes the edit-ready proxy generated from the approved recording, not the raw recorder export.
 
 ## Prerequisites
 - Node.js 22+
@@ -37,13 +40,15 @@
 ## Preview
 - `npm run video:preview`
 - Specific piece without editing `index.html`:
-  - `npm run video:preview:piece -- 05-devolucions-estat-real-16x9`
+  - `npm run video:preview:piece -- 06-importacio-extracte-editorial-16x9`
 
 ## Render
 - Default render: `npm run video:render`
 - The repo keeps only the official CLI path: `npx hyperframes render --output output.mp4`
 - Specific piece to a custom output without mutating the studio root:
-  - `npm run video:render:piece -- 05-devolucions-estat-real-16x9 --output /tmp/summa-05.mp4`
+  - `npm run video:render:piece -- 06-importacio-extracte-editorial-16x9 --output /tmp/summa-06.mp4`
+- Safe preview uses the same temporary runtime and cleans it up on exit:
+  - `npm run video:preview:piece -- 06-importacio-extracte-editorial-16x9`
 
 ## Piece discovery and tests
 - List renderable pieces:
@@ -87,11 +92,14 @@
 - Research-only. This piece is useful for study, but it is not the canonical explainer pattern.
 
 ## Current master direction
-- The first canonical master should be authored through `video-studio/functional-explainers` from `briefs/importacio-extracte-conciliacio.md` plus the matching capture registry.
+- The first functional-explainer master should be authored through `video-studio/functional-explainers` from `briefs/importacio-extracte-conciliacio.md` plus the matching capture registry.
+- `06-importacio-extracte-editorial-16x9` is the first editorial consumer of that master, so operational docs should point future reuse there.
 - HyperFrames should treat that path as upstream once the first approved master composition exists.
+- The canonical manifest may declare `editProxyPath` and `editAssetPath`; when present, `video:explainer:render` prepares a dense-keyframe proxy before HyperFrames uses the piece for editorial reframing.
 
 ## Prompt examples
 - `prompts/05-devolucions-estat-real-16x9.md`
+- `prompts/06-importacio-extracte-editorial-16x9.md`
 
 ## Documents de producció
 - `../functional-explainers/`

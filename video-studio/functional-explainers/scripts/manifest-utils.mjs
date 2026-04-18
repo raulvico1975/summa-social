@@ -102,10 +102,22 @@ function normalizeOutputDefaults(value, context) {
     fail(`${context}: output defaults missing ${missing.join(' and ')}.`);
   }
 
+  const editProxyPathRaw = readStringField(value, ['editProxyPath', 'editorialProxyPath']);
+  const editAssetPathRaw = readStringField(value, ['editAssetPath', 'editorialAssetPath']);
+  if ((editProxyPathRaw && !editAssetPathRaw) || (!editProxyPathRaw && editAssetPathRaw)) {
+    fail(`${context}: output defaults must declare editProxyPath and editAssetPath together.`);
+  }
+
   return {
     recordingOutputDir: normalizeString(recordingOutputDirRaw, 'recordingOutputDir', context),
     recordingVideoPath: normalizeString(recordingVideoPathRaw, 'recordingVideoPath', context),
     finalOutputPath: normalizeString(finalOutputPathRaw, 'finalOutputPath', context),
+    editProxyPath: editProxyPathRaw
+      ? normalizeString(editProxyPathRaw, 'editProxyPath', context)
+      : null,
+    editAssetPath: editAssetPathRaw
+      ? normalizeString(editAssetPathRaw, 'editAssetPath', context)
+      : null,
   };
 }
 
@@ -281,20 +293,41 @@ export async function buildRenderPlan(manifest, repoRoot) {
     manifest.variant,
   ];
 
-  return [
+  const plan = [
     {
       name: 'recording',
       command: recordingCommandWithOutput,
       cwd: repoRoot,
       description: `Record ${manifest.id}`,
     },
-    {
-      name: 'postproduction',
-      command: postproductionCommand,
-      cwd: repoRoot,
-      description: `Postproduce ${manifest.id}`,
-    },
   ];
+
+  if (manifest.outputDefaults.editProxyPath && manifest.outputDefaults.editAssetPath) {
+    plan.push({
+      name: 'editorial-proxy',
+      command: [
+        'node',
+        'video-studio/functional-explainers/scripts/prepare-edit-proxy.mjs',
+        '--input',
+        manifest.outputDefaults.recordingVideoPath,
+        '--output',
+        manifest.outputDefaults.editProxyPath,
+        '--asset',
+        manifest.outputDefaults.editAssetPath,
+      ],
+      cwd: repoRoot,
+      description: `Prepare explainer edit proxy for ${manifest.id}`,
+    });
+  }
+
+  plan.push({
+    name: 'postproduction',
+    command: postproductionCommand,
+    cwd: repoRoot,
+    description: `Postproduce ${manifest.id}`,
+  });
+
+  return plan;
 }
 
 function shellQuote(value) {
@@ -346,6 +379,8 @@ export function summarizeManifest(manifest) {
     recordingOutputDir: manifest.outputDefaults.recordingOutputDir,
     recordingVideoPath: manifest.outputDefaults.recordingVideoPath,
     finalOutputPath: manifest.outputDefaults.finalOutputPath,
+    editProxyPath: manifest.outputDefaults.editProxyPath,
+    editAssetPath: manifest.outputDefaults.editAssetPath,
     notes: manifest.notes,
     sourcePath: manifest.sourcePath,
   };

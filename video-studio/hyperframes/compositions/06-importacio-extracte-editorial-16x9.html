@@ -1,0 +1,267 @@
+<template id="summa-importacio-extracte-editorial-template">
+  <div
+    id="summa-importacio-extracte-editorial-root"
+    data-composition-id="06-importacio-extracte-editorial-16x9"
+    data-start="0"
+    data-width="1920"
+    data-height="1080"
+    data-duration="30.7"
+  >
+    <div id="summa-importacio-extracte-editorial-shell">
+      <section id="summa-importacio-extracte-editorial-headline" aria-live="polite">
+        <div id="summa-importacio-extracte-editorial-eyebrow"></div>
+        <h1 id="summa-importacio-extracte-editorial-title"></h1>
+        <p id="summa-importacio-extracte-editorial-meta"></p>
+      </section>
+
+      <section id="summa-importacio-extracte-editorial-stage" aria-label="Captura real de conciliació bancària">
+        <div id="summa-importacio-extracte-editorial-frame">
+          <video
+            id="summa-importacio-extracte-editorial-video"
+            class="clip"
+            data-start="0"
+            data-duration="30.7"
+            data-track-index="0"
+            src="../output/playwright/bank-reconciliation-demo/bank-reconciliation-demo.edit-proxy.mp4"
+            muted
+            playsinline
+            preload="auto"
+          ></video>
+          <div id="summa-importacio-extracte-editorial-frame-topline"></div>
+          <div id="summa-importacio-extracte-editorial-shadow"></div>
+        </div>
+      </section>
+    </div>
+
+    <style>
+      [data-composition-id="06-importacio-extracte-editorial-16x9"] {
+        position: relative;
+        width: 1920px;
+        height: 1080px;
+        overflow: hidden;
+        background: linear-gradient(180deg, #f8f4ec 0%, #f2ede3 100%);
+        color: #151a21;
+        font-family: Arial, sans-serif;
+      }
+
+      #summa-importacio-extracte-editorial-shell {
+        position: relative;
+        display: grid;
+        grid-template-rows: 136px 1fr;
+        gap: 22px;
+        width: 100%;
+        height: 100%;
+        padding: 46px 64px 52px;
+        box-sizing: border-box;
+      }
+
+      #summa-importacio-extracte-editorial-headline {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 420px;
+        gap: 42px;
+        align-items: end;
+      }
+
+      #summa-importacio-extracte-editorial-eyebrow {
+        grid-column: 1 / -1;
+        color: var(--summa-accent, #1d9bf0);
+        font-size: 14px;
+        font-weight: 700;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+      }
+
+      #summa-importacio-extracte-editorial-title {
+        margin: 0;
+        max-width: 780px;
+        font-size: 48px;
+        line-height: 0.98;
+        letter-spacing: -0.05em;
+        font-weight: 700;
+      }
+
+      #summa-importacio-extracte-editorial-meta {
+        margin: 0 0 4px;
+        color: rgba(21, 26, 33, 0.7);
+        font-size: 22px;
+        line-height: 1.28;
+      }
+
+      #summa-importacio-extracte-editorial-stage {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
+
+      #summa-importacio-extracte-editorial-frame {
+        position: relative;
+        width: 1500px;
+        height: 844px;
+        overflow: hidden;
+        border-radius: 30px;
+        border: 1px solid rgba(21, 26, 33, 0.08);
+        background: #ffffff;
+        box-shadow: 0 28px 60px rgba(21, 26, 33, 0.12);
+      }
+
+      #summa-importacio-extracte-editorial-video,
+      #summa-importacio-extracte-editorial-shadow {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+      }
+
+      #summa-importacio-extracte-editorial-video {
+        object-fit: cover;
+        object-position: center center;
+        transform-origin: center center;
+        will-change: transform;
+      }
+
+      #summa-importacio-extracte-editorial-frame-topline,
+      #summa-importacio-extracte-editorial-shadow {
+        pointer-events: none;
+      }
+
+      #summa-importacio-extracte-editorial-frame-topline {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 4px;
+        background: linear-gradient(
+          90deg,
+          var(--summa-accent, #1d9bf0) 0%,
+          rgba(29, 155, 240, 0.24) 54%,
+          rgba(29, 155, 240, 0) 100%
+        );
+      }
+
+      #summa-importacio-extracte-editorial-shadow {
+        background:
+          linear-gradient(180deg, rgba(16, 22, 31, 0.02) 0%, rgba(16, 22, 31, 0) 18%),
+          radial-gradient(circle at 88% 14%, rgba(255, 255, 255, 0.14) 0%, rgba(255, 255, 255, 0) 26%);
+      }
+    </style>
+
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <script>
+      (function () {
+        const root = document.querySelector('[data-composition-id="06-importacio-extracte-editorial-16x9"]');
+        if (!root) return;
+
+        const video = root.querySelector("#summa-importacio-extracte-editorial-video");
+        const eyebrow = root.querySelector("#summa-importacio-extracte-editorial-eyebrow");
+        const title = root.querySelector("#summa-importacio-extracte-editorial-title");
+        const meta = root.querySelector("#summa-importacio-extracte-editorial-meta");
+        const headline = root.querySelector("#summa-importacio-extracte-editorial-headline");
+        const stageFrame = root.querySelector("#summa-importacio-extracte-editorial-frame");
+        const shadow = root.querySelector("#summa-importacio-extracte-editorial-shadow");
+
+        const scenes = [
+          {
+            accent: "#1d9bf0",
+            eyebrow: "Entrada",
+            title: "Importa l'extracte des de Moviments.",
+            meta: "El flux comença dins del compte que vols revisar.",
+            scale: 1,
+            x: 0,
+            y: 0,
+          },
+          {
+            accent: "#1d9bf0",
+            eyebrow: "Validació",
+            title: "Evita el compte equivocat abans d'importar.",
+            meta: "El sistema et fa seleccionar el compte abans de continuar.",
+            scale: 1.08,
+            x: -36,
+            y: -14,
+          },
+          {
+            accent: "#657186",
+            eyebrow: "Revisió",
+            title: "Revisa imports, dates i candidats abans de confirmar.",
+            meta: "El resum et mostra què entrarà i què quedarà fora.",
+            scale: 1.11,
+            x: -38,
+            y: -86,
+          },
+          {
+            accent: "#c77d00",
+            eyebrow: "Alerta",
+            title: "Si hi ha conflictes o duplicats, es veuen abans d'entrar.",
+            meta: "La revisió passa abans de contaminar la conciliació.",
+            scale: 1.055,
+            x: -10,
+            y: -120,
+          },
+          {
+            accent: "#1f9d63",
+            eyebrow: "Resultat",
+            title: "Quan acabes, la conciliació pot continuar.",
+            meta: "Els moviments queden situats per seguir revisant.",
+            scale: 1.02,
+            x: 0,
+            y: -72,
+          },
+        ];
+
+        function setAccent(accent) {
+          root.style.setProperty("--summa-accent", accent);
+        }
+
+        function setScene(scene) {
+          setAccent(scene.accent);
+          if (eyebrow) eyebrow.textContent = scene.eyebrow;
+          if (title) title.textContent = scene.title;
+          if (meta) meta.textContent = scene.meta;
+        }
+
+        window.__timelines = window.__timelines || {};
+        const tl = gsap.timeline({ paused: true });
+
+        setScene(scenes[0]);
+        tl.from(root, { opacity: 0, duration: 0.45, ease: "power2.out" }, 0);
+        tl.from(headline, { opacity: 0, y: 12, duration: 0.45, ease: "power2.out" }, 0.05);
+        tl.from(stageFrame, { opacity: 0, y: 18, duration: 0.55, ease: "power2.out" }, 0.08);
+        tl.from(video, { opacity: 0, scale: 1.01, duration: 0.55, ease: "power2.out" }, 0.08);
+
+        scenes.forEach((scene, sceneIndex) => {
+          const start = sceneIndex * 6.14;
+          const contentAt = start + (sceneIndex === 0 ? 0 : 0.16);
+
+          if (sceneIndex > 0) {
+            tl.to(headline, { opacity: 0.2, duration: 0.16, ease: "power1.in" }, start);
+          }
+
+          tl.call(() => setScene(scene), null, contentAt);
+          tl.to(headline, { opacity: 1, duration: 0.3, ease: "power2.out" }, contentAt);
+          tl.to(
+            video,
+            {
+              scale: scene.scale,
+              x: scene.x,
+              y: scene.y,
+              duration: 1.08,
+              ease: "power2.out",
+            },
+            start
+          );
+          tl.to(
+            stageFrame,
+            {
+              scale: sceneIndex === 3 ? 1.004 : 1,
+              duration: 1.08,
+              ease: "power2.out",
+            },
+            start
+          );
+          tl.to(shadow, { opacity: sceneIndex === 3 ? 0.96 : 1, duration: 0.7, ease: "power2.out" }, start);
+        });
+
+        window.__timelines["06-importacio-extracte-editorial-16x9"] = tl;
+      })();
+    </script>
+  </div>
+</template>
