@@ -3,15 +3,17 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 
 import { createRuntimeProject } from './project-runtime.mjs';
+import { buildHyperframesRenderCommand, parseRenderPieceArgs } from './render-piece-lib.mjs';
 
 function fail(message) {
   console.error(message);
   process.exit(1);
 }
 
-const [, , pieceId, ...passthrough] = process.argv;
+const parsedArgs = parseRenderPieceArgs(process.argv.slice(2));
+const { pieceId, profile, passthrough } = parsedArgs;
 if (!pieceId) {
-  fail('Usage: npm run video:render:piece -- <composition-id> [hyperframes render args]');
+  fail('Usage: npm run video:render:piece -- <composition-id> [--profile web-premium] [hyperframes render args]');
 }
 
 const projectRoot = path.resolve(import.meta.dirname, '..');
@@ -24,10 +26,15 @@ async function cleanup() {
   await fs.rm(runtimeRoot, { recursive: true, force: true });
 }
 
-const child = spawn('npx', ['hyperframes', 'render', runtimeRoot, ...passthrough], {
-  cwd: projectRoot,
-  stdio: 'inherit',
-});
+let command;
+try {
+  command = buildHyperframesRenderCommand(runtimeRoot, { profile, passthrough });
+} catch (error) {
+  await cleanup();
+  fail(error.message);
+}
+
+const child = spawn(command[0], command.slice(1), { cwd: projectRoot, stdio: 'inherit' });
 
 child.on('exit', async (code, signal) => {
   await cleanup();

@@ -48,10 +48,13 @@
   - `npm run video:list`
 - Render 06 through a temporary runtime project:
   - `npm run video:render:piece -- 06-importacio-extracte-editorial-16x9 --output renders/06-importacio-extracte-editorial-16x9.mp4`
+- Render 06 with the website-facing delivery profile:
+  - `npm run video:render:piece -- 06-importacio-extracte-editorial-16x9 --profile web-premium --output renders/06-importacio-extracte-editorial-16x9.web.mp4`
 - Preview 06 through the same temporary runtime layer:
   - `npm run video:preview:piece -- 06-importacio-extracte-editorial-16x9`
 - This flow does not require editing `index.html` and cleans up the temporary runtime after exit.
 - Use this for safe preview and render verification of the editorial explainer layer; do not copy 05 forward as the canonical explainer shape.
+- `web-premium` is the preferred delivery render when the output is meant for a website or hero embed; it raises encoder quality at source instead of trying to “repair” a compressed draft later.
 
 ## Known risks
 - The current runtime still contains research-era components that can tempt future work back toward abstract explainers if briefs and capture sets are ignored

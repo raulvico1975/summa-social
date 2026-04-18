@@ -47,8 +47,11 @@
 - The repo keeps only the official CLI path: `npx hyperframes render --output output.mp4`
 - Specific piece to a custom output without mutating the studio root:
   - `npm run video:render:piece -- 06-importacio-extracte-editorial-16x9 --output /tmp/summa-06.mp4`
+- Specific piece with web delivery quality from source:
+  - `npm run video:render:piece -- 06-importacio-extracte-editorial-16x9 --profile web-premium --output /tmp/summa-06.web.mp4`
 - Safe preview uses the same temporary runtime and cleans it up on exit:
   - `npm run video:preview:piece -- 06-importacio-extracte-editorial-16x9`
+- `web-premium` expands to a stable encoder profile for UI-heavy videos and should be the default for website-facing delivery renders.
 
 ## Piece discovery and tests
 - List renderable pieces:
