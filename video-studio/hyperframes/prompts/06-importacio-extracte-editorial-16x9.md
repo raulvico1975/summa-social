@@ -17,7 +17,8 @@ Persones d'administració, gestió i comptabilitat d'entitats socials.
 - una sola idea per beat
 - un claim curt i una sublínia curta per beat
 - un únic focus visual per beat, sense capes competint
-- fer servir focus boxes o reframing discret només per indicar on mirar
+- fer servir reframing discret i mai caixes delimitadores per marcar elements
+- mantenir aire clar entre el bloc de text i la captura
 - blau només quan la decisió o l'acció ho demana
 - taronja per l'alerta i verd per al resultat, només si hi ha sentit semàntic
 - no usar captions ni lower-thirds tret que siguin estrictament necessaris

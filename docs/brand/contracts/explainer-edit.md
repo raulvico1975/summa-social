@@ -100,6 +100,8 @@ Use them sparingly:
 - avoid competing callouts
 - avoid decorative zoom cycles
 - avoid highlight layers that obscure the UI
+- do not use bounding boxes or hard-outline callouts over the UI
+- prefer reframing, crop, contrast, and soft light over drawn containers
 
 If the viewer would have to guess what is being emphasized, the edit is too busy.
 
@@ -115,6 +117,7 @@ Rules:
 - avoid paragraphs, caption walls, or repeated restatement of the same claim
 - keep visible text aligned with the proof on screen
 - keep copy subordinate to the proof target defined in the brief matrix
+- keep clear breathing room between the text block and the capture frame
 
 If the UI already explains the step, the copy should shrink, not expand.
 
@@ -160,6 +163,8 @@ An explainer edit is rejected if any of the following are true:
 - it adds copy that repeats what the UI already makes obvious
 - it turns the edit into a different narrative from the master
 - it obscures text or key UI states during playback
+- it crowds the capture with editorial text or overlays
+- it uses boxed callouts that miss or fight the real UI target
 - it cannot be traced cleanly back to one approved master
 - it breaks the one-claim, one-proof-target rule from the brief and grammar
 

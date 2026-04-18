@@ -114,6 +114,8 @@ Constraints:
 - motion cannot become the story
 - no decorative cycles
 - no repeated emphasis on the same beat
+- no bounding boxes or hard contour overlays around UI elements
+- keep the text block outside the capture safe area with visible breathing room
 
 ### Copy budget
 
@@ -189,4 +191,3 @@ An explainer edit fails this grammar if any beat:
 The brief must supply the claims.
 The capture set must supply the proof targets.
 The edit must only rearrange, tighten, and clarify what those sources already justify.
-

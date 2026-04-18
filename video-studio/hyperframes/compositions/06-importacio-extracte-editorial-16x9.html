@@ -29,7 +29,6 @@
           ></video>
           <div id="summa-importacio-extracte-editorial-frame-topline"></div>
           <div id="summa-importacio-extracte-editorial-shadow"></div>
-          <div id="summa-importacio-extracte-editorial-focus"></div>
         </div>
       </section>
     </div>
@@ -48,23 +47,23 @@
       #summa-importacio-extracte-editorial-shell {
         position: relative;
         display: grid;
-        grid-template-rows: 108px 1fr;
-        gap: 16px;
+        grid-template-rows: auto 1fr;
+        gap: 26px;
         width: 100%;
         height: 100%;
-        padding: 34px 42px 38px;
+        padding: 36px 44px 34px;
         box-sizing: border-box;
       }
 
       #summa-importacio-extracte-editorial-headline {
-        display: grid;
-        grid-template-columns: minmax(0, 1fr) 360px;
-        gap: 32px;
-        align-items: end;
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+        max-width: 920px;
       }
 
       #summa-importacio-extracte-editorial-eyebrow {
-        grid-column: 1 / -1;
         color: var(--summa-accent, #1d9bf0);
         font-size: 14px;
         font-weight: 700;
@@ -74,30 +73,31 @@
 
       #summa-importacio-extracte-editorial-title {
         margin: 0;
-        max-width: 700px;
-        font-size: 42px;
-        line-height: 0.95;
+        max-width: 920px;
+        font-size: 44px;
+        line-height: 0.98;
         letter-spacing: -0.05em;
         font-weight: 700;
       }
 
       #summa-importacio-extracte-editorial-meta {
-        margin: 0 0 4px;
+        margin: 0;
+        max-width: 520px;
         color: rgba(21, 26, 33, 0.7);
-        font-size: 18px;
-        line-height: 1.22;
+        font-size: 20px;
+        line-height: 1.24;
       }
 
       #summa-importacio-extracte-editorial-stage {
         display: flex;
         justify-content: center;
-        align-items: center;
+        align-items: flex-start;
       }
 
       #summa-importacio-extracte-editorial-frame {
         position: relative;
-        width: 1680px;
-        height: 944px;
+        width: 1568px;
+        height: 882px;
         overflow: hidden;
         border-radius: 26px;
         border: 1px solid rgba(21, 26, 33, 0.08);
@@ -106,8 +106,7 @@
       }
 
       #summa-importacio-extracte-editorial-video,
-      #summa-importacio-extracte-editorial-shadow,
-      #summa-importacio-extracte-editorial-focus {
+      #summa-importacio-extracte-editorial-shadow {
         position: absolute;
         inset: 0;
         width: 100%;
@@ -122,8 +121,7 @@
       }
 
       #summa-importacio-extracte-editorial-frame-topline,
-      #summa-importacio-extracte-editorial-shadow,
-      #summa-importacio-extracte-editorial-focus {
+      #summa-importacio-extracte-editorial-shadow {
         pointer-events: none;
       }
 
@@ -143,21 +141,8 @@
 
       #summa-importacio-extracte-editorial-shadow {
         background:
-          linear-gradient(180deg, rgba(16, 22, 31, 0.02) 0%, rgba(16, 22, 31, 0) 18%),
-          radial-gradient(circle at 88% 14%, rgba(255, 255, 255, 0.14) 0%, rgba(255, 255, 255, 0) 26%);
-      }
-
-      #summa-importacio-extracte-editorial-focus {
-        inset: auto;
-        width: 280px;
-        height: 140px;
-        border: 2px solid var(--summa-accent, #1d9bf0);
-        border-radius: 20px;
-        box-shadow:
-          0 0 0 9999px rgba(18, 24, 31, 0.12),
-          0 10px 24px rgba(18, 24, 31, 0.12);
-        opacity: 0.74;
-        will-change: transform, width, height, opacity;
+          linear-gradient(180deg, rgba(16, 22, 31, 0.015) 0%, rgba(16, 22, 31, 0) 18%),
+          radial-gradient(circle at 88% 14%, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0) 26%);
       }
     </style>
 
@@ -174,7 +159,6 @@
         const headline = root.querySelector("#summa-importacio-extracte-editorial-headline");
         const stageFrame = root.querySelector("#summa-importacio-extracte-editorial-frame");
         const shadow = root.querySelector("#summa-importacio-extracte-editorial-shadow");
-        const focus = root.querySelector("#summa-importacio-extracte-editorial-focus");
 
         const scenes = [
           {
@@ -185,10 +169,6 @@
             scale: 1.01,
             x: -8,
             y: -6,
-            focusX: 148,
-            focusY: 126,
-            focusWidth: 150,
-            focusHeight: 64,
           },
           {
             accent: "#1d9bf0",
@@ -198,10 +178,6 @@
             scale: 1.065,
             x: -18,
             y: -8,
-            focusX: 358,
-            focusY: 238,
-            focusWidth: 908,
-            focusHeight: 372,
           },
           {
             accent: "#657186",
@@ -211,10 +187,6 @@
             scale: 1.095,
             x: -22,
             y: -72,
-            focusX: 184,
-            focusY: 120,
-            focusWidth: 1110,
-            focusHeight: 504,
           },
           {
             accent: "#c77d00",
@@ -224,10 +196,6 @@
             scale: 1.03,
             x: -2,
             y: -96,
-            focusX: 160,
-            focusY: 102,
-            focusWidth: 1280,
-            focusHeight: 118,
           },
           {
             accent: "#1f9d63",
@@ -237,10 +205,6 @@
             scale: 1.048,
             x: -42,
             y: -84,
-            focusX: 1140,
-            focusY: 188,
-            focusWidth: 286,
-            focusHeight: 520,
           },
         ];
 
@@ -263,7 +227,6 @@
         tl.from(headline, { opacity: 0, y: 12, duration: 0.45, ease: "power2.out" }, 0.05);
         tl.from(stageFrame, { opacity: 0, y: 18, duration: 0.55, ease: "power2.out" }, 0.08);
         tl.from(video, { opacity: 0, scale: 1.01, duration: 0.55, ease: "power2.out" }, 0.08);
-        tl.from(focus, { opacity: 0, scale: 0.98, duration: 0.45, ease: "power2.out" }, 0.12);
 
         scenes.forEach((scene, sceneIndex) => {
           const start = sceneIndex * 6.14;
@@ -285,18 +248,6 @@
               ease: "power2.out",
             },
             start
-          );
-          tl.to(
-            focus,
-            {
-              x: scene.focusX,
-              y: scene.focusY,
-              width: scene.focusWidth,
-              height: scene.focusHeight,
-              duration: 0.88,
-              ease: "power2.out",
-            },
-            start + 0.06
           );
           tl.to(
             stageFrame,
