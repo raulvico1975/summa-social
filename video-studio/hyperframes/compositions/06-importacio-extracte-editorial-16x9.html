@@ -29,6 +29,7 @@
           ></video>
           <div id="summa-importacio-extracte-editorial-frame-topline"></div>
           <div id="summa-importacio-extracte-editorial-shadow"></div>
+          <div id="summa-importacio-extracte-editorial-focus"></div>
         </div>
       </section>
     </div>
@@ -47,18 +48,18 @@
       #summa-importacio-extracte-editorial-shell {
         position: relative;
         display: grid;
-        grid-template-rows: 136px 1fr;
-        gap: 22px;
+        grid-template-rows: 108px 1fr;
+        gap: 16px;
         width: 100%;
         height: 100%;
-        padding: 46px 64px 52px;
+        padding: 34px 42px 38px;
         box-sizing: border-box;
       }
 
       #summa-importacio-extracte-editorial-headline {
         display: grid;
-        grid-template-columns: minmax(0, 1fr) 420px;
-        gap: 42px;
+        grid-template-columns: minmax(0, 1fr) 360px;
+        gap: 32px;
         align-items: end;
       }
 
@@ -73,9 +74,9 @@
 
       #summa-importacio-extracte-editorial-title {
         margin: 0;
-        max-width: 780px;
-        font-size: 48px;
-        line-height: 0.98;
+        max-width: 700px;
+        font-size: 42px;
+        line-height: 0.95;
         letter-spacing: -0.05em;
         font-weight: 700;
       }
@@ -83,8 +84,8 @@
       #summa-importacio-extracte-editorial-meta {
         margin: 0 0 4px;
         color: rgba(21, 26, 33, 0.7);
-        font-size: 22px;
-        line-height: 1.28;
+        font-size: 18px;
+        line-height: 1.22;
       }
 
       #summa-importacio-extracte-editorial-stage {
@@ -95,17 +96,18 @@
 
       #summa-importacio-extracte-editorial-frame {
         position: relative;
-        width: 1500px;
-        height: 844px;
+        width: 1680px;
+        height: 944px;
         overflow: hidden;
-        border-radius: 30px;
+        border-radius: 26px;
         border: 1px solid rgba(21, 26, 33, 0.08);
         background: #ffffff;
-        box-shadow: 0 28px 60px rgba(21, 26, 33, 0.12);
+        box-shadow: 0 24px 52px rgba(21, 26, 33, 0.12);
       }
 
       #summa-importacio-extracte-editorial-video,
-      #summa-importacio-extracte-editorial-shadow {
+      #summa-importacio-extracte-editorial-shadow,
+      #summa-importacio-extracte-editorial-focus {
         position: absolute;
         inset: 0;
         width: 100%;
@@ -120,7 +122,8 @@
       }
 
       #summa-importacio-extracte-editorial-frame-topline,
-      #summa-importacio-extracte-editorial-shadow {
+      #summa-importacio-extracte-editorial-shadow,
+      #summa-importacio-extracte-editorial-focus {
         pointer-events: none;
       }
 
@@ -143,6 +146,19 @@
           linear-gradient(180deg, rgba(16, 22, 31, 0.02) 0%, rgba(16, 22, 31, 0) 18%),
           radial-gradient(circle at 88% 14%, rgba(255, 255, 255, 0.14) 0%, rgba(255, 255, 255, 0) 26%);
       }
+
+      #summa-importacio-extracte-editorial-focus {
+        inset: auto;
+        width: 280px;
+        height: 140px;
+        border: 2px solid var(--summa-accent, #1d9bf0);
+        border-radius: 20px;
+        box-shadow:
+          0 0 0 9999px rgba(18, 24, 31, 0.12),
+          0 10px 24px rgba(18, 24, 31, 0.12);
+        opacity: 0.74;
+        will-change: transform, width, height, opacity;
+      }
     </style>
 
     <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
@@ -158,52 +174,73 @@
         const headline = root.querySelector("#summa-importacio-extracte-editorial-headline");
         const stageFrame = root.querySelector("#summa-importacio-extracte-editorial-frame");
         const shadow = root.querySelector("#summa-importacio-extracte-editorial-shadow");
+        const focus = root.querySelector("#summa-importacio-extracte-editorial-focus");
 
         const scenes = [
           {
             accent: "#1d9bf0",
             eyebrow: "Entrada",
-            title: "Importa l'extracte des de Moviments.",
-            meta: "El flux comença dins del compte que vols revisar.",
-            scale: 1,
-            x: 0,
-            y: 0,
+            title: "Importa sense perdre el control.",
+            meta: "Comença al compte que vols revisar.",
+            scale: 1.01,
+            x: -8,
+            y: -6,
+            focusX: 148,
+            focusY: 126,
+            focusWidth: 150,
+            focusHeight: 64,
           },
           {
             accent: "#1d9bf0",
             eyebrow: "Validació",
-            title: "Evita el compte equivocat abans d'importar.",
-            meta: "El sistema et fa seleccionar el compte abans de continuar.",
-            scale: 1.08,
-            x: -36,
-            y: -14,
+            title: "Valida el compte abans de seguir.",
+            meta: "La decisió queda tancada abans d'importar.",
+            scale: 1.065,
+            x: -18,
+            y: -8,
+            focusX: 358,
+            focusY: 238,
+            focusWidth: 908,
+            focusHeight: 372,
           },
           {
             accent: "#657186",
             eyebrow: "Revisió",
-            title: "Revisa imports, dates i candidats abans de confirmar.",
-            meta: "El resum et mostra què entrarà i què quedarà fora.",
-            scale: 1.11,
-            x: -38,
-            y: -86,
+            title: "Revisa què entra i què queda fora.",
+            meta: "Imports, dates i candidats queden visibles.",
+            scale: 1.095,
+            x: -22,
+            y: -72,
+            focusX: 184,
+            focusY: 120,
+            focusWidth: 1110,
+            focusHeight: 504,
           },
           {
             accent: "#c77d00",
             eyebrow: "Alerta",
-            title: "Si hi ha conflictes o duplicats, es veuen abans d'entrar.",
-            meta: "La revisió passa abans de contaminar la conciliació.",
-            scale: 1.055,
-            x: -10,
-            y: -120,
+            title: "Els conflictes es veuen abans d'entrar.",
+            meta: "No contaminen la conciliació per sorpresa.",
+            scale: 1.03,
+            x: -2,
+            y: -96,
+            focusX: 160,
+            focusY: 102,
+            focusWidth: 1280,
+            focusHeight: 118,
           },
           {
             accent: "#1f9d63",
             eyebrow: "Resultat",
-            title: "Quan acabes, la conciliació pot continuar.",
-            meta: "Els moviments queden situats per seguir revisant.",
-            scale: 1.02,
-            x: 0,
-            y: -72,
+            title: "Quan entra net, pots seguir conciliant.",
+            meta: "Els moviments queden situats per revisar.",
+            scale: 1.048,
+            x: -42,
+            y: -84,
+            focusX: 1140,
+            focusY: 188,
+            focusWidth: 286,
+            focusHeight: 520,
           },
         ];
 
@@ -226,6 +263,7 @@
         tl.from(headline, { opacity: 0, y: 12, duration: 0.45, ease: "power2.out" }, 0.05);
         tl.from(stageFrame, { opacity: 0, y: 18, duration: 0.55, ease: "power2.out" }, 0.08);
         tl.from(video, { opacity: 0, scale: 1.01, duration: 0.55, ease: "power2.out" }, 0.08);
+        tl.from(focus, { opacity: 0, scale: 0.98, duration: 0.45, ease: "power2.out" }, 0.12);
 
         scenes.forEach((scene, sceneIndex) => {
           const start = sceneIndex * 6.14;
@@ -249,15 +287,27 @@
             start
           );
           tl.to(
+            focus,
+            {
+              x: scene.focusX,
+              y: scene.focusY,
+              width: scene.focusWidth,
+              height: scene.focusHeight,
+              duration: 0.88,
+              ease: "power2.out",
+            },
+            start + 0.06
+          );
+          tl.to(
             stageFrame,
             {
-              scale: sceneIndex === 3 ? 1.004 : 1,
+              scale: sceneIndex === 3 ? 1.003 : 1,
               duration: 1.08,
               ease: "power2.out",
             },
             start
           );
-          tl.to(shadow, { opacity: sceneIndex === 3 ? 0.96 : 1, duration: 0.7, ease: "power2.out" }, start);
+          tl.to(shadow, { opacity: sceneIndex === 3 ? 0.94 : 1, duration: 0.7, ease: "power2.out" }, start);
         });
 
         window.__timelines["06-importacio-extracte-editorial-16x9"] = tl;

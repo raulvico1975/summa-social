@@ -12,11 +12,12 @@ Persones d'administració, gestió i comptabilitat d'entitats socials.
 ## Senyals visuals obligatòries
 
 - fer servir el proxy editorial `../output/playwright/bank-reconciliation-demo/bank-reconciliation-demo.edit-proxy.mp4` com a prova principal
-- mantenir la UI real gran i dominant, amb el copy per sobre o al costat però mai competint amb el producte
+- mantenir la UI real gran i dominant, amb el copy només com a guia curtíssima
 - mantenir una lectura editorial, calmada i més lenta que un demo brut
 - una sola idea per beat
-- copy escàs i integrat amb la captura
+- un claim curt i una sublínia curta per beat
 - un únic focus visual per beat, sense capes competint
+- fer servir focus boxes o reframing discret només per indicar on mirar
 - blau només quan la decisió o l'acció ho demana
 - taronja per l'alerta i verd per al resultat, només si hi ha sentit semàntic
 - no usar captions ni lower-thirds tret que siguin estrictament necessaris
@@ -38,6 +39,7 @@ Persones d'administració, gestió i comptabilitat d'entitats socials.
 - editorial
 - fiable
 - sense hype
+- més demo guiada que pòster
 
 ## El que no pot semblar
 

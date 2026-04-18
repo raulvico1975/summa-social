@@ -7,10 +7,13 @@ Its job is to turn a proof-complete master into a more polished product-explaine
 
 It is downstream of `functional-explainer` and downstream of `video-studio/functional-explainers`.
 It can make the piece feel closer to a modern product video, but it cannot become a new source of truth.
+It also depends on the reusable edit grammar in `video-studio/hyperframes/templates/explainer-edit-grammar.md`
+and the reusable brief template in `video-studio/hyperframes/briefs/templates/functional-explainer-brief-template.md`.
 
 ## Relationship to the proof master
 
 An explainer edit always starts from one approved, render-verified master.
+That master must already be grounded in a brief whose claims are locked beat by beat and whose proof targets are tied to real captures.
 
 The edit may:
 
@@ -27,6 +30,8 @@ The edit may not:
 - change the core claim
 - cover up weak evidence with motion
 - outgrow the approved master into a different story
+- widen a beat into multiple claims or multiple proof targets
+- replace a capture-backed proof target with ornamental motion
 
 If the master is weak, the fix is to repair the master, not to over-edit it.
 
@@ -56,6 +61,8 @@ It should not:
 - become ad-like
 - become flashy for its own sake
 - depend on abstract motion to carry the message
+- collapse into poster language or generic campaign framing
+- blur the claim/proof pairing that the brief and grammar established
 
 ## Pacing
 
@@ -64,6 +71,8 @@ The edit must move faster than the proof master, but not so fast that the viewer
 Rules:
 
 - one idea per beat
+- one claim per beat
+- one proof target per beat
 - no filler shots
 - keep the first meaningful claim visible early
 - use rhythm changes to reinforce the story, not to decorate it
@@ -105,8 +114,17 @@ Rules:
 - avoid stacked text systems
 - avoid paragraphs, caption walls, or repeated restatement of the same claim
 - keep visible text aligned with the proof on screen
+- keep copy subordinate to the proof target defined in the brief matrix
 
 If the UI already explains the step, the copy should shrink, not expand.
+
+## Brief and grammar inputs
+
+The edit must remain faithful to the brief and grammar that produced it.
+
+- `video-studio/hyperframes/briefs/templates/functional-explainer-brief-template.md` defines the claim set, proof targets, and beat matrix.
+- `video-studio/hyperframes/templates/explainer-edit-grammar.md` defines how each beat is written and tightened in the edit.
+- `explainer-edit` may compress, reframe, and refine beats, but it may not rewrite the claim/proof relationship.
 
 ## Scene jobs
 
@@ -119,6 +137,7 @@ Valid scene jobs are:
 - focus attention on one important control or result
 - connect two approved beats without adding a new claim
 - land the outcome or benefit
+- support a single beat in the brief matrix
 
 Invalid scene behavior includes:
 
@@ -126,6 +145,8 @@ Invalid scene behavior includes:
 - switching topics mid-scene
 - using a scene as a general-purpose spacer
 - stacking proof, narration, and typography without a clear hierarchy
+- introducing a beat with no proof target
+- using motion to compensate for a weak or missing claim
 
 ## Rejection triggers
 
@@ -140,10 +161,13 @@ An explainer edit is rejected if any of the following are true:
 - it turns the edit into a different narrative from the master
 - it obscures text or key UI states during playback
 - it cannot be traced cleanly back to one approved master
+- it breaks the one-claim, one-proof-target rule from the brief and grammar
 
 ## Governance
 
 `functional-explainer` defines the proof contract.
 `explainer-edit` defines the editorial consumer layer on top of that proof.
+`functional-explainer-brief-template.md` defines the reusable brief structure.
+`explainer-edit-grammar.md` defines the reusable beat grammar.
 
 When they conflict, the proof contract wins.

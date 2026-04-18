@@ -13,6 +13,8 @@ For editorial consumer-layer cuts on top of an approved master, also follow `doc
 - The studio runtime is `video-studio/hyperframes`.
 - HyperFrames consumes the canonical master path and render inputs.
 - HyperFrames is not a source of truth.
+- The production chain is `source capture -> approved master -> edit proxy -> explainer-edit`.
+- The approved master is the only source of truth; the edit proxy exists only to support downstream editorial reframing or retiming.
 
 ## What a master is
 
@@ -26,7 +28,7 @@ A master must:
 - use approved capture evidence as the primary proof
 - be readable on its own before any derived distribution cut exists
 - have a clear approval state before it is treated as reusable
-- generate an edit-ready proxy when the downstream explainer layer needs reframing or retiming
+- generate an edit-ready proxy only when downstream `explainer-edit` work needs reframing or retiming
 
 ## What a derived cut is
 
@@ -52,11 +54,12 @@ A derived cut may not:
 1. Start from an approved brief and storyboard.
 2. Select the approved capture set.
 3. Assemble the master through `video-studio/functional-explainers`.
-4. Generate the edit-ready proxy for any downstream `explainer-edit` work.
-5. Render and review the master at exact timestamps.
-6. Fix any timing, overlap, looping, or readability problems.
-7. Approve the master only after render verification passes.
-8. Derive secondary cuts from the approved master only.
+4. Render and review the master at exact timestamps.
+5. Generate the edit-ready proxy and edit asset only if a downstream `explainer-edit` cut is needed.
+6. Use the proxy as the editing input for the consumer layer, not as a replacement for the master.
+7. Fix any timing, overlap, looping, or readability problems.
+8. Approve the master only after render verification passes.
+9. Derive secondary cuts from the approved master only.
 
 ## Review gates
 
@@ -84,6 +87,7 @@ Verification must confirm:
 - text is legible in playback
 - the product proof is present where the contract requires it
 - edit-ready proxies use dense keyframes before HyperFrames reframing consumes them
+- any declared `editProxyPath` and `editAssetPath` are produced from the approved recording, then handed off to `explainer-edit`
 
 If a render fails any of these checks, the master is not approved.
 
@@ -93,6 +97,7 @@ If a render fails any of these checks, the master is not approved.
 - Rendered mp4 files stay untracked.
 - Preview snapshots and thumbnails stay untracked.
 - Edit proxies and edit-asset JSON files stay untracked.
+- The reusable editorial handoff lives in docs, not in tracked proxy artifacts.
 - The repository should only store durable production inputs and reviewable contracts.
 
 ## Approval gate

@@ -92,8 +92,9 @@
       "job": "deixa el llistat final llest per revisar"
     }
   ],
-  "renderNotes": [
-    "Usa el recorder real de bank-reconciliation-demo i el storyboard funcional nou.",
+  "notes": [
+    "Usa el recorder real de bank-reconciliation-demo i el storyboard funcional nou; el master ha de sortir del capture set aprovat, no d'un proxy editorial.",
+    "Si hi ha treball downstream d'explainer-edit, el flux real és recording -> edit proxy -> explainer-edit; el proxy i l'edit-asset JSON són artefactes intermedis, no font de veritat.",
     "No afegeixis intro ni outro de marca.",
     "Mantingues un unic subtitol curt per escena.",
     "Prioritza prova visual real per sobre d'overlays decoratius."
