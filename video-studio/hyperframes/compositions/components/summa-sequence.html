@@ -1,9 +1,9 @@
 <template id="summa-sequence-template">
-  <div data-composition-id="summa-sequence" data-width="1920" data-height="1080" data-duration="12">
+  <div data-composition-id="summa-sequence" data-width="1920" data-height="1080" data-duration="20">
     <section
       class="clip summa-scene scene-hook"
       data-start="0"
-      data-duration="3"
+      data-duration="5"
       data-track-index="0"
       data-label="scene-hook"
     >
@@ -24,8 +24,8 @@
     </section>
     <section
       class="clip summa-scene scene-problem"
-      data-start="3"
-      data-duration="3"
+      data-start="5"
+      data-duration="5"
       data-track-index="1"
       data-label="scene-problem"
     >
@@ -46,8 +46,8 @@
     </section>
     <section
       class="clip summa-scene scene-solution"
-      data-start="6"
-      data-duration="3"
+      data-start="10"
+      data-duration="5"
       data-track-index="2"
       data-label="scene-solution"
     >
@@ -68,8 +68,8 @@
     </section>
     <section
       class="clip summa-scene scene-outcome"
-      data-start="9"
-      data-duration="3"
+      data-start="15"
+      data-duration="5"
       data-track-index="3"
       data-label="scene-outcome"
     >
@@ -109,10 +109,10 @@
       [data-composition-id="summa-sequence"] .summa-scene-layout {
         position: absolute;
         display: grid;
-        grid-template-columns: 236px minmax(0, 1fr);
-        gap: 34px;
+        grid-template-columns: 220px minmax(0, 1fr);
+        gap: 42px;
         align-items: center;
-        width: 848px;
+        width: 980px;
       }
 
       [data-composition-id="summa-sequence"] .summa-scene-copy {
@@ -124,7 +124,7 @@
 
       [data-composition-id="summa-sequence"] .summa-scene-figure {
         position: relative;
-        width: 236px;
+        width: 220px;
         height: 232px;
       }
 
@@ -140,7 +140,7 @@
       [data-composition-id="summa-sequence"] .summa-figure-node {
         position: absolute;
         top: 107px;
-        left: 182px;
+        left: 168px;
         width: 18px;
         height: 18px;
         border: 2px solid #74b7d8;
@@ -191,19 +191,15 @@
 
       [data-composition-id="summa-sequence"][data-layout="landscape"] .scene-hook .summa-scene-layout,
       [data-composition-id="summa-sequence"][data-layout="landscape"] .scene-solution .summa-scene-layout {
-        top: 232px;
+        top: 248px;
         left: 96px;
       }
 
       [data-composition-id="summa-sequence"][data-layout="landscape"] .scene-problem .summa-scene-layout,
       [data-composition-id="summa-sequence"][data-layout="landscape"] .scene-outcome .summa-scene-layout {
-        top: 232px;
+        top: 248px;
         right: 96px;
-      }
-
-      [data-composition-id="summa-sequence"][data-layout="landscape"] .scene-problem .summa-scene-figure,
-      [data-composition-id="summa-sequence"][data-layout="landscape"] .scene-outcome .summa-scene-figure {
-        order: 2;
+        grid-template-columns: minmax(0, 1fr) 220px;
       }
 
       [data-composition-id="summa-sequence"][data-layout="portrait"] .summa-scene-layout {
@@ -291,24 +287,24 @@
       }
 
       [data-composition-id="summa-sequence"] .summa-scene-title {
-        font-size: 72px;
-        line-height: 0.98;
+        font-size: 58px;
+        line-height: 1.02;
         font-weight: 700;
         letter-spacing: -0.04em;
       }
 
       [data-composition-id="summa-sequence"][data-layout="portrait"] .summa-scene-title {
-        font-size: 70px;
+        font-size: 60px;
       }
 
       [data-composition-id="summa-sequence"] .summa-scene-body {
         color: #2f3944;
-        font-size: 28px;
-        line-height: 1.36;
+        font-size: 22px;
+        line-height: 1.42;
       }
 
       [data-composition-id="summa-sequence"][data-layout="portrait"] .summa-scene-body {
-        font-size: 26px;
+        font-size: 24px;
       }
 
       [data-composition-id="summa-sequence"] .summa-scene-chip {
@@ -381,10 +377,10 @@
 
         const tl = gsap.timeline({ paused: true });
         const sceneWindows = {
-          hook: { start: 0, end: 3 },
-          problem: { start: 3, end: 6 },
-          solution: { start: 6, end: 9 },
-          outcome: { start: 9, end: 12 },
+          hook: { start: 0, end: 5 },
+          problem: { start: 5, end: 10 },
+          solution: { start: 10, end: 15 },
+          outcome: { start: 15, end: 20 },
         };
 
         tl.set(Object.values(sceneEls).filter(Boolean), { autoAlpha: 0 }, 0);
@@ -398,11 +394,11 @@
           tl.set(sceneEl, { autoAlpha: 1 }, window.start);
           tl.fromTo(
             cardEl,
-            { opacity: 0, y: 22 },
-            { opacity: 1, y: 0, duration: 0.42, ease: "power2.out" },
-            window.start + 0.08
+            { opacity: 0, y: 20 },
+            { opacity: 1, y: 0, duration: 0.5, ease: "power2.out" },
+            window.start + 0.12
           );
-          tl.to(sceneEl, { autoAlpha: 0, duration: 0.16, ease: "power1.in" }, window.end - 0.16);
+          tl.to(sceneEl, { autoAlpha: 0, duration: 0.22, ease: "power1.in" }, window.end - 0.22);
         });
 
         window.__timelines = window.__timelines || {};

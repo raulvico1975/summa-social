@@ -6,14 +6,14 @@ copy, reusable components, and overlays. It is not a pitch deck summary.
 ## 05-devolucions-estat-real-16x9
 - Composition: `compositions/05-devolucions-estat-real-16x9.html`
 - Format: `16:9`
-- Duration: `12s`
+- Duration: `20s`
 - Base sequence: `compositions/components/summa-sequence.html`
-- Caption system: `compositions/components/summa-caption.html`
-- Lower third: `compositions/components/summa-lower-third.html` from `6s` to `9s`
+- Caption system: none in this pilot
+- Lower third: none in this pilot
 
 | Time | Scene | Primary text | Visual component | Caption / overlay | CTA / action |
 | --- | --- | --- | --- | --- | --- |
-| `0-3s` | Hook | `Si no saps quina quota ha tornat, la feina s'encalla.` | `summa-sequence` → `scene-hook` | Caption: `Si no saps quina quota ha tornat, no pots decidir bé.` | None |
-| `3-6s` | Problem | `Banc, Excel i trucades no coincideixen.` | `summa-sequence` → `scene-problem` | Caption: `Quan banc i Excel no coincideixen, el control es trenca.` | None |
-| `6-9s` | Solution | `Quota, motiu i estat queden junts.` | `summa-sequence` → `scene-solution` | Lower third: `Lligar` + operational copy | Operational action only |
-| `9-12s` | Outcome | `Abans de reintentar, ja sabeu què toca.` | `summa-sequence` → `scene-outcome` | Caption: `Primer entendre el cas. Després decidir l'acció.` | No dedicated CTA shell |
+| `0-5s` | Hook | `No saps a quina quota correspon.` | `summa-sequence` → `scene-hook` | None | None |
+| `5-10s` | Problem | `Banc i Excel diuen coses diferents.` | `summa-sequence` → `scene-problem` | None | None |
+| `10-15s` | Solution | `Summa ho deixa en un sol lloc.` | `summa-sequence` → `scene-solution` | None | One next-action idea only |
+| `15-20s` | Outcome | `Primer enteneu el cas. Després actueu.` | `summa-sequence` → `scene-outcome` | None | No CTA shell |

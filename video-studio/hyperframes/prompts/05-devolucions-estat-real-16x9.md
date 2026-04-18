@@ -15,6 +15,14 @@ Persones que porten administracio, comptabilitat i gestio de quotes en entitats 
 - documents, rebuts, estat i recorregut de proces abans que blocs de producte
 - blanc, negre i accent blau molt suau
 - aire, calma i criteri
+- una sola capa principal de text per escena
+- res de captions i lower-thirds en aquest pilot
+
+## Ritme obligatori
+
+- durada total: 20 segons
+- 4 escenes de 5 segons
+- temps suficient per llegir titol i frase de suport sense pressa
 
 ## To del missatge
 
