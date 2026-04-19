@@ -39,6 +39,7 @@ This means:
 ## Story structure
 
 Use `3` to `5` proof beats.
+Prefer `4` if the story closes cleanly there.
 
 Each beat must have:
 
@@ -61,6 +62,13 @@ Valid beat jobs are:
 - no supporting line unless it removes ambiguity
 - if the UI already explains the moment, copy should disappear
 - every word must serve the viewer, not the brand ego
+- copy should sound operational, not campaign-like
+
+## Editorial priority
+
+- start from the clearest proof state available
+- do not open on a broad page state if a stronger modal, warning, or result state exists
+- let `verify` and `resolve` beats breathe more than `establish` beats
 
 ## Rejection triggers
 

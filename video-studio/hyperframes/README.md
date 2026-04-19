@@ -98,7 +98,7 @@
 - `shots/`
   - Reusable shot-level building blocks
 - `templates/`
-  - Product-film template contracts and shot language
+  - Product-film template contracts, shot language, and review gate
 - `HANDOFF.md`
   - Current state, reusable pieces, risks, limitations, and repeatable operating steps for another agent
 Use these documents together with:

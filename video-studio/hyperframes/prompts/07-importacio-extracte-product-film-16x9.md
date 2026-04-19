@@ -9,17 +9,20 @@ Ja no és sandbox de runtime; és el primer intent seriós de llenguatge públic
 
 Construir una peça premium a partir de captures fixes 4K del flux real
 d'importació i conciliació, amb ritme lent, text mínim i zero layout de pòster.
+La versió actual ha de prioritzar els estats més forts del flux, no la pàgina
+general més buida.
 
 ## Regles obligatòries
 
 - fer servir captures fixes reals com a imatge principal
 - composició full-bleed o near full-bleed
-- 5 beats de prova: entrada, compte, resum, conflicte, resultat
+- 4 beats de prova: importació, revisió, duplicats, resultat
 - una sola línia principal per beat
 - una sola línia de suport només si treu ambigüitat
 - sense targeta amb producte incrustat
 - sense lower-thirds, rails de captions ni caixes delimitadores
 - moviment sobri: zoom, reframe i hold
+- obrir des del primer estat de prova fort; no des d'un context feble
 - qualitat pensada per render `web-premium`
 
 ## To

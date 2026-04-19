@@ -23,3 +23,7 @@ and downstream product films.
 
 ## Operating rule
 If a shot cannot be traced to a real capture and a production brief, it is not canonical.
+
+## Product film reference
+- [Product film shot library](./product-film/README.md) for the reusable premium-film shot set.
+- Use that library when the brief calls for a polished product story built from real captures and restrained copy.

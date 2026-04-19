@@ -13,6 +13,8 @@
 - safe per-piece preview and render wrappers
 - web delivery profile support
 - briefs, captures, and templates registry
+- capture-first product-film shot library
+- product-film review gate
 
 ## What is fixed
 - Plain HTML + `data-*` + GSAP structure

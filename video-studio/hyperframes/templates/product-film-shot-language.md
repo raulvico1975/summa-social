@@ -44,5 +44,9 @@ Do not use holds as filler.
 - one shot job per beat
 - one proof target per beat
 - one movement intention per beat
+- prefer `4` beats when the story can close without a fifth
+- start from the strongest proof state available, not from the weakest page-wide setup
 - no decorative camera choreography
 - no typography-led beats when UI proof is available
+- keep dominant copy to a short operational line
+- let `verify` and `resolve` beats hold longer than they drift

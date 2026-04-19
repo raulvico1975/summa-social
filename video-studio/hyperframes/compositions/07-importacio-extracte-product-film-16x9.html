@@ -5,25 +5,19 @@
     data-start="0"
     data-width="1920"
     data-height="1080"
-    data-duration="24"
+    data-duration="20"
   >
     <section id="summa-importacio-extracte-product-film-stage" aria-label="Importació d'extracte i conciliació dins de Summa">
-      <div class="summa-product-film-shot" data-shot="entry">
+      <div class="summa-product-film-shot" data-shot="shell">
         <img
           src="../output/playwright/bank-reconciliation-demo/movements-start.png"
-          alt="Moviments abans d'importar l'extracte"
+          alt="Pantalla de moviments llesta per importar un extracte bancari"
         />
       </div>
       <div class="summa-product-film-shot" data-shot="account">
         <img
           src="../output/playwright/bank-reconciliation-demo/import-account-dialog.png"
           alt="Selecció del compte abans d'importar"
-        />
-      </div>
-      <div class="summa-product-film-shot" data-shot="preview">
-        <img
-          src="../output/playwright/bank-reconciliation-demo/after-account-continue.png"
-          alt="Resum pre-importació amb imports i dates"
         />
       </div>
       <div class="summa-product-film-shot" data-shot="warning">
@@ -34,21 +28,25 @@
       </div>
       <div class="summa-product-film-shot" data-shot="result">
         <img
-          src="../output/playwright/bank-reconciliation-demo/reconciliation-result.png"
+          src="../output/playwright/bank-reconciliation-demo/after-ai-categorization.png"
           alt="Resultat final després d'importar i continuar conciliant"
         />
       </div>
 
-      <div id="summa-importacio-extracte-product-film-overlay-top"></div>
-      <div id="summa-importacio-extracte-product-film-overlay-bottom"></div>
-      <div id="summa-importacio-extracte-product-film-overlay-edge"></div>
-
-      <header id="summa-importacio-extracte-product-film-copy">
-        <div id="summa-importacio-extracte-product-film-kicker"></div>
-        <div id="summa-importacio-extracte-product-film-rule"></div>
-        <h1 id="summa-importacio-extracte-product-film-title"></h1>
-        <p id="summa-importacio-extracte-product-film-meta"></p>
-      </header>
+      <div id="summa-importacio-extracte-product-film-copy" aria-hidden="true">
+        <div class="summa-product-film-caption" data-caption="shell">
+          <div class="summa-product-film-kicker">Conciliació</div>
+          <div class="summa-product-film-rule"></div>
+          <h1 class="summa-product-film-title">Concilia els moviments bancaris.</h1>
+          <p class="summa-product-film-meta">Importa l'extracte i deixa només les excepcions per validar.</p>
+        </div>
+        <div class="summa-product-film-caption" data-caption="result">
+          <div class="summa-product-film-kicker">Resultat</div>
+          <div class="summa-product-film-rule"></div>
+          <h1 class="summa-product-film-title">Només queden les excepcions.</h1>
+          <p class="summa-product-film-meta">La resta queda llesta per revisar.</p>
+        </div>
+      </div>
     </section>
 
     <style>
@@ -57,8 +55,8 @@
         width: 1920px;
         height: 1080px;
         overflow: hidden;
-        background: #090d13;
-        color: #f6f8fb;
+        background: linear-gradient(180deg, #eef3f8 0%, #e8edf3 100%);
+        color: #0f1724;
         font-family: "Helvetica Neue", Arial, sans-serif;
       }
 
@@ -72,9 +70,6 @@
 
       .summa-product-film-shot,
       .summa-product-film-shot img,
-      #summa-importacio-extracte-product-film-overlay-top,
-      #summa-importacio-extracte-product-film-overlay-bottom,
-      #summa-importacio-extracte-product-film-overlay-edge,
       #summa-importacio-extracte-product-film-copy {
         position: absolute;
         inset: 0;
@@ -86,92 +81,69 @@
       }
 
       .summa-product-film-shot img {
-        width: 106%;
-        height: 106%;
-        inset: -3%;
+        width: 100%;
+        height: 100%;
+        inset: 0;
         object-fit: cover;
+        object-position: center center;
         transform-origin: center center;
         will-change: transform, opacity;
-        filter: saturate(0.99) contrast(1.01);
-      }
-
-      #summa-importacio-extracte-product-film-overlay-top,
-      #summa-importacio-extracte-product-film-overlay-bottom,
-      #summa-importacio-extracte-product-film-overlay-edge {
-        pointer-events: none;
-      }
-
-      #summa-importacio-extracte-product-film-overlay-top {
-        background: linear-gradient(
-          180deg,
-          rgba(9, 13, 19, 0.72) 0%,
-          rgba(9, 13, 19, 0.34) 14%,
-          rgba(9, 13, 19, 0.08) 34%,
-          rgba(9, 13, 19, 0) 52%
-        );
-      }
-
-      #summa-importacio-extracte-product-film-overlay-bottom {
-        background: linear-gradient(
-          0deg,
-          rgba(9, 13, 19, 0.3) 0%,
-          rgba(9, 13, 19, 0.08) 18%,
-          rgba(9, 13, 19, 0) 36%
-        );
-      }
-
-      #summa-importacio-extracte-product-film-overlay-edge {
-        background:
-          radial-gradient(circle at 22% 14%, rgba(78, 98, 120, 0.16) 0%, rgba(78, 98, 120, 0) 30%),
-          linear-gradient(90deg, rgba(9, 13, 19, 0.7) 0%, rgba(9, 13, 19, 0.28) 18%, rgba(9, 13, 19, 0.08) 34%, rgba(9, 13, 19, 0) 48%);
-        mix-blend-mode: normal;
+        filter: saturate(1.01) contrast(1.01);
       }
 
       #summa-importacio-extracte-product-film-copy {
-        top: var(--summa-film-copy-top, 0px);
-        left: var(--summa-film-copy-left, 0px);
-        width: var(--summa-film-copy-width, 500px);
-        padding: 42px 64px 0;
-        display: flex;
-        flex-direction: column;
-        gap: 8px;
-        box-sizing: border-box;
         z-index: 2;
+        pointer-events: none;
       }
 
-      #summa-importacio-extracte-product-film-kicker {
-        color: rgba(226, 233, 242, 0.76);
+      .summa-product-film-caption {
+        position: absolute;
+        left: var(--summa-film-copy-left, 64px);
+        bottom: var(--summa-film-copy-bottom, 68px);
+        width: var(--summa-film-copy-width, 560px);
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        opacity: 0;
+        visibility: hidden;
+        will-change: transform, opacity;
+      }
+
+      .summa-product-film-kicker {
+        color: rgba(72, 93, 117, 0.9);
         font-size: 12px;
         font-weight: 700;
         letter-spacing: 0.18em;
         text-transform: uppercase;
       }
 
-      #summa-importacio-extracte-product-film-rule {
-        width: 42px;
+      .summa-product-film-rule {
+        width: 34px;
         height: 2px;
         border-radius: 999px;
         background: var(--summa-film-accent, #7bb7ea);
-        opacity: 0.96;
       }
 
-      #summa-importacio-extracte-product-film-title {
+      .summa-product-film-title {
         margin: 0;
-        max-width: 420px;
-        font-size: 44px;
-        line-height: 1.03;
-        letter-spacing: -0.045em;
+        max-width: 540px;
+        font-size: 52px;
+        line-height: 0.98;
+        letter-spacing: -0.048em;
         font-weight: 700;
         text-wrap: balance;
+        color: #0f1724;
+        text-shadow: 0 10px 24px rgba(255, 255, 255, 0.34);
       }
 
-      #summa-importacio-extracte-product-film-meta {
+      .summa-product-film-meta {
         margin: 0;
-        max-width: 420px;
-        color: rgba(244, 247, 251, 0.92);
-        font-size: 18px;
-        line-height: 1.18;
+        max-width: 500px;
+        color: rgba(39, 53, 68, 0.88);
+        font-size: 22px;
+        line-height: 1.14;
         letter-spacing: -0.02em;
+        text-shadow: 0 10px 24px rgba(255, 255, 255, 0.26);
       }
     </style>
 
@@ -181,170 +153,99 @@
         const root = document.querySelector('[data-composition-id="07-importacio-extracte-product-film-16x9"]');
         if (!root) return;
 
-        const copy = root.querySelector("#summa-importacio-extracte-product-film-copy");
-        const kicker = root.querySelector("#summa-importacio-extracte-product-film-kicker");
-        const rule = root.querySelector("#summa-importacio-extracte-product-film-rule");
-        const title = root.querySelector("#summa-importacio-extracte-product-film-title");
-        const meta = root.querySelector("#summa-importacio-extracte-product-film-meta");
         const shots = Array.from(root.querySelectorAll(".summa-product-film-shot"));
+        const captions = Array.from(root.querySelectorAll(".summa-product-film-caption"));
 
         const scenes = [
           {
-            shot: "entry",
+            shot: "shell",
+            caption: "shell",
             accent: "#7bb7ea",
-            kicker: "Importació",
-            title: "Importa l'extracte.",
-            meta: "i prepara'l per conciliar.",
-            copyWidth: 500,
-            copyTop: 0,
-            copyLeft: 0,
-            fromScale: 1.05,
-            toScale: 1.01,
-            fromX: 180,
-            toX: 124,
-            fromY: -42,
-            toY: -18,
-            motionDuration: 3.8,
-            copyFromX: -14,
-            copyFromY: 12,
-            copyOutX: 0,
-            copyOutY: -8,
-            textLead: 0.18,
-            textTail: 0.7,
+            copyWidth: 640,
+            copyLeft: 64,
+            copyBottom: 104,
+            fromScale: 1.1,
+            toScale: 1.16,
+            fromX: 96,
+            toX: 122,
+            fromY: 22,
+            toY: 8,
+            motionDuration: 4.9,
+            objectPosition: "50% 50%",
+            copyInAt: 0.34,
+            copyOutAt: 3.96,
           },
           {
             shot: "account",
             accent: "#7bb7ea",
-            kicker: "Compte",
-            title: "Fixa el compte.",
-            meta: "",
-            copyWidth: 430,
-            copyTop: 6,
-            copyLeft: 0,
-            fromScale: 1.04,
-            toScale: 1.01,
-            fromX: 74,
-            toX: 40,
-            fromY: -16,
-            toY: -4,
-            motionDuration: 3.2,
-            copyFromX: 0,
-            copyFromY: 18,
-            copyOutX: 8,
-            copyOutY: -6,
-            textLead: 0.4,
-            textTail: 0.74,
-          },
-          {
-            shot: "preview",
-            accent: "#7bb7ea",
-            kicker: "Revisió",
-            title: "Revisa resum i dates.",
-            meta: "",
-            copyWidth: 440,
-            copyTop: 16,
-            copyLeft: 0,
-            fromScale: 1.08,
-            toScale: 1.02,
-            fromX: 138,
-            toX: 82,
-            fromY: 42,
-            toY: 16,
-            motionDuration: 2.9,
-            copyFromX: -10,
-            copyFromY: 24,
-            copyOutX: 0,
-            copyOutY: -10,
-            textLead: 0.52,
-            textTail: 0.78,
+            fromScale: 1.2,
+            toScale: 1.26,
+            fromX: 6,
+            toX: 0,
+            fromY: -6,
+            toY: 0,
+            motionDuration: 4.9,
+            objectPosition: "50% 50%",
           },
           {
             shot: "warning",
             accent: "#d8a24a",
-            kicker: "Duplicats",
-            title: "Detecta solapaments.",
-            meta: "",
-            copyWidth: 420,
-            copyTop: 24,
-            copyLeft: 0,
-            fromScale: 1.07,
-            toScale: 1.02,
-            fromX: 116,
-            toX: 72,
-            fromY: 18,
-            toY: 0,
-            motionDuration: 2.6,
-            copyFromX: 10,
-            copyFromY: 8,
-            copyOutX: 0,
-            copyOutY: -12,
-            textLead: 0.48,
-            textTail: 0.76,
+            fromScale: 1.16,
+            toScale: 1.22,
+            fromX: 0,
+            toX: 0,
+            fromY: 14,
+            toY: 24,
+            motionDuration: 4.9,
+            objectPosition: "50% 44%",
           },
           {
             shot: "result",
+            caption: "result",
             accent: "#6fc08e",
-            kicker: "Resultat",
-            title: "Queda llest per revisar.",
-            meta: "amb menys risc d'error.",
-            copyWidth: 460,
-            copyTop: 12,
-            copyLeft: 0,
-            fromScale: 1.04,
-            toScale: 1.005,
-            fromX: 124,
-            toX: 78,
-            fromY: -18,
-            toY: -6,
-            motionDuration: 3.1,
-            copyFromX: -8,
-            copyFromY: 10,
-            copyOutX: 0,
-            copyOutY: 0,
-            textLead: 0.42,
-            textTail: 0.68,
+            copyWidth: 540,
+            copyLeft: 64,
+            copyBottom: 72,
+            fromScale: 1.08,
+            toScale: 1.12,
+            fromX: 104,
+            toX: 132,
+            fromY: 0,
+            toY: 18,
+            motionDuration: 4.9,
+            objectPosition: "50% 24%",
+            copyInAt: 15.56,
           },
         ];
 
         const shotMap = new Map(
           shots.map((shot) => [shot.getAttribute("data-shot"), shot.querySelector("img")]),
         );
-
-        function setScene(scene) {
-          root.style.setProperty("--summa-film-accent", scene.accent);
-          root.style.setProperty("--summa-film-copy-width", `${scene.copyWidth ?? 620}px`);
-          root.style.setProperty("--summa-film-copy-top", `${scene.copyTop ?? 0}px`);
-          root.style.setProperty("--summa-film-copy-left", `${scene.copyLeft ?? 0}px`);
-          kicker.textContent = scene.kicker;
-          title.textContent = scene.title;
-          meta.textContent = scene.meta;
-          meta.style.display = scene.meta ? "block" : "none";
-        }
+        const captionMap = new Map(
+          captions.map((caption) => [caption.getAttribute("data-caption"), caption]),
+        );
 
         window.__timelines = window.__timelines || {};
         const tl = gsap.timeline({ paused: true });
-        const sceneDuration = 4.8;
+        const sceneDuration = 5;
 
-        setScene(scenes[0]);
+        tl.set(captions, { opacity: 0, visibility: "hidden" }, 0);
 
         scenes.forEach((scene, index) => {
           const start = index * sceneDuration;
           const shotEl = shotMap.get(scene.shot);
+          const captionEl = scene.caption ? captionMap.get(scene.caption) : null;
           const previousShotEl = index > 0 ? shotMap.get(scenes[index - 1].shot) : null;
-          const textInAt = start + (scene.textLead ?? (index === 0 ? 0.18 : 0.34));
-          const textOutAt = start + sceneDuration - (scene.textTail ?? 0.58);
 
           if (!shotEl) return;
 
-          if (index > 0) {
-            tl.call(() => setScene(scene), null, textInAt - 0.05);
-          }
+          shotEl.style.objectPosition = scene.objectPosition ?? "50% 50%";
 
           tl.set(shotEl.parentElement, { opacity: 1 }, start);
           tl.fromTo(
             shotEl.parentElement,
             { opacity: index === 0 ? 1 : 0 },
-            { opacity: 1, duration: 0.52, ease: "power2.out" },
+            { opacity: 1, duration: 0.28, ease: "power2.out" },
             start,
           );
           tl.fromTo(
@@ -358,43 +259,71 @@
               scale: scene.toScale,
               x: scene.toX,
               y: scene.toY,
-              duration: scene.motionDuration ?? sceneDuration,
-              ease: scene.motionEase ?? "power2.out",
+              duration: scene.motionDuration ?? 4.9,
+              ease: "power2.out",
             },
             start,
           );
 
           if (previousShotEl) {
-            tl.to(previousShotEl.parentElement, { opacity: 0, duration: 0.46, ease: "power2.out" }, start + 0.08);
+            tl.to(previousShotEl.parentElement, { opacity: 0, duration: 0.24, ease: "power2.out" }, start + 0.03);
           }
 
-          tl.fromTo(
-            copy,
-            {
-              opacity: index === 0 ? 0 : 0.12,
-              x: scene.copyFromX ?? 0,
-              y: scene.copyFromY ?? (index === 0 ? 0 : 16),
-            },
-            { opacity: 1, x: 0, y: 0, duration: 0.4, ease: "power2.out" },
-            textInAt,
-          );
-          tl.fromTo(
-            rule,
-            { scaleX: 0.45, transformOrigin: "left center" },
-            { scaleX: 1, duration: 0.36, ease: "power2.out" },
-            textInAt + 0.02,
-          );
-          tl.to(
-            copy,
-            {
-              opacity: index === scenes.length - 1 ? 1 : 0.06,
-              x: index === scenes.length - 1 ? 0 : (scene.copyOutX ?? 0),
-              y: index === scenes.length - 1 ? 0 : (scene.copyOutY ?? -10),
-              duration: 0.32,
-              ease: "power2.in",
-            },
-            textOutAt,
-          );
+          if (captionEl) {
+            tl.set(
+              captionEl,
+              {
+                visibility: "visible",
+                "--summa-film-accent": scene.accent,
+                "--summa-film-copy-width": `${scene.copyWidth ?? 560}px`,
+                "--summa-film-copy-left": `${scene.copyLeft ?? 64}px`,
+                "--summa-film-copy-bottom": `${scene.copyBottom ?? 68}px`,
+              },
+              start,
+            );
+            tl.fromTo(
+              captionEl,
+              {
+                opacity: 0,
+                x: 0,
+                y: 16,
+              },
+              {
+                opacity: 1,
+                x: 0,
+                y: 0,
+                duration: 0.34,
+                ease: "power2.out",
+              },
+              scene.copyInAt ?? (start + 0.3),
+            );
+            tl.fromTo(
+              captionEl.querySelector(".summa-product-film-rule"),
+              {
+                scaleX: 0.4,
+                transformOrigin: "left center",
+              },
+              {
+                scaleX: 1,
+                duration: 0.28,
+                ease: "power2.out",
+              },
+              (scene.copyInAt ?? (start + 0.3)) + 0.02,
+            );
+            if (index < scenes.length - 1) {
+              tl.to(
+                captionEl,
+                {
+                  opacity: 0,
+                  y: -10,
+                  duration: 0.22,
+                  ease: "power2.in",
+                },
+                scene.copyOutAt ?? (start + 3.96),
+              );
+              tl.set(captionEl, { visibility: "hidden" }, (scene.copyOutAt ?? (start + 3.96)) + 0.22);
+            }
+          }
         });
 
         window.__timelines["07-importacio-extracte-product-film-16x9"] = tl;

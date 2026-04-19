@@ -19,6 +19,9 @@ test('listRenderablePieces returns the authored marketing compositions', async (
     pieces.map((piece) => piece.id),
     ['06-importacio-extracte-editorial-16x9', '07-importacio-extracte-product-film-16x9'],
   );
+
+  const premiumPiece = pieces.find((piece) => piece.id === '07-importacio-extracte-product-film-16x9');
+  assert.equal(premiumPiece?.duration, 20);
 });
 
 test('createRuntimeProject builds a temporary render root without mutating the repo', async () => {
