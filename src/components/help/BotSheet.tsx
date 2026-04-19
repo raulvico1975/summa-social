@@ -18,6 +18,7 @@ import { trackUX } from '@/lib/ux/trackUX';
 import { usePathname, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { resolveManualAnchorFromHint } from '@/help/help-manual-links';
+import type { ResponseSubtype } from '@/lib/support/engine/types';
 import type { SupportTurn } from '@/lib/support/support-context';
 
 // -------------------------------------------------------------------
@@ -30,6 +31,7 @@ interface BotMessage {
   uiPaths?: string[];
   cardId?: string;
   mode?: 'card' | 'fallback';
+  responseSubtype?: ResponseSubtype;
   questionText?: string;
   clarifyOptions?: Array<{
     index: 1 | 2 | 3;
@@ -254,6 +256,7 @@ export function BotSheet({ open, onOpenChange }: BotSheetProps) {
           uiPaths: data.uiPaths,
           cardId: data.cardId,
           mode: data.mode,
+          responseSubtype: data.responseSubtype,
           questionText: text,
           clarifyOptions,
         }]);
@@ -325,6 +328,7 @@ export function BotSheet({ open, onOpenChange }: BotSheetProps) {
           helpful,
           cardId: msg.cardId,
           mode: msg.mode ?? 'fallback',
+          responseSubtype: msg.responseSubtype,
         }),
       })
     } catch {

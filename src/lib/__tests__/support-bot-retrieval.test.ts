@@ -46,6 +46,26 @@ test('retrieveCard understands remittance split variants', () => {
   assert.equal(es.mode, 'card')
 })
 
+test('retrieveCard resolves movement split phrasing to the movement guide', () => {
+  const ca = retrieveCard('com divideixo un moviment?', 'ca', cards)
+  assert.equal(ca.card.id, 'howto-movement-split-amount')
+  assert.equal(ca.mode, 'card')
+
+  const es = retrieveCard('¿cómo divido un movimiento?', 'es', cards)
+  assert.equal(es.card.id, 'howto-movement-split-amount')
+  assert.equal(es.mode, 'card')
+})
+
+test('retrieveCard resolves remittance split with 182 phrasing to the 182 guide', () => {
+  const ca = retrieveCard("si divideixo una remesa, les quotes compten al 182?", 'ca', cards)
+  assert.equal(ca.card.id, 'howto-mark-donation-182')
+  assert.equal(ca.mode, 'card')
+
+  const es = retrieveCard('si divido una remesa, las cuotas cuentan en el 182?', 'es', cards)
+  assert.equal(es.card.id, 'howto-mark-donation-182')
+  assert.equal(es.mode, 'card')
+})
+
 test('retrieveCard tolerates remittance misspelling', () => {
   const result = retrieveCard('tinc problemes per dividir una remessa', 'ca', cards)
   assert.equal(result.card.id, 'guide-split-remittance')
@@ -212,6 +232,138 @@ test('retrieveCard resolves import-status phrasing', () => {
   const ca = retrieveCard("com sé quants moviments s'han importat correctament?", 'ca', cards)
   assert.equal(ca.card.id, 'guide-import-movements')
   assert.equal(ca.mode, 'card')
+})
+
+test('retrieveCard resolves uncategorized movement backlog questions', () => {
+  const ca = retrieveCard("Tinc 200 moviments sense categoritzar. M'he de posar a fer-los un per un?", 'ca', cards)
+  assert.equal(ca.card.id, 'howto-movement-unassigned-alerts')
+  assert.equal(ca.mode, 'card')
+
+  const ca2 = retrieveCard('Hi ha un moviment que no sé què és. Puc deixar-lo sense categoritzar?', 'ca', cards)
+  assert.equal(ca2.card.id, 'howto-movement-unassigned-alerts')
+  assert.equal(ca2.mode, 'card')
+})
+
+test('retrieveCard resolves natural invoice placement phrasing', () => {
+  const result = retrieveCard("Vull guardar la factura d'una despesa. On la poso?", 'ca', cards)
+  assert.equal(result.card.id, 'guide-attach-document')
+  assert.equal(result.mode, 'card')
+})
+
+test('retrieveCard resolves manual movement creation phrasing safely', () => {
+  const result = retrieveCard('Puc crear un moviment a mà, sense importar-lo del banc?', 'ca', cards)
+  assert.equal(result.card.id, 'howto-enter-expense')
+  assert.equal(result.mode, 'card')
+})
+
+test('retrieveCard falls back for member fee pause when the feature is not covered', () => {
+  const result = retrieveCard('Puc posar una quota en pausa?', 'ca', cards)
+  assert.equal(result.card.id, 'fallback-no-answer')
+  assert.equal(result.mode, 'fallback')
+})
+
+test('retrieveCard resolves remittance low-members variants around inactive members and timing badges', () => {
+  const inactive = retrieveCard('A la remesa apareixen socis que haurien d’estar de baixa. Per què passa?', 'ca', cards)
+  assert.equal(inactive.card.id, 'guide-remittance-low-members')
+  assert.equal(inactive.mode, 'card')
+
+  const notYet = retrieveCard('Un soci apareix com "No toca encara" però sí que el vull cobrar. Puc incloure’l?', 'ca', cards)
+  assert.equal(notYet.card.id, 'howto-remittance-review-before-send')
+  assert.equal(notYet.mode, 'card')
+})
+
+test('retrieveCard keeps Stripe-specific banking questions on the Stripe guide', () => {
+  const groupedIncome = retrieveCard('Rebem donacions per Stripe però al banc només veig un ingrés. Com ho desgloso?', 'ca', cards)
+  assert.equal(groupedIncome.card.id, 'guide-stripe-donations')
+  assert.equal(groupedIncome.mode, 'card')
+
+  const unidentified = retrieveCard('Un donant de Stripe no apareix identificat. Per què?', 'ca', cards)
+  assert.equal(unidentified.card.id, 'guide-stripe-donations')
+  assert.equal(unidentified.mode, 'card')
+
+  const returned = retrieveCard('Un donant ha fet una donació a Stripe i després l’ha retornada. Com ho gestiono?', 'ca', cards)
+  assert.equal(returned.card.id, 'guide-stripe-donations')
+  assert.equal(returned.mode, 'card')
+})
+
+test('retrieveCard resolves fiscal edge cases for model 182', () => {
+  const recurrent = retrieveCard('Què vol dir recurrent al Model 182?', 'ca', cards)
+  assert.equal(recurrent.card.id, 'guide-model-182')
+  assert.equal(recurrent.mode, 'card')
+
+  const aeat = retrieveCard('Puc presentar el Model 182 directament a l’AEAT sense passar per la gestoria?', 'ca', cards)
+  assert.equal(aeat.card.id, 'fallback-fiscal-unclear')
+  assert.equal(aeat.mode, 'fallback')
+})
+
+test('retrieveCard resolves import template and historical import questions', () => {
+  const template = retrieveCard('On trobo la plantilla oficial per importar socis?', 'ca', cards)
+  assert.equal(template.card.id, 'guide-import-donors')
+  assert.equal(template.mode, 'card')
+
+  const historical = retrieveCard("Puc importar moviments de tot l'any passat o només del mes actual?", 'ca', cards)
+  assert.equal(historical.card.id, 'guide-import-movements')
+  assert.equal(historical.mode, 'card')
+})
+
+test('retrieveCard resolves project justification and budget-import questions safely', () => {
+  const justification = retrieveCard('Què és el mode quadrar justificació?', 'ca', cards)
+  assert.equal(justification.card.id, 'guide-projects')
+  assert.equal(justification.mode, 'card')
+
+  const budget = retrieveCard("Puc importar el pressupost d'un projecte des d'Excel?", 'ca', cards)
+  assert.equal(budget.card.id, 'fallback-no-answer')
+  assert.equal(budget.mode, 'fallback')
+})
+
+test('retrieveCard resolves organization fiscal settings and multiple bank-account questions', () => {
+  const fiscalData = retrieveCard('Com canvio les dades fiscals de l’entitat?', 'ca', cards)
+  assert.equal(fiscalData.card.id, 'howto-organization-fiscal-data')
+  assert.equal(fiscalData.mode, 'card')
+
+  const bankAccounts = retrieveCard('Tenim dos comptes bancaris. Com els gestiono?', 'ca', cards)
+  assert.equal(bankAccounts.card.id, 'guide-select-bank-account')
+  assert.equal(bankAccounts.mode, 'card')
+})
+
+test('retrieveCard sends performance complaints to generic troubleshooting', () => {
+  const result = retrieveCard('L’aplicació va molt lenta. Què puc fer?', 'ca', cards)
+  assert.equal(result.card.id, 'manual-common-errors')
+  assert.equal(result.mode, 'card')
+})
+
+test('retrieveCard resolves remaining top-100 orientation and generic help queries', () => {
+  const template = retrieveCard('Què és això de la "plantilla oficial" que veig als importadors?', 'ca', cards)
+  assert.equal(template.card.id, 'guide-import-donors')
+  assert.equal(template.mode, 'card')
+
+  const blankPage = retrieveCard('La pàgina es queda en blanc.', 'ca', cards)
+  assert.equal(blankPage.card.id, 'manual-common-errors')
+  assert.equal(blankPage.mode, 'card')
+
+  const notSaved = retrieveCard('He fet un canvi i no es guarda.', 'ca', cards)
+  assert.equal(notSaved.card.id, 'manual-common-errors')
+  assert.equal(notSaved.mode, 'card')
+
+  const deleted = retrieveCard('He esborrat algo sense voler. Es pot recuperar?', 'ca', cards)
+  assert.equal(deleted.card.id, 'manual-danger-zone')
+  assert.equal(deleted.mode, 'card')
+
+  const helpHub = retrieveCard('No trobo la resposta a cap lloc. Amb qui parlo?', 'ca', cards)
+  assert.equal(helpHub.card.id, 'manual-guides-hub')
+  assert.equal(helpHub.mode, 'card')
+
+  const dashboard = retrieveCard('Com entenc el Dashboard i què he de mirar primer?', 'ca', cards)
+  assert.equal(dashboard.card.id, 'guide-first-day')
+  assert.equal(dashboard.mode, 'card')
+
+  const mobile = retrieveCard('Puc fer servir Summa Social des del mòbil?', 'ca', cards)
+  assert.equal(mobile.card.id, 'fallback-no-answer')
+  assert.equal(mobile.mode, 'fallback')
+
+  const firstTime = retrieveCard('Per on començo si és la primera vegada que entro?', 'ca', cards)
+  assert.equal(firstTime.card.id, 'guide-first-day')
+  assert.equal(firstTime.mode, 'card')
 })
 
 test('retrieveCard resolves member paid fees history question', () => {

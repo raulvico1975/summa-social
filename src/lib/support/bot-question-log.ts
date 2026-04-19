@@ -10,6 +10,7 @@
 
 import { createHash } from 'crypto'
 import { type Firestore, FieldValue } from 'firebase-admin/firestore'
+import type { ResponseSubtype } from './engine/types'
 
 // =============================================================================
 // NORMALIZE
@@ -64,6 +65,38 @@ export function maskPII(text: string): string {
     .replace(/(?:\+\d{1,3}[\s.-]?)?\(?\d{2,4}\)?[\s.-]?\d{3}[\s.-]?\d{3,4}\b/g, '[PHONE]')
 }
 
+export function normalizeResponseSubtype(raw: unknown): ResponseSubtype | null {
+  if (raw === 'full_verified_answer' || raw === 'guided_navigation' || raw === 'clarify' || raw === 'fallback') {
+    return raw
+  }
+
+  return null
+}
+
+export function deriveResponseSubtype(input: {
+  mode?: 'card' | 'fallback'
+  cardId?: string | null
+  decisionReason?: string | null
+  responseSubtype?: unknown
+}): ResponseSubtype {
+  const normalized = normalizeResponseSubtype(input.responseSubtype)
+  if (normalized) return normalized
+
+  if (input.cardId === 'clarify-disambiguation') {
+    return 'clarify'
+  }
+
+  if (input.mode === 'fallback') {
+    return 'fallback'
+  }
+
+  if (typeof input.decisionReason === 'string' && input.decisionReason.includes('navigation')) {
+    return 'guided_navigation'
+  }
+
+  return 'full_verified_answer'
+}
+
 export interface BotQuestionLogMeta {
   bestCardId?: string
   bestScore?: number
@@ -71,6 +104,7 @@ export interface BotQuestionLogMeta {
   secondScore?: number
   retrievalConfidence?: 'high' | 'medium' | 'low'
   confidenceBand?: 'high' | 'medium' | 'low'
+  responseSubtype?: ResponseSubtype
   decisionReason?: string
   intent?: 'operational' | 'informational'
   specificCaseDetected?: boolean
@@ -186,6 +220,7 @@ export async function logBotQuestion(
       secondScore: meta?.secondScore ?? null,
       retrievalConfidence: meta?.retrievalConfidence ?? meta?.confidenceBand ?? null,
       confidenceBand: meta?.confidenceBand ?? meta?.retrievalConfidence ?? null,
+      responseSubtype: meta?.responseSubtype ?? null,
       decisionReason: meta?.decisionReason ?? null,
       intent: meta?.intent ?? null,
       specificCaseDetected: meta?.specificCaseDetected ?? null,

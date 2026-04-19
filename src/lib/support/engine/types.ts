@@ -5,6 +5,7 @@ export type InputLang = 'ca' | 'es' | 'fr' | 'pt'
 export type AssistantTone = 'neutral' | 'warm'
 export type IntentType = 'operational' | 'informational'
 export type CardSource = 'validated-kb' | 'bundled-failsafe' | 'runtime-fallback'
+export type ResponseSubtype = 'full_verified_answer' | 'guided_navigation' | 'clarify' | 'fallback'
 
 export type ClarifyOption = {
   index: 1 | 2 | 3
@@ -15,6 +16,7 @@ export type ClarifyOption = {
 export type SuccessResponse = {
   ok: true
   mode: 'card' | 'fallback'
+  responseSubtype?: ResponseSubtype
   cardId: string
   answer: string
   guideId: string | null
@@ -40,6 +42,7 @@ export type OrchestratorMeta = {
   intentType: IntentType
   retrievalConfidence?: RetrievalConfidence
   confidenceBand?: RetrievalConfidence
+  responseSubtype?: ResponseSubtype
   bestCardId?: string
   bestScore?: number
   secondCardId?: string

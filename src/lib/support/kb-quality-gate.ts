@@ -4,6 +4,7 @@ import { loadGuideContent, type KBCard } from './load-kb'
 import { validateKbCards } from './validate-kb-cards'
 import { retrieveCard } from './bot-retrieval'
 import { evaluateGoldenSet, GOLDEN_SET_MIN_CRITICAL_TOP1 } from './eval/golden-set'
+import { evaluateTopSupportQuestionsBenchmark } from './eval/top-support-questions'
 import { extractOperationalSteps } from './engine/policy'
 
 type ExpectedRow = {
@@ -42,6 +43,9 @@ const REQUIRED_CRITICAL_QUERIES: Array<{ lang: 'ca' | 'es'; q: string; expectedC
 
 const MAX_MISMATCH_ERRORS = 30
 const MIN_EVAL_ACCURACY = 0.78
+const TOP_SUPPORT_WARN_CRITICAL_POSITIVE = 0.75
+const TOP_SUPPORT_WARN_COVERED_POSITIVE = 0.7
+const MAX_TOP_SUPPORT_WARNING_MISMATCHES = 15
 
 type EvalStats = {
   total: number
@@ -69,6 +73,26 @@ export type KbQualityGateResult = {
       fallbackCount: number
       fallbackRate: number
       operationalWithoutCard: number
+    }
+    topSupport: {
+      total: number
+      positiveCount: number
+      positiveRate: number
+      criticalTotal: number
+      criticalPositiveCount: number
+      criticalPositiveRate: number
+      coveredTotal: number
+      coveredPositiveCount: number
+      coveredPositiveRate: number
+      weakTotal: number
+      weakPositiveCount: number
+      weakPositiveRate: number
+      absentTotal: number
+      absentPositiveCount: number
+      absentPositiveRate: number
+      clarifyCount: number
+      fallbackCount: number
+      trustedOperationalCount: number
     }
   }
 }
@@ -222,6 +246,7 @@ export function runKbQualityGate(cards: KBCard[]): KbQualityGateResult {
   errors.push(...criticalQueryErrors)
   errors.push(...evaluateCriticalOperationalCards(cards))
   const golden = evaluateGoldenSet(cards)
+  const topSupport = evaluateTopSupportQuestionsBenchmark(cards)
 
   if (golden.metrics.criticalTop1Accuracy < GOLDEN_SET_MIN_CRITICAL_TOP1) {
     errors.push(
@@ -237,6 +262,26 @@ export function runKbQualityGate(cards: KBCard[]): KbQualityGateResult {
 
   warnings.push(...golden.errors.slice(0, 30))
 
+  if (topSupport.metrics.criticalPositiveRate < TOP_SUPPORT_WARN_CRITICAL_POSITIVE) {
+    warnings.push(
+      `Top-100 benchmark critical positive sota objectiu orientatiu (${(topSupport.metrics.criticalPositiveRate * 100).toFixed(1)}% < ${(TOP_SUPPORT_WARN_CRITICAL_POSITIVE * 100).toFixed(0)}%)`
+    )
+  }
+
+  if (topSupport.metrics.coveredPositiveRate < TOP_SUPPORT_WARN_COVERED_POSITIVE) {
+    warnings.push(
+      `Top-100 benchmark covered positive sota objectiu orientatiu (${(topSupport.metrics.coveredPositiveRate * 100).toFixed(1)}% < ${(TOP_SUPPORT_WARN_COVERED_POSITIVE * 100).toFixed(0)}%)`
+    )
+  }
+
+  warnings.push(
+    ...topSupport.mismatches.slice(0, MAX_TOP_SUPPORT_WARNING_MISMATCHES).map(mismatch => {
+      const expected = mismatch.expectedAnyOfCardIds.join(', ')
+      const confidence = mismatch.confidence ? `, ${mismatch.confidence}` : ''
+      return `[top-support][${mismatch.coverage}] "${mismatch.question}" -> expected any of "${expected}" but got "${mismatch.actualCardId}" (${mismatch.actualMode}${confidence})`
+    })
+  )
+
   return {
     ok: errors.length === 0,
     errors,
@@ -248,6 +293,7 @@ export function runKbQualityGate(cards: KBCard[]): KbQualityGateResult {
       evalCa: evalCa.stats,
       evalEs: evalEs.stats,
       golden: golden.metrics,
+      topSupport: topSupport.metrics,
     },
   }
 }
