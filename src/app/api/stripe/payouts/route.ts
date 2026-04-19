@@ -44,7 +44,16 @@ const defaultDeps: StripePayoutsRouteDeps = {
   listRecentPaidStripePayouts,
 };
 
-export async function handleStripePayoutsGet(
+function isStripePayoutsRouteDeps(value: unknown): value is StripePayoutsRouteDeps {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'verifyIdToken' in value &&
+    'listRecentPaidStripePayouts' in value
+  );
+}
+
+async function handleStripePayoutsGet(
   request: NextRequest,
   deps: StripePayoutsRouteDeps = defaultDeps
 ) {
@@ -118,6 +127,7 @@ export async function handleStripePayoutsGet(
   }
 }
 
-export async function GET(request: NextRequest) {
-  return handleStripePayoutsGet(request);
+export async function GET(request: NextRequest, testDeps?: unknown) {
+  const deps = isStripePayoutsRouteDeps(testDeps) ? testDeps : defaultDeps;
+  return handleStripePayoutsGet(request, deps);
 }

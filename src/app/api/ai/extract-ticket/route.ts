@@ -4,6 +4,7 @@ import { getStorage } from 'firebase/storage';
 import { getApp } from 'firebase/app';
 import { resolveGoogleGenAiApiKey } from '@/ai/config';
 import { extractTicketImage, type ExtractTicketImageOutput } from '@/ai/flows/extract-ticket-image';
+import { verifyIdToken } from '@/lib/api/admin-sdk';
 
 // =============================================================================
 // TYPES
@@ -28,13 +29,18 @@ type SuccessResponse = {
   confidence: number;
 };
 
+type UnauthorizedResponse = {
+  ok: false;
+  code: 'UNAUTHORIZED';
+};
+
 type ErrorResponse = {
   ok: false;
   code: 'QUOTA_EXCEEDED' | 'RATE_LIMITED' | 'TRANSIENT' | 'INVALID_INPUT' | 'AI_ERROR' | 'FETCH_ERROR';
   message: string;
 };
 
-type ApiResponse = SuccessResponse | ErrorResponse;
+type ApiResponse = SuccessResponse | UnauthorizedResponse | ErrorResponse;
 
 // =============================================================================
 // HELPERS
@@ -110,6 +116,14 @@ function detectMimeType(buffer: ArrayBuffer): 'image/jpeg' | 'image/png' | 'imag
  */
 export async function POST(request: NextRequest): Promise<NextResponse<ApiResponse>> {
   try {
+    const auth = await verifyIdToken(request);
+    if (!auth) {
+      return NextResponse.json(
+        { ok: false, code: 'UNAUTHORIZED' },
+        { status: 401 }
+      );
+    }
+
     // Verify API key is available
     const apiKey = resolveGoogleGenAiApiKey();
     if (!apiKey) {

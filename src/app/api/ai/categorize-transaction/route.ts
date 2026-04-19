@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { resolveGoogleGenAiApiKey } from '@/ai/config';
 import { ai } from '@/ai/genkit';
+import { verifyIdToken } from '@/lib/api/admin-sdk';
 import { z } from 'genkit';
 
 // =============================================================================
@@ -83,13 +84,18 @@ type SuccessResponse = {
   confidence: number;
 };
 
+type UnauthorizedResponse = {
+  ok: false;
+  code: 'UNAUTHORIZED';
+};
+
 type ErrorResponse = {
   ok: false;
   code: 'QUOTA_EXCEEDED' | 'RATE_LIMITED' | 'TRANSIENT' | 'INVALID_INPUT' | 'AI_ERROR';
   message: string;
 };
 
-type ApiResponse = SuccessResponse | ErrorResponse;
+type ApiResponse = SuccessResponse | UnauthorizedResponse | ErrorResponse;
 
 // =============================================================================
 // ROUTE HANDLER
@@ -97,6 +103,14 @@ type ApiResponse = SuccessResponse | ErrorResponse;
 
 export async function POST(request: NextRequest): Promise<NextResponse<ApiResponse>> {
   try {
+    const auth = await verifyIdToken(request);
+    if (!auth) {
+      return NextResponse.json(
+        { ok: false, code: 'UNAUTHORIZED' },
+        { status: 401 }
+      );
+    }
+
     // Verify API key is available
     const apiKey = resolveGoogleGenAiApiKey();
     if (!apiKey) {

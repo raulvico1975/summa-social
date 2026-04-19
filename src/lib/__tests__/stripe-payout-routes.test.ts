@@ -3,8 +3,8 @@ import test from 'node:test';
 
 import { NextRequest, NextResponse } from 'next/server';
 
-import { handleStripePayoutGet } from '@/app/api/stripe/payout/[payoutId]/route';
-import { handleStripePayoutsGet } from '@/app/api/stripe/payouts/route';
+import { GET as getStripePayout } from '@/app/api/stripe/payout/[payoutId]/route';
+import { GET as getStripePayouts } from '@/app/api/stripe/payouts/route';
 import { UnsupportedStripeCurrencyError } from '@/lib/stripe/payout-sync';
 
 function makeRequest(url: string) {
@@ -27,7 +27,7 @@ function makeBaseDeps() {
 }
 
 test('GET /api/stripe/payouts retorna 200 amb payouts quan la moneda es suportada', async () => {
-  const response = await handleStripePayoutsGet(
+  const response = await getStripePayouts(
     makeRequest('http://localhost/api/stripe/payouts?orgId=org-1'),
     {
       ...makeBaseDeps(),
@@ -70,7 +70,7 @@ test('GET /api/stripe/payouts retorna 200 amb payouts quan la moneda es suportad
 });
 
 test('GET /api/stripe/payouts retorna 422 i missatge estable per moneda de 3 decimals', async () => {
-  const response = await handleStripePayoutsGet(
+  const response = await getStripePayouts(
     makeRequest('http://localhost/api/stripe/payouts?orgId=org-1'),
     {
       ...makeBaseDeps(),
@@ -89,7 +89,7 @@ test('GET /api/stripe/payouts retorna 422 i missatge estable per moneda de 3 dec
 });
 
 test('GET /api/stripe/payout/[payoutId] retorna 200 amb pagaments quan la moneda es suportada', async () => {
-  const response = await handleStripePayoutGet(
+  const response = await getStripePayout(
     makeRequest('http://localhost/api/stripe/payout/po_1?orgId=org-1'),
     { params: Promise.resolve({ payoutId: 'po_1' }) },
     {
@@ -134,7 +134,7 @@ test('GET /api/stripe/payout/[payoutId] retorna 200 amb pagaments quan la moneda
 });
 
 test('GET /api/stripe/payout/[payoutId] retorna 422 i missatge estable per moneda de 3 decimals', async () => {
-  const response = await handleStripePayoutGet(
+  const response = await getStripePayout(
     makeRequest('http://localhost/api/stripe/payout/po_1?orgId=org-1'),
     { params: Promise.resolve({ payoutId: 'po_1' }) },
     {
