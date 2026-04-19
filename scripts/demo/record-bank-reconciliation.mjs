@@ -416,6 +416,7 @@ async function hideNoise(page) {
       button[aria-label="Assistant"],
       [data-radix-toast-viewport],
       [data-sonner-toaster],
+      [role="tooltip"],
       [role="status"],
       div[class*="fixed bottom-6 right-6 z-50"],
       div[class*="fixed bottom-6 left-4 z-50"],
@@ -430,6 +431,79 @@ async function hideNoise(page) {
     window.scrollTo({ top: 0, behavior: 'instant' });
   }).catch(() => {});
   await sleep(200);
+}
+
+async function parkMouse(page) {
+  await page.mouse.move(24, 24, { steps: 6 }).catch(() => {});
+  await sleep(120);
+}
+
+async function suppressProductUpdatesSurface(page) {
+  await page.evaluate(() => {
+    const keywords = ['Novetats a Summa', 'Categories en bloc'];
+    const elements = Array.from(document.querySelectorAll('body *'));
+
+    elements.forEach((element) => {
+      const text = (element.textContent || '').replace(/\s+/g, ' ').trim();
+      if (!text) return;
+      if (!keywords.some((keyword) => text.includes(keyword))) return;
+
+      const root =
+        element.closest('[data-radix-popper-content-wrapper]') ||
+        element.closest('[role="dialog"]') ||
+        element.closest('[role="region"]') ||
+        element;
+
+      if (root instanceof HTMLElement) {
+        root.style.display = 'none';
+        root.setAttribute('data-demo-hidden', 'true');
+      }
+    });
+  }).catch(() => {});
+}
+
+async function suppressTransientTooltips(page) {
+  await page.evaluate(() => {
+    const keywords = ['Aquests valors corresponen', 'Estos valores corresponden'];
+    const elements = Array.from(document.querySelectorAll('body *'));
+
+    elements.forEach((element) => {
+      const text = (element.textContent || '').replace(/\s+/g, ' ').trim();
+      if (!text) return;
+      if (!keywords.some((keyword) => text.includes(keyword))) return;
+
+      const roleTooltip = element.closest('[role="tooltip"]');
+      if (roleTooltip instanceof HTMLElement) {
+        roleTooltip.style.display = 'none';
+        roleTooltip.setAttribute('data-demo-hidden', 'true');
+        return;
+      }
+
+      if (element instanceof HTMLElement) {
+        const rect = element.getBoundingClientRect();
+        if (rect.width <= 420 && rect.height <= 180) {
+          element.style.display = 'none';
+          element.setAttribute('data-demo-hidden', 'true');
+        }
+      }
+    });
+  }).catch(() => {});
+}
+
+async function waitForTransactionsTableReady(page) {
+  await page.waitForFunction(() => {
+    const rows = Array.from(document.querySelectorAll('tbody tr'));
+    if (rows.length === 0) return false;
+    if (document.querySelector('tbody .animate-pulse')) return false;
+
+    return rows.some((row) => {
+      if (!(row instanceof HTMLElement) || row.offsetParent === null) return false;
+      const text = (row.innerText || '').replace(/\s+/g, ' ').trim();
+      return text.length >= 24;
+    });
+  }, null, { timeout: 30000 });
+
+  await sleep(900);
 }
 
 async function clickButton(page, pattern, scope = page) {
@@ -451,11 +525,10 @@ async function openMovementsPage(page, credentials, artifactDir) {
   await page.getByRole('heading', { name: /Moviments/i }).waitFor({ state: 'visible', timeout: 30000 });
   await waitForAppIdle(page);
   await hideNoise(page);
-  await page.waitForFunction(() => {
-    const rows = document.querySelectorAll('tbody tr');
-    return rows.length >= 5;
-  }, null, { timeout: 30000 }).catch(() => {});
-  await sleep(1400);
+  await waitForTransactionsTableReady(page);
+  await sleep(3200);
+  await suppressProductUpdatesSurface(page);
+  await parkMouse(page);
 
   const markerPath = path.join(artifactDir, 'movements-start.png');
   await page.screenshot({ path: markerPath, fullPage: false });
@@ -517,15 +590,22 @@ async function handleDedupeSummary(page, artifactDir) {
 
   const scrollRegion = dialog.locator('.overflow-y-auto').first();
   if (await scrollRegion.count()) {
-    await scrollRegion.hover();
-    await page.mouse.wheel(0, 380);
+    await scrollRegion.evaluate((element) => {
+      element.scrollTop = element.scrollHeight;
+    }).catch(() => {});
     await sleep(900);
   }
 
+  await suppressTransientTooltips(page);
+  await parkMouse(page);
   const dedupeShotPath = path.join(artifactDir, 'import-dedupe.png');
   await page.screenshot({ path: dedupeShotPath, fullPage: false });
 
-  await clickButton(page, /Importar 3 nous|Importar .*nous/i, dialog);
+  const importButton = dialog.locator('button').last();
+  await importButton.waitFor({ state: 'visible', timeout: 30000 });
+  await importButton.scrollIntoViewIfNeeded().catch(() => {});
+  await sleep(180);
+  await importButton.click({ force: true });
   await dialog.waitFor({ state: 'hidden', timeout: 45000 });
 
   const successToast = page.getByText(
@@ -806,6 +886,7 @@ async function runImportResultFlow(page, artifactDir, scenarioData) {
   await refreshAndFocusScenario(page, scenarioData.searchTerm);
   await sleep(2600);
 
+  await parkMouse(page);
   const resultPath = path.join(artifactDir, 'reconciliation-result.png');
   await page.screenshot({ path: resultPath, fullPage: false });
 }
