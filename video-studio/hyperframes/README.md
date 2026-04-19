@@ -20,7 +20,8 @@
 - `video-studio/functional-explainers` is the canonical proof-first master path.
 - HyperFrames is the runtime for previews, renders, and future product-film compositions.
 - The canonical flow is `brief -> capture set -> proof-first master -> product film -> delivery cuts`.
-- There is currently no approved premium film in this folder.
+- There is still no approved premium film in this folder.
+- `07-importacio-extracte-product-film-16x9` is the current premium candidate baseline.
 - `06-importacio-extracte-editorial-16x9` remains only as a technical sandbox for real capture + proxy + reframing.
 
 ## Prerequisites
@@ -37,17 +38,17 @@
 ## Preview
 - `npm run video:preview`
 - Specific piece without editing `index.html`:
-  - `npm run video:preview:piece -- 06-importacio-extracte-editorial-16x9`
+  - `npm run video:preview:piece -- 07-importacio-extracte-product-film-16x9`
 
 ## Render
 - Default render: `npm run video:render`
 - The repo keeps only the official CLI path: `npx hyperframes render --output output.mp4`
 - Specific piece to a custom output without mutating the studio root:
-  - `npm run video:render:piece -- 06-importacio-extracte-editorial-16x9 --output /tmp/summa-06.mp4`
+  - `npm run video:render:piece -- 07-importacio-extracte-product-film-16x9 --output /tmp/summa-07.mp4`
 - Specific piece with web delivery quality from source:
-  - `npm run video:render:piece -- 06-importacio-extracte-editorial-16x9 --profile web-premium --output /tmp/summa-06.web.mp4`
+  - `npm run video:render:piece -- 07-importacio-extracte-product-film-16x9 --profile web-premium --output /tmp/summa-07.web.mp4`
 - Safe preview uses the same temporary runtime and cleans it up on exit:
-  - `npm run video:preview:piece -- 06-importacio-extracte-editorial-16x9`
+  - `npm run video:preview:piece -- 07-importacio-extracte-product-film-16x9`
 - `web-premium` expands to a stable encoder profile for UI-heavy videos and should be the default for website-facing delivery renders.
 
 ## Piece discovery and tests
@@ -78,12 +79,14 @@
 - Brand intro/outro videos remain in `../../public/brand/video/`
 
 ## Current direction
-- The next approved piece should be authored as a premium product film, not as a continuation of `05` or as a direct visual precedent from `06`.
+- `07-importacio-extracte-product-film-16x9` is the current candidate for the first approved premium product film.
+- `06` should not be continued as public film language.
 - Briefs and capture registries remain upstream truth.
 - HyperFrames should only consume that truth.
 
 ## Prompt examples
 - `prompts/06-importacio-extracte-editorial-16x9.md`
+- `prompts/07-importacio-extracte-product-film-16x9.md`
 
 ## Documents de producció
 - `../functional-explainers/`

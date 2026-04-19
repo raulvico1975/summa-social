@@ -3,7 +3,8 @@
 ## Current studio status
 - Renderable HyperFrames runtime without the old short-video scaffold
 - Canonical proof path: `video-studio/functional-explainers`
-- Current root entry in `index.html`: `06-importacio-extracte-editorial-16x9`
+- Current root entry in `index.html`: `07-importacio-extracte-product-film-16x9`
+- `07-importacio-extracte-product-film-16x9` is the current premium candidate baseline
 - `06-importacio-extracte-editorial-16x9` is a sandbox only, not an approved premium precedent
 - Tested with `npx hyperframes lint`, `npx hyperframes validate`, and project renders
 
@@ -38,19 +39,19 @@
 ## How to render a specific composition
 - List available pieces:
   - `npm run video:list`
-- Render 06 through a temporary runtime project:
-  - `npm run video:render:piece -- 06-importacio-extracte-editorial-16x9 --output renders/06-importacio-extracte-editorial-16x9.mp4`
-- Render 06 with the website-facing delivery profile:
-  - `npm run video:render:piece -- 06-importacio-extracte-editorial-16x9 --profile web-premium --output renders/06-importacio-extracte-editorial-16x9.web.mp4`
-- Preview 06 through the same temporary runtime layer:
-  - `npm run video:preview:piece -- 06-importacio-extracte-editorial-16x9`
+- Render 07 through a temporary runtime project:
+  - `npm run video:render:piece -- 07-importacio-extracte-product-film-16x9 --output renders/07-importacio-extracte-product-film-16x9.mp4`
+- Render 07 with the website-facing delivery profile:
+  - `npm run video:render:piece -- 07-importacio-extracte-product-film-16x9 --profile web-premium --output renders/07-importacio-extracte-product-film-16x9.web.mp4`
+- Preview 07 through the same temporary runtime layer:
+  - `npm run video:preview:piece -- 07-importacio-extracte-product-film-16x9`
 - This flow does not require editing `index.html` and cleans up the temporary runtime after exit.
-- Use this for safe preview and render verification of sandbox work; do not treat 06 as approved film language.
+- Use this for safe preview and render verification of the current premium candidate without mutating the repo root again.
 - `web-premium` is the preferred delivery render when the output is meant for a website or hero embed; it raises encoder quality at source instead of trying to “repair” a compressed draft later.
 
 ## Known risks
+- `07` is still only a candidate and may still read as under-directed if the motion or copy feel templated
 - The sandbox 06 piece can still tempt future work back toward poster-like layout if it is treated as precedent
-- No approved premium composition exists yet, so the next film still needs fresh design work
 
 ## Unresolved points
 - No intro/outro is required or defined at system level
@@ -71,4 +72,4 @@
 
 ## System limitations
 - Designed for sober functional demos and product explainers, not motion-heavy launch films
-- No current composition in tree should be cited as approved premium precedent
+- No current composition in tree should yet be cited as approved premium precedent
