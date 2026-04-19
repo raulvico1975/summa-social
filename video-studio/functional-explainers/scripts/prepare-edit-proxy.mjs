@@ -33,7 +33,7 @@ function parseArgs(argv) {
         [
           'Usage: node video-studio/functional-explainers/scripts/prepare-edit-proxy.mjs --input <video> --output <proxy.mp4> --asset <asset.json>',
           '',
-          'Creates an edit-ready explainer proxy with denser keyframes and writes a small metadata asset alongside it.',
+          'Creates a product-film working proxy with denser keyframes and writes a small metadata asset alongside it.',
         ].join('\n'),
       );
       process.exit(0);
@@ -182,7 +182,7 @@ async function main() {
   const proxyFrameRate = parseFrameRate(proxyStream.r_frame_rate) || 30;
 
   const asset = {
-    kind: 'explainer-edit-proxy',
+    kind: 'product-film-proxy',
     createdAt: new Date().toISOString(),
     sourcePath: path.relative(process.cwd(), inputPath),
     proxyPath: path.relative(process.cwd(), outputPath),

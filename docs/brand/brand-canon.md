@@ -1,45 +1,54 @@
-# Summa Social Brand Canon
+# Summa Social Shared Brand Canon
 
 ## Purpose
 
-This document is the canonical visual contract for Summa Social marketing assets.
-It governs blog covers first and becomes the upstream source for short-video later.
+This document defines the shared brand law across media.
+It is intentionally upstream and does not dictate the visual grammar of every
+channel.
 
-## Visual language
+Blog-cover illustration and product video must each have their own channel
+contract.
 
-- Minimalist hand-drawn doodle line art
-- Thin, continuous, organic, slightly imperfect line
-- Black and white base
-- One or two very soft blue accents only
-- White or transparent background
-- No gradients
-- No shadows
-- No textures
-- No tech effects
-- No generic SaaS illustration style
-- Not childish
-- Not caricatural
-- Calm, mature, operational, professional tone
+## Shared identity
 
-## What images should represent
+- calm
+- exact
+- mature
+- operational
+- trustworthy
+- never generic SaaS
 
-- Processes and criteria, not literal app screenshots
-- Administrative order over time
-- Calm operational control
-- Real working situations without facial-detail portraiture
-- Visuals that can stand alone without a long caption
+## Shared audience truth
 
-## What images must avoid
+The brand speaks to people who run real administrative and economic work inside
+social entities.
 
-- Real UI screens
-- Decorative text
-- Loud colors
-- Clipart feeling
-- Empty compositions that feel unfinished
+They care about:
+
+- knowing what happened
+- seeing what changed
+- reducing ambiguity
+- trusting that the system is under control
+
+## Shared rejection triggers
+
+- hype without proof
+- decorative sophistication without operational meaning
+- startup language that could belong to anyone
+- visuals that hide the real work being discussed
+- a tone that feels childish, loud, or careless
+
+## Channel split
+
+- `blog-cover` governs illustration-led brand imagery
+- `functional-explainer` governs proof-first masters
+- `product-film` governs premium public-facing product video
+
+No channel may silently inherit another channel's visual law.
 
 ## Governance
 
-1. The brand is governed by contracts, not taste.
-2. Approved reference images are part of the system.
-3. Only approved outputs can enter brand memory.
-4. Execution behavior must match the documented contract.
+1. Contracts outrank taste.
+2. Approved references are channel-specific.
+3. Only approved outputs enter memory.
+4. Runtime behavior must match the documented contract.

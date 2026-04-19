@@ -3,22 +3,19 @@
 ## Purpose
 
 This document defines how the functional-explainer channel is executed in practice.
-It turns the brand contract into a reviewable production workflow for masters and derived cuts.
-
-For editorial consumer-layer cuts on top of an approved master, also follow `docs/brand/contracts/explainer-edit.md`.
+It turns the brand contracts into a reviewable production workflow for
+proof-first masters, premium films, and delivery cuts.
 
 ## Runtime
 
 - The canonical master path is `video-studio/functional-explainers`.
 - The studio runtime is `video-studio/hyperframes`.
-- HyperFrames consumes the canonical master path and render inputs.
-- HyperFrames is not a source of truth.
-- The production chain is `source capture -> approved master -> edit proxy -> explainer-edit`.
-- The approved master is the only source of truth; the edit proxy exists only to support downstream editorial reframing or retiming.
+- HyperFrames is a renderer and runtime, not a style authority.
+- The production chain is `source capture -> approved proof-first master -> product film -> delivery cuts`.
 
 ## What a master is
 
-A master is the approved upstream explainer for one feature or workflow.
+A master is the approved upstream proof artifact for one feature or workflow.
 
 A master must:
 
@@ -26,40 +23,47 @@ A master must:
 - be produced through the `functional-explainers` pipeline
 - be built around one feature or one operational workflow
 - use approved capture evidence as the primary proof
-- be readable on its own before any derived distribution cut exists
+- be readable on its own before any premium editorial treatment exists
 - have a clear approval state before it is treated as reusable
-- generate an edit-ready proxy only when downstream `explainer-edit` work needs reframing or retiming
+- stay visually subordinate to truth rather than polish
 
-## What a derived cut is
+## What a product film is
 
-A derived cut is a downstream version of a master.
+A product film is the premium public-facing expression of an approved master.
 
-A derived cut may:
+A product film may:
 
-- crop
-- shorten
-- simplify
-- re-time
-- reframe for a target channel
+- reframe
+- retime
+- simplify copy
+- improve editorial rhythm
+- raise delivery quality
 
-A derived cut may not:
+A product film may not:
 
-- invent a new narrative
-- introduce unapproved proof
-- change the core problem or promise
-- override the approved capture set
+- invent proof
+- change the workflow truth
+- turn the piece into a poster, keynote, or ad shell
+- replace proof with decorative motion
+
+## What a delivery cut is
+
+A delivery cut is a downstream export of the product film for a target surface.
+
+A delivery cut may crop, shorten, or change export settings.
+It may not change the approved narrative.
 
 ## Production flow
 
 1. Start from an approved brief and storyboard.
 2. Select the approved capture set.
-3. Assemble the master through `video-studio/functional-explainers`.
+3. Assemble the proof-first master through `video-studio/functional-explainers`.
 4. Render and review the master at exact timestamps.
-5. Generate the edit-ready proxy and edit asset only if a downstream `explainer-edit` cut is needed.
-6. Use the proxy as the editing input for the consumer layer, not as a replacement for the master.
+5. Generate any proxy assets only as editorial working material.
+6. Build the product film from the approved master.
 7. Fix any timing, overlap, looping, or readability problems.
-8. Approve the master only after render verification passes.
-9. Derive secondary cuts from the approved master only.
+8. Approve the product film only after render verification passes.
+9. Derive delivery cuts from the approved product film only.
 
 ## Review gates
 
@@ -68,7 +72,7 @@ No explainer may be considered approved until all of the following are true:
 - the audience is clear
 - the problem is clear
 - the product proof is visible
-- the scene order is readable without pausing
+- the proof sequence is readable without pausing
 - the copy density stays within the contract
 - the approved capture set matches the brief
 - the master export has been checked as a real render, not just as a timeline preview
@@ -86,8 +90,8 @@ Verification must confirm:
 - no layers overlap in a way that blocks readability
 - text is legible in playback
 - the product proof is present where the contract requires it
-- edit-ready proxies use dense keyframes before HyperFrames reframing consumes them
-- any declared `editProxyPath` and `editAssetPath` are produced from the approved recording, then handed off to `explainer-edit`
+- any proxy assets preserve enough quality for downstream reframing
+- the export profile matches the delivery intent when the piece is web-facing
 
 If a render fails any of these checks, the master is not approved.
 
@@ -96,8 +100,7 @@ If a render fails any of these checks, the master is not approved.
 - Source docs, templates, and scripts are committed.
 - Rendered mp4 files stay untracked.
 - Preview snapshots and thumbnails stay untracked.
-- Edit proxies and edit-asset JSON files stay untracked.
-- The reusable editorial handoff lives in docs, not in tracked proxy artifacts.
+- Proxy artifacts and edit metadata stay untracked.
 - The repository should only store durable production inputs and reviewable contracts.
 
 ## Approval gate
@@ -105,18 +108,11 @@ If a render fails any of these checks, the master is not approved.
 The first human review gate is functional, not aesthetic.
 The video must make sense to someone handling accounting or member administration in a Catalan social entity.
 
-## Research status
+## Rejected direction
 
-`05-devolucions-estat-real-16x9` remains research material only.
+The earlier short-video and poster-like explainer line is rejected.
 
-It is:
-
-- not an approved precedent
-- not a reusable master
-- not a distribution template
-- not a substitute for render verification
-
-This matters because the production system must preserve the learning without canonizing a failed pilot.
+It must not be reused as precedent for premium video.
 
 ## Governance
 

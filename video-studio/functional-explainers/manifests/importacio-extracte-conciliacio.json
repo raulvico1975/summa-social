@@ -25,7 +25,7 @@
   "storyboardSlug": "importacio-extracte-conciliacio-functional",
   "storyboardPath": "scripts/demo/video-storyboards/importacio-extracte-conciliacio-functional.mjs",
   "variant": "ca",
-  "targetMasterFormat": "functional-explainer-master-16x9",
+  "targetMasterFormat": "proof-first-master-16x9",
   "outputDefaults": {
     "recordingOutputDir": "output/playwright/bank-reconciliation-demo",
     "recordingVideoPath": "output/playwright/bank-reconciliation-demo/bank-reconciliation-demo.mp4",
@@ -94,7 +94,7 @@
   ],
   "notes": [
     "Usa el recorder real de bank-reconciliation-demo i el storyboard funcional nou; el master ha de sortir del capture set aprovat, no d'un proxy editorial.",
-    "Si hi ha treball downstream d'explainer-edit, el flux real és recording -> edit proxy -> explainer-edit; el proxy i l'edit-asset JSON són artefactes intermedis, no font de veritat.",
+    "El flux real és recording -> proof-first master -> product film -> delivery cuts; el proxy i l'edit-asset JSON són artefactes intermedis, no font de veritat.",
     "No afegeixis intro ni outro de marca.",
     "Mantingues un unic subtitol curt per escena.",
     "Prioritza prova visual real per sobre d'overlays decoratius."

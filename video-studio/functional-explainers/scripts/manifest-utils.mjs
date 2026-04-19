@@ -304,7 +304,7 @@ export async function buildRenderPlan(manifest, repoRoot) {
 
   if (manifest.outputDefaults.editProxyPath && manifest.outputDefaults.editAssetPath) {
     plan.push({
-      name: 'editorial-proxy',
+      name: 'working-proxy',
       command: [
         'node',
         'video-studio/functional-explainers/scripts/prepare-edit-proxy.mjs',
@@ -316,7 +316,7 @@ export async function buildRenderPlan(manifest, repoRoot) {
         manifest.outputDefaults.editAssetPath,
       ],
       cwd: repoRoot,
-      description: `Prepare explainer edit proxy for ${manifest.id}`,
+      description: `Prepare product-film working proxy for ${manifest.id}`,
     });
   }
 

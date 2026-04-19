@@ -4,14 +4,14 @@
 
 Reusable brief template for proof-backed Summa Social explainers.
 
-Use this template when the goal is a guided demo cut with one claim per beat
-and one proof target per beat.
+Use this template when the goal is a proof-first master with one proof target
+per beat.
 
 ## How to use
 
-- Fill this brief before editing any master explainer.
+- Fill this brief before building any proof-first master.
 - Keep the scope narrow enough that every claim can be proved with a real capture.
-- Use the matching `explainer-edit-grammar` when you turn the brief into beats.
+- Use the shot-language and product-film contracts only after this brief is approved.
 - Do not add ornamental story beats that do not map to product proof.
 
 ## Brief id
@@ -79,16 +79,16 @@ Rules:
 - no abstract proof
 - no illustrative stand-ins if a real capture exists
 
-## Beat matrix
+## Proof sequence
 
-Use this table to lock the claim-to-proof relationship before editing.
+Use this table to lock the claim-to-proof relationship before any premium edit.
 
-| Beat | Claim | Proof target | Required capture | Edit note |
-| --- | --- | --- | --- | --- |
-| 1 | `<claim-1>` | `<proof-target-1>` | `<capture-1>` | `<edit-note-1>` |
-| 2 | `<claim-2>` | `<proof-target-2>` | `<capture-2>` | `<edit-note-2>` |
-| 3 | `<claim-3>` | `<proof-target-3>` | `<capture-3>` | `<edit-note-3>` |
-| 4 | `<claim-4>` | `<proof-target-4>` | `<capture-4>` | `<edit-note-4>` |
+| Beat | Job | Claim | Proof target | Required capture | Film note |
+| --- | --- | --- | --- | --- | --- |
+| 1 | `<job-1>` | `<claim-1>` | `<proof-target-1>` | `<capture-1>` | `<film-note-1>` |
+| 2 | `<job-2>` | `<claim-2>` | `<proof-target-2>` | `<capture-2>` | `<film-note-2>` |
+| 3 | `<job-3>` | `<claim-3>` | `<proof-target-3>` | `<capture-3>` | `<film-note-3>` |
+| 4 | `<job-4>` | `<claim-4>` | `<proof-target-4>` | `<capture-4>` | `<film-note-4>` |
 
 ## Approved captures needed
 
@@ -132,5 +132,6 @@ Use this section for any scope boundaries, terminology, or operational warnings.
 
 ## Sign-off
 
-This brief is ready when every claim has a proof target, every proof target has a capture, and the beat matrix can be edited without inventing new story.
-
+This brief is ready when every claim has a proof target, every proof target has
+a capture, and the proof sequence can move downstream without inventing a new
+story.

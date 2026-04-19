@@ -1,5 +1,8 @@
 # Approved Reference Images
 
+These references are approved for illustration-led work.
+They are not automatic upstream references for product film.
+
 ## Initial approved set
 
 1. public/visuals/web/web_divideix_remeses_ca.webp

@@ -17,17 +17,17 @@ test('listRenderablePieces returns the authored marketing compositions', async (
 
   assert.deepEqual(
     pieces.map((piece) => piece.id),
-    ['05-devolucions-estat-real-16x9', '06-importacio-extracte-editorial-16x9'],
+    ['06-importacio-extracte-editorial-16x9'],
   );
 });
 
 test('createRuntimeProject builds a temporary render root without mutating the repo', async () => {
-  const runtimeRoot = await createRuntimeProject(projectRoot, '05-devolucions-estat-real-16x9');
+  const runtimeRoot = await createRuntimeProject(projectRoot, '06-importacio-extracte-editorial-16x9');
 
   const indexHtml = await fs.readFile(path.join(runtimeRoot, 'index.html'), 'utf8');
 
-  assert.match(indexHtml, /data-composition-id="05-devolucions-estat-real-16x9"/);
-  assert.match(indexHtml, /data-composition-src="compositions\/05-devolucions-estat-real-16x9\.html"/);
+  assert.match(indexHtml, /data-composition-id="06-importacio-extracte-editorial-16x9"/);
+  assert.match(indexHtml, /data-composition-src="compositions\/06-importacio-extracte-editorial-16x9\.html"/);
 
   const stats = await fs.lstat(path.join(runtimeRoot, 'compositions'));
   assert.equal(stats.isSymbolicLink(), true);

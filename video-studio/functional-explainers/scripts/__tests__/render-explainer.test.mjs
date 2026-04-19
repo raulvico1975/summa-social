@@ -114,7 +114,7 @@ test('buildRenderPlan wires the manifest into deterministic commands', async () 
   ]);
 });
 
-test('buildRenderPlan inserts an edit-proxy step when the manifest declares editorial assets', async () => {
+test('buildRenderPlan inserts a working-proxy step when the manifest declares editorial assets', async () => {
   const { repoRoot, manifestsDir } = await createWorkspace();
   await writeJson(path.join(manifestsDir, '03-gamma.json'), {
     id: 'gamma',
@@ -150,8 +150,8 @@ test('buildRenderPlan inserts an edit-proxy step when the manifest declares edit
       ],
     },
     {
-      name: 'editorial-proxy',
-      description: 'Prepare explainer edit proxy for gamma',
+      name: 'working-proxy',
+      description: 'Prepare product-film working proxy for gamma',
       cwd: repoRoot,
       command: [
         'node',

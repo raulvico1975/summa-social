@@ -1,5 +1,10 @@
 # 06 — Importació extracte editorial 16:9
 
+## Status
+
+Sandbox tècnic.
+No és precedent visual premium.
+
 ## Problema a explicar
 
 Importar un extracte bancari no és només pujar un fitxer.
@@ -11,19 +16,13 @@ Persones d'administració, gestió i comptabilitat d'entitats socials.
 
 ## Senyals visuals obligatòries
 
-- fer servir el proxy editorial `../output/playwright/bank-reconciliation-demo/bank-reconciliation-demo.edit-proxy.mp4` com a prova principal
+- fer servir el proxy de treball `../output/playwright/bank-reconciliation-demo/bank-reconciliation-demo.edit-proxy.mp4` com a prova principal
 - mantenir la UI real gran i dominant, amb el copy només com a guia curtíssima
-- mantenir una lectura editorial, calmada i més lenta que un demo brut
-- una sola idea per beat
-- un claim curt i una sublínia curta per beat
-- un únic focus visual per beat, sense capes competint
 - fer servir reframing discret i mai caixes delimitadores per marcar elements
 - mantenir aire clar entre el bloc de text i la captura
-- blau només quan la decisió o l'acció ho demana
-- taronja per l'alerta i verd per al resultat, només si hi ha sentit semàntic
-- no usar captions ni lower-thirds tret que siguin estrictament necessaris
+- tractar aquesta peça com a banc de proves per runtime i timing, no com a cànon visual
 
-## Ritme obligatori
+## Ritme actual
 
 - durada aproximada: 30,7 segons
 - 5 beats
@@ -42,9 +41,7 @@ Persones d'administració, gestió i comptabilitat d'entitats socials.
 - sense hype
 - més demo guiada que pòster
 
-## El que no pot semblar
+## Nota
 
-- anunci de startup
-- demo de dashboard
-- peça abstracta sobre banca
-- vídeo promocional amb massa moviment
+Si una futura peça premium vol reutilitzar aquest fitxer, s'haurà de
+redissenyar des del contracte `product-film`, no iterar-lo com si ja fos bo.

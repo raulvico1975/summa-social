@@ -1,8 +1,8 @@
 # Briefs Registry
 
-This directory holds the production briefs for `functional-explainer` pieces.
+This directory holds the production briefs for proof-first video masters.
 Each brief is the written contract that connects a real Summa workflow to the
-captures, shots, and template needed to produce a master explainer.
+captures, shots, and template needed to produce a reliable upstream master.
 
 ## What a brief must define
 
@@ -16,12 +16,12 @@ captures, shots, and template needed to produce a master explainer.
 
 ## How to use this registry
 
-- Treat each brief as the source of truth for one explainer workflow.
+- Treat each brief as the source of truth for one workflow.
 - Use real Summa UI proof when the scene is meant to demonstrate product value.
 - Do not invent captures inside the brief; captures must be listed in the
   capture registry first.
-- Keep the brief narrow enough that a future editor can build from it without
-  re-litigating the product story.
+- Keep the brief narrow enough that a future product-film editor can build from
+  it without re-litigating the product story.
 
 ## Brief structure
 

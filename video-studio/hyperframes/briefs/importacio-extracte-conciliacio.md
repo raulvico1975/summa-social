@@ -46,11 +46,11 @@ The explainer should be built from captures that show the actual product path:
 
 ## Target master format
 
-`functional-explainer-master-16x9`
+`proof-first-master-16x9`
 
-This is the master format for the first canonical explainer. It should stay
-product-led, readable in normal playback, and backed by real captures rather
-than illustrative stand-ins.
+This is the proof-first master for the first canonical workflow.
+It should stay product-led, readable in normal playback, and backed by real
+captures rather than illustrative stand-ins.
 
 ## Later derived channels
 
@@ -81,5 +81,5 @@ brief should preserve.
 ## Brief note
 
 This brief is intentionally narrow. It should be the first workflow that proves
-the new functional-explainer system can be built from a brief, a capture set,
-and a reusable master template.
+the new proof-first video system can be built from a brief, a capture set, and
+an approved master contract.

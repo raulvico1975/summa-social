@@ -5,27 +5,26 @@ Canonical product-led video masters live here.
 ## Role
 
 - This folder is the master-path entrypoint for `functional-explainer` work.
-- HyperFrames under `../hyperframes` is the consumer runtime for rendering, previews, and experimental or derived compositions.
-- The reusable production chain is `approved brief -> storyboard -> real capture -> master render -> edit proxy -> explainer-edit`.
-- `05-devolucions-estat-real-16x9` stays research-only.
+- HyperFrames under `../hyperframes` is the runtime for rendering, previews, and future product-film compositions.
+- The reusable production chain is `approved brief -> real capture -> proof-first master -> product film -> delivery cuts`.
 
 ## Operational flow
 
 1. Start from the approved brief and storyboard.
 2. Use approved real-capture evidence and the capture registry.
-3. Build the master composition contract.
+3. Build the proof-first master.
 4. Render verify before approval.
-5. Generate the edit-ready proxy and edit asset only when a downstream `explainer-edit` cut needs reframing or retiming.
-6. Derive any secondary cuts after the master is approved.
+5. Generate proxy artifacts only as working material for downstream editorial use.
+6. Derive product-film and delivery cuts only after the master is approved.
 
 ## What belongs here
 
 - Master-path briefs
 - Storyboards
 - Capture registry references
-- Master template contracts
+- Proof-first template contracts
 - Approval and verification notes
-- Manifest `notes` that keep proxy/editorial handoff rules close to the piece
+- Manifest `notes` that keep proof and delivery rules close to the piece
 
 ## CLI
 
@@ -34,4 +33,4 @@ Canonical product-led video masters live here.
 - `npm run video:explainer:render -- importacio-extracte-conciliacio --skip-recording`
 
 `--skip-recording` is the fast path when the base capture already exists and only the postproduction layer changes.
-If the manifest declares `editProxyPath` and `editAssetPath`, the render command prepares the explainer-edit proxy automatically and keeps the proxy separate from the approved master render.
+If the manifest declares proxy artifacts, they are treated as working outputs only and stay separate from the approved master.

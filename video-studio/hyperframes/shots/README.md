@@ -1,12 +1,13 @@
 # Summa Social HyperFrames - Shot Library
 
 ## Purpose
-This folder holds reusable shot-level building blocks for the canonical `functional-explainer` flow.
+This folder holds reusable shot-level building blocks for proof-first masters
+and downstream product films.
 
 ## Canonical use
 - Shots are assembled from real product captures, not invented placeholders.
 - Each shot must map back to a brief, a capture record, or a reusable scene rule.
-- Shots are inputs to a master template, not final compositions.
+- Shots are inputs to a master or film template, not final compositions.
 
 ## What belongs here
 - Scene-specific shot definitions
@@ -22,4 +23,3 @@ This folder holds reusable shot-level building blocks for the canonical `functio
 
 ## Operating rule
 If a shot cannot be traced to a real capture and a production brief, it is not canonical.
-
