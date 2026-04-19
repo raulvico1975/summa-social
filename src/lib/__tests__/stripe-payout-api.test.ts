@@ -12,6 +12,7 @@ import {
   buildStripePayoutGroupFromPayments,
   stripeMinorAmountToMajor,
 } from '@/lib/stripe/payout-sync';
+import type { StripePayoutGroup } from '@/lib/stripe/types';
 
 test('listRecentPaidStripePayouts filters non-paid payouts and adds preview for paid payouts only', async () => {
   const seenUrls: string[] = [];
@@ -123,6 +124,99 @@ test('listRecentPaidStripePayouts filters non-paid payouts and adds preview for 
   assert.match(seenUrls[0], /\/payouts\?limit=10/);
   assert.match(seenUrls[1], /\/balance_transactions\?/);
   assert.match(seenUrls[1], /payout=po_paid_1/);
+});
+
+test('listRecentPaidStripePayouts keeps paging until it finds paid payouts', async () => {
+  const responses = [
+    {
+      object: 'list',
+      has_more: true,
+      data: Array.from({ length: 10 }, (_, index) => ({
+        id: `po_pending_${index + 1}`,
+        amount: 5000,
+        currency: 'eur',
+        arrival_date: 1713446400 + index,
+        created: 1713446400 + index,
+        status: 'pending',
+      })),
+    },
+    {
+      object: 'list',
+      has_more: false,
+      data: [
+        {
+          id: 'po_paid_2',
+          amount: 8750,
+          currency: 'eur',
+          arrival_date: 1713532800,
+          created: 1713532800,
+          status: 'paid',
+        },
+      ],
+    },
+    {
+      object: 'list',
+      has_more: false,
+      data: [
+        {
+          id: 'txn_preview_1',
+          type: 'payment',
+          fee: 50,
+          net: 8700,
+          currency: 'eur',
+          reporting_category: 'charge',
+          source: {
+            object: 'charge',
+            id: 'ch_preview_1',
+            amount: 8750,
+            currency: 'eur',
+            created: 1713532800,
+            billing_details: {
+              name: 'Maria Puig',
+            },
+          },
+        },
+      ],
+    },
+  ];
+
+  const seenUrls: string[] = [];
+  const fetchImpl: typeof fetch = async (input) => {
+    seenUrls.push(String(input));
+    const payload = responses.shift();
+    assert.ok(payload, 'expected a mocked Stripe response');
+
+    return new Response(JSON.stringify(payload), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  };
+
+  const payouts = await listRecentPaidStripePayouts({
+    secretKey: 'sk_test_123',
+    fetchImpl,
+    timeoutMs: 250,
+  });
+
+  assert.equal(payouts.length, 1);
+  assert.deepEqual(payouts[0], {
+    id: 'po_paid_2',
+    date: 1713532800,
+    amount: 87.5,
+    currency: 'eur',
+    arrivalDate: 1713532800,
+    created: 1713532800,
+    status: 'paid',
+    preview: {
+      paymentCount: 1,
+      firstDisplayName: 'Maria Puig',
+      secondDisplayName: null,
+    },
+  });
+  assert.equal(seenUrls.length, 3);
+  assert.match(seenUrls[1]!, /starting_after=po_pending_10/);
+  assert.match(seenUrls[2]!, /\/balance_transactions\?/);
+  assert.match(seenUrls[2]!, /payout=po_paid_2/);
 });
 
 test('fetchStripePayout normalizes payout data and assertStripePayoutPaid blocks unpaid payouts', async () => {
@@ -278,14 +372,14 @@ test('getStripeSecretKeyFromEnv reads only STRIPE_SECRET_KEY from env', () => {
   assert.equal(getStripeSecretKeyFromEnv({} as unknown as NodeJS.ProcessEnv), null);
 });
 
-test('stripeMinorAmountToMajor supports zero and three-decimal currencies', () => {
+test('stripeMinorAmountToMajor supports zero-decimal currencies and rejects unsupported three-decimal ones', () => {
   assert.equal(stripeMinorAmountToMajor(12345, 'eur'), 123.45);
   assert.equal(stripeMinorAmountToMajor(12345, 'jpy'), 12345);
-  assert.equal(stripeMinorAmountToMajor(12345, 'kwd'), 12.345);
+  assert.throws(() => stripeMinorAmountToMajor(12345, 'kwd'), /STRIPE_UNSUPPORTED_CURRENCY/);
 });
 
 test('buildStripePayoutGroupFromPayments adapts API payload to the current imputation flow', () => {
-  const group = buildStripePayoutGroupFromPayments('po_abc', [
+  const group: StripePayoutGroup = buildStripePayoutGroupFromPayments('po_abc', [
     {
       stripePaymentId: 'ch_1',
       amountGross: 40,

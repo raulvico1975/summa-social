@@ -1,24 +1,24 @@
 # Rollback Plan (auto) — Summa Social
 
-Generat: 2026-04-17 17:44
+Generat: 2026-04-19 12:47
 Risc: ALT
 Backup curt: NO_REQUIRED
-SHA prod abans de publicar: ef7ca9c80
-SHA branca a publicar (codex/blog-cover-publish-prodonly-20260417): a8a6fe18d
+SHA prod abans de publicar: ce7e4bca5
+SHA branca a publicar (main): a3f2a991c
 
 ## Si cal marxa enrere rapida
 
 Opcio recomanada (preserva historial):
 ```bash
-git checkout codex/blog-cover-publish-prodonly-20260417
-git revert a8a6fe18d --no-edit
-git push origin codex/blog-cover-publish-prodonly-20260417
-bash scripts/deploy.sh codex/blog-cover-publish-prodonly-20260417
+git checkout main
+git revert a3f2a991c --no-edit
+git push origin main
+bash scripts/deploy.sh main
 ```
 
 Emergencia critica (nomes si la produccio cau i no hi ha alternativa):
 ```bash
 git checkout prod
-git reset --hard ef7ca9c80
+git reset --hard ce7e4bca5
 git push origin prod --force-with-lease
 ```

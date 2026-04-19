@@ -1,10 +1,12 @@
 import {
+  UnsupportedStripeCurrencyError,
   stripeMinorAmountToMajor,
   type StripePayoutPayment,
 } from '@/lib/stripe/payout-sync';
 
 const STRIPE_API_BASE_URL = 'https://api.stripe.com/v1';
 const STRIPE_PAYOUT_LIST_LIMIT = 10;
+const STRIPE_RECENT_PAID_PAYOUT_TARGET = 10;
 const STRIPE_PAGE_LIMIT = 100;
 const STRIPE_REQUEST_TIMEOUT_MS = 8_000;
 const STRIPE_MAX_PAGE_LOOPS = 25;
@@ -336,25 +338,53 @@ export async function listRecentPaidStripePayouts(input: {
   fetchImpl?: StripeFetch;
   timeoutMs?: number;
 }): Promise<StripeRecentPayout[]> {
-  const searchParams = new URLSearchParams({
-    limit: String(STRIPE_PAYOUT_LIST_LIMIT),
-  });
+  const payouts: StripePayoutDetails[] = [];
+  let startingAfter: string | null = null;
 
-  const response = await stripeGet<StripePayoutListResponse>({
-    path: '/payouts',
-    secretKey: input.secretKey,
-    searchParams,
-    fetchImpl: input.fetchImpl,
-    timeoutMs: input.timeoutMs,
-  });
+  for (
+    let page = 0;
+    page < STRIPE_MAX_PAGE_LOOPS && payouts.length < STRIPE_RECENT_PAID_PAYOUT_TARGET;
+    page += 1
+  ) {
+    const searchParams = new URLSearchParams({
+      limit: String(STRIPE_PAYOUT_LIST_LIMIT),
+    });
+    if (startingAfter) {
+      searchParams.set('starting_after', startingAfter);
+    }
 
-  const payouts = response.data
-    .map(normalizeStripePayout)
-    .filter((payout): payout is StripePayoutDetails => Boolean(payout))
-    .filter((payout) => payout.status === 'paid');
+    const response = await stripeGet<StripePayoutListResponse>({
+      path: '/payouts',
+      secretKey: input.secretKey,
+      searchParams,
+      fetchImpl: input.fetchImpl,
+      timeoutMs: input.timeoutMs,
+    });
 
+    payouts.push(
+      ...response.data
+        .map(normalizeStripePayout)
+        .filter((payout): payout is StripePayoutDetails => Boolean(payout))
+        .filter((payout) => payout.status === 'paid')
+        .map((payout) => ({
+          ...payout,
+          status: 'paid' as const,
+        }))
+    );
+
+    if (!response.has_more) {
+      break;
+    }
+
+    startingAfter = response.data.at(-1)?.id ?? null;
+    if (!startingAfter) {
+      break;
+    }
+  }
+
+  const paidPayouts = payouts.slice(0, STRIPE_RECENT_PAID_PAYOUT_TARGET);
   const previews = await Promise.all(
-    payouts.map((payout) =>
+    paidPayouts.map((payout) =>
       fetchStripePayoutPreview({
         secretKey: input.secretKey,
         payoutId: payout.id,
@@ -364,7 +394,7 @@ export async function listRecentPaidStripePayouts(input: {
     )
   );
 
-  return payouts.map((payout, index) => ({
+  return paidPayouts.map((payout, index) => ({
     ...payout,
     date: payout.arrivalDate,
     status: 'paid' as const,
@@ -374,6 +404,16 @@ export async function listRecentPaidStripePayouts(input: {
       secondDisplayName: null,
     },
   }));
+}
+
+export function isUnsupportedStripeCurrencyError(
+  error: unknown
+): error is UnsupportedStripeCurrencyError {
+  return error instanceof UnsupportedStripeCurrencyError;
+}
+
+export function getUnsupportedStripeCurrencyMessage(currency: string): string {
+  return `Aquest flux de payout Stripe no admet la moneda ${currency.toUpperCase()}.`;
 }
 
 async function fetchStripeBalanceTransactionsPage(input: {

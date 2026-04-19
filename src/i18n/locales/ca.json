@@ -4884,6 +4884,7 @@
   "dialogs.stripeImputation.description": "Pots carregar un CSV de Stripe o completar la imputació manualment. La taula final sempre és editable abans de confirmar.",
   "dialogs.stripeImputation.descriptionStripeImport": "Aquest moviment bancari correspon a un payout Stripe. Summa en pot carregar el detall directament des de Stripe i deixar-te la imputació preparada. Usa el CSV només si la sync no està disponible.",
   "dialogs.stripeImputation.duplicateDescription": "No es pot confirmar mentre hi hagi `stripePaymentId` repetits dins la mateixa imputació.",
+  "dialogs.stripeImputation.duplicatePayoutPayments": "Aquest payout conté pagaments Stripe ja imputats. Fes servir \"Desfer imputació Stripe\" del moviment original abans de reimputar.",
   "dialogs.stripeImputation.duplicateTitle": "Pagaments Stripe duplicats",
   "dialogs.stripeImputation.detectedPayoutLabel": "Payout detectat",
   "dialogs.stripeImputation.detectedPayoutPlaceholder": "Selecciona el payout correcte",
