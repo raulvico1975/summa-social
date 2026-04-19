@@ -9,6 +9,44 @@ import { getAdminDb, validateUserMembership, verifyIdToken } from '@/lib/api/adm
 import { requirePermission } from '@/lib/api/require-permission';
 
 const REGION = 'europe-west1';
+const ALLOWED_ORIGINS = [
+  'https://summasocial.app',
+  'http://localhost:3000',
+  'http://127.0.0.1:3000',
+];
+
+function resolveOrigin(origin: string | null): string | null {
+  if (!origin) return null;
+  return ALLOWED_ORIGINS.includes(origin) ? origin : null;
+}
+
+function buildCorsHeaders(request: Request, baseHeaders?: HeadersInit): Headers {
+  const headers = new Headers(baseHeaders);
+  const origin = resolveOrigin(request.headers.get('origin'));
+
+  if (origin) {
+    headers.set('Access-Control-Allow-Origin', origin);
+  } else {
+    headers.delete('Access-Control-Allow-Origin');
+  }
+
+  headers.set('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  headers.set('Access-Control-Allow-Headers', 'Authorization, Content-Type');
+  headers.set('Vary', 'Origin');
+
+  return headers;
+}
+
+function jsonWithCors(
+  request: Request,
+  body: unknown,
+  init?: ResponseInit
+): NextResponse {
+  return NextResponse.json(body, {
+    ...init,
+    headers: buildCorsHeaders(request, init?.headers),
+  });
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -16,7 +54,8 @@ export async function POST(request: NextRequest) {
     const authHeader = request.headers.get('Authorization');
     const authResult = await verifyIdToken(request);
     if (!authHeader?.startsWith('Bearer ') || !authResult) {
-      return NextResponse.json(
+      return jsonWithCors(
+        request,
         { code: 'UNAUTHENTICATED', message: 'Token no proporcionat' },
         { status: 401 }
       );
@@ -27,7 +66,8 @@ export async function POST(request: NextRequest) {
     try {
       body = await request.json();
     } catch {
-      return NextResponse.json(
+      return jsonWithCors(
+        request,
         { code: 'INVALID_REQUEST', message: 'Body invàlid' },
         { status: 400 }
       );
@@ -36,7 +76,8 @@ export async function POST(request: NextRequest) {
     const payload = body as Record<string, unknown>;
     const orgId = typeof payload.orgId === 'string' ? payload.orgId.trim() : '';
     if (!orgId) {
-      return NextResponse.json(
+      return jsonWithCors(
+        request,
         { code: 'INVALID_REQUEST', message: 'orgId obligatori' },
         { status: 400 }
       );
@@ -53,7 +94,8 @@ export async function POST(request: NextRequest) {
     // 3. Construir URL de la Cloud Function
     const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
     if (!projectId) {
-      return NextResponse.json(
+      return jsonWithCors(
+        request,
         { code: 'INTERNAL_ERROR', message: 'Configuració del servidor incompleta' },
         { status: 500 }
       );
@@ -78,12 +120,13 @@ export async function POST(request: NextRequest) {
     // 6. Si és un error JSON, retornar-lo tal qual
     if (contentType.includes('application/json')) {
       const errorData = await upstream.json();
-      return NextResponse.json(errorData, { status: upstream.status });
+      return jsonWithCors(request, errorData, { status: upstream.status });
     }
 
     // 7. Si és un ZIP, retornar l'stream
     if (!upstream.body) {
-      return NextResponse.json(
+      return jsonWithCors(
+        request,
         { code: 'INTERNAL_ERROR', message: 'Resposta buida del servidor' },
         { status: 500 }
       );
@@ -91,14 +134,15 @@ export async function POST(request: NextRequest) {
 
     return new Response(upstream.body, {
       status: upstream.status,
-      headers: {
+      headers: buildCorsHeaders(request, {
         'Content-Type': contentType,
         'Content-Disposition': contentDisposition,
-      },
+      }),
     });
   } catch (error) {
     console.error('[closing-bundle-zip] Error proxy:', error);
-    return NextResponse.json(
+    return jsonWithCors(
+      request,
       { code: 'INTERNAL_ERROR', message: 'Error intern del servidor' },
       { status: 500 }
     );
@@ -106,13 +150,9 @@ export async function POST(request: NextRequest) {
 }
 
 // Permetre peticions OPTIONS per CORS (tot i que Next.js ho gestiona automàticament)
-export async function OPTIONS() {
+export async function OPTIONS(request: Request) {
   return new Response(null, {
     status: 204,
-    headers: {
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'POST, OPTIONS',
-      'Access-Control-Allow-Headers': 'Authorization, Content-Type',
-    },
+    headers: buildCorsHeaders(request),
   });
 }

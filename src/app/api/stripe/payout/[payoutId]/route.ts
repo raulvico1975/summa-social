@@ -50,7 +50,18 @@ const defaultDeps: StripePayoutRouteDeps = {
   fetchStripePayoutPayments,
 };
 
-export async function handleStripePayoutGet(
+function resolveDeps(): StripePayoutRouteDeps {
+  const testGlobal = globalThis as typeof globalThis & {
+    __stripePayoutRouteDeps__?: Partial<StripePayoutRouteDeps>;
+  };
+
+  return {
+    ...defaultDeps,
+    ...(testGlobal.__stripePayoutRouteDeps__ ?? {}),
+  };
+}
+
+async function handleStripePayoutGet(
   request: NextRequest,
   { params }: { params: Promise<{ payoutId: string }> },
   deps: StripePayoutRouteDeps = defaultDeps
@@ -158,5 +169,5 @@ export async function GET(
   request: NextRequest,
   context: { params: Promise<{ payoutId: string }> }
 ) {
-  return handleStripePayoutGet(request, context);
+  return handleStripePayoutGet(request, context, resolveDeps());
 }

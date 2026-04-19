@@ -3,9 +3,14 @@ import test from 'node:test';
 
 import { NextRequest, NextResponse } from 'next/server';
 
-import { handleStripePayoutGet } from '@/app/api/stripe/payout/[payoutId]/route';
-import { handleStripePayoutsGet } from '@/app/api/stripe/payouts/route';
+import { GET as handleStripePayoutGet } from '@/app/api/stripe/payout/[payoutId]/route';
+import { GET as handleStripePayoutsGet } from '@/app/api/stripe/payouts/route';
 import { UnsupportedStripeCurrencyError } from '@/lib/stripe/payout-sync';
+
+const testGlobal = globalThis as typeof globalThis & {
+  __stripePayoutsRouteDeps__?: Record<string, unknown>;
+  __stripePayoutRouteDeps__?: Record<string, unknown>;
+};
 
 function makeRequest(url: string) {
   return new NextRequest(url, {
@@ -26,29 +31,49 @@ function makeBaseDeps() {
   };
 }
 
+async function callStripePayoutsRoute(deps: Record<string, unknown>) {
+  testGlobal.__stripePayoutsRouteDeps__ = deps;
+  try {
+    return await handleStripePayoutsGet(
+      makeRequest('http://localhost/api/stripe/payouts?orgId=org-1')
+    );
+  } finally {
+    delete testGlobal.__stripePayoutsRouteDeps__;
+  }
+}
+
+async function callStripePayoutRoute(deps: Record<string, unknown>) {
+  testGlobal.__stripePayoutRouteDeps__ = deps;
+  try {
+    return await handleStripePayoutGet(
+      makeRequest('http://localhost/api/stripe/payout/po_1?orgId=org-1'),
+      { params: Promise.resolve({ payoutId: 'po_1' }) }
+    );
+  } finally {
+    delete testGlobal.__stripePayoutRouteDeps__;
+  }
+}
+
 test('GET /api/stripe/payouts retorna 200 amb payouts quan la moneda es suportada', async () => {
-  const response = await handleStripePayoutsGet(
-    makeRequest('http://localhost/api/stripe/payouts?orgId=org-1'),
-    {
-      ...makeBaseDeps(),
-      listRecentPaidStripePayouts: async () => [
-        {
-          id: 'po_1',
-          date: 1713360000,
-          amount: 97,
-          currency: 'eur',
-          arrivalDate: 1713360000,
-          created: 1713273600,
-          status: 'paid' as const,
-          preview: {
-            paymentCount: 1,
-            firstDisplayName: 'Anna Serra',
-            secondDisplayName: null,
-          },
+  const response = await callStripePayoutsRoute({
+    ...makeBaseDeps(),
+    listRecentPaidStripePayouts: async () => [
+      {
+        id: 'po_1',
+        date: 1713360000,
+        amount: 97,
+        currency: 'eur',
+        arrivalDate: 1713360000,
+        created: 1713273600,
+        status: 'paid' as const,
+        preview: {
+          paymentCount: 1,
+          firstDisplayName: 'Anna Serra',
+          secondDisplayName: null,
         },
-      ],
-    }
-  );
+      },
+    ],
+  });
 
   assert.equal(response.status, 200);
   assert.deepEqual(await response.json(), [
@@ -70,15 +95,12 @@ test('GET /api/stripe/payouts retorna 200 amb payouts quan la moneda es suportad
 });
 
 test('GET /api/stripe/payouts retorna 422 i missatge estable per moneda de 3 decimals', async () => {
-  const response = await handleStripePayoutsGet(
-    makeRequest('http://localhost/api/stripe/payouts?orgId=org-1'),
-    {
-      ...makeBaseDeps(),
-      listRecentPaidStripePayouts: async () => {
-        throw new UnsupportedStripeCurrencyError('kwd');
-      },
-    }
-  );
+  const response = await callStripePayoutsRoute({
+    ...makeBaseDeps(),
+    listRecentPaidStripePayouts: async () => {
+      throw new UnsupportedStripeCurrencyError('kwd');
+    },
+  });
 
   assert.equal(response.status, 422);
   assert.deepEqual(await response.json(), {
@@ -89,34 +111,30 @@ test('GET /api/stripe/payouts retorna 422 i missatge estable per moneda de 3 dec
 });
 
 test('GET /api/stripe/payout/[payoutId] retorna 200 amb pagaments quan la moneda es suportada', async () => {
-  const response = await handleStripePayoutGet(
-    makeRequest('http://localhost/api/stripe/payout/po_1?orgId=org-1'),
-    { params: Promise.resolve({ payoutId: 'po_1' }) },
-    {
-      ...makeBaseDeps(),
-      fetchStripePayout: async () => ({
-        id: 'po_1',
-        amount: 97,
+  const response = await callStripePayoutRoute({
+    ...makeBaseDeps(),
+    fetchStripePayout: async () => ({
+      id: 'po_1',
+      amount: 97,
+      currency: 'eur',
+      arrivalDate: 1713360000,
+      created: 1713273600,
+      status: 'paid',
+    }),
+    assertStripePayoutPaid: () => undefined,
+    fetchStripePayoutPayments: async () => [
+      {
+        stripePaymentId: 'ch_1',
+        amountGross: 100,
+        fee: 3,
+        net: 97,
         currency: 'eur',
-        arrivalDate: 1713360000,
+        customerEmail: 'donor@example.org',
+        description: 'Donacio web',
         created: 1713273600,
-        status: 'paid',
-      }),
-      assertStripePayoutPaid: () => undefined,
-      fetchStripePayoutPayments: async () => [
-        {
-          stripePaymentId: 'ch_1',
-          amountGross: 100,
-          fee: 3,
-          net: 97,
-          currency: 'eur',
-          customerEmail: 'donor@example.org',
-          description: 'Donacio web',
-          created: 1713273600,
-        },
-      ],
-    }
-  );
+      },
+    ],
+  });
 
   assert.equal(response.status, 200);
   assert.deepEqual(await response.json(), [
@@ -134,18 +152,14 @@ test('GET /api/stripe/payout/[payoutId] retorna 200 amb pagaments quan la moneda
 });
 
 test('GET /api/stripe/payout/[payoutId] retorna 422 i missatge estable per moneda de 3 decimals', async () => {
-  const response = await handleStripePayoutGet(
-    makeRequest('http://localhost/api/stripe/payout/po_1?orgId=org-1'),
-    { params: Promise.resolve({ payoutId: 'po_1' }) },
-    {
-      ...makeBaseDeps(),
-      fetchStripePayout: async () => {
-        throw new UnsupportedStripeCurrencyError('kwd');
-      },
-      assertStripePayoutPaid: () => undefined,
-      fetchStripePayoutPayments: async () => [],
-    }
-  );
+  const response = await callStripePayoutRoute({
+    ...makeBaseDeps(),
+    fetchStripePayout: async () => {
+      throw new UnsupportedStripeCurrencyError('kwd');
+    },
+    assertStripePayoutPaid: () => undefined,
+    fetchStripePayoutPayments: async () => [],
+  });
 
   assert.equal(response.status, 422);
   assert.deepEqual(await response.json(), {

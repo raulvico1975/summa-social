@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { resolveGoogleGenAiApiKey } from '@/ai/config';
 import { ai } from '@/ai/genkit';
+import { verifyIdToken } from '@/lib/api/admin-sdk';
+import { checkRateLimitOrThrow } from '@/lib/api/rate-limit';
 import { z } from 'genkit';
 
 // =============================================================================
@@ -85,8 +87,8 @@ type SuccessResponse = {
 
 type ErrorResponse = {
   ok: false;
-  code: 'QUOTA_EXCEEDED' | 'RATE_LIMITED' | 'TRANSIENT' | 'INVALID_INPUT' | 'AI_ERROR';
-  message: string;
+  code: 'UNAUTHORIZED' | 'QUOTA_EXCEEDED' | 'RATE_LIMITED' | 'TRANSIENT' | 'INVALID_INPUT' | 'AI_ERROR';
+  message?: string;
 };
 
 type ApiResponse = SuccessResponse | ErrorResponse;
@@ -97,6 +99,36 @@ type ApiResponse = SuccessResponse | ErrorResponse;
 
 export async function POST(request: NextRequest): Promise<NextResponse<ApiResponse>> {
   try {
+    const auth = await verifyIdToken(request);
+    if (!auth) {
+      return NextResponse.json(
+        { ok: false, code: 'UNAUTHORIZED' },
+        { status: 401 }
+      );
+    }
+
+    try {
+      await checkRateLimitOrThrow({
+        uid: auth.uid,
+        scope: 'ai_categorize_transaction',
+        limit: 30,
+        windowMs: 60_000,
+      });
+    } catch (error) {
+      if (error instanceof Error && error.message === 'RATE_LIMITED') {
+        return NextResponse.json(
+          { ok: false, code: 'RATE_LIMITED' },
+          {
+            status: 429,
+            headers: {
+              'Retry-After': '60',
+            },
+          }
+        );
+      }
+      throw error;
+    }
+
     // Verify API key is available
     const apiKey = resolveGoogleGenAiApiKey();
     if (!apiKey) {

@@ -44,7 +44,18 @@ const defaultDeps: StripePayoutsRouteDeps = {
   listRecentPaidStripePayouts,
 };
 
-export async function handleStripePayoutsGet(
+function resolveDeps(): StripePayoutsRouteDeps {
+  const testGlobal = globalThis as typeof globalThis & {
+    __stripePayoutsRouteDeps__?: Partial<StripePayoutsRouteDeps>;
+  };
+
+  return {
+    ...defaultDeps,
+    ...(testGlobal.__stripePayoutsRouteDeps__ ?? {}),
+  };
+}
+
+async function handleStripePayoutsGet(
   request: NextRequest,
   deps: StripePayoutsRouteDeps = defaultDeps
 ) {
@@ -118,6 +129,8 @@ export async function handleStripePayoutsGet(
   }
 }
 
-export async function GET(request: NextRequest) {
-  return handleStripePayoutsGet(request);
+export async function GET(
+  request: NextRequest
+) {
+  return handleStripePayoutsGet(request, resolveDeps());
 }
