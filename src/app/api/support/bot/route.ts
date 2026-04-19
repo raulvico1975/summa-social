@@ -13,13 +13,13 @@ import { verifyIdToken, getAdminDb, validateUserMembership, isSuperAdmin } from 
 import { requireOperationalAccess } from '@/lib/api/require-operational-access'
 import { loadGuideContent, type KBCard } from '@/lib/support/load-kb'
 import { isEmergencyRuntimeKb, loadKbCards } from '@/lib/support/load-kb-runtime'
-import { incrementBotQuestionCounters, logBotQuestion, normalizeForHash } from '@/lib/support/bot-question-log'
+import { deriveResponseSubtype, incrementBotQuestionCounters, logBotQuestion, normalizeForHash } from '@/lib/support/bot-question-log'
 import { debugRetrieveCard, detectSmallTalkResponse, retrieveCard, type KbLang, type RetrievalResult, type RetrievalTraceDiscard } from '@/lib/support/bot-retrieval'
 import { orchestrator } from '@/lib/support/engine/orchestrator'
 import { buildEmergencyFallback } from '@/lib/support/engine/renderer'
 import { extractOperationalSteps, normalizeUiPathsAgainstCatalog } from '@/lib/support/engine/policy'
 import { clampTimeout, normalizeAssistantTone, normalizeLang, parseClarifyOptionIds, withTimeout } from '@/lib/support/engine/normalize'
-import type { ApiResponse, AssistantTone, InputLang } from '@/lib/support/engine/types'
+import type { ApiResponse, AssistantTone, InputLang, ResponseSubtype } from '@/lib/support/engine/types'
 import { normalizeSupportContext } from '@/lib/support/support-context'
 import guideProjectsCardRaw from '../../../../../docs/kb/cards/guides/guide-projects.json'
 import guideAttachDocumentCardRaw from '../../../../../docs/kb/cards/guides/guide-attach-document.json'
@@ -139,8 +139,20 @@ type BotDebugTrace = {
     discarded: RetrievalTraceDiscard[]
     clarifyOptions: Array<{ index: 1 | 2 | 3; cardId: string; label: string }>
     finalMode: 'card' | 'fallback'
+    responseSubtype: ResponseSubtype
     finalUiPaths: string[]
   }
+}
+
+function buildResponseSubtype(
+  response: { mode?: 'card' | 'fallback'; cardId?: string | null },
+  decisionReason?: string
+): ResponseSubtype {
+  return deriveResponseSubtype({
+    mode: response.mode,
+    cardId: response.cardId ?? null,
+    decisionReason: decisionReason ?? null,
+  })
 }
 
 const BotInputSchema = z.object({
@@ -570,6 +582,10 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
 
     const smallTalk = detectSmallTalkResponse(message, kbLang)
     if (smallTalk) {
+      const responseSubtype = buildResponseSubtype(
+        { mode: 'fallback', cardId: smallTalk.cardId },
+        'smalltalk_response'
+      )
       const observabilityWrites: Promise<void>[] = []
       if (previousContext.previousQuestion && previousContext.previousWasClarify && !isClarifySelectionMessage(message, previousContext.previousClarifyOptionIds ?? [])) {
         observabilityWrites.push(incrementBotQuestionCounters(db, orgId, previousContext.previousQuestion, inputLang, {
@@ -589,6 +605,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
       void logBotQuestion(db, orgId, message, inputLang, 'fallback', smallTalk.cardId, {
         retrievalConfidence: 'high',
         confidenceBand: 'high',
+        responseSubtype,
         decisionReason: 'smalltalk_response',
         intent: 'informational',
         specificCaseDetected: false,
@@ -598,6 +615,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
       return NextResponse.json({
         ok: true,
         mode: 'fallback',
+        responseSubtype,
         cardId: smallTalk.cardId,
         answer: smallTalk.answer,
         guideId: null,
@@ -709,13 +727,20 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
           selectedCardId: emergency.cardId,
           usedClarification: false,
           trustedOperationalCard: false,
+          responseSubtype: buildResponseSubtype(emergency, 'deterministic_mismatch_guardrail'),
         },
         selectedCard: null,
         kbLang,
       }
     }
 
-    let responsePayload: ApiResponse | (ApiResponse & { debugTrace?: BotDebugTrace }) = result.response
+    const responseSubtype = buildResponseSubtype(result.response, result.meta.decisionReason)
+    const responseWithSubtype = {
+      ...result.response,
+      responseSubtype,
+    }
+
+    let responsePayload: ApiResponse | (ApiResponse & { debugTrace?: BotDebugTrace }) = responseWithSubtype as ApiResponse
     if (traceEnabled) {
       const retrieval = debugRetrieveCard(message, kbLang, retrievableCards, supportContext)
       const selectedCard = retrievableCards.find(card => card.id === result.response.cardId) ?? null
@@ -764,6 +789,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
             discarded: [...retrieval.discarded, ...policyDiscards],
             clarifyOptions: result.response.clarifyOptions ?? [],
             finalMode: result.response.mode,
+            responseSubtype,
             finalUiPaths: result.response.uiPaths,
           },
         },
@@ -813,6 +839,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
       secondScore: result.meta.secondScore,
       retrievalConfidence: result.meta.retrievalConfidence,
       confidenceBand: result.meta.confidenceBand ?? result.meta.retrievalConfidence,
+      responseSubtype,
       decisionReason: result.meta.decisionReason,
       intent: result.meta.intentType,
       specificCaseDetected: result.meta.specificCaseDetected,

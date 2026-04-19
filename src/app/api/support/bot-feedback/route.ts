@@ -10,7 +10,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { FieldValue } from 'firebase-admin/firestore'
 import { getAdminDb, validateUserMembership, verifyIdToken } from '@/lib/api/admin-sdk'
 import { requireOperationalAccess } from '@/lib/api/require-operational-access'
-import { createQuestionHash, maskPII, normalizeForHash } from '@/lib/support/bot-question-log'
+import { createQuestionHash, deriveResponseSubtype, maskPII, normalizeForHash } from '@/lib/support/bot-question-log'
 
 type InputLang = 'ca' | 'es' | 'fr' | 'pt'
 
@@ -36,6 +36,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
       helpful?: boolean
       cardId?: string
       mode?: 'card' | 'fallback'
+      responseSubtype?: unknown
     }
 
     const question = typeof body.question === 'string' ? body.question.trim() : ''
@@ -47,6 +48,11 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
     const lang = normalizeLang(body.lang)
     const mode = body.mode === 'card' ? 'card' : 'fallback'
     const cardId = typeof body.cardId === 'string' ? body.cardId : null
+    const responseSubtype = deriveResponseSubtype({
+      mode,
+      cardId,
+      responseSubtype: body.responseSubtype,
+    })
 
     const db = getAdminDb()
 
@@ -78,6 +84,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
         messageNormalized: normalized,
         resultMode: mode,
         cardIdOrFallbackId: cardId,
+        responseSubtype,
         helpfulYes: helpful ? FieldValue.increment(1) : FieldValue.increment(0),
         helpfulNo: helpful ? FieldValue.increment(0) : FieldValue.increment(1),
         lastFeedbackHelpful: helpful,

@@ -685,6 +685,95 @@ function hasToken(tokens: Set<string>, ...candidates: string[]): boolean {
 function detectProtectedOverride(message: string): RetrievalOverride | null {
   const normalized = normalizePlain(message)
 
+  if (/\bmoviments?\b/.test(normalized) && /\bsense categoritzar\b/.test(normalized)) {
+    return { kind: 'card', cardId: 'howto-movement-unassigned-alerts', minScore: 710, decisionReason: 'uncategorized_movements_backlog' }
+  }
+
+  if (/\bmoviment\b/.test(normalized) && /\b(categoritzar|categorizar)\b/.test(normalized) && /\b(no se que es|no se qué es|no se que es|no se quin es|no se cual es)\b/.test(normalized)) {
+    return { kind: 'card', cardId: 'howto-movement-unassigned-alerts', minScore: 700, decisionReason: 'uncategorized_single_movement_safe' }
+  }
+
+  if (/\bcrear\b/.test(normalized) && /\bmoviment\b/.test(normalized) && /\bsense importar/.test(normalized) && /\b(banc|banco|compte|cuenta)\b/.test(normalized)) {
+    return { kind: 'card', cardId: 'howto-enter-expense', minScore: 705, decisionReason: 'manual_movement_without_bank_import' }
+  }
+
+  if (/\bquota\b/.test(normalized) && /\b(pausa|pausar|pause|suspendre|suspender)\b/.test(normalized)) {
+    return { kind: 'fallback', cardId: 'fallback-no-answer', decisionReason: 'member_fee_pause_not_covered' }
+  }
+
+  if (/\b(no toca encara|todavia no toca|todavía no toca)\b/.test(normalized) && /\b(soci|donant|socio|donante|remesa)\b/.test(normalized)) {
+    return { kind: 'card', cardId: 'howto-remittance-review-before-send', minScore: 705, decisionReason: 'remittance_not_yet_due_badge' }
+  }
+
+  if (/\bstripe\b/.test(normalized) && /\b(banc|banco)\b/.test(normalized) && /\b(ingres|ingreso)\w*\b/.test(normalized) && /\b(desglos\w*|desgloss\w*|divid\w*)\b/.test(normalized)) {
+    return { kind: 'card', cardId: 'guide-stripe-donations', minScore: 710, decisionReason: 'stripe_grouped_bank_income' }
+  }
+
+  if (/\bstripe\b/.test(normalized) && /\b(donant|donante|soci|socio)\b/.test(normalized) && /\b(no apareix identificat|no aparece identificado|no identificat)\b/.test(normalized)) {
+    return { kind: 'card', cardId: 'guide-stripe-donations', minScore: 705, decisionReason: 'stripe_donor_not_identified' }
+  }
+
+  if (/\bstripe\b/.test(normalized) && /\b(donacio|donaciones?|donacions?)\b/.test(normalized) && /\b(retornad|retornada|retornado|devuelt|devolucio|devolucion|refund)\b/.test(normalized)) {
+    return { kind: 'card', cardId: 'guide-stripe-donations', minScore: 700, decisionReason: 'stripe_returned_donation' }
+  }
+
+  if (/\bplantilla oficial\b/.test(normalized) && /\b(import|importador)\w*\b/.test(normalized)) {
+    return { kind: 'card', cardId: 'guide-import-donors', minScore: 700, decisionReason: 'official_import_template' }
+  }
+
+  if (/\b182\b/.test(normalized) && /\brecurrent\b/.test(normalized)) {
+    return { kind: 'card', cardId: 'guide-model-182', minScore: 705, decisionReason: 'model_182_recurrent_field' }
+  }
+
+  if (/\b(quadrar justificacio|quadrar justificació)\b/.test(normalized)) {
+    return { kind: 'card', cardId: 'guide-projects', minScore: 700, decisionReason: 'project_justification_mode' }
+  }
+
+  if (/\b(projecte|proyecto)\b/.test(normalized) && /\b(pressupost|presupuesto|budget)\b/.test(normalized) && /\b(import|excel|csv)\b/.test(normalized)) {
+    return { kind: 'fallback', cardId: 'fallback-no-answer', decisionReason: 'project_budget_import_not_covered' }
+  }
+
+  if (
+    /\bfiscal\w*\b/.test(normalized) &&
+    /\b(dades|datos)\b/.test(normalized) &&
+    /\b(entitat|organitzacio|organizacion|entidad)\b/.test(normalized) &&
+    /\b(canvi|cambi|edit|modific|actualitz)\w*\b/.test(normalized)
+  ) {
+    return { kind: 'card', cardId: 'howto-organization-fiscal-data', minScore: 710, decisionReason: 'organization_fiscal_data_change' }
+  }
+
+  if (/\b(aplicacio|app|pagina|pantalla)\b/.test(normalized) && /\b(lent|lenta|slow)\b/.test(normalized)) {
+    return { kind: 'card', cardId: 'manual-common-errors', minScore: 690, decisionReason: 'generic_performance_troubleshooting' }
+  }
+
+  if (/\b(pagina|pantalla)\b/.test(normalized) && /\b(en blanc|blanca|blanco)\b/.test(normalized)) {
+    return { kind: 'card', cardId: 'manual-common-errors', minScore: 690, decisionReason: 'blank_screen_troubleshooting' }
+  }
+
+  if (/\b(no es guarda|no se guarda)\b/.test(normalized) || (/\bcanvi\b/.test(normalized) && /\bguardar\b/.test(normalized) && /\bno\b/.test(normalized))) {
+    return { kind: 'card', cardId: 'manual-common-errors', minScore: 690, decisionReason: 'changes_not_saving_troubleshooting' }
+  }
+
+  if (/\b(esborrat|borrado|eliminado|eliminat)\b/.test(normalized) && /\b(sense voler|sin querer|accidentalment|accidentalmente)\b/.test(normalized)) {
+    return { kind: 'card', cardId: 'manual-danger-zone', minScore: 695, decisionReason: 'accidental_delete_recovery' }
+  }
+
+  if ((/\b(no trobo la resposta|no encuentro la respuesta)\b/.test(normalized) || /\bamb qui parlo\b/.test(normalized) || /\bcon quien hablo\b/.test(normalized)) && !/\brol\b/.test(normalized)) {
+    return { kind: 'card', cardId: 'manual-guides-hub', minScore: 700, decisionReason: 'help_hub_escalation' }
+  }
+
+  if (/\bdashboard\b/.test(normalized) && /\b(primer|primero)\b/.test(normalized)) {
+    return { kind: 'card', cardId: 'guide-first-day', minScore: 700, decisionReason: 'dashboard_first_day_orientation' }
+  }
+
+  if (/\b(mobil|movil|mobile)\b/.test(normalized) && /\bsumma social\b/.test(normalized)) {
+    return { kind: 'fallback', cardId: 'fallback-no-answer', decisionReason: 'mobile_support_not_covered' }
+  }
+
+  if (/\b(per on comenco|por donde empiezo|primera vegada|primera vez)\b/.test(normalized)) {
+    return { kind: 'card', cardId: 'guide-first-day', minScore: 705, decisionReason: 'first_day_orientation' }
+  }
+
   if (/\b(zona de perill|zona de peligro)\b/.test(normalized)) {
     return { kind: 'card', cardId: 'manual-danger-zone', minScore: 720, decisionReason: 'danger_zone_explainer' }
   }
@@ -693,7 +782,13 @@ function detectProtectedOverride(message: string): RetrievalOverride | null {
     return { kind: 'card', cardId: 'guide-danger-delete-remittance', minScore: 710, decisionReason: 'danger_last_remittance_exact' }
   }
 
-  if (/\b(presento|presentar|declaracio|declaracion)\b/.test(normalized) && /\b(donatius|donativos)\b/.test(normalized) && /\b(hisenda|hacienda|aeat)\b/.test(normalized)) {
+  if (
+    /\b(presento|presentar|declaracio|declaracion)\b/.test(normalized) &&
+    (
+      (/\b(donatius|donativos)\b/.test(normalized) && /\b(hisenda|hacienda|aeat)\b/.test(normalized)) ||
+      (/\b182\b/.test(normalized) && /\b(hisenda|hacienda|aeat)\b/.test(normalized))
+    )
+  ) {
     return { kind: 'fallback', cardId: 'fallback-fiscal-unclear', decisionReason: 'fiscal_filing_out_of_scope' }
   }
 
@@ -722,6 +817,62 @@ function detectProtectedOverride(message: string): RetrievalOverride | null {
 
 function detectDirectIntentMatch(tokens: string[]): DirectIntentMatch | null {
   const set = new Set(tokens)
+
+  // "Com canvio les dades fiscals de l'entitat?"
+  if (
+    hasToken(set, 'fiscal') &&
+    hasToken(set, 'dades', 'datos') &&
+    hasToken(set, 'entitat', 'organitzacio', 'organizacion', 'organizacio', 'entidad') &&
+    hasToken(set, 'canviar', 'canvio', 'cambiar', 'cambio', 'modificar', 'modifico', 'editar', 'actualitzar', 'actualizar')
+  ) {
+    return { cardId: 'howto-organization-fiscal-data', minScore: 700 }
+  }
+
+  // "Tenim dos comptes bancaris. Com els gestiono?"
+  if (
+    hasToken(set, 'banc', 'banco', 'compte', 'cuenta') &&
+    hasToken(set, 'gestionar', 'gestiono', 'gestiono', 'seleccionar', 'selecciono', 'canviar', 'canvio', 'cambiar', 'cambio') &&
+    !hasToken(set, 'stripe', 'devolucio', 'devolucion', 'retorn', 'retorno')
+  ) {
+    return { cardId: 'guide-select-bank-account', minScore: 685 }
+  }
+
+  // "Vull guardar la factura d'una despesa. On la poso?"
+  if (
+    hasToken(set, 'document', 'factura', 'factures', 'facturas', 'rebut', 'rebuts', 'recibo', 'recibos', 'nomina', 'nomines') &&
+    hasToken(set, 'guardar', 'guardo', 'guardarho', 'posar', 'poso', 'poner', 'pongo')
+  ) {
+    return { cardId: 'guide-attach-document', minScore: 695 }
+  }
+
+  // "Puc crear un moviment a mà, sense importar-lo del banc?"
+  if (
+    hasToken(set, 'crear', 'creo', 'crea', 'afegir', 'añadir', 'anadir', 'agregar') &&
+    hasToken(set, 'moviment', 'moviments', 'movimiento', 'movimientos') &&
+    hasToken(set, 'importar', 'importo', 'carregar', 'carrego', 'cargar', 'cargo') &&
+    hasToken(set, 'banc', 'banco', 'compte', 'cuenta')
+  ) {
+    return { cardId: 'howto-enter-expense', minScore: 690 }
+  }
+
+  // "Apareixen socis que haurien d'estar de baixa a la remesa"
+  if (
+    hasToken(set, 'remesa') &&
+    hasToken(set, 'soci', 'donant', 'socio', 'donante') &&
+    hasToken(set, 'baixa', 'baja', 'inactiu', 'inactivo') &&
+    hasToken(set, 'apareix', 'apareixen', 'aparece', 'aparecen', 'sale', 'salen', 'surt', 'surten')
+  ) {
+    return { cardId: 'guide-remittance-low-members', minScore: 690 }
+  }
+
+  // "Puc importar moviments de tot l'any passat o només del mes actual?"
+  if (
+    hasToken(set, 'importar', 'importo', 'importat', 'importado', 'carregar', 'carrego', 'cargar', 'cargo') &&
+    hasToken(set, 'moviment', 'moviments', 'movimiento', 'movimientos') &&
+    hasToken(set, 'any', 'ano', 'año', 'mes', 'actual', 'passat', 'pasado', 'anterior')
+  ) {
+    return { cardId: 'guide-import-movements', minScore: 680 }
+  }
 
   // "Com canvio la categoria per defecte d'un donant?"
   if (
@@ -847,6 +998,25 @@ function detectDirectIntentMatch(tokens: string[]): DirectIntentMatch | null {
     !hasToken(set, 'document', 'factura', 'rebut', 'recibo')
   ) {
     return { cardId: 'guide-edit-movement', minScore: 670 }
+  }
+
+  // "Com divideixo un moviment?" / "¿Cómo divido un movimiento?"
+  if (
+    hasToken(set, 'dividir', 'fraccionar', 'partir', 'desglossar', 'desglosar') &&
+    hasToken(set, 'moviment', 'moviments', 'movimiento', 'movimientos') &&
+    !hasToken(set, 'remesa', 'remesas', 'remessa', '182')
+  ) {
+    return { cardId: 'howto-movement-split-amount', minScore: 680 }
+  }
+
+  // "Si divideixo una remesa, les quotes compten al 182?"
+  if (
+    hasToken(set, 'dividir', 'fraccionar', 'partir', 'desglossar', 'desglosar') &&
+    hasToken(set, 'remesa', 'remesas', 'remessa') &&
+    hasToken(set, '182') &&
+    hasToken(set, 'quota', 'cuota', 'quotes', 'cuotas')
+  ) {
+    return { cardId: 'howto-mark-donation-182', minScore: 700 }
   }
 
   // "Com gestiono els accessos i permisos?"

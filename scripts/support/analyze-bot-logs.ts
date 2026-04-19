@@ -2,6 +2,8 @@ import { mkdir, writeFile } from 'node:fs/promises'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { getAdminDb } from '../../src/lib/api/admin-sdk'
+import { deriveResponseSubtype } from '../../src/lib/support/bot-question-log'
+import type { ResponseSubtype } from '../../src/lib/support/engine/types'
 
 type ConfidenceBand = 'high' | 'medium' | 'low'
 type IntentType = 'operational' | 'informational'
@@ -13,6 +15,7 @@ export type BotQuestionLogRecord = {
   messageNormalized: string
   lang: string
   resultMode: 'card' | 'fallback'
+  responseSubtype: ResponseSubtype
   cardIdOrFallbackId: string | null
   bestCardId: string | null
   confidenceBand: ConfidenceBand | null
@@ -39,6 +42,7 @@ export type ProblemMetric = {
   messageNormalized: string
   lang: string
   count: number
+  responseSubtype: ResponseSubtype
   fallbackRate: number | null
   fallbackRateStatus?: MetricStatus
   fallbackRateBasis?: 'prospective_counters' | 'historical_not_reconstructible'
@@ -55,11 +59,14 @@ export type ProblemMetric = {
   intent: IntentType | null
 }
 
+export type ResponseSubtypeCounts = Record<ResponseSubtype, number>
+
 export type BotProblemsReport = {
   generatedAt: string
   orgId: string
   days: number
   sourceCollection: string
+  responseSubtypeCounts: ResponseSubtypeCounts
   topFallback: ProblemMetric[]
   topNotHelpful: ProblemMetric[]
   topHighFrequency: ProblemMetric[]
@@ -154,12 +161,20 @@ export function toBotQuestionLogRecord(
   normalizedQueryHash: string,
   data: Record<string, unknown>
 ): BotQuestionLogRecord {
+  const responseSubtype = deriveResponseSubtype({
+    mode: data.resultMode === 'card' ? 'card' : 'fallback',
+    cardId: typeof data.cardIdOrFallbackId === 'string' ? data.cardIdOrFallbackId : null,
+    decisionReason: typeof data.decisionReason === 'string' ? data.decisionReason : null,
+    responseSubtype: data.responseSubtype,
+  })
+
   return {
     normalizedQueryHash,
     messageRaw: String(data.messageRaw ?? ''),
     messageNormalized: String(data.messageNormalized ?? ''),
     lang: String(data.lang ?? 'ca'),
     resultMode: data.resultMode === 'card' ? 'card' : 'fallback',
+    responseSubtype,
     cardIdOrFallbackId: typeof data.cardIdOrFallbackId === 'string' ? data.cardIdOrFallbackId : null,
     bestCardId: typeof data.bestCardId === 'string' ? data.bestCardId : null,
     confidenceBand: (data.confidenceBand ?? data.retrievalConfidence ?? null) as ConfidenceBand | null,
@@ -199,6 +214,7 @@ function buildMetric(record: BotQuestionLogRecord): ProblemMetric {
     messageNormalized: record.messageNormalized,
     lang: record.lang,
     count: record.count,
+    responseSubtype: record.responseSubtype,
     fallbackRate: hasProspectiveModeSignal ? record.fallbackCount / modeTotal : null,
     fallbackRateStatus: hasProspectiveModeSignal ? 'ok' : 'insufficient_data',
     fallbackRateBasis: hasProspectiveModeSignal ? 'prospective_counters' : 'historical_not_reconstructible',
@@ -249,6 +265,16 @@ export function buildBotProblemsReport(
   options: BuildReportOptions
 ): BotProblemsReport {
   const metrics = records.map(buildMetric)
+  const responseSubtypeCounts: ResponseSubtypeCounts = {
+    full_verified_answer: 0,
+    guided_navigation: 0,
+    clarify: 0,
+    fallback: 0,
+  }
+
+  for (const metric of metrics) {
+    responseSubtypeCounts[metric.responseSubtype] += 1
+  }
 
   const topFallback = metrics
     .filter(metric => metric.fallbackRate != null && metric.fallbackRate > 0)
@@ -279,6 +305,7 @@ export function buildBotProblemsReport(
     orgId: options.orgId,
     days: options.days,
     sourceCollection: `organizations/${options.orgId}/supportBotQuestions`,
+    responseSubtypeCounts,
     topFallback,
     topNotHelpful,
     topHighFrequency,

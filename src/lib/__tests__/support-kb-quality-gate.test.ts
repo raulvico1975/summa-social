@@ -21,3 +21,13 @@ test('quality gate fails when critical operational card has no renderable steps'
   )
 })
 
+test('quality gate reports top support benchmark coverage metrics', () => {
+  const gate = runKbQualityGate(loadAllCards())
+
+  assert.equal(typeof gate.stats.topSupport.total, 'number')
+  assert.equal(gate.stats.topSupport.total, 100)
+  assert.equal(typeof gate.stats.topSupport.positiveRate, 'number')
+  assert.equal(typeof gate.stats.topSupport.criticalPositiveRate, 'number')
+  assert.equal(typeof gate.stats.topSupport.coveredPositiveRate, 'number')
+  assert.equal(typeof gate.stats.topSupport.fallbackCount, 'number')
+})

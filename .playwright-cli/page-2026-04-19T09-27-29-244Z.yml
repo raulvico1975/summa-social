@@ -1,0 +1,439 @@
+- generic [active] [ref=e1]:
+  - banner:
+    - generic [ref=e2]:
+      - link "Ir al contenido principal":
+        - /url: "#main"
+      - generic [ref=e4]:
+        - link "Página de inicio de OpenAI" [ref=e5] [cursor=pointer]:
+          - /url: /es-ES/
+          - img [ref=e7]
+        - generic [ref=e9]:
+          - navigation "Navegación principal" [ref=e11]:
+            - list [ref=e12]:
+              - listitem [ref=e13]:
+                - link "Investigación" [ref=e14] [cursor=pointer]:
+                  - /url: /es-ES/research/index/
+                  - generic [ref=e16]: Investigación
+                - button "Menú Investigación"
+              - listitem [ref=e17]:
+                - button "Productos" [ref=e18] [cursor=pointer]:
+                  - generic [ref=e20]: Productos
+                - button "Menú Productos"
+              - listitem [ref=e21]:
+                - link "Empresas" [ref=e22] [cursor=pointer]:
+                  - /url: /es-ES/business/
+                  - generic [ref=e24]: Empresas
+                - button "Menú Empresas"
+              - listitem [ref=e25]:
+                - link "Desarrolladores" [ref=e26] [cursor=pointer]:
+                  - /url: /es-ES/api/
+                  - generic [ref=e28]: Desarrolladores
+                - button "Menú Desarrolladores"
+              - listitem [ref=e29]:
+                - link "Empresa" [ref=e30] [cursor=pointer]:
+                  - /url: /es-ES/about/
+                  - generic [ref=e32]: Empresa
+                - button "Menú Empresa"
+              - listitem [ref=e33]:
+                - link "Fundación (se abre en una ventana nueva)" [ref=e34] [cursor=pointer]:
+                  - /url: https://openaifoundation.org
+                  - generic [ref=e36]: Fundación
+                  - generic [ref=e37]: (se abre en una ventana nueva)
+          - generic [ref=e39]:
+            - button "Abrir búsqueda" [ref=e41] [cursor=pointer]:
+              - img [ref=e42]
+            - button "Cerrar búsqueda" [ref=e44] [cursor=pointer]:
+              - img [ref=e45]
+          - generic [ref=e48]:
+            - button "Iniciar sesión" [ref=e49] [cursor=pointer]:
+              - text: Iniciar sesión
+              - img [ref=e50]
+            - link "Probar ChatGPT (se abre en una ventana nueva)" [ref=e52] [cursor=pointer]:
+              - /url: https://chatgpt.com/?openaicom-did=a69d33a5-3b09-4f52-b899-4b298a88e0d1&openaicom_referred=true
+              - text: Probar ChatGPT
+              - img [ref=e53]
+              - generic [ref=e55]: (se abre en una ventana nueva)
+  - generic [ref=e56]:
+    - main [ref=e57]:
+      - generic [ref=e58]: Codex para (casi) todo | OpenAI
+      - navigation:
+        - generic [ref=e60]:
+          - button "Tabla de contenidos" [ref=e61] [cursor=pointer]:
+            - generic [ref=e62]: Tabla de contenidos
+          - img [ref=e64]
+      - article [ref=e66]:
+        - generic [ref=e67]:
+          - generic [ref=e71]:
+            - generic [ref=e72]:
+              - paragraph [ref=e73]: 16 de abril de 2026
+              - link "Producto" [ref=e74] [cursor=pointer]:
+                - /url: /es-ES/news/product-releases/
+            - heading "Codex para (casi) todo" [level=1] [ref=e75]
+            - link "Descargar para macOS" [ref=e81] [cursor=pointer]:
+              - /url: https://persistent.oaistatic.com/codex-app-prod/Codex.dmg
+          - generic [ref=e83]:
+            - generic [ref=e86]:
+              - button "Reproducir audio del texto de la página" [ref=e87] [cursor=pointer]:
+                - img [ref=e88]
+              - generic [ref=e92]: Escucha el artículo
+            - button "Compartir" [ref=e97] [cursor=pointer]:
+              - img [ref=e98]
+              - text: Compartir
+        - generic [ref=e101]:
+          - paragraph [ref=e103]: Presentamos una actualización importante de Codex, que lo convierte en un socio más poderoso para los más de 3 millones de desarrolladores que lo utilizan cada semana para acelerar el trabajo en todo el ciclo de vida del desarrollo de software.
+          - paragraph [ref=e105]: Codex ahora puede manejar tu ordenador a tu lado, trabajar con más herramientas y aplicaciones que usas a diario, generar imágenes, recordar tus preferencias, aprender de acciones previas y encargarse de tareas continuas y repetitivas. La aplicación Codex ahora incluye además una compatibilidad más amplia para flujos de trabajo de desarrollo, como revisar PR, ver múltiples archivos y terminales, conectarse a entornos de desarrollo remotos mediante SSH y un navegador integrado para iterar más rápido en diseños frontend, aplicaciones y videojuegos.
+          - heading "Ampliar Codex más allá de la programación" [level=2] [ref=e109]
+          - paragraph [ref=e111]: Con el uso del ordenador en segundo plano, Codex ahora puede utilizar todas las aplicaciones de tu ordenador al ver, hacer clic y escribir con su propio cursor. Varios agentes pueden trabajar en tu Mac en paralelo, sin interferir con tu propio trabajo en otras aplicaciones. Para los desarrolladores, esto resulta útil para iterar en cambios del frontend, probar aplicaciones o trabajar en aplicaciones que no exponen una API.
+          - paragraph [ref=e121]: Codex también está empezando a funcionar de forma nativa con la web. La aplicación ahora incluye un navegador integrado, donde puedes comentar directamente en las páginas para dar instrucciones precisas al agente. Resulta útil a día de hoy para el desarrollo frontend y de videojuegos, y con el tiempo está previsto ampliarlo para que Codex pueda controlar por completo el navegador más allá de las aplicaciones web en localhost.
+          - paragraph [ref=e131]:
+            - text: Codex ahora puede usar
+            - link "gpt-image-1.5⁠ (se abre en una ventana nueva)" [ref=e132] [cursor=pointer]:
+              - /url: https://developers.openai.com/api/docs/models/gpt-image-1.5
+              - generic [ref=e133]: gpt-image-1.5
+              - text: ⁠
+              - generic [ref=e134]: (se abre en una ventana nueva)
+            - text: para generar y refinar imágenes. Combinado con capturas de pantalla y código, es útil para crear elementos visuales para conceptos de producto, diseños de frontend, maquetas y juegos dentro del mismo flujo de trabajo.
+          - paragraph [ref=e144]: Además, lanzamos más de 90 complementos adicionales, que combinan habilidades, integraciones de aplicaciones y servidores MCP para dar a Codex más formas de obtener contexto y actuar en todas tus herramientas. Algunos de los nuevos complementos que los desarrolladores encontrarán más útiles incluyen Atlassian Rovo para ayudar a gestionar JIRA, CircleCI, CodeRabbit, GitLab Issues, Microsoft Suite, Neon by Databricks, Remotion, Render y Superpowers.
+          - heading "Trabajar a lo largo del ciclo de vida del desarrollo de software" [level=2] [ref=e156]
+          - paragraph [ref=e158]: La aplicación ahora incluye soporte para responder comentarios de revisión en GitHub, ejecutar varias pestañas del terminal y conectarse a entornos de desarrollo remotos por SSH en fase alfa. Además, permite abrir archivos directamente en la barra lateral con vistas previas enriquecidas de PDF, hojas de cálculo, presentaciones y documentos, y usar un nuevo panel de resumen para seguir los planes, fuentes y artefactos del agente.
+          - paragraph [ref=e168]: "En conjunto, estas mejoras hacen que sea más rápido pasar por todas las etapas del ciclo de vida del desarrollo de software: escribir código, comprobar resultados, revisar cambios y colaborar con el agente en un solo espacio de trabajo."
+          - heading "Mantén tu trabajo en marcha" [level=2] [ref=e172]
+          - paragraph [ref=e174]: Hemos ampliado las automatizaciones para que se puedan reutilizar hilos de conversación existentes y conservar así el contexto ya acumulado. Codex ahora puede programarse tareas futuras y reactivarse automáticamente para continuar una tarea a largo plazo, incluso durante varios días o semanas.
+          - paragraph [ref=e176]: Los equipos usan automatizaciones para todo, desde integrar pull requests abiertos hasta hacer seguimiento de tareas y mantenerse al tanto de conversaciones rápidas en herramientas como Slack, Gmail y Notion.
+          - paragraph [ref=e186]: También lanzamos una vista previa de la memoria, que permite a Codex recordar contexto útil de experiencias previas, como preferencias personales, correcciones e información que ha costado tiempo recopilar. Así, las tareas futuras se completan más rápido y con un nivel de calidad que antes solo era posible mediante instrucciones personalizadas extensas.
+          - paragraph [ref=e188]: Codex ahora también propone de forma proactiva tareas útiles para continuar desde donde lo dejaste. A partir del contexto de los proyectos, los complementos conectados y la memoria, Codex puede ahora sugerir cómo empezar la jornada o por dónde retomar un proyecto anterior. Por ejemplo, Codex puede identificar comentarios abiertos en Google Docs que requieren tu atención, extraer contexto pertinente de Slack, Notion y tu base de código, y después ofrecerte una lista priorizada de acciones.
+          - heading "Disponibilidad" [level=2] [ref=e192]
+          - paragraph [ref=e194]: Desde hoy, estas actualizaciones empiezan a implementarse para los usuarios de la aplicación de escritorio de Codex que inicien sesión con ChatGPT.
+          - paragraph [ref=e196]: Las funciones de personalización, como las sugerencias contextuales y la memoria, estarán disponibles pronto para los usuarios de Enterprise, Edu, la UE y el Reino Unido. El uso de ordenadores está disponible inicialmente en macOS y pronto se ofrecerá a usuarios de la UE y el Reino Unido.
+          - paragraph [ref=e198]:
+            - text: Si ya usas Codex en el terminal o el editor, pruébalo en el resto de tu flujo de trabajo. Si aún no has probado Codex,
+            - link "descarga la aplicación⁠" [ref=e199] [cursor=pointer]:
+              - /url: /es-ES/codex/
+              - generic [ref=e200]: descarga la aplicación
+              - text: ⁠
+            - text: para comenzar.
+          - heading "Próximos pasos" [level=2] [ref=e204]
+          - paragraph [ref=e206]: En apenas un año desde el lanzamiento de Codex, se han ampliado las formas en que los desarrolladores utilizan Codex. Los desarrolladores comienzan a usar Codex para escribir código y luego lo utilizan cada vez más para comprender sistemas, recopilar contexto, revisar trabajo, depurar problemas, coordinarse con sus compañeros de equipo y mantener en marcha trabajos de mayor duración.
+          - paragraph [ref=e208]: Nuestra misión es garantizar que la IAG beneficie a toda la humanidad, lo que incluye reducir la brecha entre lo que las personas son capaces de imaginar y lo que pueden crear. Esta versión acerca Codex a las herramientas, los flujos de trabajo y las decisiones que intervienen en el desarrollo de software, y pronto habrá mucho más.
+        - region "Comentarios sobre la localización" [ref=e211]:
+          - generic [ref=e212]:
+            - paragraph [ref=e213]: Comentarios sobre la traducción
+            - generic [ref=e214]:
+              - paragraph [ref=e215]: ¿Qué tal está esta página en tu idioma?
+              - generic [ref=e216]:
+                - button "Excelente" [ref=e217] [cursor=pointer]:
+                  - generic [ref=e218]:
+                    - img [ref=e220]
+                    - generic [ref=e222]: Excelente
+                - button "Bien" [ref=e223] [cursor=pointer]:
+                  - generic [ref=e224]:
+                    - img [ref=e226]
+                    - generic [ref=e228]: Bien
+                - button "Deficiente" [ref=e229] [cursor=pointer]:
+                  - generic [ref=e230]:
+                    - img [ref=e232]
+                    - generic [ref=e234]: Deficiente
+        - generic [ref=e237]:
+          - list [ref=e239]:
+            - listitem [ref=e240]:
+              - link "2026" [ref=e241] [cursor=pointer]:
+                - /url: /news/?tags=2026
+            - listitem [ref=e242]:
+              - link "Codex" [ref=e243] [cursor=pointer]:
+                - /url: /news/?tags=codex
+          - generic [ref=e244]:
+            - heading "Autor" [level=2] [ref=e245]
+            - generic [ref=e246]: OpenAI
+        - generic [ref=e247]:
+          - generic [ref=e248]:
+            - heading "Sigue leyendo" [level=2] [ref=e250]
+            - link "Ver todo" [ref=e251] [cursor=pointer]:
+              - /url: /es-ES/news/
+          - generic [ref=e254]:
+            - generic [ref=e256]:
+              - img "Agents SDK Art Card 1080x1080" [ref=e262]
+              - link "The next evolution of the Agents SDK - Producto - 15 abr 2026" [ref=e263] [cursor=pointer]:
+                - /url: /es-ES/index/the-next-evolution-of-the-agents-sdk/
+                - generic [ref=e264]:
+                  - generic [ref=e265]: The next evolution of the Agents SDK
+                  - paragraph [ref=e266]:
+                    - generic [ref=e267]: Producto
+                    - time [ref=e269]: 15 abr 2026
+            - generic [ref=e271]:
+              - img "Frame" [ref=e277]
+              - link "Codex ahora ofrece precios de pago por uso para los equipos - Producto - 2 abr 2026" [ref=e278] [cursor=pointer]:
+                - /url: /es-ES/index/codex-flexible-pricing-for-teams/
+                - generic [ref=e279]:
+                  - generic [ref=e280]: Codex ahora ofrece precios de pago por uso para los equipos
+                  - paragraph [ref=e281]:
+                    - generic [ref=e282]: Producto
+                    - time [ref=e284]: 2 abr 2026
+            - generic [ref=e286]:
+              - img "Shopping-ArtCard-1x1" [ref=e292]
+              - link "Impulsar el descubrimiento de productos en ChatGPT - Producto - 24 mar 2026" [ref=e293] [cursor=pointer]:
+                - /url: /es-ES/index/powering-product-discovery-in-chatgpt/
+                - generic [ref=e294]:
+                  - generic [ref=e295]: Impulsar el descubrimiento de productos en ChatGPT
+                  - paragraph [ref=e296]:
+                    - generic [ref=e297]: Producto
+                    - time [ref=e299]: 24 mar 2026
+    - contentinfo [ref=e300]:
+      - generic [ref=e302]:
+        - generic [ref=e303]:
+          - generic [ref=e304]:
+            - heading "Nuestra investigación" [level=2] [ref=e305]
+            - list [ref=e306]:
+              - listitem [ref=e307]:
+                - link "Índice de investigaciones" [ref=e308] [cursor=pointer]:
+                  - /url: /es-ES/research/index/
+              - listitem [ref=e309]:
+                - link "Resumen de investigaciones" [ref=e310] [cursor=pointer]:
+                  - /url: /es-ES/research/
+              - listitem [ref=e311]:
+                - link "Residencia de investigación" [ref=e312] [cursor=pointer]:
+                  - /url: /es-ES/residency/
+              - listitem [ref=e313]:
+                - link "Investigación económica" [ref=e314] [cursor=pointer]:
+                  - /url: /es-ES/signals/
+          - generic [ref=e315]:
+            - heading "Últimos avances" [level=2] [ref=e316]
+            - list [ref=e317]:
+              - listitem [ref=e318]:
+                - link "GPT-5.3 Instant" [ref=e319] [cursor=pointer]:
+                  - /url: /es-ES/index/gpt-5-3-instant/
+              - listitem [ref=e320]:
+                - link "GPT-5.3-Codex" [ref=e321] [cursor=pointer]:
+                  - /url: /es-ES/index/introducing-gpt-5-3-codex/
+              - listitem [ref=e322]:
+                - link "GPT-5" [ref=e323] [cursor=pointer]:
+                  - /url: /es-ES/gpt-5/
+              - listitem [ref=e324]:
+                - link "Codex" [ref=e325] [cursor=pointer]:
+                  - /url: /es-ES/index/introducing-gpt-5-3-codex/
+          - generic [ref=e326]:
+            - heading "Salvaguardia" [level=2] [ref=e327]
+            - list [ref=e328]:
+              - listitem [ref=e329]:
+                - link "Enfoque sobre las medidas de salvaguardia" [ref=e330] [cursor=pointer]:
+                  - /url: /es-ES/safety/
+              - listitem [ref=e331]:
+                - link "Seguridad y privacidad" [ref=e332] [cursor=pointer]:
+                  - /url: /es-ES/security-and-privacy/
+              - listitem [ref=e333]:
+                - link "Confianza y transparencia" [ref=e334] [cursor=pointer]:
+                  - /url: /es-ES/trust-and-transparency/
+        - generic [ref=e335]:
+          - generic [ref=e336]:
+            - heading "ChatGPT" [level=2] [ref=e337]
+            - list [ref=e338]:
+              - listitem [ref=e339]:
+                - link "Descubre ChatGPT (se abre en una ventana nueva)" [ref=e340] [cursor=pointer]:
+                  - /url: https://chatgpt.com/es-ES/overview?openaicom-did=a69d33a5-3b09-4f52-b899-4b298a88e0d1&openaicom_referred=true
+                  - text: Descubre ChatGPT
+                  - img [ref=e341]
+                  - generic [ref=e343]: (se abre en una ventana nueva)
+              - listitem [ref=e344]:
+                - link "Business" [ref=e345] [cursor=pointer]:
+                  - /url: https://chatgpt.com/es-ES/business/business-plan?openaicom-did=a69d33a5-3b09-4f52-b899-4b298a88e0d1&openaicom_referred=true
+              - listitem [ref=e346]:
+                - link "Enterprise" [ref=e347] [cursor=pointer]:
+                  - /url: https://chatgpt.com/es-ES/business/enterprise?openaicom-did=a69d33a5-3b09-4f52-b899-4b298a88e0d1&openaicom_referred=true
+              - listitem [ref=e348]:
+                - link "Educación" [ref=e349] [cursor=pointer]:
+                  - /url: https://chatgpt.com/es-ES/business/education?openaicom-did=a69d33a5-3b09-4f52-b899-4b298a88e0d1&openaicom_referred=true
+              - listitem [ref=e350]:
+                - link "Precios (se abre en una ventana nueva)" [ref=e351] [cursor=pointer]:
+                  - /url: https://chatgpt.com/es-ES/pricing?openaicom-did=a69d33a5-3b09-4f52-b899-4b298a88e0d1&openaicom_referred=true
+                  - text: Precios
+                  - img [ref=e352]
+                  - generic [ref=e354]: (se abre en una ventana nueva)
+              - listitem [ref=e355]:
+                - link "Descargar (se abre en una ventana nueva)" [ref=e356] [cursor=pointer]:
+                  - /url: https://chatgpt.com/es-ES/download?openaicom-did=a69d33a5-3b09-4f52-b899-4b298a88e0d1&openaicom_referred=true
+                  - text: Descargar
+                  - img [ref=e357]
+                  - generic [ref=e359]: (se abre en una ventana nueva)
+          - generic [ref=e360]:
+            - heading "Sora" [level=2] [ref=e361]
+            - list [ref=e362]:
+              - listitem [ref=e363]:
+                - link "Visión general de Sora" [ref=e364] [cursor=pointer]:
+                  - /url: /es-ES/sora/
+              - listitem [ref=e365]:
+                - link "Características" [ref=e366] [cursor=pointer]:
+                  - /url: /sora/#features
+              - listitem [ref=e367]:
+                - link "Precios" [ref=e368] [cursor=pointer]:
+                  - /url: /sora/#pricing
+              - listitem [ref=e369]:
+                - link "Inicio de sesión en Sora (se abre en una ventana nueva)" [ref=e370] [cursor=pointer]:
+                  - /url: https://sora.com/
+                  - text: Inicio de sesión en Sora
+                  - img [ref=e371]
+                  - generic [ref=e373]: (se abre en una ventana nueva)
+          - generic [ref=e374]:
+            - heading "Plataforma API" [level=2] [ref=e375]
+            - list [ref=e376]:
+              - listitem [ref=e377]:
+                - link "Visión general de la plataforma" [ref=e378] [cursor=pointer]:
+                  - /url: /es-ES/api/
+              - listitem [ref=e379]:
+                - link "Precios" [ref=e380] [cursor=pointer]:
+                  - /url: /es-ES/api/pricing/
+              - listitem [ref=e381]:
+                - link "Inicio de sesión en la API (se abre en una ventana nueva)" [ref=e382] [cursor=pointer]:
+                  - /url: https://platform.openai.com/login
+                  - text: Inicio de sesión en la API
+                  - img [ref=e383]
+                  - generic [ref=e385]: (se abre en una ventana nueva)
+              - listitem [ref=e386]:
+                - link "Documentación (se abre en una ventana nueva)" [ref=e387] [cursor=pointer]:
+                  - /url: https://developers.openai.com/api/docs
+                  - text: Documentación
+                  - img [ref=e388]
+                  - generic [ref=e390]: (se abre en una ventana nueva)
+              - listitem [ref=e391]:
+                - link "Foro de desarrolladores (se abre en una ventana nueva)" [ref=e392] [cursor=pointer]:
+                  - /url: https://community.openai.com/
+                  - text: Foro de desarrolladores
+                  - img [ref=e393]
+                  - generic [ref=e395]: (se abre en una ventana nueva)
+        - generic [ref=e396]:
+          - generic [ref=e397]:
+            - heading "Para empresas" [level=2] [ref=e398]
+            - list [ref=e399]:
+              - listitem [ref=e400]:
+                - link "Resumen de los servicios para empresas" [ref=e401] [cursor=pointer]:
+                  - /url: /es-ES/business/
+              - listitem [ref=e402]:
+                - link "Soluciones" [ref=e403] [cursor=pointer]:
+                  - /url: /es-ES/solutions/
+              - listitem [ref=e404]:
+                - link "Contactar con ventas" [ref=e405] [cursor=pointer]:
+                  - /url: /es-ES/contact-sales/
+          - generic [ref=e406]:
+            - heading "Empresa" [level=2] [ref=e407]
+            - list [ref=e408]:
+              - listitem [ref=e409]:
+                - link "Acerca de nosotros" [ref=e410] [cursor=pointer]:
+                  - /url: /es-ES/about/
+              - listitem [ref=e411]:
+                - link "Nuestros estatutos" [ref=e412] [cursor=pointer]:
+                  - /url: /es-ES/charter/
+              - listitem [ref=e413]:
+                - link "Fundación (se abre en una ventana nueva)" [ref=e414] [cursor=pointer]:
+                  - /url: https://openaifoundation.org
+                  - text: Fundación
+                  - img [ref=e415]
+                  - generic [ref=e417]: (se abre en una ventana nueva)
+              - listitem [ref=e418]:
+                - link "Empleo" [ref=e419] [cursor=pointer]:
+                  - /url: /es-ES/careers/
+              - listitem [ref=e420]:
+                - link "Marca" [ref=e421] [cursor=pointer]:
+                  - /url: /es-ES/brand/
+          - generic [ref=e422]:
+            - heading "Apoyo" [level=2] [ref=e423]
+            - list [ref=e424]:
+              - listitem [ref=e425]:
+                - link "Centro de ayuda (se abre en una ventana nueva)" [ref=e426] [cursor=pointer]:
+                  - /url: https://help.openai.com/
+                  - text: Centro de ayuda
+                  - img [ref=e427]
+                  - generic [ref=e429]: (se abre en una ventana nueva)
+          - generic [ref=e430]:
+            - heading "Más" [level=2] [ref=e431]
+            - list [ref=e432]:
+              - listitem [ref=e433]:
+                - link "Noticias" [ref=e434] [cursor=pointer]:
+                  - /url: /es-ES/news/
+              - listitem [ref=e435]:
+                - link "Historias" [ref=e436] [cursor=pointer]:
+                  - /url: /es-ES/stories/
+              - listitem [ref=e437]:
+                - link "Academy" [ref=e438] [cursor=pointer]:
+                  - /url: /es-ES/academy/
+              - listitem [ref=e439]:
+                - link "Transmisiones en vivo" [ref=e440] [cursor=pointer]:
+                  - /url: /es-ES/live/
+              - listitem [ref=e441]:
+                - link "Podcast" [ref=e442] [cursor=pointer]:
+                  - /url: /es-ES/podcast/
+              - listitem [ref=e443]:
+                - link "RSS" [ref=e444] [cursor=pointer]:
+                  - /url: /news/rss.xml
+        - generic [ref=e446]:
+          - heading "Términos y políticas" [level=2] [ref=e447]
+          - list [ref=e448]:
+            - listitem [ref=e449]:
+              - link "Condiciones de uso" [ref=e450] [cursor=pointer]:
+                - /url: /es-ES/policies/terms-of-use/
+            - listitem [ref=e451]:
+              - link "Política de privacidad" [ref=e452] [cursor=pointer]:
+                - /url: /es-ES/policies/privacy-policy/
+            - listitem [ref=e453]:
+              - link "Otras políticas" [ref=e454] [cursor=pointer]:
+                - /url: /es-ES/policies/
+      - generic [ref=e455]:
+        - generic [ref=e456]:
+          - link "X" [ref=e457] [cursor=pointer]:
+            - /url: https://x.com/OpenAI
+            - img [ref=e458]
+            - generic [ref=e460]: (se abre en una ventana nueva)
+          - link "YouTube" [ref=e461] [cursor=pointer]:
+            - /url: https://www.youtube.com/OpenAI
+            - img [ref=e462]
+            - generic [ref=e464]: (se abre en una ventana nueva)
+          - link "LinkedIn" [ref=e465] [cursor=pointer]:
+            - /url: https://www.linkedin.com/company/openai
+            - img [ref=e466]
+            - generic [ref=e468]: (se abre en una ventana nueva)
+          - link "GitHub" [ref=e469] [cursor=pointer]:
+            - /url: https://github.com/openai
+            - img [ref=e470]
+            - generic [ref=e472]: (se abre en una ventana nueva)
+          - link "Instagram" [ref=e473] [cursor=pointer]:
+            - /url: https://www.instagram.com/openai/
+            - img [ref=e474]
+            - generic [ref=e476]: (se abre en una ventana nueva)
+          - link "TikTok" [ref=e477] [cursor=pointer]:
+            - /url: https://www.tiktok.com/@openai
+            - img [ref=e478]
+            - generic [ref=e480]: (se abre en una ventana nueva)
+          - link "Discord" [ref=e481] [cursor=pointer]:
+            - /url: https://discord.gg/openai
+            - img [ref=e482]
+            - generic [ref=e484]: (se abre en una ventana nueva)
+        - generic [ref=e485]:
+          - generic [ref=e486]: OpenAI © 2015–2026
+          - button "Gestionar cookies" [ref=e487] [cursor=pointer]
+        - generic [ref=e488]:
+          - button "Cambiar idioma" [ref=e489] [cursor=pointer]:
+            - generic [ref=e490]:
+              - img [ref=e491]
+              - generic [ref=e494]:
+                - text: español
+                - generic [ref=e495]: España
+          - generic:
+            - generic:
+              - generic:
+                - generic:
+                  - generic:
+                    - img
+                    - textbox "Buscar localidades por nombre o región":
+                      - /placeholder: Búsqueda
+  - dialog "Utilizamos cookies" [ref=e496]:
+    - generic [ref=e497]:
+      - paragraph [ref=e498]: Utilizamos cookies
+      - paragraph [ref=e499]:
+        - text: Usamos cookies para que este sitio funcione, entender cómo se utiliza el servicio y apoyar nuestras acciones de marketing. Visita
+        - button "Gestiona las cookies" [ref=e500] [cursor=pointer]
+        - text: para cambiar tus preferencias en cualquier momento. Consulta nuestra
+        - link "política de cookies" [ref=e501] [cursor=pointer]:
+          - /url: /policies/cookie-policy/
+        - text: para obtener más información.
+    - generic [ref=e502]:
+      - button "Gestionar cookies" [ref=e503] [cursor=pointer]
+      - button "Rechazar no esenciales" [ref=e504] [cursor=pointer]
+      - button "Aceptar todo" [ref=e505] [cursor=pointer]
+  - alert [ref=e506]
