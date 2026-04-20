@@ -103,7 +103,7 @@ export const TOP_SUPPORT_USER_QUESTIONS_CA: TopSupportQuestionCase[] = [
   buildCase('remeses-05', 'Remeses i SEPA', 'remittances', 'La remesa té menys socis del que esperava. Què passa?', ['guide-remittance-low-members'], 'covered'),
   buildCase('remeses-06', 'Remeses i SEPA', 'remittances', 'He dividit una remesa i m’he equivocat. Es pot desfer?', ['guide-split-remittance'], 'covered'),
   buildCase('remeses-07', 'Remeses i SEPA', 'remittances', 'Apareixen socis que haurien d’estar de baixa. Per què passa?', ['guide-remittance-low-members', 'guide-donor-inactive'], 'covered'),
-  buildCase('remeses-08', 'Remeses i SEPA', 'remittances', 'Un soci no apareix identificat a la remesa. Per què?', ['ts-remittance-member-not-identified'], 'covered'),
+  buildCase('remeses-08', 'Remeses i SEPA', 'remittances', 'Un soci no apareix identificat a la remesa. Per què?', ['kb-remittance-member-missing'], 'covered'),
   buildCase('remeses-09', 'Remeses i SEPA', 'remittances', 'Alguns socis no tenen la periodicitat informada. Què faig?', ['guide-remittance-low-members', 'fallback-remittances-unclear'], 'weak'),
   buildCase('remeses-10', 'Remeses i SEPA', 'remittances', 'Un soci apareix com "No toca encara" però sí que el vull cobrar. Puc incloure’l?', ['guide-remittance-low-members', 'howto-remittance-review-before-send'], 'covered'),
 

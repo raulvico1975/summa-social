@@ -17,7 +17,9 @@
       "ja tinc aquests moviments importats",
       "com sap el sistema si hi ha moviments solapats",
       "com detecta solapaments en importar",
-      "duplicats per saldo a l extracte"
+      "duplicats per saldo a l extracte",
+      "moviments solapats import",
+      "extracte solapat"
     ],
     "es": [
       "fechas solapadas",
@@ -26,7 +28,9 @@
       "ya tengo estos movimientos importados",
       "como sabe el sistema si hay movimientos solapados",
       "como detecta solapamientos al importar",
-      "duplicados por saldo en el extracto"
+      "duplicados por saldo en el extracto",
+      "movimientos solapados al importar",
+      "extracto solapado"
     ]
   },
   "guideId": null,
@@ -36,7 +40,7 @@
   },
   "uiPaths": ["Moviments > Importar"],
   "needsSnapshot": false,
-  "keywords": ["solapament", "duplicats", "dates", "importar", "repetits", "saldo", "referencia bancaria", "mateix extracte"],
+  "keywords": ["solapament", "duplicats", "dates", "importar", "repetits", "saldo", "referencia bancaria", "mateix extracte", "extracte solapat"],
   "source_faq": ["Q9"],
   "source_manual": ["5.1"],
   "source_guides": ["importMovements"],

@@ -1,0 +1,64 @@
+{
+  "id": "kb-remittance-member-missing",
+  "type": "troubleshooting",
+  "domain": "remittances",
+  "risk": "guarded",
+  "guardrail": "b1_remittances",
+  "answerMode": "full",
+  "title": {
+    "ca": "Un soci no entra a la remesa",
+    "es": "Un socio no entra en la remesa"
+  },
+  "intents": {
+    "ca": [
+      "per què aquest soci no entra a la remesa",
+      "soci no surt a la remesa",
+      "un soci no apareix a la remesa",
+      "falta un soci a la remesa"
+    ],
+    "es": [
+      "por qué este socio no entra en la remesa",
+      "un socio no sale en la remesa",
+      "un socio no aparece en la remesa",
+      "falta un socio en la remesa"
+    ]
+  },
+  "guideId": null,
+  "answer": {
+    "ca": "Si un soci no entra a la remesa:\n1. Obre la remesa i revisa si el problema és de matching o de dades del soci.\n2. Comprova que DNI, IBAN i nom coincideixen amb la fitxa del donant.\n3. Si les dades no coincideixen, actualitza el donant i torna a processar la remesa.\n\nComprovació final: el soci ha de quedar identificat al detall de la remesa abans de continuar.",
+    "es": "Si un socio no entra en la remesa:\n1. Abre la remesa y revisa si el problema es de matching o de datos del socio.\n2. Comprueba que DNI, IBAN y nombre coinciden con la ficha del donante.\n3. Si los datos no coinciden, actualiza el donante y vuelve a procesar la remesa.\n\nComprobación final: el socio debe quedar identificado en el detalle de la remesa antes de continuar."
+  },
+  "uiPaths": [
+    "Moviments > Obrir remesa > Detall",
+    "Donants > Obrir donant > Editar"
+  ],
+  "needsSnapshot": false,
+  "keywords": [
+    "remesa",
+    "soci",
+    "matching",
+    "dni",
+    "iban",
+    "nom",
+    "no entra"
+  ],
+  "source_faq": [
+    "Q44",
+    "Q49"
+  ],
+  "source_manual": [
+    "6.3",
+    "6.4"
+  ],
+  "source_guides": [],
+  "related": [
+    "guide-remittance-low-members",
+    "ts-remittance-member-not-identified",
+    "howto-remittance-undo"
+  ],
+  "error_key": null,
+  "symptom": {
+    "ca": "La remesa deixa un soci sense identificar o fora del detall esperat",
+    "es": "La remesa deja a un socio sin identificar o fuera del detalle esperado"
+  }
+}

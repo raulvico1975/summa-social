@@ -78,7 +78,7 @@
   { "q": "donde subo facturas", "expectedCardId": "guide-attach-document" },
   { "q": "duplicados extracto bancario", "expectedCardId": "howto-import-safe-duplicates" },
   { "q": "como deshacer remesa", "expectedCardId": "howto-remittance-undo" },
-  { "q": "por que no sale socio remesa", "expectedCardId": "ts-remittance-member-not-identified" },
+  { "q": "por que no sale socio remesa", "expectedCardId": "kb-remittance-member-missing" },
   { "q": "¿cómo sé cuántos movimientos se han importado correctamente?", "expectedCardId": "guide-import-movements" },
   { "q": "quiero ver todos los pagos a un proveedor concreto", "expectedCardId": "guide-movement-filters" },
   { "q": "he dividido una remesa y me he equivocado, ¿se puede deshacer?", "expectedCardId": "guide-split-remittance" },

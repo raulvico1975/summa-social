@@ -560,7 +560,7 @@ test('retrieveCard resolves operational remittance recovery queries to verified 
   assert.equal(shortUndo.mode, 'card')
 
   const lowMembers = retrieveCard('per què no surt soci remesa', 'ca', cards)
-  assert.equal(lowMembers.card.id, 'ts-remittance-member-not-identified')
+  assert.equal(lowMembers.card.id, 'kb-remittance-member-missing')
   assert.equal(lowMembers.mode, 'card')
 
   const notMatching = retrieveCard('remesa no quadra', 'ca', cards)

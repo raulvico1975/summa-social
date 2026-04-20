@@ -14,20 +14,24 @@
       "com genero certificats de donació",
       "certificat fiscal per donants",
       "enviar certificats als socis",
-      "certificat de donatius"
+      "certificat de donatius",
+      "com envio els certificats a tots",
+      "enviar certificats als donants per email"
     ],
     "es": [
       "cómo genero certificados de donación",
       "certificado fiscal para donantes",
       "enviar certificados a los socios",
-      "certificado de donativos"
+      "certificado de donativos",
+      "cómo envío los certificados a todos",
+      "enviar certificados a los donantes por email"
     ]
   },
   "guideId": "generateDonorCertificate",
   "answer": null,
   "uiPaths": ["Informes > Certificats"],
   "needsSnapshot": false,
-  "keywords": ["certificat", "donació", "fiscal", "PDF", "enviar"],
+  "keywords": ["certificat", "donació", "fiscal", "PDF", "enviar", "massiu", "email"],
   "source_faq": ["Q73", "Q74"],
   "source_manual": ["9.3"],
   "source_guides": ["generateDonorCertificate"],
