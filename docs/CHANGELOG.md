@@ -15,6 +15,11 @@ Aquest fitxer ja no pretén duplicar el document mestre.
 - Stripe/imputacio: l'anti-duplicacio passa a ser forta per payout complet; si qualsevol `stripePaymentId` del payout ja existeix actiu, es rebutja tota la reimputacio i cal fer `Desfer imputacio Stripe` del moviment original
 - Stripe/imputacio: no s'accepten imputacions parcials d'un payout i `stripe_adjustment` queda reservat nomes a diferencies reals entre banc i net calculat
 - Stripe/API: la llista de payouts paid pagina mes enlla de la primera pagina i el flux actual rebutja explicitament monedes de 3 decimals
+- codi intern: la categoritzacio automatica endureix regles deterministes per descripcio (ingressos i despeses) i saneja millor la sortida final abans de fixar categoria/confianca
+- API/integracions: `POST /api/ai/categorize-transaction` reforca validacio d'entrada i classifica errors d'IA en codis operables (`INVALID_INPUT`, `QUOTA_EXCEEDED`, `RATE_LIMITED`, `TRANSIENT`, `AI_ERROR`)
+- codi intern: el bot d'ajuda amplia sinonims/normalitzacio, deteccio de casos especifics i heuristiques de recuperacio per reduir `fallback` i millorar match operatiu
+- operativa: s'afegeix benchmark executable `support:eval:top100` per auditar la qualitat del retrieval del bot sobre el lot de 100 preguntes prioritaries
+- documentacio per usuari: es separa manteniment editorial entre manuals llargs (`docs/manual-usuari-*`) i runtime (`public/docs/manual-usuari-*`), amb contracte de sincronitzacio explicit a `src/help/README.md`
 
 ### 2026-04-17
 
