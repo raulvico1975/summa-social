@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { FieldValue } from 'firebase-admin/firestore';
 import { getAdminDb, validateUserMembership, verifyIdToken } from '@/lib/api/admin-sdk';
+import { computeStoredMemberCapabilities } from '@/lib/member-capabilities-sync';
 import {
   memberPermissionsDocPath,
   validateAndCanonicalizeUserPermissionWrite,
@@ -112,6 +113,11 @@ export async function POST(request: NextRequest) {
   const { deny, grants } = validation.value;
   const updatePayload: Record<string, unknown> = {
     updatedAt: FieldValue.serverTimestamp(),
+    capabilities: computeStoredMemberCapabilities({
+      role: 'user',
+      userOverrides: deny.length > 0 ? { deny } : null,
+      userGrants: grants.length > 0 ? grants : null,
+    }),
     userOverrides: deny.length > 0 ? { deny } : FieldValue.delete(),
     userGrants: grants.length > 0 ? grants : FieldValue.delete(),
   };

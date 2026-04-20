@@ -40,7 +40,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
 import { useTranslations } from '@/i18n';
-import { collection, doc, deleteDoc, updateDoc, query, where, getDocs } from 'firebase/firestore';
+import { collection, doc, deleteDoc, deleteField, updateDoc, query, where, getDocs } from 'firebase/firestore';
 import { Users, UserPlus, MoreHorizontal, Trash2, Shield, User, Eye, Clock, Loader2, Download, Upload, MoreVertical } from 'lucide-react';
 import type { OrganizationMember, OrganizationRole, Invitation } from '@/lib/data';
 import { InviteMemberDialog } from './invite-member-dialog';
@@ -53,6 +53,7 @@ import { cn } from '@/lib/utils';
 import { MOBILE_ACTIONS_BAR, MOBILE_CTA_PRIMARY } from '@/lib/ui/mobile-actions';
 import { MembersUserPermissionsDialog } from '@/components/members-user-permissions-dialog';
 import { isUserPermissionsCustomized } from '@/lib/permissions';
+import { buildStoredMemberRoleFields } from '@/lib/member-capabilities-sync';
 
 export function MembersManager() {
   const { firestore, user } = useFirebase();
@@ -147,8 +148,11 @@ export function MembersManager() {
 
     setIsProcessing(true);
     try {
+      const roleFields = buildStoredMemberRoleFields(newRole);
       await updateDoc(doc(membersCollection, member.userId), {
-        role: newRole,
+        ...roleFields,
+        userOverrides: deleteField(),
+        userGrants: deleteField(),
         updatedAt: new Date().toISOString(),
       });
 

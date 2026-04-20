@@ -5,7 +5,7 @@ import dynamic from 'next/dynamic';
 import { TransactionsTable } from '@/components/transactions-table';
 import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
 import { collection, query, where } from 'firebase/firestore';
-import type { Transaction, Category } from '@/lib/data';
+import type { Category } from '@/lib/data';
 import { useTranslations } from '@/i18n';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
 import { useSearchParams } from 'next/navigation';
@@ -66,12 +66,6 @@ export default function MovimientosPage() {
 
   // Feature flag: Documents pendents
   const isPendingDocsEnabled = organization?.features?.pendingDocs ?? false;
-
-  const transactionsQuery = useMemoFirebase(
-    () => organizationId ? collection(firestore, 'organizations', organizationId, 'transactions') : null,
-    [firestore, organizationId]
-  );
-  const { data: transactions, isLoading } = useCollection<Transaction>(transactionsQuery);
 
   const categoriesQuery = useMemoFirebase(
     () => organizationId ? collection(firestore, 'organizations', organizationId, 'categories') : null,
@@ -143,18 +137,14 @@ export default function MovimientosPage() {
         </div>
       </div>
 
-      {isLoading ? (
-        <p>{t.common.loading}</p>
-      ) : (
-        <div className="w-full">
-          <TransactionsTable
-            initialDateFilter={initialPeriodFilter ?? undefined}
-            initialFiscalFilter={initialFiscalFilter}
-            initialDemoAction={initialDemoAction}
-            canEditMovements={canEditMovements}
-          />
-        </div>
-      )}
+      <div className="w-full">
+        <TransactionsTable
+          initialDateFilter={initialPeriodFilter ?? undefined}
+          initialFiscalFilter={initialFiscalFilter}
+          initialDemoAction={initialDemoAction}
+          canEditMovements={canEditMovements}
+        />
+      </div>
     </div>
   );
 }
