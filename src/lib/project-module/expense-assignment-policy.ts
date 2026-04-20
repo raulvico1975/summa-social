@@ -44,6 +44,20 @@ export function canSelectExpenseForProjectAssignment(_item: UnifiedExpenseWithLi
   return true;
 }
 
+export function shouldShowProjectExpenseLoadMore(options: {
+  isLoading: boolean;
+  hasMore: boolean;
+  isServerFiltered: boolean;
+  tableFilter: ProjectExpenseTableFilter;
+  searchQuery: string;
+}): boolean {
+  if (options.isLoading) return false;
+  if (!options.hasMore) return false;
+  if (options.isServerFiltered) return false;
+
+  return true;
+}
+
 export function shouldAutoOpenProjectAssignmentEditor(options: {
   hasAutoOpened: boolean;
   isLoading: boolean;

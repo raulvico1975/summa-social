@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import {
   canSelectExpenseForProjectAssignment,
   matchesProjectExpenseTableFilter,
+  shouldShowProjectExpenseLoadMore,
   shouldAutoOpenProjectAssignmentEditor,
 } from '@/lib/project-module/expense-assignment-policy';
 import type { UnifiedExpenseWithLink } from '@/lib/project-module-types';
@@ -85,6 +86,32 @@ test('detail editor auto-opens for pending assignments regardless of global cate
       hasAutoOpened: false,
       assignedAmount: 100,
       totalAmount: 100,
+    }),
+    false
+  );
+});
+
+test('keeps load-more available when a local bank filter is active', () => {
+  assert.equal(
+    shouldShowProjectExpenseLoadMore({
+      isLoading: false,
+      hasMore: true,
+      isServerFiltered: false,
+      tableFilter: 'bank',
+      searchQuery: '',
+    }),
+    true
+  );
+});
+
+test('hides load-more only for server-filtered expense views', () => {
+  assert.equal(
+    shouldShowProjectExpenseLoadMore({
+      isLoading: false,
+      hasMore: true,
+      isServerFiltered: true,
+      tableFilter: 'all',
+      searchQuery: '',
     }),
     false
   );

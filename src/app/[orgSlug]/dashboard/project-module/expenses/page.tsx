@@ -99,6 +99,7 @@ import { usePermissions } from '@/hooks/use-permissions';
 import {
   canSelectExpenseForProjectAssignment,
   matchesProjectExpenseTableFilter,
+  shouldShowProjectExpenseLoadMore,
   type ProjectExpenseTableFilter,
 } from '@/lib/project-module/expense-assignment-policy';
 
@@ -893,6 +894,14 @@ export default function ExpensesInboxPage() {
 
     return result;
   }, [expenses, tableFilter, searchQuery]);
+
+  const shouldShowLoadMore = shouldShowProjectExpenseLoadMore({
+    isLoading,
+    hasMore,
+    isServerFiltered: isFiltered,
+    tableFilter,
+    searchQuery,
+  });
 
   // Quick Assign 100%
   const handleAssign100 = async (txId: string, project: Project, budgetLine?: BudgetLine | null, fxAmountEUR?: number) => {
@@ -2028,7 +2037,7 @@ export default function ExpensesInboxPage() {
       )}
 
       {/* Botó carregar més (només si no hi ha filtres locals) */}
-      {!isLoading && hasMore && !isFiltered && tableFilter === 'all' && !searchQuery && (
+      {shouldShowLoadMore && (
         <div className="flex justify-center py-4">
           <Button
             variant="outline"
