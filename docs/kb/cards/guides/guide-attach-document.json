@@ -19,7 +19,9 @@
       "com pujo una factura o rebut o nomina",
       "pujar factura a summa",
       "com pujo un rebut",
-      "adjuntar una nomina"
+      "adjuntar una nomina",
+      "he pujat un document al moviment equivocat",
+      "moure factura a un altre moviment"
     ],
     "es": [
       "cómo adjunto un documento",
@@ -30,14 +32,16 @@
       "como subo una factura o recibo o nomina",
       "subir factura a summa",
       "como subo un recibo",
-      "adjuntar una nomina"
+      "adjuntar una nomina",
+      "he subido un documento al movimiento equivocado",
+      "mover factura a otro movimiento"
     ]
   },
   "guideId": "attachDocument",
   "answer": null,
-  "uiPaths": ["Moviments > Arrossegar document", "Moviments > Pendents > Pujar documents"],
+  "uiPaths": ["Moviments > Obrir moviment > Adjuntar document", "Moviments > Pendents > Pujar documents"],
   "needsSnapshot": false,
-  "keywords": ["adjuntar", "document", "factura", "justificant", "arrossegar", "drag", "pujar", "rebut", "nomina", "pendents"],
+  "keywords": ["adjuntar", "document", "factura", "justificant", "arrossegar", "drag", "pujar", "rebut", "nomina", "pendents", "equivocat", "altre moviment"],
   "source_faq": ["Q31"],
   "source_manual": ["5.5"],
   "source_guides": ["attachDocument"],

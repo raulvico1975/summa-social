@@ -12,13 +12,13 @@
   "intents": {
     "ca": [
       "com assigno un moviment bancari",
-      "com assigno contacte i categoria a un moviment",
+      "com assigno contacte i categoria a un moviment sense assignar",
       "moviment sense assignar",
       "com corregeixo un moviment sense contacte"
     ],
     "es": [
       "cómo asigno un movimiento bancario",
-      "cómo asigno contacto y categoría a un movimiento",
+      "cómo asigno contacto y categoría a un movimiento sin asignar",
       "movimiento sin asignar",
       "cómo corrijo un movimiento sin contacto"
     ]
@@ -35,9 +35,12 @@
   "needsSnapshot": false,
   "keywords": [
     "moviment",
-    "categoria",
     "contacte",
-    "assignar"
+    "assignar",
+    "sense assignar",
+    "sense contacte",
+    "sin asignar",
+    "sin contacto"
   ],
   "source_faq": [
     "Q29",

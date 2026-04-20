@@ -16,6 +16,8 @@
       "canviar contacte d'un moviment",
       "modificar un moviment",
       "he categoritzat un moviment malament",
+      "canviar categoria moviment",
+      "corregir categoria d'un moviment",
       "afegir una nota o comentari a un moviment"
     ],
     "es": [
@@ -24,14 +26,16 @@
       "cambiar contacto de un movimiento",
       "modificar un movimiento",
       "he categorizado un movimiento mal",
+      "cambiar categoria movimiento",
+      "corregir la categoría de un movimiento",
       "agregar una nota o comentario a un movimiento"
     ]
   },
   "guideId": "editMovement",
   "answer": null,
-  "uiPaths": ["Moviments > Clic sobre el moviment"],
+  "uiPaths": ["Moviments > Obrir moviment"],
   "needsSnapshot": false,
-  "keywords": ["editar", "moviment", "categoria", "contacte", "modificar", "corregir", "nota", "comentari"],
+  "keywords": ["editar", "moviment", "categoria", "contacte", "modificar", "corregir", "nota", "comentari", "categoritzat malament"],
   "source_faq": ["Q29", "Q30", "Q38"],
   "source_manual": ["5.4"],
   "source_guides": ["editMovement"],

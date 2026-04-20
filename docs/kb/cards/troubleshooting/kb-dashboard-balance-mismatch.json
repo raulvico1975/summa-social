@@ -1,0 +1,64 @@
+{
+  "id": "kb-dashboard-balance-mismatch",
+  "type": "troubleshooting",
+  "domain": "general",
+  "risk": "safe",
+  "guardrail": "none",
+  "answerMode": "full",
+  "title": {
+    "ca": "El Dashboard no quadra amb el banc",
+    "es": "El Dashboard no cuadra con el banco"
+  },
+  "intents": {
+    "ca": [
+      "per què el saldo del dashboard no em quadra amb el del banc",
+      "el dashboard em dona un saldo diferent del banc",
+      "saldo dashboard diferent banc",
+      "dashboard no quadra amb el banc"
+    ],
+    "es": [
+      "por qué el saldo del dashboard no me cuadra con el del banco",
+      "el dashboard me da un saldo diferente al banco",
+      "saldo dashboard diferente banco",
+      "dashboard no cuadra con el banco"
+    ]
+  },
+  "guideId": null,
+  "answer": {
+    "ca": "Per revisar una diferència entre Dashboard i banc:\n1. Compara el mateix període al Dashboard i a l'extracte.\n2. Revisa que els ingressos quadrin com Quotes + Donacions + Altres ingressos, i recorda que Terreny es mostra separat.\n3. Si encara no quadra, ves a Moviments, filtra per dates i revisa moviments sense categoritzar o mal classificats.\n\nComprovació final: quan els moviments del període estan ben classificats, el resum del Dashboard ha de quadrar amb el banc.",
+    "es": "Para revisar una diferencia entre Dashboard y banco:\n1. Compara el mismo período en el Dashboard y en el extracto.\n2. Revisa que los ingresos cuadren como Cuotas + Donaciones + Otros ingresos, y recuerda que Terreno se muestra separado.\n3. Si sigue sin cuadrar, ve a Movimientos, filtra por fechas y revisa movimientos sin categorizar o mal clasificados.\n\nComprobación final: cuando los movimientos del período están bien clasificados, el resumen del Dashboard debe cuadrar con el banco."
+  },
+  "uiPaths": [
+    "Dashboard",
+    "Moviments > Taula"
+  ],
+  "needsSnapshot": false,
+  "keywords": [
+    "dashboard",
+    "saldo",
+    "banc",
+    "quadra",
+    "altres ingressos",
+    "terreny",
+    "període"
+  ],
+  "source_faq": [
+    "Q37",
+    "Q37b"
+  ],
+  "source_manual": [
+    "1.4"
+  ],
+  "source_guides": [],
+  "related": [
+    "manual-dashboard-other-income",
+    "manual-dashboard-terrain",
+    "howto-dashboard-income-period",
+    "howto-movement-unassigned-alerts"
+  ],
+  "error_key": null,
+  "symptom": {
+    "ca": "El resum del Dashboard no coincideix amb l'extracte bancari",
+    "es": "El resumen del Dashboard no coincide con el extracto bancario"
+  }
+}

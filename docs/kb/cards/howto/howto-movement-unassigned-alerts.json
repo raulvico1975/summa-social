@@ -14,13 +14,15 @@
       "com detecto anomalies o moviments sense assignar",
       "com trobo moviments sense categoritzar",
       "moviments sense contacte assignat",
-      "pendents de revisar als moviments"
+      "pendents de revisar als moviments",
+      "on veig els moviments pendents de categoritzar"
     ],
     "es": [
       "cómo detecto anomalías o movimientos sin asignar",
       "cómo encuentro movimientos sin categorizar",
       "movimientos sin contacto asignado",
-      "pendientes de revisar en movimientos"
+      "pendientes de revisar en movimientos",
+      "dónde veo los movimientos pendientes de categorizar"
     ]
   },
   "guideId": null,
@@ -37,7 +39,8 @@
     "sense categoritzar",
     "sense contacte",
     "dashboard",
-    "pendents"
+    "pendents",
+    "pendents de categoritzar"
   ],
   "source_faq": [],
   "source_manual": [

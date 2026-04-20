@@ -15,14 +15,20 @@
       "on trobo les guies d'ajuda dins l'app",
       "com obro l ajuda de summa",
       "com obro l assistent",
-      "no trobo ajuda dins summa"
+      "no trobo ajuda dins summa",
+      "porta'm al lloc exacte dins l'app",
+      "no trobo on es fa això dins l'app",
+      "on es fa aixo"
     ],
     "es": [
       "donde encuentro las guias de ayuda dentro de la app",
       "dónde encuentro las guías de ayuda dentro de la app",
       "como abro la ayuda de summa",
       "como abro el asistente",
-      "no encuentro ayuda dentro de summa"
+      "no encuentro ayuda dentro de summa",
+      "llévame al lugar exacto dentro de la app",
+      "no encuentro dónde se hace esto dentro de la app",
+      "donde se hace esto"
     ]
   },
   "guideId": null,
@@ -41,7 +47,10 @@
     "bot",
     "ajuda",
     "icona ?",
-    "assistent"
+    "assistent",
+    "lloc exacte",
+    "on es fa",
+    "dónde se hace"
   ],
   "source_faq": [
     "Q7½"

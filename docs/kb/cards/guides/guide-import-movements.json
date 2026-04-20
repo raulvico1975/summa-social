@@ -14,13 +14,17 @@
       "importar extracte bancari",
       "com importar extracte bancari",
       "pujar extracte del banc",
-      "importar moviments del banc"
+      "importar moviments del banc",
+      "he importat l'extracte i em falten moviments",
+      "m falten moviments després d importar el banc"
     ],
     "es": [
       "importar extracto bancario",
       "cómo importar extracto bancario",
       "subir extracto del banco",
-      "importar movimientos del banco"
+      "importar movimientos del banco",
+      "he importado el extracto y me faltan movimientos",
+      "me faltan movimientos tras importar el banco"
     ]
   },
   "guideId": null,
@@ -38,7 +42,10 @@
     "banc",
     "csv",
     "excel",
-    "moviments"
+    "moviments",
+    "falten moviments",
+    "moviments ignorats",
+    "errors importacio"
   ],
   "source_faq": [
     "Q9",

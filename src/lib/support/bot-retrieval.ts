@@ -121,6 +121,11 @@ const COMMON_TYPO_MAP: Record<string, string> = {
   despesses: 'despeses',
   proytecto: 'proyecto',
   movimients: 'moviments',
+  proyecte: 'projecte',
+  dashborad: 'dashboard',
+  categorisar: 'categoritzar',
+  donans: 'donants',
+  extracta: 'extracte',
 }
 
 const TOKEN_CANONICAL_MAP: Record<string, string> = (() => {
@@ -764,6 +769,23 @@ function detectProtectedOverride(message: string): RetrievalOverride | null {
     return { kind: 'card', cardId: 'manual-guides-hub', minScore: 700, decisionReason: 'help_hub_escalation' }
   }
 
+  if (/\b(porta.?m|ll[eé]vame)\b/.test(normalized) && /\b(lloc exacte|lugar exacto)\b/.test(normalized)) {
+    return { kind: 'card', cardId: 'manual-guides-hub', minScore: 710, decisionReason: 'exact_place_navigation_help' }
+  }
+
+  if ((/\bon es fa\b/.test(normalized) || /\bdonde se hace\b/.test(normalized)) && !/\bmenu lateral\b/.test(normalized)) {
+    return { kind: 'card', cardId: 'manual-guides-hub', minScore: 700, decisionReason: 'where_is_it_navigation_help' }
+  }
+
+  if (
+    /\b(banc|banco)\b/.test(normalized) &&
+    /(extracte|extracto)/.test(normalized) &&
+    /\b(format|formato)\b/.test(normalized) &&
+    /\b(estrany|raro|rar|invalid|invàlid|invalido)\b/.test(normalized)
+  ) {
+    return { kind: 'card', cardId: 'ts-import-invalid-format', minScore: 710, decisionReason: 'import_format_invalid_or_weird' }
+  }
+
   if (/\bdashboard\b/.test(normalized) && /\b(primer|primero)\b/.test(normalized)) {
     return { kind: 'card', cardId: 'guide-first-day', minScore: 700, decisionReason: 'dashboard_first_day_orientation' }
   }
@@ -876,6 +898,15 @@ function detectDirectIntentMatch(tokens: string[]): DirectIntentMatch | null {
     return { cardId: 'guide-import-movements', minScore: 680 }
   }
 
+  // "El banc em dona l'extracte en un format estrany"
+  if (
+    hasToken(set, 'banc', 'banco', 'compte', 'cuenta') &&
+    hasToken(set, 'extracte', 'extracto', 'fitxer', 'fichero', 'archivo') &&
+    hasToken(set, 'format', 'formato', 'estrany', 'raro', 'rar', 'invalid', 'invàlid', 'invalido')
+  ) {
+    return { cardId: 'ts-import-invalid-format', minScore: 705 }
+  }
+
   // "Com canvio la categoria per defecte d'un donant?"
   if (
     hasToken(set, 'categoria') &&
@@ -914,6 +945,16 @@ function detectDirectIntentMatch(tokens: string[]): DirectIntentMatch | null {
     return { cardId: 'guide-import-movements', minScore: 680 }
   }
 
+  // "Per què el dashboard no quadra amb el banc?"
+  if (
+    hasToken(set, 'dashboard') &&
+    hasToken(set, 'saldo', 'ingressos', 'ingresos') &&
+    hasToken(set, 'banc', 'banco', 'compte', 'cuenta') &&
+    hasToken(set, 'quadra', 'cuadra', 'diferent', 'diferencia')
+  ) {
+    return { cardId: 'kb-dashboard-balance-mismatch', minScore: 710 }
+  }
+
   // "He importat l'extracte dues vegades" / "No vull duplicats al banc"
   if (
     hasToken(set, 'importar', 'importo', 'importat', 'importado', 'carregar', 'carrego', 'cargar', 'cargo', 'pujar', 'pujo', 'subir', 'subo') &&
@@ -932,7 +973,7 @@ function detectDirectIntentMatch(tokens: string[]): DirectIntentMatch | null {
     hasToken(set, 'moviment', 'moviments', 'movimiento', 'movimientos', 'extracte', 'extracto') &&
     (
       hasToken(set, 'sap', 'sabe', 'detecta', 'detectar', 'detecto', 'sistema') ||
-      hasToken(set, 'duplicat', 'duplicats', 'duplicado', 'duplicados', 'saldo')
+      hasToken(set, 'duplicat', 'duplicats', 'duplicado', 'duplicados', 'saldo', 'importar', 'importo')
     )
   ) {
     return { cardId: 'ts-import-overlap', minScore: 705 }
@@ -1014,6 +1055,15 @@ function detectDirectIntentMatch(tokens: string[]): DirectIntentMatch | null {
     return { cardId: 'guide-edit-movement', minScore: 670 }
   }
 
+  // "He categoritzat un moviment malament"
+  if (
+    hasToken(set, 'moviment', 'moviments', 'movimiento', 'movimientos') &&
+    hasToken(set, 'categoria', 'categoritzar', 'categorizar') &&
+    hasToken(set, 'canviar', 'canvio', 'cambiar', 'cambio', 'corregir', 'corregeixo', 'editar', 'edito', 'malament', 'mal')
+  ) {
+    return { cardId: 'guide-edit-movement', minScore: 700 }
+  }
+
   // "Com divideixo un moviment?" / "¿Cómo divido un movimiento?"
   if (
     hasToken(set, 'dividir', 'fraccionar', 'partir', 'desglossar', 'desglosar') &&
@@ -1070,9 +1120,18 @@ function detectDirectIntentMatch(tokens: string[]): DirectIntentMatch | null {
   if (
     hasToken(set, 'remesa') &&
     hasToken(set, 'soci', 'donant', 'socio', 'donante') &&
-    hasToken(set, 'surt', 'sale', 'apareix', 'aparece', 'falten', 'faltan')
+    hasToken(set, 'surt', 'sale', 'apareix', 'aparece', 'falten', 'faltan', 'entra', 'entrar', 'inclou', 'incluye')
   ) {
-    return { cardId: 'ts-remittance-member-not-identified', minScore: 685 }
+    return { cardId: 'kb-remittance-member-missing', minScore: 700 }
+  }
+
+  // "Com desfaig una imputació a projecte?"
+  if (
+    hasToken(set, 'projecte', 'proyecto') &&
+    hasToken(set, 'imputar', 'despesa', 'gasto') &&
+    hasToken(set, 'desfer', 'desfaig', 'deshacer', 'deshago', 'treure', 'quitar', 'editar', 'edito', 'percentatge', 'porcentaje')
+  ) {
+    return { cardId: 'kb-project-expense-unassign', minScore: 710 }
   }
 
   // "Com generar una remesa SEPA?"
@@ -1131,6 +1190,16 @@ function detectDirectIntentMatch(tokens: string[]): DirectIntentMatch | null {
     hasToken(set, 'projecte', 'proyecto')
   ) {
     return { cardId: 'guide-projects', minScore: 620 }
+  }
+
+  // "Com assigno una despesa a un projecte?"
+  if (
+    hasToken(set, 'assignar', 'assigno', 'asignar', 'asigno', 'imputar', 'imputo') &&
+    hasToken(set, 'despesa', 'gasto') &&
+    hasToken(set, 'projecte', 'proyecto') &&
+    !hasToken(set, 'desfer', 'desfaig', 'deshacer', 'deshago', 'treure', 'quitar', 'editar', 'edito', 'percentatge', 'porcentaje')
+  ) {
+    return { cardId: 'guide-projects', minScore: 705 }
   }
 
   // "Com imputo una despesa a diferents projectes?"

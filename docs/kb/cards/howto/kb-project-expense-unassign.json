@@ -1,0 +1,59 @@
+{
+  "id": "kb-project-expense-unassign",
+  "type": "howto",
+  "domain": "projects",
+  "risk": "safe",
+  "guardrail": "none",
+  "answerMode": "full",
+  "title": {
+    "ca": "Desfer o editar una imputació de projecte",
+    "es": "Deshacer o editar una imputación de proyecto"
+  },
+  "intents": {
+    "ca": [
+      "com desfaig una imputació a projecte",
+      "treure una despesa d'un projecte",
+      "he imputat malament una despesa a un projecte",
+      "com edito el percentatge d'una despesa a projectes"
+    ],
+    "es": [
+      "cómo deshago una imputación a proyecto",
+      "quitar un gasto de un proyecto",
+      "he imputado mal un gasto a un proyecto",
+      "cómo edito el porcentaje de un gasto en proyectos"
+    ]
+  },
+  "guideId": null,
+  "answer": {
+    "ca": "Per desfer o retocar una imputació:\n1. Ves a Projectes > Assignació de despeses i obre la despesa.\n2. Edita el projecte o el percentatge de repartiment des del detall.\n3. Desa els canvis i comprova que els totals es recalculen.\n\nAbans de continuar: si la despesa surt bloquejada o no editable, revisa el detall perquè pot requerir una altra acció abans de canviar la imputació.",
+    "es": "Para deshacer o retocar una imputación:\n1. Ve a Proyectos > Asignación de gastos y abre el gasto.\n2. Edita el proyecto o el porcentaje de reparto desde el detalle.\n3. Guarda los cambios y comprueba que los totales se recalculan.\n\nAntes de continuar: si el gasto aparece bloqueado o no editable, revisa el detalle porque puede requerir otra acción antes de cambiar la imputación."
+  },
+  "uiPaths": [
+    "Projectes > Assignació de despeses > Obrir despesa"
+  ],
+  "needsSnapshot": false,
+  "keywords": [
+    "imputació",
+    "percentatge",
+    "repartiment",
+    "desfer"
+  ],
+  "source_faq": [
+    "Q80"
+  ],
+  "source_manual": [
+    "10.2"
+  ],
+  "source_guides": [
+    "projects"
+  ],
+  "related": [
+    "guide-projects",
+    "manual-project-expenses-filtered-feed"
+  ],
+  "error_key": null,
+  "symptom": {
+    "ca": "La despesa està imputada al projecte equivocat o amb un percentatge incorrecte",
+    "es": "El gasto está imputado al proyecto equivocado o con un porcentaje incorrecto"
+  }
+}

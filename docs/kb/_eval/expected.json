@@ -78,7 +78,7 @@
   { "q": "on pujo factures", "expectedCardId": "guide-attach-document" },
   { "q": "duplicats extracte bancari", "expectedCardId": "howto-import-safe-duplicates" },
   { "q": "com desfer remesa", "expectedCardId": "howto-remittance-undo" },
-  { "q": "per què no surt soci remesa", "expectedCardId": "ts-remittance-member-not-identified" },
+  { "q": "per què no surt soci remesa", "expectedCardId": "kb-remittance-member-missing" },
   { "q": "com sé quants moviments s'han importat correctament?", "expectedCardId": "guide-import-movements" },
   { "q": "vull veure tots els pagaments a un proveïdor concret", "expectedCardId": "guide-movement-filters" },
   { "q": "he dividit una remesa i m'he equivocat, es pot desfer?", "expectedCardId": "guide-split-remittance" },
