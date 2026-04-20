@@ -4,6 +4,14 @@ Registre cronologic de desplegaments a produccio.
 
 ## Notes operatives sense deploy
 
+### 2026-04-20 — Baruma: tancament del cas de despeses del mòdul de Projectes
+
+- Cas separat en dos fronts i resolt en l'ordre correcte: primer fix de visibilitat/paginació, després sanejament de dades.
+- Confirmacio operativa final a Baruma: el filtre `Seu` ja no queda truncat a `50` i la vista arriba a `81` despeses elegibles abans de qualsevol reprocessament.
+- Sanejament posterior separat amb `scripts/backfill-project-expenses-eligibility.ts`: `dry-run` amb `pending=4` i execucio real `4/4`.
+- Evidencia de feed despres del sanejament: `exports/projectExpenses/items` passa de `81` a `85` documents amb `isEligibleForProjects=true`.
+- Tancament funcional: no canvia cap calcul fiscal, cap criteri d'elegibilitat ni cap model de dades; nomes deixa constancia del tancament operatiu.
+
 ### 2026-04-17 — Stripe Sync read-only desplegat i validat a produccio
 
 - SHA publicat: `080ac3761`.
