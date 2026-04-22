@@ -4,6 +4,14 @@ Registre cronologic de desplegaments a produccio.
 
 ## Notes operatives sense deploy
 
+### 2026-04-20 — Baruma: tancament del cas de despeses del mòdul de Projectes
+
+- Cas separat en dos fronts i resolt en l'ordre correcte: primer fix de visibilitat/paginació, després sanejament de dades.
+- Confirmacio operativa final a Baruma: el filtre `Seu` ja no queda truncat a `50` i la vista arriba a `81` despeses elegibles abans de qualsevol reprocessament.
+- Sanejament posterior separat amb `scripts/backfill-project-expenses-eligibility.ts`: `dry-run` amb `pending=4` i execucio real `4/4`.
+- Evidencia de feed despres del sanejament: `exports/projectExpenses/items` passa de `81` a `85` documents amb `isEligibleForProjects=true`.
+- Tancament funcional: no canvia cap calcul fiscal, cap criteri d'elegibilitat ni cap model de dades; nomes deixa constancia del tancament operatiu.
+
 ### 2026-04-17 — Stripe Sync read-only desplegat i validat a produccio
 
 - SHA publicat: `080ac3761`.
@@ -344,6 +352,7 @@ Registre cronologic de desplegaments a produccio.
 | 2026-04-20 09:49 | 0b30f8507 | MITJA | No | 4 | OK |
 | 2026-04-20 11:30 | f6581e56 | ALT | Si | 13 | OK_AMB_AVIS |
 | 2026-04-20 12:46 | 002b97925 | ALT | No | 6 | OK_AMB_AVIS |
+| 2026-04-20 12:57 | bcda904e4 | ALT | Si | 5 | OK |
 ## Decisions humanes (negoci)
 
 | Data | SHA | human_question_reason | business_impact | decision_taken |
@@ -456,3 +465,4 @@ Registre cronologic de desplegaments a produccio.
 | 2026-04-20 11:30 | f6581e56 | SKIPPED_NO_BUCKET | - |
 | 2026-04-20 12:46 | 002b97925 | Risc ALT residual detectat (avís guiat, no bloquejant). | podria afectar càlculs econòmics de projectes, i l'entitat podria veure imports o desviacions incorrectes. | AUTO_CONTINUE_GUIDED_WARNING |
 | 2026-04-20 12:46 | 002b97925 | ALT | podria afectar càlculs econòmics de projectes, i l'entitat podria veure imports o desviacions incorrectes. | Recomanacio: publicar amb monitoratge curt post-deploy. |
+| 2026-04-20 12:57 | bcda904e4 | SKIPPED_NO_BUCKET | - |

@@ -36,23 +36,22 @@ service cloud.firestore {
     // ───────────────────────────────────────────────────────────────────────
 
     function hasCapability(orgId, permKey) {
-      if (request.auth == null) return false;
-      let memberRef = /databases/$(database)/documents/organizations/$(orgId)/members/$(request.auth.uid);
-      if (!exists(memberRef)) return false;
-      let m = get(memberRef).data;
-      if (m.role == 'admin') return true;
-      return m.get('capabilities', {}).get(permKey, false) == true;
+      return request.auth != null
+        && exists(/databases/$(database)/documents/organizations/$(orgId)/members/$(request.auth.uid))
+        && (
+          get(/databases/$(database)/documents/organizations/$(orgId)/members/$(request.auth.uid)).data.role == 'admin'
+          || get(/databases/$(database)/documents/organizations/$(orgId)/members/$(request.auth.uid)).data.get('capabilities', {}).get(permKey, false) == true
+        );
     }
 
     function hasProjectCapability(orgId) {
-      if (request.auth == null) return false;
-      let memberRef = /databases/$(database)/documents/organizations/$(orgId)/members/$(request.auth.uid);
-      if (!exists(memberRef)) return false;
-      let m = get(memberRef).data;
-      if (m.role == 'admin') return true;
-      let caps = m.get('capabilities', {});
-      return caps.get('projectes.manage', false) == true
-          || caps.get('projectes.expenseInput', false) == true;
+      return request.auth != null
+        && exists(/databases/$(database)/documents/organizations/$(orgId)/members/$(request.auth.uid))
+        && (
+          get(/databases/$(database)/documents/organizations/$(orgId)/members/$(request.auth.uid)).data.role == 'admin'
+          || get(/databases/$(database)/documents/organizations/$(orgId)/members/$(request.auth.uid)).data.get('capabilities', {}).get('projectes.manage', false) == true
+          || get(/databases/$(database)/documents/organizations/$(orgId)/members/$(request.auth.uid)).data.get('capabilities', {}).get('projectes.expenseInput', false) == true
+        );
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -304,6 +303,19 @@ service cloud.firestore {
           );
 
         allow delete: if isSuperAdmin() || (isMemberOf(orgId) && getMemberRole(orgId) in ['admin', 'user']);
+      }
+
+      // ─────────────────────────────────────────────────────────────────────
+      // DONATIONS (Stripe imputat i font fiscal complementària)
+      // Manté el mateix perímetre financer que transactions:
+      // - lectura amb moviments.read
+      // - escriptura operativa per admin/user
+      // ─────────────────────────────────────────────────────────────────────
+
+      match /donations/{donationId} {
+        allow read: if isSuperAdmin() || hasCapability(orgId, 'moviments.read');
+        allow create, update, delete: if isSuperAdmin()
+          || (isMemberOf(orgId) && getMemberRole(orgId) in ['admin', 'user']);
       }
 
       // ─────────────────────────────────────────────────────────────────────
