@@ -10,6 +10,12 @@ Aquest fitxer ja no pretén duplicar el document mestre.
 
 ## Resum dels canvis recents
 
+### 2026-04-23
+
+- seguretat: lot de 6 fixes d'autoritzacio i aillament desplegat i validat en produccio
+- seguretat: blindatge cross-org a `saved-run` i `relink-document`, gate `SuperAdmin` a `danger-zone`, gate admin-only a `bank-accounts/archive`, binding d'email a `invitations/accept` i enforcement de `moviments.editar` a `firestore.rules`
+- operativa: verificacio real postdeploy completada amb respostes esperades `403`/`permission-denied` per als 6 casos
+
 ### 2026-04-19
 
 - bot d'ajuda: queda integrat i publicat com a funcionalitat viva de producte dins del dashboard

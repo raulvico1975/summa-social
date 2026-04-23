@@ -9,6 +9,7 @@ import { collectionGroup, query, where, getDocs, doc, getDoc, limit } from 'fire
 import { generateUniqueSlug, reserveSlug } from '@/lib/slugs';
 import type { Organization, OrganizationRole, UserProfile, OrganizationMember } from '@/lib/data';
 import { normalizeOrganizationMember } from '@/lib/organization-member-normalization';
+import { OrganizationAccessDeniedError as AccessDeniedError, resolveOrganizationAccessRole } from '@/lib/organization-access';
 import { Loader2, AlertCircle, LogOut } from 'lucide-react';
 import { User, signOut } from 'firebase/auth';
 import { isDemoEnv } from '@/lib/demo/isDemoOrg';
@@ -43,17 +44,6 @@ function isPermissionDenied(err: unknown): boolean {
   const code = (err as any)?.code;
   if (code === 'permission-denied') return true;
   return msg.includes('permission') || msg.includes('permission-denied') || msg.includes('missing or insufficient');
-}
-
-/**
- * Classe d'error específica per accés denegat per Firestore Rules
- * (diferent d'errors tècnics com network, unavailable, etc.)
- */
-class AccessDeniedError extends Error {
-  constructor(message: string = 'No tens accés a aquesta organització') {
-    super(message);
-    this.name = 'AccessDeniedError';
-  }
 }
 
 /**
@@ -168,44 +158,43 @@ function useOrganizationBySlug(orgSlug?: string) {
           orgDoc = { id: orgId, ...orgSnap.data() } as Organization;
 
           // ═══════════════════════════════════════════════════════════════════
-          // 3. Carregar rol de l'usuari (per UI, no per decidir accés)
-          // L'accés ja està validat pel canary read anterior.
+          // 3. Validar membership canònic o bypass explícit de SuperAdmin
           // ═══════════════════════════════════════════════════════════════════
+          const demoMode = isDemoEnv();
           const memberRef = doc(firestore, 'organizations', orgId, 'members', user.uid);
+          let resolvedMember: OrganizationMember | null = null;
           try {
             const memberSnap = await getDoc(memberRef);
             if (memberSnap.exists()) {
-              const normalizedMember = normalizeOrganizationMember(memberSnap.data(), {
+              resolvedMember = normalizeOrganizationMember(memberSnap.data(), {
                 userId: user.uid,
                 email: user.email ?? '',
                 displayName: user.displayName ?? '',
               });
-              runIfActive(() => setUserRole(normalizedMember.role));
-            } else {
-              // No és membre directe, però té accés (SuperAdmin o hasOrgInProfile via rules)
-              // Comportament esperat per SuperAdmins: poden accedir a qualsevol org sense membership.
-              // Per UI, assignem rol admin (SuperAdmin) o viewer (altres casos edge).
-              if (!isDemoEnv()) {
-                const saRef = doc(firestore, 'systemSuperAdmins', user.uid);
-                const saSnap = await getDoc(saRef);
-                const isSuperAdmin = saSnap.exists();
-                if (process.env.NODE_ENV !== 'production') {
-                  console.debug('[ORG_PROVIDER] Access without membership:', isSuperAdmin ? 'SuperAdmin' : 'hasOrgInProfile', 'uid=', user.uid);
-                }
-                runIfActive(() => setUserRole(isSuperAdmin ? 'admin' : 'viewer'));
-              } else {
-                // DEMO: assignar admin a tots
-                runIfActive(() => setUserRole('admin'));
-              }
             }
-          } catch {
-            // Si falla la lectura del membre (permission-denied), assumim viewer
-            // (l'accés a l'org ja està validat pel canary)
-            if (process.env.NODE_ENV !== 'production') {
-              console.debug('[ORG_PROVIDER] Member read failed, assuming viewer role');
+          } catch (memberErr) {
+            if (isPermissionDenied(memberErr)) {
+              throw new AccessDeniedError();
             }
-            runIfActive(() => setUserRole('viewer'));
+            throw memberErr;
           }
+
+          let isSuperAdmin = false;
+          if (!resolvedMember && !demoMode) {
+            const saRef = doc(firestore, 'systemSuperAdmins', user.uid);
+            const saSnap = await getDoc(saRef);
+            isSuperAdmin = saSnap.exists();
+          }
+
+          runIfActive(() =>
+            setUserRole(
+              resolveOrganizationAccessRole({
+                memberRole: resolvedMember?.role ?? null,
+                isSuperAdmin,
+                isDemoMode: demoMode,
+              })
+            )
+          );
 
         } else {
           // ═══════════════════════════════════════════════════════════════════

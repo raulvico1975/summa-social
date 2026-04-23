@@ -24,11 +24,6 @@ service cloud.firestore {
       return isMemberOf(orgId) && getMemberRole(orgId) == 'admin';
     }
 
-    function hasOrgInProfile(orgId) {
-      return isSignedIn() &&
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.organizationId == orgId;
-    }
-
     // ───────────────────────────────────────────────────────────────────────
     // CAPABILITY HELPERS (D1 — fail-closed)
     // Comprova el camp capabilities del membre (map<string, bool>).
@@ -165,8 +160,15 @@ service cloud.firestore {
     // ═══════════════════════════════════════════════════════════════════════
 
     match /users/{userId} {
-      allow read, write: if isSignedIn() && request.auth.uid == userId;
+      allow read: if isSignedIn() && request.auth.uid == userId;
       allow read: if isSuperAdmin();
+      allow create: if isSignedIn() && request.auth.uid == userId && isSuperAdmin();
+      allow update: if isSignedIn()
+        && request.auth.uid == userId
+        // El perfil pot contenir dades de navegació, però mai és la font d'autorització.
+        && request.resource.data.organizationId == resource.data.organizationId
+        && request.resource.data.get('defaultOrganizationId', null) == resource.data.get('defaultOrganizationId', null);
+      allow delete: if false;
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -229,8 +231,8 @@ service cloud.firestore {
     // ═══════════════════════════════════════════════════════════════════════
 
     match /organizations/{orgId} {
-      // Llegir: membres o usuaris amb l'org al perfil
-      allow read: if isMemberOf(orgId) || hasOrgInProfile(orgId) || isSuperAdmin();
+      // Llegir: només membres reals o superadmins
+      allow read: if isMemberOf(orgId) || isSuperAdmin();
       
       // Crear: només Super Admin
       allow create: if isSuperAdmin();
@@ -248,7 +250,7 @@ service cloud.firestore {
       // ─────────────────────────────────────────────────────────────────────
 
       match /members/{memberId} {
-        allow read: if isMemberOf(orgId) || hasOrgInProfile(orgId) || isSuperAdmin();
+        allow read: if isMemberOf(orgId) || isSuperAdmin();
         // P0 FIX: Només admin de l'org o superadmin poden crear membres
         // Self-join eliminat per evitar escalada de privilegis cross-org
         // P1 FIX: El rol del membre ha de derivar de la invitació (client no pot triar)
@@ -513,12 +515,12 @@ service cloud.firestore {
 
       match /exports/{exportType} {
         // (Opcional) llegir el document "exportType" si existeix
-        allow read: if isMemberOf(orgId) || hasOrgInProfile(orgId) || isSuperAdmin();
+        allow read: if isMemberOf(orgId) || isSuperAdmin();
         allow write: if false;
 
         match /items/{itemId} {
           // El nou mòdul pot llegir el feed si és membre de l'org
-          allow read: if isMemberOf(orgId) || hasOrgInProfile(orgId) || isSuperAdmin();
+          allow read: if isMemberOf(orgId) || isSuperAdmin();
 
           // Cap client pot escriure exports
           allow create, update, delete: if false;
@@ -531,7 +533,7 @@ service cloud.firestore {
       // ─────────────────────────────────────────────────────────────────────
 
       match /projectModule/{document=**} {
-        allow read: if isMemberOf(orgId) || hasOrgInProfile(orgId) || isSuperAdmin();
+        allow read: if isMemberOf(orgId) || isSuperAdmin();
         // SECURITY FIX: enforça projectes.manage o projectes.expenseInput (capabilities D1)
         allow write: if isSuperAdmin() || hasProjectCapability(orgId);
       }
@@ -543,7 +545,7 @@ service cloud.firestore {
       // ─────────────────────────────────────────────────────────────────────
 
       match /expenseReports/{reportId} {
-        allow read: if isSuperAdmin() || isMemberOf(orgId) || hasOrgInProfile(orgId);
+        allow read: if isSuperAdmin() || isMemberOf(orgId);
         allow create: if isSuperAdmin() || (isMemberOf(orgId) && getMemberRole(orgId) in ['admin', 'user']);
 
         // UPDATE: bloquejar transició a 'archived' i camps de traça des de client
@@ -573,7 +575,7 @@ service cloud.firestore {
       // ─────────────────────────────────────────────────────────────────────
 
       match /pendingDocuments/{docId} {
-        allow read: if isSuperAdmin() || isMemberOf(orgId) || hasOrgInProfile(orgId);
+        allow read: if isSuperAdmin() || isMemberOf(orgId);
         allow create, update, delete: if isSuperAdmin() || (isMemberOf(orgId) && getMemberRole(orgId) in ['admin', 'user']);
       }
 
@@ -599,25 +601,24 @@ service cloud.firestore {
       // ─────────────────────────────────────────────────────────────────────
 
       match /prebankRemittances/{remittanceId} {
-        allow read: if isSuperAdmin() || isMemberOf(orgId) || hasOrgInProfile(orgId);
+        allow read: if isSuperAdmin() || isMemberOf(orgId);
         allow create, update, delete: if isSuperAdmin() || (isMemberOf(orgId) && getMemberRole(orgId) in ['admin', 'user']);
       }
 
       // ─────────────────────────────────────────────────────────────────────
       // INTEGRACIONS (backups, OAuth, etc.)
       // Path: /organizations/{orgId}/integrations/{integrationId}
-      // FIX: hasOrgInProfile afegit per permetre lectura durant inicialització
       // ─────────────────────────────────────────────────────────────────────
 
       match /integrations/{integrationId} {
-        // Read general: membre, perfil amb org, o superadmin
-        allow read: if isSuperAdmin() || isMemberOf(orgId) || hasOrgInProfile(orgId);
+        // Read general: només membre real o superadmin
+        allow read: if isSuperAdmin() || isMemberOf(orgId);
         // Write: només admin de l'org o superadmin
         allow create, update, delete: if isSuperAdmin() || isAdminOf(orgId);
 
         // Subcol·lecció per OAuth requests
         match /backupOAuthRequests/{requestId} {
-          allow read: if isSuperAdmin() || isMemberOf(orgId) || hasOrgInProfile(orgId);
+          allow read: if isSuperAdmin() || isMemberOf(orgId);
           allow create, update, delete: if isSuperAdmin() || isAdminOf(orgId);
         }
       }
@@ -628,7 +629,7 @@ service cloud.firestore {
       // ─────────────────────────────────────────────────────────────────────
 
       match /onboarding/{docId} {
-        allow read: if isSuperAdmin() || isMemberOf(orgId) || hasOrgInProfile(orgId);
+        allow read: if isSuperAdmin() || isMemberOf(orgId);
         allow create, update, delete: if isSuperAdmin() || (isMemberOf(orgId) && getMemberRole(orgId) in ['admin', 'user']);
       }
 
