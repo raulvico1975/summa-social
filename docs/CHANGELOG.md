@@ -10,6 +10,12 @@ Aquest fitxer ja no pretén duplicar el document mestre.
 
 ## Resum dels canvis recents
 
+### 2026-04-22
+
+- codi intern: la classificació de moviments passa a un ordre de decisió únic (evidència dura → memòria confirmada → regles deterministes → IA amb llindar alt), compartit entre importació i categorització
+- API/integracions: nova ruta `POST /api/transactions/classification-memory` per persistir memòria de classificació per organització només des de confirmacions manuals amb permís `moviments.editar`
+- documentació per usuari: el resum de preimportació es simplifica a "extracte / ja existents / s'importaran ara" i el CTA mostra només els moviments que realment entraran
+
 ### 2026-04-19
 
 - bot d'ajuda: queda integrat i publicat com a funcionalitat viva de producte dins del dashboard

@@ -473,6 +473,13 @@ Summa admite importación bancaria en formatos habituales como CSV y Excel, seg�
 4. Revisa la vista previa.
 5. Confirma la importación.
 
+Antes de confirmar verás el bloque **"Qué pasará con este extracto"** con tres contadores:
+- movimientos detectados en el extracto
+- movimientos que ya existen en Summa
+- movimientos que se importarán ahora
+
+Si hay posibles duplicados, aparecen como revisión opcional antes de confirmar. El botón de importación refleja solo los movimientos que realmente se crearán.
+
 ### Sobre los duplicados
 
 El sistema intenta detectar duplicados antes de escribir:
@@ -485,17 +492,19 @@ Si el sistema marca un solapamiento, revisa antes de confirmar.
 
 ## 5.2 Cómo funciona la autoasignación inteligente
 
-### Fase 1: matching por nombre
+### Orden de decisión
 
-Intenta reconocer personas o entidades conocidas a partir de la descripción del banco.
+El sistema aplica este orden, de mayor robustez a menor robustez:
 
-### Fase 2: inteligencia artificial
+1. Evidencia fuerte: IBAN, NIF/DNI o email con coincidencia única
+2. Memoria confirmada por la usuaria (patrón normalizado validado varias veces)
+3. Reglas deterministas (nombre claro o palabras clave fiables)
+4. IA solo como último recurso y con umbral alto
+5. Si no hay certeza suficiente, queda pendiente de revisión manual
 
-Si no basta con reglas simples, la IA puede sugerir categoría, siempre dentro de las opciones reales.
+### Memoria de clasificación
 
-### Fase 3: categoría por defecto
-
-Si un contacto tiene categoría por defecto, Summa puede aprovecharla para acelerar la clasificación.
+La memoria solo se alimenta con confirmaciones manuales de la usuaria. No se alimenta con decisiones automáticas del sistema.
 
 ### Reglas automáticas de categorización
 

@@ -747,6 +747,13 @@ La bona notícia és que Summa Social fa gran part de la feina automàticament. 
 6. Si tens més d'un compte bancari, selecciona'l
 7. Clica **"Importar X moviments"**
 
+Abans de confirmar, veuràs el bloc **"Què passarà amb aquest extracte"** amb tres comptadors:
+- moviments detectats a l'extracte
+- moviments que ja existeixen a Summa
+- moviments que s'importaran ara
+
+Si hi ha possibles duplicats, es mostren com a revisió opcional abans de confirmar. El botó d'importació reflecteix només els moviments que realment entraran.
+
 > ⚠️ **Molt important:** La **Data d'operació** és obligatòria. El fitxer ha de portar aquesta columna, o una data equivalent que el sistema pugui interpretar de manera fiable. Si falta o és invàlida, la importació s'atura i et diu quina fila has de revisar.
 >
 > Per què és tan important?
@@ -771,22 +778,19 @@ En la pràctica això vol dir:
 
 Quan importes moviments, Summa Social intenta assignar-los automàticament:
 
-### Fase 1: Matching per nom (~70% dels moviments)
+### Ordre de decisió
 
-El sistema busca el nom de cada contacte a la descripció del moviment.
+El sistema aplica aquest ordre, sempre de més robust a menys robust:
 
-**Exemple:** 
-- Descripció: "REBUT ENDESA SA 123456"
-- Proveïdor registrat: "ENDESA"
-- Resultat: ✅ S'assigna automàticament
+1. Evidència dura: IBAN, NIF/DNI o email amb coincidència única
+2. Memòria confirmada per l'usuari (patró normalitzat ja validat diverses vegades)
+3. Regles deterministes (nom clar o paraules clau fiables)
+4. IA com a últim recurs i amb llindar alt
+5. Si no hi ha prou certesa, queda pendent de revisió manual
 
-### Fase 2: Intel·ligència Artificial (~16% més)
+### Memòria de classificació
 
-Si no troba cap nom, la IA suggereix el contacte més probable. Però tranquil: la IA **només suggereix**, mai s'aplica automàticament. Sempre has de validar tu.
-
-### Fase 3: Categoria per defecte
-
-Si el contacte té una categoria per defecte, s'aplica automàticament.
+La memòria s'alimenta només quan una persona confirma manualment la decisió. No es nodreix amb decisions automàtiques del sistema.
 
 ### Regles automàtiques de categorització
 
