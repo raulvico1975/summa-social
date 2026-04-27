@@ -15,6 +15,10 @@ Aquest fitxer ja no pretén duplicar el document mestre.
 - seguretat: lot de 6 fixes d'autoritzacio i aillament desplegat i validat en produccio
 - seguretat: blindatge cross-org a `saved-run` i `relink-document`, gate `SuperAdmin` a `danger-zone`, gate admin-only a `bank-accounts/archive`, binding d'email a `invitations/accept` i enforcement de `moviments.editar` a `firestore.rules`
 - operativa: verificacio real postdeploy completada amb respostes esperades `403`/`permission-denied` per als 6 casos
+- codi intern: nova capa `organization-access` i gate al `organization-provider` per impedir canvis de context d'org via perfil si no hi ha membresia valida
+- API/integracions: hardening addicional a `POST /api/contacts/archive` i `POST /api/pending-documents/relink-document` amb checks d'org/rol i bloqueig de bypassos de visor
+- API/integracions: `POST /api/exports/closing-bundle-zip` elimina traces de debug i resposta amb secrets, i enforce de permisos alineat entre route i backend d'export
+- operativa: reforc de perimetre a `storage.rules` i blindatge extra d'autoritzacio cross-org a `firestore.rules` amb cobertura de regressio
 
 ### 2026-04-19
 
