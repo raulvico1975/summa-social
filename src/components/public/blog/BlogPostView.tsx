@@ -8,7 +8,6 @@ import { PublicSiteHeader } from '@/components/public/PublicSiteHeader'
 import { Button } from '@/components/ui/button'
 import { getBlogCopy } from '@/lib/blog/copy'
 import { formatBlogDate, getLocalizedBlogPostBySlug } from '@/lib/blog/firestore'
-import { getBlogCategoryLabel } from '@/lib/blog/presentation'
 import {
   estimateBlogReadingTimeMinutes,
   formatBlogReadingTime,
@@ -24,12 +23,11 @@ function isBlogConfigured() {
 }
 
 function buildArticleMeta(
-  categoryLabel: string,
   publishedAt: string,
   readingTime: string,
   locale: PublicLocale
 ) {
-  return [categoryLabel, formatBlogDate(publishedAt, locale), readingTime].join(' · ')
+  return [formatBlogDate(publishedAt, locale), readingTime].join(' · ')
 }
 
 interface BlogPostViewProps {
@@ -55,14 +53,12 @@ export async function BlogPostView({
 
   const copy = getBlogCopy(locale)
   const t = getPublicTranslations(locale)
-  const categoryLabel = getBlogCategoryLabel(post.category, locale)
   const featuresHref = `/${locale}#capabilities`
   const readingTime = formatBlogReadingTime(
     estimateBlogReadingTimeMinutes(post.contentHtml),
     locale
   )
   const articleMeta = buildArticleMeta(
-    categoryLabel,
     post.publishedAt,
     readingTime,
     locale

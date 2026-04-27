@@ -165,13 +165,6 @@
     margin-top: 0;
   }
 
-  .blog-rich-text > p:first-of-type {
-    font-size: clamp(1.18rem, 1.02rem + 0.58vw, 1.42rem);
-    line-height: 1.72;
-    color: hsl(var(--foreground) / 0.76);
-    margin-bottom: 2rem;
-  }
-
   .blog-rich-text :where(h2, h3, h4) {
     color: hsl(var(--foreground));
     letter-spacing: -0.02em;
