@@ -35,6 +35,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { useTranslations } from '@/i18n';
 import type { ClassifiedRow } from '@/lib/transaction-dedupe';
 import { getSafeDuplicateUi } from '@/lib/safe-duplicate-ui';
+import { getCandidateDuplicateUi } from '@/lib/candidate-duplicate-ui';
 import type { ParseSummary, ParsedBankStatementRow } from '@/lib/importers/bank/bankStatementParser';
 
 interface DedupeCandidateResolverProps {
@@ -158,6 +159,15 @@ export function DedupeCandidateResolver({
       'importers.transaction.summary.noneToImportMessage',
       "No s'importarà cap moviment perquè tots ja existeixen"
     );
+  const candidateReviewHint = candidateCount === 1
+    ? tr(
+      'importers.transaction.summary.reviewHintSingle',
+      '1 moviment necessita revisió per possible duplicat'
+    )
+    : tr(
+      'importers.transaction.summary.reviewHintPlural',
+      '{count} moviments necessiten revisió per possibles duplicats'
+    ).replace('{count}', String(candidateCount));
 
   if (!open) return null;
 
@@ -207,10 +217,7 @@ export function DedupeCandidateResolver({
               <p className="text-sm font-medium">{mainMessage}</p>
               {candidateCount > 0 && (
                 <p className="mt-1 text-xs text-muted-foreground">
-                  {tr(
-                    'importers.transaction.summary.reviewHint',
-                    'Tens {count} possibles duplicats a revisar abans de decidir si també els vols importar.'
-                  ).replace('{count}', String(candidateCount))}
+                  {candidateReviewHint}
                 </p>
               )}
             </div>
@@ -362,54 +369,84 @@ export function DedupeCandidateResolver({
                 </p>
               </div>
 
-              <ScrollArea className="max-h-[380px] rounded-md border">
-                <div className="min-w-[760px]">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-[84px] text-center">Incloure</TableHead>
-                      <TableHead className="w-[130px]">Data</TableHead>
-                      <TableHead className="w-[120px] text-right">Import</TableHead>
-                      <TableHead className="w-[120px] text-right">Saldo (nou)</TableHead>
-                      <TableHead className="w-[120px] text-right">Saldo (existent)</TableHead>
-                      <TableHead>Descripció</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {candidates.map((candidate, index) => {
-                      const existing = candidate.matchedExisting[0];
-                      const checked = selectedCandidateIndexes.has(index);
-                      return (
-                        <TableRow key={`${candidate.tx.description}-${candidate.tx.date}-${index}`}>
-                          <TableCell className="text-center">
-                            <Checkbox
-                              id={`candidate-${index}`}
-                              checked={checked}
-                              onCheckedChange={(value) => toggleCandidate(index, value === true)}
-                            />
-                          </TableCell>
-                          <TableCell className="whitespace-nowrap text-xs">
-                            {formatDate(candidate.tx.operationDate ?? candidate.tx.date)}
-                          </TableCell>
-                          <TableCell className="whitespace-nowrap text-right font-mono text-xs">
-                            {formatAmount(candidate.tx.amount)}
-                          </TableCell>
-                          <TableCell className="whitespace-nowrap text-right font-mono text-xs">
-                            {formatAmount(candidate.tx.balanceAfter)}
-                          </TableCell>
-                          <TableCell className="whitespace-nowrap text-right font-mono text-xs">
-                            {formatAmount(existing?.balanceAfter)}
-                          </TableCell>
-                          <TableCell className="max-w-[320px] text-xs">
-                            <span className="break-words">{candidate.tx.description}</span>
-                          </TableCell>
+              <TooltipProvider delayDuration={150}>
+                <ScrollArea className="max-h-[380px] rounded-md border">
+                  <div className="min-w-[760px]">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="w-[84px] text-center">Incloure</TableHead>
+                          <TableHead className="w-[130px]">Data</TableHead>
+                          <TableHead className="w-[120px] text-right">Import</TableHead>
+                          <TableHead className="w-[120px] text-right">Saldo (nou)</TableHead>
+                          <TableHead className="w-[120px] text-right">Saldo (existent)</TableHead>
+                          <TableHead>Descripció</TableHead>
                         </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-                </div>
-              </ScrollArea>
+                      </TableHeader>
+                      <TableBody>
+                        {candidates.map((candidate, index) => {
+                          const existing = candidate.matchedExisting[0];
+                          const checked = selectedCandidateIndexes.has(index);
+                          const candidateUi = getCandidateDuplicateUi(candidate);
+                          const statusLabel = tr(candidateUi.statusKey, candidateUi.statusFallback);
+                          const reasonLabel = tr(candidateUi.reasonKey, candidateUi.reasonFallback)
+                            .replace('{days}', candidateUi.reasonParams.days ?? '');
+                          const tooltipLabel = tr(candidateUi.tooltipKey, candidateUi.tooltipFallback)
+                            .replace('{days}', candidateUi.reasonParams.days ?? '');
+                          const infoLabel = tr(candidateUi.infoLabelKey, candidateUi.infoLabelFallback);
+
+                          return (
+                            <TableRow key={`${candidate.tx.description}-${candidate.tx.date}-${index}`}>
+                              <TableCell className="text-center">
+                                <Checkbox
+                                  id={`candidate-${index}`}
+                                  checked={checked}
+                                  onCheckedChange={(value) => toggleCandidate(index, value === true)}
+                                />
+                              </TableCell>
+                              <TableCell className="whitespace-nowrap text-xs">
+                                {formatDate(candidate.tx.operationDate ?? candidate.tx.date)}
+                              </TableCell>
+                              <TableCell className="whitespace-nowrap text-right font-mono text-xs">
+                                {formatAmount(candidate.tx.amount)}
+                              </TableCell>
+                              <TableCell className="whitespace-nowrap text-right font-mono text-xs">
+                                {formatAmount(candidate.tx.balanceAfter)}
+                              </TableCell>
+                              <TableCell className="whitespace-nowrap text-right font-mono text-xs">
+                                {formatAmount(existing?.balanceAfter)}
+                              </TableCell>
+                              <TableCell className="max-w-[320px] text-xs">
+                                <div className="space-y-1">
+                                  <p className="font-medium">{statusLabel}</p>
+                                  <div className="flex items-start gap-1.5">
+                                    <p className="break-words text-muted-foreground">{reasonLabel}</p>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <button
+                                          type="button"
+                                          className="mt-0.5 inline-flex shrink-0 items-center text-muted-foreground transition-colors hover:text-foreground"
+                                          aria-label={infoLabel}
+                                        >
+                                          <Info className="h-3.5 w-3.5" />
+                                        </button>
+                                      </TooltipTrigger>
+                                      <TooltipContent className="max-w-xs text-xs leading-relaxed">
+                                        <p>{tooltipLabel}</p>
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  </div>
+                                  <p className="break-words text-muted-foreground/80">{candidate.tx.description}</p>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </ScrollArea>
+              </TooltipProvider>
             </>
           )}
 

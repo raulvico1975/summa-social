@@ -13,6 +13,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { randomUUID } from 'node:crypto';
 import { initializeApp, getApps, applicationDefault } from 'firebase-admin/app';
 import { getFirestore, FieldValue, type Firestore } from 'firebase-admin/firestore';
 import { getStorage } from 'firebase-admin/storage';
@@ -152,6 +153,44 @@ interface RelinkDocumentDeps {
 
 function getOrganizationStoragePrefix(orgId: string): string {
   return `organizations/${orgId}/`;
+}
+
+function getFirstDownloadToken(metadataValue: unknown): string | null {
+  if (typeof metadataValue !== 'string') {
+    return null;
+  }
+
+  const firstToken = metadataValue
+    .split(',')
+    .map((token) => token.trim())
+    .find(Boolean);
+
+  return firstToken ?? null;
+}
+
+async function buildFirebaseStorageDownloadUrl(
+  file: Pick<Bucket['file'], never> & {
+    getMetadata: () => Promise<[{ metadata?: Record<string, unknown> }?]>;
+    setMetadata: (metadata: { metadata: Record<string, unknown> }) => Promise<unknown>;
+  },
+  bucketName: string,
+  objectPath: string
+): Promise<string> {
+  const [currentMetadata = {}] = await file.getMetadata();
+  const metadata = currentMetadata.metadata ?? {};
+  let downloadToken = getFirstDownloadToken(metadata.firebaseStorageDownloadTokens);
+
+  if (!downloadToken) {
+    downloadToken = randomUUID();
+    await file.setMetadata({
+      metadata: {
+        ...metadata,
+        firebaseStorageDownloadTokens: downloadToken,
+      },
+    });
+  }
+
+  return `https://firebasestorage.googleapis.com/v0/b/${bucketName}/o/${encodeURIComponent(objectPath)}?alt=media&token=${downloadToken}`;
 }
 
 export async function handleRelinkDocumentPost(
@@ -384,16 +423,20 @@ export async function handleRelinkDocumentPost(
       console.log(`${logPrefix} Fitxer ja existeix al destí, no cal copiar`);
     }
 
-    // Obtenir URL pública (signada)
-    const [signedUrl] = await destFile.getSignedUrl({
-      action: 'read',
-      expires: '03-01-2500', // URL de llarga durada
-    });
+    // Obtenir URL pública estable via token de Firebase Storage, sense signatura IAM
+    const documentUrl = await buildFirebaseStorageDownloadUrl(
+      destFile as typeof destFile & {
+        getMetadata: () => Promise<[{ metadata?: Record<string, unknown> }?]>;
+        setMetadata: (metadata: { metadata: Record<string, unknown> }) => Promise<unknown>;
+      },
+      bucket.name,
+      destPath
+    );
 
     // 12. Actualitzar la transacció amb el document
     await safeUpdate({
       data: {
-        document: signedUrl,
+        document: documentUrl,
         updatedAt: FieldValue.serverTimestamp(),
       },
       context: writeContextBase,

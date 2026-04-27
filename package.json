@@ -66,6 +66,7 @@
     "migrate:capabilities": "node scripts/migrations/backfill-member-capabilities.mjs",
     "images:landings:optimize": "node scripts/images/optimize-landing-assets.mjs"
     ,
+    "email:set-resend-key": "node scripts/set-resend-key.mjs",
     "editorial:seed-historical": "node --import tsx scripts/editorial/seed-historical.ts",
     "editorial:generate-monthly": "node --import tsx scripts/editorial/generate-monthly.ts",
     "editorial:derive-linkedin": "node --import tsx scripts/editorial/derive-linkedin.ts",

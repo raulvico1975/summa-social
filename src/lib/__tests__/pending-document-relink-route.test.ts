@@ -74,34 +74,64 @@ class FakeDb {
 }
 
 class FakeFile {
+  private readonly fileState: {
+    content: string;
+    metadata: Record<string, unknown>;
+  };
+
   constructor(
-    private readonly files: Map<string, string>,
+    private readonly files: Map<string, { content: string; metadata: Record<string, unknown> }>,
     readonly path: string
-  ) {}
+  ) {
+    const existing = this.files.get(this.path);
+    if (existing) {
+      this.fileState = existing;
+    } else {
+      this.fileState = { content: '', metadata: {} };
+      this.files.set(this.path, this.fileState);
+    }
+  }
 
   async exists() {
-    return [this.files.has(this.path)] as const;
+    return [this.files.get(this.path)?.content !== undefined && this.files.get(this.path)?.content !== ''] as const;
   }
 
   async copy(destination: FakeFile) {
-    if (!this.files.has(this.path)) {
+    const current = this.files.get(this.path);
+    if (!current || current.content === '') {
       throw new Error(`missing-file:${this.path}`);
     }
 
-    this.files.set(destination.path, this.files.get(this.path) ?? '');
+    this.files.set(destination.path, {
+      content: current.content,
+      metadata: { ...current.metadata },
+    });
   }
 
-  async getSignedUrl() {
-    return [`https://example.test/${encodeURIComponent(this.path)}`] as const;
+  async getMetadata() {
+    return [{ metadata: { ...this.fileState.metadata } }] as const;
+  }
+
+  async setMetadata(payload: { metadata: Record<string, unknown> }) {
+    this.fileState.metadata = { ...this.fileState.metadata, ...payload.metadata };
+    this.files.set(this.path, this.fileState);
+    return [{ metadata: { ...this.fileState.metadata } }] as const;
   }
 }
 
 class FakeBucket {
   readonly name = 'fake-bucket';
-  private readonly files: Map<string, string>;
+  readonly files: Map<string, { content: string; metadata: Record<string, unknown> }>;
 
-  constructor(files: Record<string, string>) {
-    this.files = new Map(Object.entries(files));
+  constructor(files: Record<string, string | { content: string; metadata?: Record<string, unknown> }>) {
+    this.files = new Map(
+      Object.entries(files).map(([path, value]) => [
+        path,
+        typeof value === 'string'
+          ? { content: value, metadata: {} }
+          : { content: value.content, metadata: { ...(value.metadata ?? {}) } },
+      ])
+    );
   }
 
   file(path: string) {
@@ -111,7 +141,7 @@ class FakeBucket {
 
 function makeDeps(args: {
   docs: Record<string, FakeDocData>;
-  files?: Record<string, string>;
+  files?: Record<string, string | { content: string; metadata?: Record<string, unknown> }>;
 }) {
   return {
     verifyIdTokenFn: async () => ({
@@ -169,18 +199,18 @@ test('POST /api/pending-documents/relink-document deixa continuar a role user', 
     },
   };
 
+  const bucket = new FakeBucket({
+    'organizations/org-1/pendingDocuments/pending-1/ticket.pdf': 'ticket-data',
+  });
+
   const response = await handleRelinkDocumentPost(
     makeRequest({
       orgId: 'org-1',
       pendingId: 'pending-1',
     }),
     {
-      ...makeDeps({
-        docs,
-        files: {
-          'organizations/org-1/pendingDocuments/pending-1/ticket.pdf': 'ticket-data',
-        },
-      }),
+      ...makeDeps({ docs }),
+      getAdminStorageFn: () => bucket as any,
       validateUserMembershipFn: async () => ({
         valid: true,
         role: 'user',
@@ -194,6 +224,116 @@ test('POST /api/pending-documents/relink-document deixa continuar a role user', 
   assert.deepEqual(await response.json(), {
     success: true,
   });
+  const updatedTx = docs['organizations/org-1/transactions/tx-1'] as Record<string, unknown>;
+  assert.match(
+    updatedTx.document as string,
+    /^https:\/\/firebasestorage\.googleapis\.com\/v0\/b\/fake-bucket\/o\/organizations%2Forg-1%2Fdocuments%2Ftx-1%2Fticket\.pdf\?alt=media&token=/
+  );
+  const updatedPending = docs['organizations/org-1/pendingDocuments/pending-1'] as Record<string, unknown>;
+  const updatedPendingFile = updatedPending.file as Record<string, unknown>;
+  assert.equal(
+    updatedPendingFile.finalStoragePath,
+    'organizations/org-1/documents/tx-1/ticket.pdf'
+  );
+});
+
+test('POST /api/pending-documents/relink-document crea un download token quan el desti no en te', async () => {
+  const docs: Record<string, FakeDocData> = {
+    'organizations/org-1/pendingDocuments/pending-1': {
+      matchedTransactionId: 'tx-1',
+      file: {
+        filename: 'ticket.pdf',
+        storagePath: 'organizations/org-1/pendingDocuments/pending-1/ticket.pdf',
+      },
+    },
+    'organizations/org-1/transactions/tx-1': {
+      document: null,
+    },
+  };
+
+  const bucket = new FakeBucket({
+    'organizations/org-1/pendingDocuments/pending-1/ticket.pdf': 'ticket-data',
+  });
+
+  const response = await handleRelinkDocumentPost(
+    makeRequest({
+      orgId: 'org-1',
+      pendingId: 'pending-1',
+    }),
+    {
+      ...makeDeps({ docs }),
+      getAdminStorageFn: () => bucket as any,
+      validateUserMembershipFn: async () => ({
+        valid: true,
+        role: 'user',
+        userOverrides: null,
+        userGrants: null,
+      }) as any,
+    }
+  );
+
+  assert.equal(response.status, 200);
+  const updatedTx = docs['organizations/org-1/transactions/tx-1'] as Record<string, unknown>;
+  const documentUrl = updatedTx.document;
+  assert.equal(typeof documentUrl, 'string');
+  assert.match(
+    documentUrl as string,
+    /^https:\/\/firebasestorage\.googleapis\.com\/v0\/b\/fake-bucket\/o\/organizations%2Forg-1%2Fdocuments%2Ftx-1%2Fticket\.pdf\?alt=media&token=/
+  );
+  const destState = bucket.files.get('organizations/org-1/documents/tx-1/ticket.pdf');
+  assert.equal(typeof destState?.metadata.firebaseStorageDownloadTokens, 'string');
+  assert.ok((destState?.metadata.firebaseStorageDownloadTokens as string).length > 0);
+});
+
+test('POST /api/pending-documents/relink-document reutilitza el token existent si el desti ja existeix', async () => {
+  const docs: Record<string, FakeDocData> = {
+    'organizations/org-1/pendingDocuments/pending-1': {
+      matchedTransactionId: 'tx-1',
+      file: {
+        filename: 'ticket.pdf',
+        storagePath: 'organizations/org-1/pendingDocuments/pending-1/ticket.pdf',
+        finalStoragePath: 'organizations/org-1/documents/tx-1/ticket.pdf',
+      },
+    },
+    'organizations/org-1/transactions/tx-1': {
+      document: null,
+    },
+  };
+
+  const bucket = new FakeBucket({
+    'organizations/org-1/documents/tx-1/ticket.pdf': {
+      content: 'ready',
+      metadata: {
+        firebaseStorageDownloadTokens: 'existing-token',
+      },
+    },
+  });
+
+  const response = await handleRelinkDocumentPost(
+    makeRequest({
+      orgId: 'org-1',
+      pendingId: 'pending-1',
+    }),
+    {
+      ...makeDeps({ docs }),
+      getAdminStorageFn: () => bucket as any,
+      validateUserMembershipFn: async () => ({
+        valid: true,
+        role: 'user',
+        userOverrides: null,
+        userGrants: null,
+      }) as any,
+    }
+  );
+
+  assert.equal(response.status, 200);
+  const updatedTx = docs['organizations/org-1/transactions/tx-1'] as Record<string, unknown>;
+  assert.equal(
+    updatedTx.document,
+    'https://firebasestorage.googleapis.com/v0/b/fake-bucket/o/organizations%2Forg-1%2Fdocuments%2Ftx-1%2Fticket.pdf?alt=media&token=existing-token'
+  );
+  const destState = bucket.files.get('organizations/org-1/documents/tx-1/ticket.pdf');
+  assert.equal(destState?.metadata.firebaseStorageDownloadTokens, 'existing-token');
 });
 
 test('POST /api/pending-documents/relink-document bloqueja si el pending apunta a un fitxer d una altra organitzacio', async () => {
