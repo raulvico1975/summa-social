@@ -233,6 +233,7 @@ export function PublicFeaturesExplorer({
           const selectedItem =
             section.items.find((item) => item.id === selectedItemId) ??
             section.items[0];
+          const isActiveSection = section.id === activeSectionId;
 
           if (!selectedItem) {
             return null;
@@ -240,14 +241,15 @@ export function PublicFeaturesExplorer({
 
           return (
             <TabsContent key={section.id} value={section.id} className="mt-0">
-              <div
-              className={cn(
-                'grid gap-8',
-                layout === 'image-heavy'
-                  ? 'lg:grid-cols-[0.56fr_1.44fr] lg:items-start lg:gap-24 xl:grid-cols-[0.52fr_1.48fr] xl:gap-28'
-                  : 'lg:grid-cols-[0.92fr_1.08fr]'
-              )}
-            >
+              {isActiveSection ? (
+                <div
+                  className={cn(
+                    'grid gap-8',
+                    layout === 'image-heavy'
+                      ? 'lg:grid-cols-[0.56fr_1.44fr] lg:items-start lg:gap-24 xl:grid-cols-[0.52fr_1.48fr] xl:gap-28'
+                      : 'lg:grid-cols-[0.92fr_1.08fr]'
+                  )}
+                >
                 <div className={showSectionIntro ? 'space-y-7 lg:-mt-1 lg:space-y-8' : ''}>
                   {showSectionIntro ? (
                     <div className="space-y-4 lg:space-y-5">
@@ -377,27 +379,29 @@ export function PublicFeaturesExplorer({
                               </Link>
                             ) : null}
                             <div className="mt-4 lg:hidden">
-                              <PublicFeatureDemo
-                                key={`${item.id}-mobile`}
-                                locale={locale}
-                                media={item.media}
-                                variant={layout === 'image-heavy' ? 'airy' : 'default'}
-                                className={cn(
-                                  layout === 'image-heavy'
-                                    ? 'w-full bg-transparent p-0 shadow-none'
-                                    : 'p-3 sm:p-4'
-                                )}
-                                mediaClassName={cn(
-                                  layout === 'image-heavy'
-                                    ? 'aspect-auto h-auto w-full rounded-xl object-contain object-center'
-                                    : 'rounded-[1.25rem]'
-                                )}
-                                showDemoBadge={false}
-                                showCaptionsBadge={false}
-                                expandOnPlay={false}
-                                dialogTitle={item.title}
-                                dialogDescription={item.description}
-                              />
+                              {isActive ? (
+                                <PublicFeatureDemo
+                                  key={`${item.id}-mobile`}
+                                  locale={locale}
+                                  media={item.media}
+                                  variant={layout === 'image-heavy' ? 'airy' : 'default'}
+                                  className={cn(
+                                    layout === 'image-heavy'
+                                      ? 'w-full bg-transparent p-0 shadow-none'
+                                      : 'p-3 sm:p-4'
+                                  )}
+                                  mediaClassName={cn(
+                                    layout === 'image-heavy'
+                                      ? 'aspect-auto h-auto w-full rounded-xl object-contain object-center'
+                                      : 'rounded-[1.25rem]'
+                                  )}
+                                  showDemoBadge={false}
+                                  showCaptionsBadge={false}
+                                  expandOnPlay={false}
+                                  dialogTitle={item.title}
+                                  dialogDescription={item.description}
+                                />
+                              ) : null}
                             </div>
                           </AccordionContent>
                         </AccordionItem>
@@ -446,7 +450,8 @@ export function PublicFeaturesExplorer({
                     </div>
                   </div>
                 </div>
-              </div>
+                </div>
+              ) : null}
             </TabsContent>
           );
         })}
