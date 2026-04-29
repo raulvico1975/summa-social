@@ -141,6 +141,13 @@ type BotDebugTrace = {
     finalMode: 'card' | 'fallback'
     responseSubtype: ResponseSubtype
     finalUiPaths: string[]
+    intentDetected: string | null
+    intentConfidence: number | null
+    intentReason: string | null
+    retrievalDomain: string | null
+    candidateCardIds: string[]
+    candidateScores: number[]
+    candidateReasons: string[]
   }
 }
 
@@ -609,6 +616,15 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
         decisionReason: 'smalltalk_response',
         intent: 'informational',
         specificCaseDetected: false,
+        intentDetected: null,
+        intentConfidence: null,
+        intentReason: null,
+        candidateCardIds: [],
+        candidateScores: [],
+        candidateReasons: [],
+        retrievalDomain: 'general',
+        retrievalOutcome: 'fallback',
+        languageDetected: inputLang,
       }).catch(e => console.error('[bot] log error:', e))
       void Promise.all(observabilityWrites).catch(e => console.error('[bot] observability error:', e))
 
@@ -791,6 +807,13 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
             finalMode: result.response.mode,
             responseSubtype,
             finalUiPaths: result.response.uiPaths,
+            intentDetected: retrieval.intentDetected ?? null,
+            intentConfidence: retrieval.intentConfidence ?? null,
+            intentReason: retrieval.intentReason ?? null,
+            retrievalDomain: retrieval.retrievalDomain ?? null,
+            candidateCardIds: retrieval.topCandidates.map(candidate => candidate.cardId),
+            candidateScores: retrieval.topCandidates.map(candidate => candidate.score),
+            candidateReasons: retrieval.topCandidates.map(candidate => candidate.reason),
           },
         },
       }
@@ -843,6 +866,15 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
       decisionReason: result.meta.decisionReason,
       intent: result.meta.intentType,
       specificCaseDetected: result.meta.specificCaseDetected,
+      intentDetected: deterministicRetrieval.intentDetected ?? null,
+      intentConfidence: deterministicRetrieval.intentConfidence ?? null,
+      intentReason: deterministicRetrieval.intentReason ?? null,
+      candidateCardIds: deterministicRetrieval.candidateCardIds ?? [],
+      candidateScores: deterministicRetrieval.candidateScores ?? [],
+      candidateReasons: deterministicRetrieval.candidateReasons ?? [],
+      retrievalDomain: deterministicRetrieval.retrievalDomain ?? null,
+      retrievalOutcome: result.response.cardId === 'clarify-disambiguation' ? 'clarify' : result.response.mode,
+      languageDetected: inputLang,
     }).catch(e => console.error('[bot] log error:', e))
     void Promise.all(observabilityWrites).catch(e => console.error('[bot] observability error:', e))
 

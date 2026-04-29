@@ -50,6 +50,13 @@ export type OrchestratorMeta = {
   decisionReason?: string
   specificCaseDetected?: boolean
   questionDomain?: string
+  intentDetected?: string
+  intentConfidence?: number
+  intentReason?: string
+  retrievalDomain?: string
+  candidateCardIds?: string[]
+  candidateScores?: number[]
+  candidateReasons?: string[]
   selectedCardId: string
   usedClarification: boolean
   trustedOperationalCard: boolean

@@ -40,6 +40,23 @@ test('orchestrator keeps operational card answer for trusted guide card', async 
   assert.match(result.response.answer, /\n1\.\s+/)
 })
 
+test('orchestrator exposes retrieval intent diagnostics in metadata', async () => {
+  const result = await orchestrator({
+    message: 'com imputo un abonament de Stripe?',
+    kbLang: 'ca',
+    cards,
+    clarifyOptionIds: [],
+    assistantTone: 'neutral',
+    allowAiIntent: false,
+    allowAiReformat: false,
+  })
+
+  assert.equal(result.response.cardId, 'guide-stripe-donations')
+  assert.equal((result.meta as any).intentDetected, 'stripe_imputation')
+  assert.equal((result.meta as any).retrievalDomain, 'stripe')
+  assert.deepEqual((result.meta as any).candidateCardIds?.slice(0, 1), ['guide-stripe-donations'])
+})
+
 test('orchestrator routes generic new expense question to the dedicated expense guide', async () => {
   const result = await orchestrator({
     message: 'com introdueixo una nova despesa?',

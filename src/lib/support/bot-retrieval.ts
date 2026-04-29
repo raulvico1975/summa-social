@@ -1,5 +1,11 @@
 import { loadGuideContent, type KBCard } from './load-kb'
 import { cardMatchesScreenContext, isFollowUpMessage, type SupportContext } from './support-context'
+import {
+  normalizeSupportIntent,
+  supportIntentToCardAdjustment,
+  type SupportIntent,
+  type SupportIntentDomain,
+} from './engine/intent-normalizer'
 
 const DIRECT_MATCH_THRESHOLD = 36
 const CLARIFY_MIN_SCORE = 24
@@ -26,6 +32,13 @@ export type RetrievalResult = {
   decisionReason?: string
   specificCaseDetected?: boolean
   questionDomain?: QuestionDomain
+  intentDetected?: SupportIntent
+  intentConfidence?: number
+  intentReason?: string
+  retrievalDomain?: SupportIntentDomain
+  candidateCardIds?: string[]
+  candidateScores?: number[]
+  candidateReasons?: string[]
 }
 
 export type RetrievalTraceCandidate = {
@@ -47,6 +60,10 @@ export type RetrievalDebugTrace = {
   tokens: string[]
   questionDomain: QuestionDomain
   specificCaseDetected: boolean
+  intentDetected?: SupportIntent
+  intentConfidence?: number
+  intentReason?: string
+  retrievalDomain?: SupportIntentDomain
   cardsConsidered: string[]
   directIntent: { cardId: string; minScore: number } | null
   topCandidates: RetrievalTraceCandidate[]
@@ -638,6 +655,32 @@ function scoreCard(
   }
 
   return score
+}
+
+function buildIntentDiagnostics(message: string): Pick<
+  RetrievalResult,
+  'intentDetected' | 'intentConfidence' | 'intentReason' | 'retrievalDomain'
+> {
+  const intent = normalizeSupportIntent(message)
+  if (intent.intent === 'unknown') return {}
+  return {
+    intentDetected: intent.intent,
+    intentConfidence: intent.confidence,
+    intentReason: intent.reason,
+    retrievalDomain: intent.domain ?? undefined,
+  }
+}
+
+function buildCandidateDiagnostics(
+  candidates: Array<{ card: KBCard; score: number; reason?: string }>,
+  max = 5
+): Pick<RetrievalResult, 'candidateCardIds' | 'candidateScores' | 'candidateReasons'> {
+  const top = candidates.slice(0, max)
+  return {
+    candidateCardIds: top.map(entry => entry.card.id),
+    candidateScores: top.map(entry => entry.score),
+    candidateReasons: top.map((entry, index) => entry.reason ?? (index === 0 ? 'best_ranked' : 'ranked_candidate')),
+  }
 }
 
 export function inferQuestionDomain(message: string): QuestionDomain {
@@ -1242,6 +1285,8 @@ export function retrieveCard(
 ): RetrievalResult {
   const tokens = normalize(message)
   const normalizedMessage = normalizePlain(message)
+  const intentNormalization = normalizeSupportIntent(message)
+  const intentDiagnostics = buildIntentDiagnostics(message)
   const hints = buildSupportHints(message, lang, cards, supportContext)
   const contextualQuestion = hints.followUp && hints.conversationHintText
     ? `${message} ${hints.conversationHintText}`
@@ -1266,6 +1311,8 @@ export function retrieveCard(
         decisionReason: override.decisionReason,
         specificCaseDetected,
         questionDomain,
+        ...intentDiagnostics,
+        ...buildCandidateDiagnostics([{ card: matchedCard, score: override.kind === 'card' ? (override.minScore ?? 999) : 0, reason: 'protected_override' }]),
       }
     }
   }
@@ -1289,16 +1336,23 @@ export function retrieveCard(
         decisionReason: followUpDirectIntent ? 'follow_up_direct_intent' : 'direct_intent_high_confidence',
         specificCaseDetected,
         questionDomain,
+        ...intentDiagnostics,
+        ...buildCandidateDiagnostics([{ card: directCard, score: resolvedDirectIntent.minScore ?? 999, reason: followUpDirectIntent ? 'follow_up_direct_intent' : 'direct_intent' }]),
       }
     }
   }
 
   const regularCards = cards.filter(isRetrievableCard)
   const ranked = regularCards
-    .map(card => ({
-      card,
-      score: scoreCard(tokens, normalizedMessage, questionDomain, specificCaseDetected, card, lang, hints),
-    }))
+    .map(card => {
+      const baseScore = scoreCard(tokens, normalizedMessage, questionDomain, specificCaseDetected, card, lang, hints)
+      const adjustment = supportIntentToCardAdjustment(intentNormalization, card.id)
+      return {
+        card,
+        score: baseScore + adjustment.score,
+        reason: adjustment.reason ?? 'ranked_candidate',
+      }
+    })
     .sort((a, b) => b.score - a.score)
 
   const best = ranked[0]
@@ -1315,6 +1369,8 @@ export function retrieveCard(
     confidenceBand: confidence,
     specificCaseDetected,
     questionDomain,
+    ...intentDiagnostics,
+    ...buildCandidateDiagnostics(ranked),
   } satisfies Omit<RetrievalResult, 'card' | 'mode'>
 
   if (
@@ -1429,6 +1485,8 @@ export function debugRetrieveCard(
 ): RetrievalDebugTrace {
   const tokens = normalize(message)
   const normalizedMessage = normalizePlain(message)
+  const intentNormalization = normalizeSupportIntent(message)
+  const intentDiagnostics = buildIntentDiagnostics(message)
   const hints = buildSupportHints(message, lang, cards, supportContext)
   const contextualQuestion = hints.followUp && hints.conversationHintText
     ? `${message} ${hints.conversationHintText}`
@@ -1441,10 +1499,15 @@ export function debugRetrieveCard(
   const resolvedDirectIntent = followUpDirectIntent ?? directIntent
   const regularCards = cards.filter(isRetrievableCard)
   const ranked = regularCards
-    .map(card => ({
-      card,
-      score: scoreCard(tokens, normalizedMessage, questionDomain, specificCaseDetected, card, lang, hints),
-    }))
+    .map(card => {
+      const baseScore = scoreCard(tokens, normalizedMessage, questionDomain, specificCaseDetected, card, lang, hints)
+      const adjustment = supportIntentToCardAdjustment(intentNormalization, card.id)
+      return {
+        card,
+        score: baseScore + adjustment.score,
+        reason: adjustment.reason,
+      }
+    })
     .sort((a, b) => b.score - a.score)
 
   const topCandidates = ranked.slice(0, 5).map((entry, index) => ({
@@ -1452,7 +1515,7 @@ export function debugRetrieveCard(
     score: entry.score,
     type: entry.card.type,
     answerMode: entry.card.answerMode,
-    reason: index === 0 ? 'best_ranked' : 'tie_break_loss',
+    reason: entry.reason ?? (index === 0 ? 'best_ranked' : 'tie_break_loss'),
   }))
 
   const discarded: RetrievalTraceDiscard[] = cards
@@ -1495,6 +1558,7 @@ export function debugRetrieveCard(
     tokens,
     questionDomain,
     specificCaseDetected,
+    ...intentDiagnostics,
     cardsConsidered: regularCards.map(card => card.id),
     directIntent: override && override.kind === 'card'
       ? { cardId: override.cardId, minScore: override.minScore ?? 999 }

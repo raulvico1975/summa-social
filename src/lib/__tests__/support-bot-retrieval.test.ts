@@ -66,6 +66,27 @@ test('retrieveCard resolves remittance split with 182 phrasing to the 182 guide'
   assert.equal(es.mode, 'card')
 })
 
+test('retrieveCard exposes canonical intent diagnostics for Stripe payout questions', () => {
+  const ca = retrieveCard('com imputo un abonament de Stripe?', 'ca', cards)
+  assert.equal(ca.card.id, 'guide-stripe-donations')
+  assert.equal((ca as any).intentDetected, 'stripe_imputation')
+  assert.equal((ca as any).retrievalDomain, 'stripe')
+  assert.equal(typeof (ca as any).intentConfidence, 'number')
+  assert.ok((ca as any).intentConfidence >= 0.7)
+
+  const es = retrieveCard('¿cómo divido un payout de Stripe?', 'es', cards)
+  assert.equal(es.card.id, 'guide-stripe-donations')
+  assert.equal((es as any).intentDetected, 'stripe_imputation')
+  assert.equal((es as any).retrievalDomain, 'stripe')
+})
+
+test('retrieveCard keeps plain remittance split separate from Stripe intent diagnostics', () => {
+  const result = retrieveCard('com divideixo una remesa de quotes?', 'ca', cards)
+  assert.equal(result.card.id, 'guide-split-remittance')
+  assert.equal((result as any).intentDetected, 'split_remittance')
+  assert.equal((result as any).retrievalDomain, 'remittances')
+})
+
 test('retrieveCard tolerates remittance misspelling', () => {
   const result = retrieveCard('tinc problemes per dividir una remessa', 'ca', cards)
   assert.equal(result.card.id, 'guide-split-remittance')

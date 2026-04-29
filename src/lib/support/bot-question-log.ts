@@ -116,6 +116,15 @@ export interface BotQuestionLogMeta {
   answerCount?: number
   clarifyCount?: number
   fallbackCount?: number
+  intentDetected?: string | null
+  intentConfidence?: number | null
+  intentReason?: string | null
+  candidateCardIds?: string[]
+  candidateScores?: number[]
+  candidateReasons?: string[]
+  retrievalDomain?: string | null
+  retrievalOutcome?: 'card' | 'fallback' | 'clarify' | string | null
+  languageDetected?: string | null
 }
 
 export type BotQuestionCounterIncrements = Pick<
@@ -167,6 +176,22 @@ function buildModeCounterIncrementPayload(
   return {
     fallbackCount: FieldValue.increment(1),
   }
+}
+
+function sanitizeStringArray(values: unknown, max = 5): string[] {
+  if (!Array.isArray(values)) return []
+  return values
+    .filter((value): value is string => typeof value === 'string')
+    .map(value => value.trim())
+    .filter(Boolean)
+    .slice(0, max)
+}
+
+function sanitizeNumberArray(values: unknown, max = 5): number[] {
+  if (!Array.isArray(values)) return []
+  return values
+    .filter((value): value is number => typeof value === 'number' && Number.isFinite(value))
+    .slice(0, max)
 }
 
 // =============================================================================
@@ -224,6 +249,17 @@ export async function logBotQuestion(
       decisionReason: meta?.decisionReason ?? null,
       intent: meta?.intent ?? null,
       specificCaseDetected: meta?.specificCaseDetected ?? null,
+      intentDetected: meta?.intentDetected ?? null,
+      intentConfidence: typeof meta?.intentConfidence === 'number' && Number.isFinite(meta.intentConfidence)
+        ? meta.intentConfidence
+        : null,
+      intentReason: meta?.intentReason ?? null,
+      candidateCardIds: sanitizeStringArray(meta?.candidateCardIds),
+      candidateScores: sanitizeNumberArray(meta?.candidateScores),
+      candidateReasons: sanitizeStringArray(meta?.candidateReasons),
+      retrievalDomain: meta?.retrievalDomain ?? null,
+      retrievalOutcome: meta?.retrievalOutcome ?? (cardIdOrFallbackId === 'clarify-disambiguation' ? 'clarify' : resultMode),
+      languageDetected: meta?.languageDetected ?? lang ?? null,
       count: FieldValue.increment(1),
       ...buildModeCounterIncrementPayload(resultMode, cardIdOrFallbackId),
       lastSeenAt: FieldValue.serverTimestamp(),

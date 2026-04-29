@@ -49,6 +49,9 @@ const CRITICAL_CASES: GoldenCase[] = [
   { lang: 'ca', question: 'com puc saber les quotes que un soci ha pagat?', expectedCardId: 'manual-member-paid-quotas', critical: true },
   { lang: 'ca', question: 'com faig arribar el certificat de donatius a un soci?', expectedCardId: 'guide-donor-certificate', critical: true },
   { lang: 'ca', question: 'tinc problemes per dividir una remessa', expectedCardId: 'guide-split-remittance', critical: true },
+  { lang: 'ca', question: 'com imputo un abonament de Stripe?', expectedCardId: 'guide-stripe-donations', critical: true },
+  { lang: 'ca', question: 'he rebut un ingrés de Stripe, què faig?', expectedCardId: 'guide-stripe-donations', critical: true },
+  { lang: 'ca', question: 'com divideixo una remesa de quotes?', expectedCardId: 'guide-split-remittance', critical: true },
   { lang: 'es', question: 'como abro un proyecto?', expectedCardId: 'project-open', critical: true },
   { lang: 'es', question: 'como se abre un proyecto?', expectedCardId: 'project-open', critical: true },
   { lang: 'es', question: 'como imputo un gasto a varios proyectos?', expectedCardId: 'guide-projects', critical: true },
@@ -65,6 +68,9 @@ const CRITICAL_CASES: GoldenCase[] = [
   { lang: 'es', question: 'como puedo saber las cuotas que un socio ha pagado?', expectedCardId: 'manual-member-paid-quotas', critical: true },
   { lang: 'es', question: 'como envio el certificado de donacion a un socio?', expectedCardId: 'guide-donor-certificate', critical: true },
   { lang: 'es', question: 'tengo problemas para dividir una remesa', expectedCardId: 'guide-split-remittance', critical: true },
+  { lang: 'es', question: 'como imputo un ingreso de Stripe?', expectedCardId: 'guide-stripe-donations', critical: true },
+  { lang: 'es', question: 'he recibido un abono de Stripe, que hago?', expectedCardId: 'guide-stripe-donations', critical: true },
+  { lang: 'es', question: 'como divido una remesa de cuotas?', expectedCardId: 'guide-split-remittance', critical: true },
 ]
 
 function toExpectedRows(raw: unknown): ExpectedRow[] {

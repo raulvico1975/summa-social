@@ -6,6 +6,7 @@ import { pickTopDisambiguationOptions, resolveRetrieval, type IntentClassifier }
 import { buildEmergencyFallback, renderAnswer } from './renderer'
 import type { AssistantTone, OrchestratorResult } from './types'
 import type { SupportContext } from '../support-context'
+import type { RetrievalResult } from '../bot-retrieval'
 
 function findFallbackCard(cards: KBCard[]): KBCard | null {
   return cards.find(card => card.id === 'fallback-no-answer')
@@ -37,6 +38,27 @@ function buildGuidedNavigationAnswer(card: KBCard, lang: KbLang): string {
 function canServeSpecificCaseCard(decisionReason: string | undefined, selectedCard: KBCard | null): boolean {
   if (!selectedCard || selectedCard.type === 'fallback') return false
   return decisionReason === 'specific_case_safe_checklist'
+}
+
+function buildRetrievalDiagnostics(result: RetrievalResult | null): Pick<
+  OrchestratorResult['meta'],
+  | 'intentDetected'
+  | 'intentConfidence'
+  | 'intentReason'
+  | 'retrievalDomain'
+  | 'candidateCardIds'
+  | 'candidateScores'
+  | 'candidateReasons'
+> {
+  return {
+    intentDetected: result?.intentDetected,
+    intentConfidence: result?.intentConfidence,
+    intentReason: result?.intentReason,
+    retrievalDomain: result?.retrievalDomain,
+    candidateCardIds: result?.candidateCardIds ?? [],
+    candidateScores: result?.candidateScores ?? [],
+    candidateReasons: result?.candidateReasons ?? [],
+  }
 }
 
 export async function orchestrator(input: {
@@ -71,6 +93,7 @@ export async function orchestrator(input: {
     classifyIntent,
     reformat,
   } = input
+  let retrievalDiagnostics = buildRetrievalDiagnostics(null)
 
   if (cards.length === 0) {
     const emergency = buildEmergencyFallback(kbLang)
@@ -108,6 +131,7 @@ export async function orchestrator(input: {
     })
     retrievalResult = resolution.result
     selectedByClarify = resolution.selectedByClarify
+    retrievalDiagnostics = buildRetrievalDiagnostics(retrievalResult)
   } catch (error) {
     console.error('[bot] retrieve error:', error)
   }
@@ -141,6 +165,7 @@ export async function orchestrator(input: {
           : retrievalResult.decisionReason ?? 'medium_confidence_disambiguation',
         specificCaseDetected: retrievalResult.specificCaseDetected ?? false,
         questionDomain: retrievalResult.questionDomain,
+        ...retrievalDiagnostics,
         selectedCardId: 'clarify-disambiguation',
         usedClarification: true,
         trustedOperationalCard: false,
@@ -168,6 +193,7 @@ export async function orchestrator(input: {
         decisionReason: retrievalResult?.decisionReason ?? 'no_selected_card',
         specificCaseDetected: retrievalResult?.specificCaseDetected ?? false,
         questionDomain: retrievalResult?.questionDomain,
+        ...retrievalDiagnostics,
         selectedCardId: emergency.cardId,
         usedClarification: false,
         trustedOperationalCard: false,
@@ -204,6 +230,7 @@ export async function orchestrator(input: {
           decisionReason: retrievalResult?.decisionReason ?? 'specific_case_guardrail',
           specificCaseDetected: true,
           questionDomain: retrievalResult?.questionDomain,
+        ...retrievalDiagnostics,
           selectedCardId: selectedFallback.id,
           usedClarification: false,
           trustedOperationalCard: false,
@@ -235,6 +262,7 @@ export async function orchestrator(input: {
         decisionReason: 'specific_case_guardrail',
         specificCaseDetected: true,
         questionDomain: retrievalResult?.questionDomain,
+        ...retrievalDiagnostics,
         selectedCardId: cardId,
         usedClarification: false,
         trustedOperationalCard: false,
@@ -272,6 +300,7 @@ export async function orchestrator(input: {
           decisionReason: 'operational_medium_navigation',
           specificCaseDetected: retrievalResult?.specificCaseDetected ?? false,
           questionDomain: retrievalResult?.questionDomain,
+        ...retrievalDiagnostics,
           selectedCardId: selectedCard.id,
           usedClarification: false,
           trustedOperationalCard: false,
@@ -309,6 +338,7 @@ export async function orchestrator(input: {
             : 'operational_medium_disambiguation',
           specificCaseDetected: retrievalResult?.specificCaseDetected ?? false,
           questionDomain: retrievalResult?.questionDomain,
+        ...retrievalDiagnostics,
           selectedCardId: 'clarify-disambiguation',
           usedClarification: true,
           trustedOperationalCard: false,
@@ -346,6 +376,7 @@ export async function orchestrator(input: {
             : 'operational_low_fallback',
         specificCaseDetected: retrievalResult?.specificCaseDetected ?? false,
         questionDomain: retrievalResult?.questionDomain,
+        ...retrievalDiagnostics,
         selectedCardId: fallbackCardId,
         usedClarification: false,
         trustedOperationalCard: false,
@@ -388,6 +419,7 @@ export async function orchestrator(input: {
       decisionReason: retrievalResult?.decisionReason ?? 'high_confidence_match',
       specificCaseDetected: retrievalResult?.specificCaseDetected ?? false,
       questionDomain: retrievalResult?.questionDomain,
+      ...retrievalDiagnostics,
       selectedCardId: rendered.card.id,
       usedClarification: selectedByClarify,
       trustedOperationalCard: rendered.trustedOperationalCard,
