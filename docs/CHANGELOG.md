@@ -10,6 +10,12 @@ Aquest fitxer ja no pretén duplicar el document mestre.
 
 ## Resum dels canvis recents
 
+### 2026-04-29
+
+- codi intern: el bot d'ajuda incorpora normalitzacio d'intents i diagnostics de retrieval (`intentDetected`, `intentConfidence`, `retrievalDomain`, candidats i scores) per reduir col·lisions entre casos de Stripe i remeses
+- operativa: el log de `supportBotQuestions` guarda diagnostics sanejats i sense `undefined`, deixant traça estable per analisi i regressio sobre preguntes reals
+- documentació per usuari: la web publica reforca el relat institucional de trajectoria (Semilla/GONG) a home, footer i pagina "Qui som" en `ca|es|fr|pt`, substituint l'estat "en construccio"
+
 ### 2026-04-23
 
 - seguretat: lot de 6 fixes d'autoritzacio i aillament desplegat i validat en produccio
