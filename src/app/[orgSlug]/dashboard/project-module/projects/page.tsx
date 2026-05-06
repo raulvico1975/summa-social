@@ -6,19 +6,31 @@
 import * as React from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useProjects } from '@/hooks/use-project-module';
+import { useProjectLifecycle, useProjects } from '@/hooks/use-project-module';
 import { useOrgUrl, useCurrentOrganization } from '@/hooks/organization-provider';
 import { useFirebase } from '@/firebase';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { AlertCircle, Plus, FolderKanban, Calendar, Euro, Eye, Pencil } from 'lucide-react';
+import { AlertCircle, Plus, FolderKanban, Calendar, Euro, Eye, Pencil, Archive, Trash2, Loader2 } from 'lucide-react';
 import { EmptyState } from '@/components/ui/empty-state';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { useToast } from '@/hooks/use-toast';
 import { trackUX } from '@/lib/ux/trackUX';
 import { useTranslations } from '@/i18n';
 import { collection, getDocs } from 'firebase/firestore';
 import type { Project, ExpenseAssignment } from '@/lib/project-module-types';
+import type { ProjectDeletePolicy, ProjectDeleteUsage } from '@/lib/project-module/project-lifecycle-policy';
 
 function formatDate(dateStr: string | null): string {
   if (!dateStr) return '-';
@@ -45,9 +57,18 @@ function formatAmountCompact(amount: number): string {
 interface ProjectCardProps {
   project: Project;
   executedAmount: number;
+  isMutating: boolean;
+  onRequestClose: (project: Project) => void;
+  onRequestDelete: (project: Project) => void;
 }
 
-function ProjectCard({ project, executedAmount }: ProjectCardProps) {
+function ProjectCard({
+  project,
+  executedAmount,
+  isMutating,
+  onRequestClose,
+  onRequestDelete,
+}: ProjectCardProps) {
   const { t, tr } = useTranslations();
   const { buildUrl } = useOrgUrl();
   const router = useRouter();
@@ -78,6 +99,18 @@ function ProjectCard({ project, executedAmount }: ProjectCardProps) {
   const handleEditClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     trackUX('projects.edit.click', { projectId: project.id, projectName: project.name });
+  };
+
+  const handleCloseClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    trackUX('projects.close.request', { projectId: project.id, projectName: project.name });
+    onRequestClose(project);
+  };
+
+  const handleDeleteClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    trackUX('projects.delete.request', { projectId: project.id, projectName: project.name });
+    onRequestDelete(project);
   };
 
   return (
@@ -154,22 +187,73 @@ function ProjectCard({ project, executedAmount }: ProjectCardProps) {
               <Pencil className="h-4 w-4" />
             </Button>
           </Link>
+          {project.status === 'active' && (
+            <Button
+              variant="ghost"
+              size="sm"
+              title={tr('projectModule.projects.closeAction', 'Tancar projecte')}
+              onClick={handleCloseClick}
+              disabled={isMutating}
+              className="text-muted-foreground hover:text-foreground"
+            >
+              <Archive className="h-4 w-4" />
+            </Button>
+          )}
+          <Button
+            variant="ghost"
+            size="sm"
+            title={tr('projectModule.projects.deleteAction', 'Eliminar projecte buit')}
+            onClick={handleDeleteClick}
+            disabled={isMutating}
+            className="text-muted-foreground hover:text-destructive"
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
         </div>
       </CardContent>
     </Card>
   );
 }
 
+function formatDeleteBlockers(
+  blockers: ProjectDeletePolicy['blockers'],
+  tr: (key: string, fallback?: string) => string
+): string {
+  const labels = blockers.map((blocker) => {
+    if (blocker === 'assignments') return tr('projectModule.projects.deleteBlockerAssignments', 'imputacions de despeses');
+    if (blocker === 'budgetLines') return tr('projectModule.projects.deleteBlockerBudgetLines', 'partides pressupostaries');
+    if (blocker === 'fxTransfers') return tr('projectModule.projects.deleteBlockerFxTransfers', 'transferencies FX');
+    return tr('projectModule.projects.deleteBlockerTransactions', 'moviments vinculats');
+  });
+
+  return labels.join(', ');
+}
+
+function formatDeleteUsage(usage: ProjectDeleteUsage): string {
+  return [
+    `imputacions: ${usage.assignmentCount}`,
+    `partides: ${usage.budgetLineCount}`,
+    `FX: ${usage.fxTransferCount}`,
+    `moviments: ${usage.transactionCount}`,
+  ].join(' · ');
+}
+
 export default function ProjectsListPage() {
   const { projects, isLoading, error, refresh } = useProjects();
+  const { closeProject, inspectDeleteProject, deleteProject, isMutating } = useProjectLifecycle();
   const { buildUrl } = useOrgUrl();
   const { firestore } = useFirebase();
   const { organizationId } = useCurrentOrganization();
+  const { toast } = useToast();
   const { t, tr } = useTranslations();
 
   // Carregar tots els expenseLinks per calcular execució per projecte
   const [executionByProject, setExecutionByProject] = React.useState<Map<string, number>>(new Map());
   const [linksLoading, setLinksLoading] = React.useState(true);
+  const [projectToClose, setProjectToClose] = React.useState<Project | null>(null);
+  const [projectToDelete, setProjectToDelete] = React.useState<Project | null>(null);
+  const [deleteInspection, setDeleteInspection] = React.useState<(ProjectDeletePolicy & { usage: ProjectDeleteUsage }) | null>(null);
+  const [isInspectingDelete, setIsInspectingDelete] = React.useState(false);
 
   React.useEffect(() => {
     if (!organizationId) return;
@@ -211,6 +295,77 @@ export default function ProjectsListPage() {
   React.useEffect(() => {
     trackUX('projects.open', { projectCount: projects.length });
   }, [projects.length]);
+
+  const handleRequestDelete = React.useCallback(async (project: Project) => {
+    setProjectToDelete(project);
+    setDeleteInspection(null);
+    setIsInspectingDelete(true);
+
+    try {
+      const inspection = await inspectDeleteProject(project.id);
+      setDeleteInspection(inspection);
+    } catch (err) {
+      toast({
+        variant: 'destructive',
+        title: tr('projectModule.projects.deleteInspectErrorTitle', 'No s’ha pogut revisar el projecte'),
+        description: err instanceof Error ? err.message : tr('projectModule.projects.deleteInspectErrorBody', 'Torna-ho a provar.'),
+      });
+      setProjectToDelete(null);
+    } finally {
+      setIsInspectingDelete(false);
+    }
+  }, [inspectDeleteProject, toast, tr]);
+
+  const handleConfirmClose = React.useCallback(async () => {
+    if (!projectToClose) return;
+
+    try {
+      await closeProject(projectToClose.id);
+      toast({
+        title: tr('projectModule.projects.closeSuccessTitle', 'Projecte tancat'),
+        description: tr('projectModule.projects.closeSuccessBody', 'El projecte queda preservat i deixa d’aparèixer com a projecte actiu.'),
+      });
+      trackUX('projects.close.success', { projectId: projectToClose.id, projectName: projectToClose.name });
+      setProjectToClose(null);
+      await refresh();
+    } catch (err) {
+      toast({
+        variant: 'destructive',
+        title: tr('projectModule.projects.closeErrorTitle', 'No s’ha pogut tancar'),
+        description: err instanceof Error ? err.message : tr('projectModule.projects.closeErrorBody', 'Torna-ho a provar.'),
+      });
+    }
+  }, [closeProject, projectToClose, refresh, toast, tr]);
+
+  const handleConfirmDelete = React.useCallback(async () => {
+    if (!projectToDelete) return;
+
+    try {
+      await deleteProject(projectToDelete.id);
+      toast({
+        title: tr('projectModule.projects.deleteSuccessTitle', 'Projecte eliminat'),
+        description: tr('projectModule.projects.deleteSuccessBody', 'El projecte no tenia dades vinculades i s’ha eliminat.'),
+      });
+      trackUX('projects.delete.success', { projectId: projectToDelete.id, projectName: projectToDelete.name });
+      setProjectToDelete(null);
+      setDeleteInspection(null);
+      await refresh();
+    } catch (err) {
+      toast({
+        variant: 'destructive',
+        title: tr('projectModule.projects.deleteErrorTitle', 'No s’ha pogut eliminar'),
+        description: err instanceof Error ? err.message : tr('projectModule.projects.deleteErrorBody', 'Tanca el projecte si cal conservar-ne la traçabilitat.'),
+      });
+    }
+  }, [deleteProject, projectToDelete, refresh, toast, tr]);
+
+  const handleCloseFromDeleteBlock = React.useCallback(async () => {
+    if (!projectToDelete) return;
+
+    setProjectToClose(projectToDelete);
+    setProjectToDelete(null);
+    setDeleteInspection(null);
+  }, [projectToDelete]);
 
   if (error) {
     return (
@@ -280,10 +435,83 @@ export default function ProjectsListPage() {
               key={project.id}
               project={project}
               executedAmount={executionByProject.get(project.id) ?? 0}
+              isMutating={isMutating}
+              onRequestClose={setProjectToClose}
+              onRequestDelete={handleRequestDelete}
             />
           ))}
         </div>
       )}
+
+      <AlertDialog open={!!projectToClose} onOpenChange={(open) => !open && setProjectToClose(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{tr('projectModule.projects.closeDialogTitle', 'Tancar projecte')}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {tr('projectModule.projects.closeDialogBody', 'El projecte es marcarà com a tancat. No s’eliminaran pressupost, imputacions, partides ni transferències.')}
+              {projectToClose ? ` ${projectToClose.name}` : ''}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t.common.cancel}</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmClose} disabled={isMutating}>
+              {isMutating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {tr('projectModule.projects.closeConfirm', 'Tancar projecte')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={!!projectToDelete} onOpenChange={(open) => {
+        if (!open) {
+          setProjectToDelete(null);
+          setDeleteInspection(null);
+        }
+      }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{tr('projectModule.projects.deleteDialogTitle', 'Eliminar projecte')}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {isInspectingDelete ? (
+                <span className="inline-flex items-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  {tr('projectModule.projects.deleteInspecting', 'Revisant si el projecte té dades vinculades...')}
+                </span>
+              ) : deleteInspection?.canDelete ? (
+                <>
+                  {tr('projectModule.projects.deleteDialogBody', 'Aquest projecte no té dades vinculades. Si l’elimines, desapareixerà definitivament. Aquesta acció no afecta moviments ni justificacions perquè no hi ha dades associades.')}
+                  {projectToDelete ? ` ${projectToDelete.name}` : ''}
+                </>
+              ) : deleteInspection ? (
+                <>
+                  {tr('projectModule.projects.deleteBlockedBody', 'Aquest projecte té dades vinculades i no es pot eliminar. Pots tancar-lo perquè deixi d’aparèixer en noves imputacions, mantenint l’històric intacte. Dades vinculades:')}
+                  {' '}
+                  {formatDeleteBlockers(deleteInspection.blockers, tr)}.
+                  <br />
+                  <span className="text-xs text-muted-foreground">{formatDeleteUsage(deleteInspection.usage)}</span>
+                </>
+              ) : null}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t.common.cancel}</AlertDialogCancel>
+            {deleteInspection?.canDelete ? (
+              <AlertDialogAction
+                onClick={handleConfirmDelete}
+                disabled={isMutating}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                {isMutating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {tr('projectModule.projects.deleteConfirm', 'Eliminar definitivament')}
+              </AlertDialogAction>
+            ) : deleteInspection && projectToDelete?.status === 'active' ? (
+              <AlertDialogAction onClick={handleCloseFromDeleteBlock}>
+                {tr('projectModule.projects.closeInstead', 'Tancar projecte')}
+              </AlertDialogAction>
+            ) : null}
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
