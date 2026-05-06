@@ -28,7 +28,13 @@ interface Transaction {
   projectId?: string | null;
   projectName?: string | null;
 
-  document?: string | null; // URL del document adjunt (nom correcte del camp)
+  document?: string | {
+    url?: string | null;
+    fileUrl?: string | null;
+    downloadURL?: string | null;
+    storagePath?: string | null;
+    name?: string | null;
+  } | null; // URL del document adjunt o format legacy amb metadades
 
   isCounterpartTransfer?: boolean;
   isRemittance?: boolean | null;
@@ -198,20 +204,56 @@ function calculateEligibility(tx: Transaction): boolean {
 }
 
 function buildDocuments(
-  documentUrl: string | null
+  document: Transaction["document"]
 ): ProjectExpenseExportWrite["documents"] {
-  if (!documentUrl) return [];
-
-  const storagePath = extractStoragePathFromFirebaseStorageUrl(documentUrl);
+  const { fileUrl, storagePath, name } = resolveDocumentReference(document);
+  if (!fileUrl && !storagePath) return [];
 
   return [
     {
       source: "summa",
       storagePath,
-      fileUrl: documentUrl,
-      name: null,
+      fileUrl,
+      name,
     },
   ];
+}
+
+function resolveDocumentReference(document: Transaction["document"]): {
+  fileUrl: string | null;
+  storagePath: string | null;
+  name: string | null;
+} {
+  if (typeof document === "string") {
+    if (!document.trim()) return { fileUrl: null, storagePath: null, name: null };
+    const storagePath = extractStoragePathFromFirebaseStorageUrl(document);
+    const isExternalUrl = /^https?:\/\//.test(document);
+    return {
+      fileUrl: isExternalUrl ? document : null,
+      storagePath: storagePath ?? (isExternalUrl ? null : document),
+      name: null,
+    };
+  }
+
+  if (!document || typeof document !== "object") {
+    return { fileUrl: null, storagePath: null, name: null };
+  }
+
+  const fileUrl = firstString(document.url, document.fileUrl, document.downloadURL);
+  return {
+    fileUrl,
+    storagePath: firstString(document.storagePath) ?? (fileUrl ? extractStoragePathFromFirebaseStorageUrl(fileUrl) : null),
+    name: firstString(document.name),
+  };
+}
+
+function firstString(...values: Array<unknown>): string | null {
+  for (const value of values) {
+    if (typeof value === "string" && value.trim()) {
+      return value;
+    }
+  }
+  return null;
 }
 
 function extractStoragePathFromFirebaseStorageUrl(url: string): string | null {
