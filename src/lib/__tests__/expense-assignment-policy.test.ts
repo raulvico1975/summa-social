@@ -91,13 +91,39 @@ test('detail editor auto-opens for pending assignments regardless of global cate
   );
 });
 
-test('keeps load-more available when a local bank filter is active', () => {
+test('hides load-more when a local table filter is active', () => {
   assert.equal(
     shouldShowProjectExpenseLoadMore({
       isLoading: false,
       hasMore: true,
       isServerFiltered: false,
       tableFilter: 'bank',
+      searchQuery: '',
+    }),
+    false
+  );
+});
+
+test('hides load-more when local search is active', () => {
+  assert.equal(
+    shouldShowProjectExpenseLoadMore({
+      isLoading: false,
+      hasMore: true,
+      isServerFiltered: false,
+      tableFilter: 'all',
+      searchQuery: 'factura',
+    }),
+    false
+  );
+});
+
+test('keeps load-more available when there are no filters', () => {
+  assert.equal(
+    shouldShowProjectExpenseLoadMore({
+      isLoading: false,
+      hasMore: true,
+      isServerFiltered: false,
+      tableFilter: 'all',
       searchQuery: '',
     }),
     true
