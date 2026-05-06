@@ -10,6 +10,13 @@ Aquest fitxer ja no pretén duplicar el document mestre.
 
 ## Resum dels canvis recents
 
+### 2026-05-03
+
+- codi intern: es reforcen els helpers de seguretat d'API (`request-guards`, `rate-limit` i validacio d'URL d'Storage) per evitar vectors d'entrada malformats abans d'arribar a logica sensible
+- API/integracions: els endpoints `POST /api/ai/categorize-transaction` i `POST /api/ai/extract-ticket` endureixen la validacio previa i retornen errors controlats davant payloads no valids
+- documentació per usuari: el panell d'estat de sistema d'`/admin` incorpora copy de seguretat mes clar amb claus i18n noves a `ca`, `es`, `fr` i `pt`
+- operativa: `storage.rules` restringeix el perimetre d'uploads per organitzacio, i `next.config.ts` afegeix headers de seguretat de resposta i simplifica la politica de build amb checks de produccio validats per tests
+
 ### 2026-04-23
 
 - seguretat: lot de 6 fixes d'autoritzacio i aillament desplegat i validat en produccio
