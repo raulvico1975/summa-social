@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { NextRequest } from 'next/server';
 
-import { handleProjectLifecyclePost } from '@/app/api/project-module/projects/lifecycle/route';
+import { handleProjectLifecyclePost } from '@/lib/project-module/project-lifecycle-route-handler';
 
 type DocData = Record<string, unknown> | null;
 
