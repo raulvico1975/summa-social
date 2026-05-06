@@ -6,6 +6,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { computeFxAmountEUR } from '@/lib/project-module/fx';
 import { validateAssignments } from '@/lib/project-module/normalize-assignments';
+import type { ProjectDeletePolicy, ProjectDeleteUsage } from '@/lib/project-module/project-lifecycle-policy';
 import {
   collection,
   query,
@@ -1656,6 +1657,111 @@ export function useSaveProject(): UseSaveProjectResult {
   return {
     save,
     isSaving,
+    error,
+  };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// HOOK: Tancar/eliminar projecte amb salvaguardes
+// ═══════════════════════════════════════════════════════════════════════════
+
+interface UseProjectLifecycleResult {
+  closeProject: (projectId: string) => Promise<void>;
+  inspectDeleteProject: (projectId: string) => Promise<ProjectDeletePolicy & { usage: ProjectDeleteUsage }>;
+  deleteProject: (projectId: string) => Promise<void>;
+  isMutating: boolean;
+  error: Error | null;
+}
+
+export function useProjectLifecycle(): UseProjectLifecycleResult {
+  const { user } = useFirebase();
+  const { organizationId } = useCurrentOrganization();
+
+  const [isMutating, setIsMutating] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
+
+  const runLifecycleAction = useCallback(async (
+    action: 'inspectDelete' | 'close' | 'delete',
+    projectId: string
+  ) => {
+    if (!organizationId || !projectId || !user) {
+      throw new Error('No autenticat');
+    }
+
+    const idToken = await user.getIdToken();
+    const response = await fetch('/api/project-module/projects/lifecycle', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${idToken}`,
+      },
+      body: JSON.stringify({
+        action,
+        orgId: organizationId,
+        projectId,
+      }),
+    });
+
+    const result = await response.json() as {
+      success?: boolean;
+      error?: string;
+      usage?: ProjectDeleteUsage;
+      policy?: ProjectDeletePolicy;
+    };
+
+    if (!response.ok || result.success !== true) {
+      throw new Error(result.error ?? 'No s’ha pogut completar l’acció');
+    }
+
+    return result;
+  }, [organizationId, user]);
+
+  const inspectDeleteProject = useCallback(async (
+    projectId: string
+  ): Promise<ProjectDeletePolicy & { usage: ProjectDeleteUsage }> => {
+    const result = await runLifecycleAction('inspectDelete', projectId);
+
+    return {
+      ...(result.policy as ProjectDeletePolicy),
+      usage: result.usage as ProjectDeleteUsage,
+    };
+  }, [runLifecycleAction]);
+
+  const closeProject = useCallback(async (projectId: string): Promise<void> => {
+    setIsMutating(true);
+    setError(null);
+
+    try {
+      await runLifecycleAction('close', projectId);
+    } catch (err) {
+      const e = err instanceof Error ? err : new Error('Error tancant projecte');
+      setError(e);
+      throw e;
+    } finally {
+      setIsMutating(false);
+    }
+  }, [runLifecycleAction]);
+
+  const deleteProject = useCallback(async (projectId: string): Promise<void> => {
+    setIsMutating(true);
+    setError(null);
+
+    try {
+      await runLifecycleAction('delete', projectId);
+    } catch (err) {
+      const e = err instanceof Error ? err : new Error('Error eliminant projecte');
+      setError(e);
+      throw e;
+    } finally {
+      setIsMutating(false);
+    }
+  }, [runLifecycleAction]);
+
+  return {
+    closeProject,
+    inspectDeleteProject,
+    deleteProject,
+    isMutating,
     error,
   };
 }
