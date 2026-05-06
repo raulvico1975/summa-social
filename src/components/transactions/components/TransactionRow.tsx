@@ -569,7 +569,7 @@ export const TransactionRow = React.memo(function TransactionRow({
     <>
       {/* Checkbox - només si onToggleSelect està definit (canBulkEdit) */}
       {onToggleSelect && (
-        <TableCell className="px-2.5 py-2.5 align-top">
+        <TableCell className="px-2.5 py-2 align-top">
           <Checkbox
             checked={isSelected}
             onCheckedChange={() => {
@@ -583,13 +583,13 @@ export const TransactionRow = React.memo(function TransactionRow({
         </TableCell>
       )}
       {/* Date */}
-      <TableCell className="whitespace-nowrap py-2.5 text-xs text-muted-foreground align-top">
+      <TableCell className="whitespace-nowrap py-2 text-xs text-muted-foreground align-top">
         {formatDateShort(displayDate)}
       </TableCell>
 
       {/* Amount */}
       <TableCell
-        className={`whitespace-nowrap py-2.5 text-right font-mono text-[13px] font-medium tabular-nums align-top ${
+        className={`whitespace-nowrap py-2 text-right font-mono text-[13px] font-medium tabular-nums align-top ${
           isReturnedDonation ? 'text-gray-400 line-through' :
           tx.amount > 0 ? 'text-green-600' : 'text-foreground'
         }`}
@@ -598,12 +598,12 @@ export const TransactionRow = React.memo(function TransactionRow({
       </TableCell>
 
       {/* Balance */}
-      <TableCell className="w-[120px] whitespace-nowrap py-2.5 text-right font-mono text-[13px] tabular-nums text-foreground align-top">
+      <TableCell className="w-[120px] whitespace-nowrap py-2 text-right font-mono text-[13px] tabular-nums text-foreground align-top">
         {balanceText}
       </TableCell>
 
       {/* Concept + Note + Badge + Mobile summary */}
-      <TableCell className="min-w-0 py-2.5">
+      <TableCell className="min-w-0 py-2">
         <div className="space-y-0.5">
           <div className="flex items-center gap-2">
             <p
@@ -739,7 +739,7 @@ export const TransactionRow = React.memo(function TransactionRow({
       </TableCell>
 
       {/* Contact - hidden on mobile, visible from lg */}
-      <TableCell className="hidden min-w-0 py-2.5 align-top lg:table-cell">
+      <TableCell className="hidden min-w-0 py-2 align-top lg:table-cell">
         {/* Cas 1: Pare de remesa de devolucions - mostrar estat, NO "Assignar donant" */}
         {tx.isRemittance && tx.remittanceType === 'returns' ? (
           <div className="flex items-center gap-1">
@@ -888,7 +888,7 @@ export const TransactionRow = React.memo(function TransactionRow({
       </TableCell>
 
       {/* Category - hidden on mobile, visible from lg */}
-      <TableCell className="hidden min-w-0 py-2.5 align-top lg:table-cell">
+      <TableCell className="hidden min-w-0 py-2 align-top lg:table-cell">
         <div className="flex items-center gap-1.5">
           <div className="min-w-0 flex-1">
             <Popover open={isCategoryPopoverOpen} onOpenChange={setIsCategoryPopoverOpen}>
@@ -991,7 +991,7 @@ export const TransactionRow = React.memo(function TransactionRow({
 
       {/* Project - hidden on mobile, visible from lg */}
       {showProjectColumn && (
-        <TableCell className="hidden py-2.5 align-top lg:table-cell">
+        <TableCell className="hidden py-2 align-top lg:table-cell">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               {projectName ? (
@@ -1022,7 +1022,7 @@ export const TransactionRow = React.memo(function TransactionRow({
       )}
 
       {/* Document column - always visible */}
-      <TableCell className="w-10 shrink-0 py-2.5 text-center align-top">
+      <TableCell className="w-10 shrink-0 py-2 text-center align-top">
         <div className="flex items-center justify-center">
           {isDocumentLoading ? (
             <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
@@ -1032,7 +1032,7 @@ export const TransactionRow = React.memo(function TransactionRow({
                 <button
                   type="button"
                   onClick={() => openDocumentUrl(tx.document!)}
-                  className="inline-flex h-9 w-9 items-center justify-center rounded-md transition-colors hover:bg-muted/40"
+                  className="inline-flex h-8 w-8 items-center justify-center rounded-md transition-colors hover:bg-muted/40"
                   aria-label={t.viewDocument}
                 >
                   <FileText className="h-[18px] w-[18px] fill-current text-foreground/80" />
@@ -1045,7 +1045,7 @@ export const TransactionRow = React.memo(function TransactionRow({
               <TooltipTrigger asChild>
                 <button
                   onClick={handleAttachDocument}
-                  className="inline-flex h-9 w-9 items-center justify-center rounded-md transition-colors hover:bg-muted/35"
+                  className="inline-flex h-8 w-8 items-center justify-center rounded-md transition-colors hover:bg-muted/35"
                   aria-label={isExpense ? t.attachProof : t.attachDocument}
                 >
                   <FileText className="h-[18px] w-[18px] text-foreground/65" />
@@ -1060,13 +1060,13 @@ export const TransactionRow = React.memo(function TransactionRow({
       </TableCell>
 
       {/* Actions menu column */}
-      <TableCell className="w-9 shrink-0 py-2.5 text-right align-top pr-2">
+      <TableCell className="w-9 shrink-0 py-2 text-right align-top pr-2">
         <DropdownMenu open={isActionsMenuOpen} onOpenChange={setIsActionsMenuOpen}>
           <DropdownMenuTrigger asChild>
             <Button
               variant="ghost"
               size="icon"
-              className="h-9 w-9 text-muted-foreground hover:text-foreground hover:bg-muted/40"
+              className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted/40"
               aria-label={t.moreOptionsAriaLabel ?? "Més opcions"}
             >
               <MoreVertical className="h-4 w-4" />

@@ -1763,7 +1763,7 @@ export default function ExpensesInboxPage() {
       ) : (
         /* Vista desktop - Taula amb jerarquia de columnes responsive */
         <div className="w-full rounded-lg border">
-          <Table className="w-full table-fixed">
+          <Table className="w-full table-fixed [&_td]:py-1.5 [&_th]:h-9 [&_th]:py-2">
             <TableHeader>
               <TableRow>
                 <TableHead className="w-[36px] px-2">
