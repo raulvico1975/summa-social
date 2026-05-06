@@ -102,6 +102,7 @@ import {
   shouldShowProjectExpenseLoadMore,
   type ProjectExpenseTableFilter,
 } from '@/lib/project-module/expense-assignment-policy';
+import { openDocumentUrl } from '@/lib/open-document-url';
 
 function formatAmount(amount: number): string {
   return new Intl.NumberFormat('ca-ES', {
@@ -1240,13 +1241,7 @@ export default function ExpensesInboxPage() {
         const downloadURL = await getDownloadURL(uploadResult.ref);
 
         const txRef = doc(firestore, 'organizations', organizationId, 'transactions', txId);
-        await updateDoc(txRef, {
-          document: {
-            url: downloadURL,
-            name: fileName,
-            storagePath: storagePath,
-          },
-        });
+        await updateDoc(txRef, { document: downloadURL });
       }
 
       await refresh();
@@ -1676,7 +1671,7 @@ export default function ExpensesInboxPage() {
                               className="h-8 w-8 shrink-0"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                window.open(expense.documentUrl!, '_blank', 'noopener,noreferrer');
+                                openDocumentUrl(expense.documentUrl!);
                               }}
                               aria-label={ep.tooltipOpenDocument}
                             >
@@ -1845,7 +1840,7 @@ export default function ExpensesInboxPage() {
                             <TooltipTrigger asChild>
                               <button
                                 type="button"
-                                onClick={() => window.open(expense.documentUrl!, '_blank', 'noopener,noreferrer')}
+                                onClick={() => openDocumentUrl(expense.documentUrl!)}
                                 className="inline-flex h-8 w-8 items-center justify-center rounded-md transition-colors hover:bg-muted/40"
                               >
                                 <FileText className="h-[18px] w-[18px] fill-current text-foreground/80" />

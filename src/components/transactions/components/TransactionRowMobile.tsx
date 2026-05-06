@@ -45,6 +45,7 @@ import {
 import {
   type StripeImputationSummary,
 } from '@/lib/stripe/activeStripeImputation';
+import { openDocumentUrl } from '@/lib/open-document-url';
 
 /**
  * Helper: middle ellipsis per a noms llargs
@@ -530,7 +531,7 @@ export const TransactionRowMobile = React.memo(function TransactionRowMobile({
             variant="ghost"
             size="icon"
             className="h-8 w-8 shrink-0"
-            onClick={() => window.open(tx.document!, '_blank')}
+            onClick={() => openDocumentUrl(tx.document!)}
             aria-label={t.viewDocument}
           >
             <FileText className="h-4 w-4 fill-current text-muted-foreground" />

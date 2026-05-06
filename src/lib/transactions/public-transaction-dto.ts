@@ -83,6 +83,16 @@ function getNullableString(value: unknown): string | null {
   return typeof value === 'string' ? value : null;
 }
 
+function getDocumentUrl(value: unknown): string | null {
+  if (typeof value === 'string') return value;
+  if (!value || typeof value !== 'object') return null;
+
+  const record = value as Record<string, unknown>;
+  return getNullableString(record.url)
+    ?? getNullableString(record.fileUrl)
+    ?? getNullableString(record.downloadURL);
+}
+
 function getNullableNumber(value: unknown): number | null {
   return typeof value === 'number' && Number.isFinite(value) ? value : null;
 }
@@ -112,7 +122,7 @@ export function serializePublicTransaction(
     contactId: getNullableString(data.contactId),
     contactType: getAllowedValue(data.contactType, ALLOWED_CONTACT_TYPES),
     projectId: getNullableString(data.projectId),
-    document: getNullableString(data.document),
+    document: getDocumentUrl(data.document),
     note: getNote(data),
     source: getAllowedValue(data.source, ALLOWED_SOURCES),
     transactionType: getAllowedValue(data.transactionType, ALLOWED_TRANSACTION_TYPES),

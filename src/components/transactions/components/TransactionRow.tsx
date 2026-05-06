@@ -68,6 +68,7 @@ import {
   type StripeImputationSummary,
 } from '@/lib/stripe/activeStripeImputation';
 import { isDemoEnv } from '@/lib/demo/isDemoOrg';
+import { openDocumentUrl } from '@/lib/open-document-url';
 
 // =============================================================================
 // HELPERS
@@ -1028,15 +1029,14 @@ export const TransactionRow = React.memo(function TransactionRow({
           ) : hasDocument ? (
             <Tooltip>
               <TooltipTrigger asChild>
-                <a
-                  href={tx.document!}
-                  target="_blank"
-                  rel="noopener noreferrer"
+                <button
+                  type="button"
+                  onClick={() => openDocumentUrl(tx.document!)}
                   className="inline-flex h-9 w-9 items-center justify-center rounded-md transition-colors hover:bg-muted/40"
                   aria-label={t.viewDocument}
                 >
                   <FileText className="h-[18px] w-[18px] fill-current text-foreground/80" />
-                </a>
+                </button>
               </TooltipTrigger>
               <TooltipContent>{t.viewDocument}</TooltipContent>
             </Tooltip>

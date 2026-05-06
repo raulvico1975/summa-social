@@ -57,3 +57,21 @@ test('serializePublicTransaction: retorna només les claus permeses i normalitza
   assert.equal('archivedByUid' in dto, false);
   assert.equal('internalPayload' in dto, false);
 });
+
+test('serializePublicTransaction: normalitza documents legacy amb objecte a URL segura', () => {
+  const dto = serializePublicTransaction('tx-legacy-doc', {
+    date: '2026-03-20',
+    description: 'Despesa amb document',
+    amount: -25,
+    document: {
+      url: 'https://firebasestorage.googleapis.com/v0/b/summa-social.firebasestorage.app/o/organizations%2Forg-1%2Ftransactions%2Ftx-1%2Ffactura.pdf?alt=media&token=abc',
+      storagePath: 'organizations/org-1/transactions/tx-1/factura.pdf',
+      name: 'factura.pdf',
+    },
+  });
+
+  assert.equal(
+    dto.document,
+    'https://firebasestorage.googleapis.com/v0/b/summa-social.firebasestorage.app/o/organizations%2Forg-1%2Ftransactions%2Ftx-1%2Ffactura.pdf?alt=media&token=abc'
+  );
+});
