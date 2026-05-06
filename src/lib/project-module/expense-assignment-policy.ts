@@ -54,6 +54,8 @@ export function shouldShowProjectExpenseLoadMore(options: {
   if (options.isLoading) return false;
   if (!options.hasMore) return false;
   if (options.isServerFiltered) return false;
+  if (options.tableFilter !== 'all') return false;
+  if (options.searchQuery.trim().length > 0) return false;
 
   return true;
 }
