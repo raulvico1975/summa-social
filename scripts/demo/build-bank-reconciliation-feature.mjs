@@ -15,28 +15,28 @@ const TMP_DIR = path.join(ROOT, 'tmp', 'bank-reconciliation-feature');
 const PUBLIC_VIDEO = path.join(
   ROOT,
   'public',
-  'visuals',
-  'functionalities',
-  'conciliation',
-  'animations',
+  'media',
+  'features',
+  'conciliacio-bancaria',
+  'video',
   'conciliation-feature-ca.mp4'
 );
 const PUBLIC_POSTER = path.join(
   ROOT,
   'public',
-  'visuals',
-  'functionalities',
-  'conciliation',
-  'optimized',
+  'media',
+  'features',
+  'conciliacio-bancaria',
+  'stills',
   'conciliation-feature-poster-ca.png'
 );
 const PUBLIC_VTT = path.join(
   ROOT,
   'public',
-  'visuals',
-  'functionalities',
-  'conciliation',
-  'animations',
+  'media',
+  'features',
+  'conciliacio-bancaria',
+  'video',
   'conciliation-feature-ca.vtt'
 );
 

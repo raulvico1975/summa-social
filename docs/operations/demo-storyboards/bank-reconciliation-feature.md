@@ -23,6 +23,6 @@ Mostrar que Summa converteix un extracte bancari en moviments classificats, revi
 ## Sortides
 
 - `output/playwright/bank-reconciliation-feature/bank-reconciliation-feature-ca.mp4`
-- `public/visuals/functionalities/conciliation/animations/conciliation-feature-ca.mp4`
-- `public/visuals/functionalities/conciliation/optimized/conciliation-feature-poster-ca.png`
-- `public/visuals/functionalities/conciliation/animations/conciliation-feature-ca.vtt`
+- `public/media/features/conciliacio-bancaria/video/conciliation-feature-ca.mp4`
+- `public/media/features/conciliacio-bancaria/stills/conciliation-feature-poster-ca.png`
+- `public/media/features/conciliacio-bancaria/video/conciliation-feature-ca.vtt`

@@ -12,8 +12,7 @@ import imageio_ffmpeg
 
 
 ROOT = Path(__file__).resolve().parents[2]
-OUTPUT_DIR = ROOT / "public" / "visuals" / "web" / "features-v3"
-FEATURES_DIR = ROOT / "public" / "visuals" / "web" / "features"
+FEATURES_ROOT = ROOT / "public" / "media" / "features"
 TARGET_SIZE = (3840, 2160)
 FPS = 30
 
@@ -21,6 +20,14 @@ MODEL_182_DIR = ROOT / "output" / "playwright" / "model-182-demo"
 MODEL_347_DIR = ROOT / "output" / "playwright" / "model-347-demo"
 HOME_EXTRA_DIR = ROOT / "output" / "playwright" / "home-extra-screens"
 DASHBOARD_DIR = ROOT / "output" / "playwright" / "dashboard-control-demo"
+
+
+def feature_still(feature: str, name: str) -> Path:
+    return FEATURES_ROOT / feature / "stills" / name
+
+
+def feature_video(feature: str, name: str) -> Path:
+    return FEATURES_ROOT / feature / "video" / name
 
 
 def lerp(a: float, b: float, t: float) -> float:
@@ -60,10 +67,12 @@ def interpolate_box(
 
 
 def save_poster(image: Image.Image, output_path: Path) -> None:
+    output_path.parent.mkdir(parents=True, exist_ok=True)
     image.save(output_path, format="WEBP", quality=92, method=6)
 
 
 def encode_video(frame_dir: Path, output_path: Path) -> None:
+    output_path.parent.mkdir(parents=True, exist_ok=True)
     ffmpeg = imageio_ffmpeg.get_ffmpeg_exe()
     args = [
         ffmpeg,
@@ -269,111 +278,109 @@ def build_dashboard_period_video(
 
 
 def main() -> None:
-    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    model182_report = load_first_existing(MODEL_182_DIR / "model-182-report.png", feature_still("model-182", "legacy-model-182.webp"))
+    model182_dialog = load_first_existing(MODEL_182_DIR / "model-182-dialog.png", feature_still("model-182", "legacy-model-182.webp"))
+    model347_report = load_first_existing(MODEL_347_DIR / "model-347-report.png", feature_still("model-347-ong", "legacy-model-347.webp"))
+    model347_dialog = load_first_existing(MODEL_347_DIR / "model-347-dialog.png", feature_still("model-347-ong", "legacy-model-347.webp"))
+    closing_bundle = load_first_existing(HOME_EXTRA_DIR / "closing-bundle-dialog.png", feature_still("model-347-ong", "legacy-excel-gestoria.webp"))
+    certificates = load_first_existing(feature_still("certificats-donacio", "legacy-certificats.webp"))
 
-    model182_report = load_first_existing(MODEL_182_DIR / "model-182-report.png", FEATURES_DIR / "block4_model182.webp")
-    model182_dialog = load_first_existing(MODEL_182_DIR / "model-182-dialog.png", FEATURES_DIR / "block4_model182.webp")
-    model347_report = load_first_existing(MODEL_347_DIR / "model-347-report.png", FEATURES_DIR / "block4_model347.webp")
-    model347_dialog = load_first_existing(MODEL_347_DIR / "model-347-dialog.png", FEATURES_DIR / "block4_model347.webp")
-    closing_bundle = load_first_existing(HOME_EXTRA_DIR / "closing-bundle-dialog.png", FEATURES_DIR / "block4_excel_gestoria.webp")
-    certificates = load_first_existing(FEATURES_DIR / "block4_certificats.webp")
+    project_budget = load_first_existing(HOME_EXTRA_DIR / "project-budget.png", feature_still("projectes-justificacio", "legacy-pressupost-partides.webp"))
+    project_expenses = load_first_existing(HOME_EXTRA_DIR / "project-expenses.png", feature_still("projectes-justificacio", "legacy-assignacio-despeses.webp"))
+    project_export = load_first_existing(HOME_EXTRA_DIR / "project-export-dialog.png", feature_still("projectes-justificacio", "legacy-export-financador.webp"))
+    field_capture = load_first_existing(HOME_EXTRA_DIR / "quick-expense-mobile.png", feature_still("projectes-justificacio", "legacy-captura-terreny.webp"))
 
-    project_budget = load_first_existing(HOME_EXTRA_DIR / "project-budget.png", FEATURES_DIR / "block5_pressupost_partides.webp")
-    project_expenses = load_first_existing(HOME_EXTRA_DIR / "project-expenses.png", FEATURES_DIR / "block5_assignacio_despeses.webp")
-    project_export = load_first_existing(HOME_EXTRA_DIR / "project-export-dialog.png", FEATURES_DIR / "block5_export_financador.webp")
-    field_capture = load_first_existing(HOME_EXTRA_DIR / "quick-expense-mobile.png", FEATURES_DIR / "block5_captura_terreny.webp")
-
-    dashboard_start = load_first_existing(DASHBOARD_DIR / "dashboard-start.png", FEATURES_DIR / "block6_dashboard.webp")
-    dashboard_overview = load_first_existing(DASHBOARD_DIR / "dashboard-overview.png", FEATURES_DIR / "block6_dashboard.webp")
-    dashboard_share = load_first_existing(DASHBOARD_DIR / "dashboard-share-summary.png", FEATURES_DIR / "block6_informe_junta.webp")
-    dashboard_pdf = load_first_existing(DASHBOARD_DIR / "dashboard-share-pdf-preview.png", FEATURES_DIR / "block6_exportacio_dades.webp")
+    dashboard_start = load_first_existing(DASHBOARD_DIR / "dashboard-start.png", feature_still("dashboard", "legacy-dashboard.webp"))
+    dashboard_overview = load_first_existing(DASHBOARD_DIR / "dashboard-overview.png", feature_still("dashboard", "legacy-dashboard.webp"))
+    dashboard_share = load_first_existing(DASHBOARD_DIR / "dashboard-share-summary.png", feature_still("control-visibilitat-entitats", "legacy-informe-junta.webp"))
+    dashboard_pdf = load_first_existing(DASHBOARD_DIR / "dashboard-share-pdf-preview.png", feature_still("control-visibilitat-entitats", "legacy-exportacio-dades.webp"))
 
     build_report_to_dialog_video(
         report_view=model182_report,
         dialog_view=model182_dialog,
-        output_video=OUTPUT_DIR / "block4_model182_loop_4k.mp4",
-        start_poster=OUTPUT_DIR / "block4_model182_start_4k.webp",
-        dialog_poster=OUTPUT_DIR / "block4_model182_dialog_4k.webp",
+        output_video=feature_video("model-182", "model-182-loop.mp4"),
+        start_poster=feature_still("model-182", "model-182-start.webp"),
+        dialog_poster=feature_still("model-182", "model-182-dialog.webp"),
         buttons_focus_box=box_from_region(TARGET_SIZE[0] * 0.71, TARGET_SIZE[1] * 0.17, 1.55),
     )
 
     build_report_to_dialog_video(
         report_view=model347_report,
         dialog_view=model347_dialog,
-        output_video=OUTPUT_DIR / "block4_model347_loop_4k.mp4",
-        start_poster=OUTPUT_DIR / "block4_model347_start_4k.webp",
-        dialog_poster=OUTPUT_DIR / "block4_model347_dialog_4k.webp",
+        output_video=feature_video("model-347-ong", "model-347-loop.mp4"),
+        start_poster=feature_still("model-347-ong", "model-347-start.webp"),
+        dialog_poster=feature_still("model-347-ong", "model-347-dialog.webp"),
         buttons_focus_box=box_from_region(TARGET_SIZE[0] * 0.71, TARGET_SIZE[1] * 0.17, 1.55),
     )
 
     build_single_view_zoom_video(
         view=certificates,
-        output_video=OUTPUT_DIR / "block4_certificats_loop_4k.mp4",
-        poster=OUTPUT_DIR / "block4_certificats_start_4k.webp",
+        output_video=feature_video("certificats-donacio", "certificats-loop.mp4"),
+        poster=feature_still("certificats-donacio", "certificats-start.webp"),
         focus_box=box_from_region(TARGET_SIZE[0] * 0.50, TARGET_SIZE[1] * 0.48, 1.12),
         hold_focus=60,
     )
 
     build_single_view_zoom_video(
         view=closing_bundle,
-        output_video=OUTPUT_DIR / "block4_excel_gestoria_loop_4k.mp4",
-        poster=OUTPUT_DIR / "block4_excel_gestoria_start_4k.webp",
+        output_video=feature_video("model-347-ong", "excel-gestoria-loop.mp4"),
+        poster=feature_still("model-347-ong", "excel-gestoria-start.webp"),
         focus_box=box_from_region(TARGET_SIZE[0] * 0.50, TARGET_SIZE[1] * 0.55, 1.24),
         hold_focus=60,
     )
 
     build_single_view_zoom_video(
         view=project_budget,
-        output_video=OUTPUT_DIR / "block5_pressupost_partides_loop_4k.mp4",
-        poster=OUTPUT_DIR / "block5_pressupost_partides_start_4k.webp",
+        output_video=feature_video("projectes-justificacio", "pressupost-partides-loop.mp4"),
+        poster=feature_still("projectes-justificacio", "pressupost-partides-start.webp"),
         focus_box=box_from_region(TARGET_SIZE[0] * 0.54, TARGET_SIZE[1] * 0.36, 1.10),
     )
 
     build_single_view_zoom_video(
         view=project_expenses,
-        output_video=OUTPUT_DIR / "block5_assignacio_despeses_loop_4k.mp4",
-        poster=OUTPUT_DIR / "block5_assignacio_despeses_start_4k.webp",
+        output_video=feature_video("projectes-justificacio", "assignacio-despeses-loop.mp4"),
+        poster=feature_still("projectes-justificacio", "assignacio-despeses-start.webp"),
         focus_box=box_from_region(TARGET_SIZE[0] * 0.48, TARGET_SIZE[1] * 0.42, 1.12),
     )
 
     build_single_view_zoom_video(
         view=field_capture,
-        output_video=OUTPUT_DIR / "block5_captura_terreny_loop_4k.mp4",
-        poster=OUTPUT_DIR / "block5_captura_terreny_start_4k.webp",
+        output_video=feature_video("projectes-justificacio", "captura-terreny-loop.mp4"),
+        poster=feature_still("projectes-justificacio", "captura-terreny-start.webp"),
         focus_box=box_from_region(TARGET_SIZE[0] * 0.52, TARGET_SIZE[1] * 0.44, 1.08),
     )
 
     build_two_state_video(
         start_view=project_budget,
         focus_view=project_export,
-        output_video=OUTPUT_DIR / "block5_export_financador_loop_4k.mp4",
-        start_poster=OUTPUT_DIR / "block5_export_financador_start_4k.webp",
-        focus_poster=OUTPUT_DIR / "block5_export_financador_dialog_4k.webp",
+        output_video=feature_video("projectes-justificacio", "export-financador-loop.mp4"),
+        start_poster=feature_still("projectes-justificacio", "export-financador-start.webp"),
+        focus_poster=feature_still("projectes-justificacio", "export-financador-dialog.webp"),
         focus_box=box_from_region(TARGET_SIZE[0] * 0.50, TARGET_SIZE[1] * 0.48, 1.12),
     )
 
     build_dashboard_period_video(
         start_view=dashboard_start,
         overview_view=dashboard_overview,
-        output_video=OUTPUT_DIR / "block6_dashboard_loop_4k.mp4",
-        poster=OUTPUT_DIR / "block6_dashboard_start_4k.webp",
+        output_video=feature_video("dashboard", "dashboard-loop.mp4"),
+        poster=feature_still("dashboard", "dashboard-start.webp"),
     )
 
     build_two_state_video(
         start_view=dashboard_overview,
         focus_view=dashboard_share,
-        output_video=OUTPUT_DIR / "block6_informe_junta_loop_4k.mp4",
-        start_poster=OUTPUT_DIR / "block6_informe_junta_start_4k.webp",
-        focus_poster=OUTPUT_DIR / "block6_informe_junta_modal_4k.webp",
+        output_video=feature_video("control-visibilitat-entitats", "informe-junta-loop.mp4"),
+        start_poster=feature_still("control-visibilitat-entitats", "informe-junta-start.webp"),
+        focus_poster=feature_still("control-visibilitat-entitats", "informe-junta-modal.webp"),
         focus_box=box_from_region(TARGET_SIZE[0] * 0.50, TARGET_SIZE[1] * 0.48, 1.10),
     )
 
     build_two_state_video(
         start_view=dashboard_share,
         focus_view=dashboard_pdf,
-        output_video=OUTPUT_DIR / "block6_exportacio_dades_loop_4k.mp4",
-        start_poster=OUTPUT_DIR / "block6_exportacio_dades_start_4k.webp",
-        focus_poster=OUTPUT_DIR / "block6_exportacio_dades_pdf_4k.webp",
+        output_video=feature_video("control-visibilitat-entitats", "exportacio-dades-loop.mp4"),
+        start_poster=feature_still("control-visibilitat-entitats", "exportacio-dades-start.webp"),
+        focus_poster=feature_still("control-visibilitat-entitats", "exportacio-dades-pdf.webp"),
         focus_box=box_from_region(TARGET_SIZE[0] * 0.50, TARGET_SIZE[1] * 0.48, 1.08),
         hold_focus=52,
     )

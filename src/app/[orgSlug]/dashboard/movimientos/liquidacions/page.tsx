@@ -973,7 +973,7 @@ export default function LiquidacionsPage() {
           <div className="flex flex-col gap-3">
             <div className="bg-white rounded-md border border-primary/20 p-2">
               <img
-                src="/visuals/marca/doodle_liquidac.png"
+                src="/brand/illustrations/doodles/doodle-liquidacions.png"
                 alt={trSafe('notes.liquidacions.imageAlt', 'Il·lustració sobre liquidacions')}
                 className="w-full max-w-full max-h-[160px] sm:max-h-[200px] object-contain"
               />

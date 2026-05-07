@@ -19,19 +19,19 @@ const SETTLED_RAW_DIR = path.join(TMP_DIR, 'video-settled-raw');
 const PUBLIC_VIDEO = path.join(
   process.cwd(),
   'public',
-  'visuals',
-  'functionalities',
+  'media',
+  'features',
   'dashboard',
-  'animations',
+  'video',
   'dashboard-control-feature-ca.mp4'
 );
 const PUBLIC_POSTER = path.join(
   process.cwd(),
   'public',
-  'visuals',
-  'functionalities',
+  'media',
+  'features',
   'dashboard',
-  'optimized',
+  'stills',
   'dashboard-control-feature-poster-ca.png'
 );
 

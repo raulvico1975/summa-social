@@ -24,28 +24,28 @@ const LIQUIDATIONS_RAW_DIR = path.join(TMP_DIR, 'liquidations-raw');
 const PUBLIC_VIDEO = path.join(
   process.cwd(),
   'public',
-  'visuals',
-  'functionalities',
+  'media',
+  'features',
   'expenses',
-  'animations',
+  'video',
   'expenses-feature-ca.mp4'
 );
 const PUBLIC_POSTER = path.join(
   process.cwd(),
   'public',
-  'visuals',
-  'functionalities',
+  'media',
+  'features',
   'expenses',
-  'optimized',
+  'stills',
   'expenses-feature-poster-ca.png'
 );
 const PUBLIC_VTT = path.join(
   process.cwd(),
   'public',
-  'visuals',
-  'functionalities',
+  'media',
+  'features',
   'expenses',
-  'animations',
+  'video',
   'expenses-feature-ca.vtt'
 );
 const BLOCK_VIDEO_PRESET = getBlockVideoPreset();
