@@ -7,129 +7,128 @@ import { getBlockVideoPreset } from './video-block-standards.mjs';
 
 const ROOT = process.cwd();
 const SOURCE_DIR = path.join(ROOT, 'output', 'playwright');
-const TARGET_DIR = path.join(ROOT, 'public', 'visuals', 'web', 'features');
 const TMP_DIR = path.join(ROOT, 'tmp', 'home-feature-assets');
 const BLOCK_VIDEO_PRESET = getBlockVideoPreset();
 const EXPORT_FRAME = BLOCK_VIDEO_PRESET.exportDimensions;
 
 const TARGETS = [
   {
-    output: 'block1_import_extractes.webp',
+    output: 'public/media/features/importar-extracte-bancari/stills/legacy-import-extractes.webp',
     source: 'bank-reconciliation-demo/import-account-dialog.png',
     layout: 'dialog',
   },
   {
-    output: 'block1_classificacio_auto.webp',
+    output: 'public/media/features/conciliacio-bancaria/stills/legacy-classificacio-auto.webp',
     source: 'bank-reconciliation-demo/after-ai-categorization.png',
     layout: 'desktop',
   },
   {
-    output: 'block1_assignacio_contactes.webp',
+    output: 'public/media/features/conciliacio-bancaria/stills/legacy-assignacio-contactes.webp',
     source: 'bank-reconciliation-demo/reconciliation-result.png',
     layout: 'desktop',
   },
   {
-    output: 'block1_multi_compte.webp',
+    output: 'public/media/features/conciliacio-bancaria/stills/legacy-multi-compte.webp',
     source: 'bank-reconciliation-demo/after-account-continue.png',
     layout: 'dialog',
   },
   {
-    output: 'block2_fitxa_donant.webp',
+    output: 'public/media/features/gestio-donants/stills/legacy-fitxa-donant.webp',
     source: 'donations-control-demo/donations-control-detail.png',
     layout: 'desktop',
   },
   {
-    output: 'block2_importacio_massiva.webp',
+    output: 'public/media/features/gestio-donants/stills/legacy-importacio-massiva.webp',
     source: 'home-extra-screens/donors-import-modal.png',
     layout: 'dialog',
   },
   {
-    output: 'block2_historic_donant.webp',
+    output: 'public/media/features/gestio-donants/stills/legacy-historic-donant.webp',
     source: 'donations-control-demo/donations-control-search.png',
     layout: 'desktop',
   },
   {
-    output: 'block2_estats_donants.webp',
+    output: 'public/media/features/gestio-donants/stills/legacy-estats-donants.webp',
     source: 'donations-control-demo/donations-control-start.png',
     layout: 'desktop',
   },
   {
-    output: 'block3_divisor_remeses.webp',
+    output: 'public/media/features/remeses-sepa/stills/legacy-divisor-remeses.webp',
     source: 'member-remittance-split-demo/split-result.png',
     layout: 'dialog',
   },
   {
-    output: 'block3_devolucions.webp',
+    output: 'public/media/features/remeses-sepa/stills/legacy-devolucions.webp',
     source: 'returns-resolution-demo/returns-dialog.png',
     layout: 'dialog',
   },
   {
-    output: 'block3_remeses_sepa.webp',
+    output: 'public/media/features/remeses-sepa/stills/legacy-remeses-sepa.webp',
     source: 'home-extra-screens/sepa-collection-page.png',
     layout: 'desktop',
   },
   {
-    output: 'block3_stripe.webp',
+    output: 'public/media/features/control-donacions-ong/stills/legacy-stripe.webp',
     source: 'home-extra-screens/movements-stripe.png',
     layout: 'desktop',
   },
   {
-    output: 'block4_model182.webp',
+    output: 'public/media/features/model-182/stills/legacy-model-182.webp',
     source: 'model-182-demo/model-182-report.png',
     layout: 'desktop',
   },
   {
-    output: 'block4_model347.webp',
+    output: 'public/media/features/model-347-ong/stills/legacy-model-347.webp',
     source: 'model-347-demo/model-347-report.png',
     layout: 'desktop',
   },
   {
-    output: 'block4_certificats.webp',
+    output: 'public/media/features/certificats-donacio/stills/legacy-certificats.webp',
     source: 'donation-certificates-demo/certificates-start.png',
     layout: 'desktop',
   },
   {
-    output: 'block4_excel_gestoria.webp',
+    output: 'public/media/features/model-347-ong/stills/legacy-excel-gestoria.webp',
     source: 'model-347-demo/model-347-start.png',
     layout: 'desktop',
   },
   {
-    output: 'block5_pressupost_partides.webp',
+    output: 'public/media/features/projectes-justificacio/stills/legacy-pressupost-partides.webp',
     source: 'home-extra-screens/project-budget.png',
     layout: 'desktop',
   },
   {
-    output: 'block5_assignacio_despeses.webp',
+    output: 'public/media/features/projectes-justificacio/stills/legacy-assignacio-despeses.webp',
     source: 'home-extra-screens/project-expenses.png',
     layout: 'desktop',
   },
   {
-    output: 'block5_captura_terreny.webp',
+    output: 'public/media/features/projectes-justificacio/stills/legacy-captura-terreny.webp',
     source: 'home-extra-screens/quick-expense-mobile.png',
     layout: 'mobile',
   },
   {
-    output: 'block5_export_financador.webp',
+    output: 'public/media/features/projectes-justificacio/stills/legacy-export-financador.webp',
     source: 'home-extra-screens/project-export-dialog.png',
     layout: 'dialog',
   },
   {
-    output: 'block6_dashboard.webp',
+    output: 'public/media/features/dashboard/stills/legacy-dashboard.webp',
     source: 'member-remittance-demo/dashboard.png',
     layout: 'desktop',
   },
   {
-    output: 'block6_alertes.webp',
+    output: 'public/media/features/control-visibilitat-entitats/stills/legacy-alertes.webp',
     source: 'returns-resolution-demo/returns-start.png',
     layout: 'desktop',
   },
   {
-    output: 'block6_informe_junta.webp',
+    output: 'public/media/features/control-visibilitat-entitats/stills/legacy-informe-junta.webp',
     source: 'home-extra-screens/closing-bundle-dialog.png',
     layout: 'dialog',
   },
   {
-    output: 'block6_exportacio_dades.webp',
+    output: 'public/media/features/control-visibilitat-entitats/stills/legacy-exportacio-dades.webp',
     source: 'model-347-demo/model-347-dialog.png',
     layout: 'dialog',
   },
@@ -196,7 +195,6 @@ function buildMagickArgs(inputPath, tempPath, layout) {
 }
 
 function main() {
-  ensureDir(TARGET_DIR);
   resetDir(TMP_DIR);
 
   for (const target of TARGETS) {
@@ -206,9 +204,11 @@ function main() {
     }
 
     const tempPngPath = path.join(TMP_DIR, target.output.replace(/\.webp$/, '.png'));
-    const outputPath = path.join(TARGET_DIR, target.output);
+    const outputPath = path.join(ROOT, target.output);
 
+    ensureDir(path.dirname(tempPngPath));
     run('magick', buildMagickArgs(sourcePath, tempPngPath, target.layout));
+    ensureDir(path.dirname(outputPath));
     run('cwebp', ['-quiet', '-q', '85', tempPngPath, '-o', outputPath]);
   }
 }

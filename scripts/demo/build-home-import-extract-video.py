@@ -14,7 +14,8 @@ import imageio_ffmpeg
 
 ROOT = Path(__file__).resolve().parents[2]
 SOURCE_DIR = ROOT / "output" / "playwright" / "bank-reconciliation-import-only"
-OUTPUT_DIR = ROOT / "public" / "visuals" / "web" / "features-v3"
+OUTPUT_STILLS_DIR = ROOT / "public" / "media" / "features" / "importar-extracte-bancari" / "stills"
+OUTPUT_VIDEO_DIR = ROOT / "public" / "media" / "features" / "importar-extracte-bancari" / "video"
 TARGET_SIZE = (3840, 2160)
 FPS = 30
 
@@ -136,15 +137,16 @@ def encode_video(frame_dir: Path, output_path: Path) -> None:
 
 
 def main() -> None:
-    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    OUTPUT_STILLS_DIR.mkdir(parents=True, exist_ok=True)
+    OUTPUT_VIDEO_DIR.mkdir(parents=True, exist_ok=True)
 
     start = load_and_resize(SOURCE_DIR / "movements-start.png")
     modal = load_and_resize(SOURCE_DIR / "import-account-dialog.png")
     preimport = load_and_resize(ROOT / "output" / "playwright" / "bank-reconciliation-demo" / "import-dedupe.png")
 
-    save_poster(start, OUTPUT_DIR / "block1_import_extractes_start_4k.webp")
-    save_poster(modal, OUTPUT_DIR / "block1_import_extractes_modal_4k.webp")
-    save_poster(preimport, OUTPUT_DIR / "block1_import_extractes_preimport_4k.webp")
+    save_poster(start, OUTPUT_STILLS_DIR / "import-extractes-start.webp")
+    save_poster(modal, OUTPUT_STILLS_DIR / "import-extractes-modal.webp")
+    save_poster(preimport, OUTPUT_STILLS_DIR / "import-extractes-preimport.webp")
 
     button_box = detect_import_button(start)
     full_box = (0.0, 0.0, float(TARGET_SIZE[0]), float(TARGET_SIZE[1]))
@@ -190,7 +192,7 @@ def main() -> None:
 
         write_frame(start, repeat=36)
 
-        encode_video(frame_dir, OUTPUT_DIR / "block1_import_extractes_loop_4k.mp4")
+        encode_video(frame_dir, OUTPUT_VIDEO_DIR / "import-extractes-loop.mp4")
 
 
 if __name__ == "__main__":

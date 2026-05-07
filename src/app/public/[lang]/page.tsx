@@ -1387,22 +1387,22 @@ const FEATURES_PATH: Record<PublicLocale, string> = {
 
 const HOME_VISUALS = {
   default: {
-    dashboard: '/visuals/web/web_dashboard.webp',
-    conciliation: '/visuals/web/web_concilia_bancaria.webp',
-    remittances: '/visuals/web/web_divide_remeses.webp',
-    donations: '/visuals/web/web_divide_stripe.webp',
-    fiscal: '/visuals/web/web_certificats_182.webp',
-    admin: '/visuals/web/web_gestio_docs.webp',
-    projects: '/visuals/web/web_seguiment_projectes.webp',
+    dashboard: '/media/features/dashboard/stills/dashboard-overview.webp',
+    conciliation: '/media/features/conciliacio-bancaria/stills/conciliacio-bancaria-es.webp',
+    remittances: '/media/features/remeses-sepa/stills/divide-remeses-es.webp',
+    donations: '/media/features/control-donacions-ong/stills/stripe-donacions-es.webp',
+    fiscal: '/media/features/model-182/stills/certificats-182-es.webp',
+    admin: '/media/features/expenses/stills/gestio-documents-es.webp',
+    projects: '/media/features/projectes-justificacio/stills/seguiment-projectes-es.webp',
   },
   ca: {
-    dashboard: '/visuals/web/web_dashboard.webp',
-    conciliation: '/visuals/web/web_concilia_bancaria_ca.webp',
-    remittances: '/visuals/web/web_divideix_remeses_ca.webp',
-    donations: '/visuals/web/web_divideix_stripe_ca.webp',
-    fiscal: '/visuals/web/web_certificats_182_ca.webp',
-    admin: '/visuals/web/web_gestio_docs_ca.webp',
-    projects: '/visuals/web/web_seguiment_projectes_ca.webp',
+    dashboard: '/media/features/dashboard/stills/dashboard-overview.webp',
+    conciliation: '/media/features/conciliacio-bancaria/stills/conciliacio-bancaria-ca.webp',
+    remittances: '/media/features/remeses-sepa/stills/divide-remeses-ca.webp',
+    donations: '/media/features/control-donacions-ong/stills/stripe-donacions-ca.webp',
+    fiscal: '/media/features/model-182/stills/certificats-182-ca.webp',
+    admin: '/media/features/expenses/stills/gestio-documents-ca.webp',
+    projects: '/media/features/projectes-justificacio/stills/seguiment-projectes-ca.webp',
   },
 } as const;
 
@@ -1499,146 +1499,146 @@ export default async function HomePage({ params }: PageProps) {
     control: ['dashboard', 'boardReport', 'dataExport'],
   };
   const CARD_SCREENSHOTS: Record<string, string> = {
-    'conciliation.importStatements': '/visuals/web/features-v3/block1_import_extractes_start_4k.webp',
-    'conciliation.autoClassification': '/visuals/web/features-v3/block1_classificacio_auto_4k.webp',
-    'conciliation.contactAssignment': '/visuals/web/features-v3/block1_assignacio_contactes_4k.webp',
-    'conciliation.multiBankAccount': '/visuals/web/features-v3/block1_multi_compte_4k.webp',
-    'donorsMembers.donorProfile': '/visuals/web/features/block2_fitxa_donant.webp',
-    'donorsMembers.bulkImport': '/visuals/web/features/block2_importacio_massiva.webp',
-    'donorsMembers.donorHistory': '/visuals/web/features/block2_historic_donant.webp',
-    'donorsMembers.operationalStatus': '/visuals/web/features/block2_estats_donants.webp',
-    'payments.remittanceSplitter': '/visuals/web/features/block3_divisor_remeses.webp',
-    'payments.bankReturns': '/visuals/web/features/block3_devolucions.webp',
-    'payments.sepaPayments': '/visuals/web/features/block3_remeses_sepa.webp',
-    'payments.stripeDonations': '/visuals/web/features/block3_stripe.webp',
-    'fiscal.model182': '/visuals/web/features/block4_model182.webp',
-    'fiscal.model347': '/visuals/web/features/block4_model347.webp',
-    'fiscal.donationCertificates': '/visuals/web/features/block4_certificats.webp',
-    'fiscal.cleanExcel': '/visuals/web/features/block4_excel_gestoria.webp',
-    'projects.budgetLines': '/visuals/web/features/block5_pressupost_partides.webp',
-    'projects.expenseAssignment': '/visuals/web/features/block5_assignacio_despeses.webp',
-    'projects.fieldCapture': '/visuals/web/features/block5_captura_terreny.webp',
-    'projects.funderExport': '/visuals/web/features/block5_export_financador.webp',
-    'control.dashboard': '/visuals/web/features/block6_dashboard.webp',
-    'control.smartAlerts': '/visuals/web/features/block6_alertes.webp',
-    'control.boardReport': '/visuals/web/features/block6_informe_junta.webp',
-    'control.dataExport': '/visuals/web/features/block6_exportacio_dades.webp',
+    'conciliation.importStatements': '/media/features/importar-extracte-bancari/stills/import-extractes-start.webp',
+    'conciliation.autoClassification': '/media/features/conciliacio-bancaria/stills/classificacio-auto.webp',
+    'conciliation.contactAssignment': '/media/features/conciliacio-bancaria/stills/assignacio-contactes.webp',
+    'conciliation.multiBankAccount': '/media/features/conciliacio-bancaria/stills/multi-compte.webp',
+    'donorsMembers.donorProfile': '/media/features/gestio-donants/stills/legacy-fitxa-donant.webp',
+    'donorsMembers.bulkImport': '/media/features/gestio-donants/stills/legacy-importacio-massiva.webp',
+    'donorsMembers.donorHistory': '/media/features/gestio-donants/stills/legacy-historic-donant.webp',
+    'donorsMembers.operationalStatus': '/media/features/gestio-donants/stills/legacy-estats-donants.webp',
+    'payments.remittanceSplitter': '/media/features/remeses-sepa/stills/legacy-divisor-remeses.webp',
+    'payments.bankReturns': '/media/features/remeses-sepa/stills/legacy-devolucions.webp',
+    'payments.sepaPayments': '/media/features/remeses-sepa/stills/legacy-remeses-sepa.webp',
+    'payments.stripeDonations': '/media/features/control-donacions-ong/stills/legacy-stripe.webp',
+    'fiscal.model182': '/media/features/model-182/stills/legacy-model-182.webp',
+    'fiscal.model347': '/media/features/model-347-ong/stills/legacy-model-347.webp',
+    'fiscal.donationCertificates': '/media/features/certificats-donacio/stills/legacy-certificats.webp',
+    'fiscal.cleanExcel': '/media/features/model-347-ong/stills/legacy-excel-gestoria.webp',
+    'projects.budgetLines': '/media/features/projectes-justificacio/stills/legacy-pressupost-partides.webp',
+    'projects.expenseAssignment': '/media/features/projectes-justificacio/stills/legacy-assignacio-despeses.webp',
+    'projects.fieldCapture': '/media/features/projectes-justificacio/stills/legacy-captura-terreny.webp',
+    'projects.funderExport': '/media/features/projectes-justificacio/stills/legacy-export-financador.webp',
+    'control.dashboard': '/media/features/dashboard/stills/legacy-dashboard.webp',
+    'control.smartAlerts': '/media/features/control-visibilitat-entitats/stills/legacy-alertes.webp',
+    'control.boardReport': '/media/features/control-visibilitat-entitats/stills/legacy-informe-junta.webp',
+    'control.dataExport': '/media/features/control-visibilitat-entitats/stills/legacy-exportacio-dades.webp',
   };
   const CARD_VIDEO_OVERRIDES: Partial<Record<string, PublicLandingHeroMedia>> = {
     'conciliation.importStatements': createVideoMedia(
-      '/visuals/web/features-v3/block1_import_extractes_loop_4k.mp4',
+      '/media/features/importar-extracte-bancari/video/import-extractes-loop.mp4',
       t.home.blocks.conciliation.cards.importStatements.screenshotAlt,
-      '/visuals/web/features-v3/block1_import_extractes_start_4k.webp'
+      '/media/features/importar-extracte-bancari/stills/import-extractes-start.webp'
     ),
     'conciliation.autoClassification': createVideoMedia(
-      '/visuals/web/features-v3/block1_classificacio_auto_loop_4k.mp4?v=20260406b',
+      '/media/features/conciliacio-bancaria/video/classificacio-auto-loop.mp4?v=20260406b',
       t.home.blocks.conciliation.cards.autoClassification.screenshotAlt,
-      '/visuals/web/features-v3/block1_classificacio_auto_start_4k.webp?v=20260406b'
+      '/media/features/conciliacio-bancaria/stills/classificacio-auto-start.webp?v=20260406b'
     ),
     'conciliation.contactAssignment': createVideoMedia(
-      '/visuals/web/features-v3/block1_assignacio_contactes_loop_4k.mp4?v=20260406b',
+      '/media/features/conciliacio-bancaria/video/assignacio-contactes-loop.mp4?v=20260406b',
       t.home.blocks.conciliation.cards.contactAssignment.screenshotAlt,
-      '/visuals/web/features-v3/block1_assignacio_contactes_start_4k.webp?v=20260406b'
+      '/media/features/conciliacio-bancaria/stills/assignacio-contactes-start.webp?v=20260406b'
     ),
     'conciliation.multiBankAccount': createVideoMedia(
-      '/visuals/web/features-v3/block1_multi_compte_loop_4k.mp4?v=20260406b',
+      '/media/features/conciliacio-bancaria/video/multi-compte-loop.mp4?v=20260406b',
       t.home.blocks.conciliation.cards.multiBankAccount.screenshotAlt,
-      '/visuals/web/features-v3/block1_multi_compte_start_4k.webp?v=20260406b'
+      '/media/features/conciliacio-bancaria/stills/multi-compte-start.webp?v=20260406b'
     ),
     'donorsMembers.donorProfile': createVideoMedia(
-      '/visuals/web/features-v3/block2_fitxa_fiscal_loop_4k.mp4?v=20260406b',
+      '/media/features/gestio-donants/video/fitxa-fiscal-loop.mp4?v=20260406b',
       t.home.blocks.donorsMembers.cards.donorProfile.screenshotAlt,
-      '/visuals/web/features-v3/block2_fitxa_fiscal_start_4k.webp?v=20260406b'
+      '/media/features/gestio-donants/stills/fitxa-fiscal-start.webp?v=20260406b'
     ),
     'donorsMembers.bulkImport': createVideoMedia(
-      '/visuals/web/features-v3/block2_importacio_massiva_loop_4k.mp4?v=20260406b',
+      '/media/features/gestio-donants/video/importacio-massiva-loop.mp4?v=20260406b',
       t.home.blocks.donorsMembers.cards.bulkImport.screenshotAlt,
-      '/visuals/web/features-v3/block2_importacio_massiva_start_4k.webp?v=20260406b'
+      '/media/features/gestio-donants/stills/importacio-massiva-start.webp?v=20260406b'
     ),
     'donorsMembers.donorHistory': createVideoMedia(
-      '/visuals/web/features-v3/block2_historic_donant_loop_4k.mp4?v=20260406b',
+      '/media/features/gestio-donants/video/historic-donant-loop.mp4?v=20260406b',
       t.home.blocks.donorsMembers.cards.donorHistory.screenshotAlt,
-      '/visuals/web/features-v3/block2_historic_donant_start_4k.webp?v=20260406b'
+      '/media/features/gestio-donants/stills/historic-donant-start.webp?v=20260406b'
     ),
     'donorsMembers.operationalStatus': createVideoMedia(
-      '/visuals/web/features-v3/block2_filtres_socis_loop_4k.mp4?v=20260406b',
+      '/media/features/gestio-donants/video/filtres-socis-loop.mp4?v=20260406b',
       t.home.blocks.donorsMembers.cards.operationalStatus.screenshotAlt,
-      '/visuals/web/features-v3/block2_filtres_socis_start_4k.webp?v=20260406b'
+      '/media/features/gestio-donants/stills/filtres-socis-start.webp?v=20260406b'
     ),
     'payments.remittanceSplitter': createVideoMedia(
-      '/visuals/web/features-v3/block3_divisor_remeses_loop_4k.mp4?v=20260406b',
+      '/media/features/remeses-sepa/video/divisor-remeses-loop.mp4?v=20260406b',
       t.home.blocks.payments.cards.remittanceSplitter.screenshotAlt,
-      '/visuals/web/features-v3/block3_divisor_remeses_start_4k.webp?v=20260406b'
+      '/media/features/remeses-sepa/stills/divisor-remeses-start.webp?v=20260406b'
     ),
     'payments.bankReturns': createVideoMedia(
-      '/visuals/web/features-v3/block3_devolucions_loop_4k.mp4?v=20260406b',
+      '/media/features/remeses-sepa/video/devolucions-loop.mp4?v=20260406b',
       t.home.blocks.payments.cards.bankReturns.screenshotAlt,
-      '/visuals/web/features-v3/block3_devolucions_start_4k.webp?v=20260406b'
+      '/media/features/remeses-sepa/stills/devolucions-start.webp?v=20260406b'
     ),
     'payments.sepaPayments': createVideoMedia(
-      '/visuals/web/features-v3/block3_remeses_sepa_loop_4k.mp4?v=20260406b',
+      '/media/features/remeses-sepa/video/remeses-sepa-loop.mp4?v=20260406b',
       t.home.blocks.payments.cards.sepaPayments.screenshotAlt,
-      '/visuals/web/features-v3/block3_remeses_sepa_start_4k.webp?v=20260406b'
+      '/media/features/remeses-sepa/stills/remeses-sepa-start.webp?v=20260406b'
     ),
     'payments.stripeDonations': createVideoMedia(
-      '/visuals/web/features-v3/block3_stripe_online_loop_4k.mp4?v=20260406b',
+      '/media/features/control-donacions-ong/video/stripe-online-loop.mp4?v=20260406b',
       t.home.blocks.payments.cards.stripeDonations.screenshotAlt,
-      '/visuals/web/features-v3/block3_stripe_online_start_4k.webp?v=20260406b'
+      '/media/features/control-donacions-ong/stills/stripe-online-start.webp?v=20260406b'
     ),
     'fiscal.model182': createVideoMedia(
-      '/visuals/web/features-v3/block4_model182_loop_4k.mp4?v=20260406a',
+      '/media/features/model-182/video/model-182-loop.mp4?v=20260406a',
       t.home.blocks.fiscal.cards.model182.screenshotAlt,
-      '/visuals/web/features-v3/block4_model182_start_4k.webp?v=20260406a'
+      '/media/features/model-182/stills/model-182-start.webp?v=20260406a'
     ),
     'fiscal.model347': createVideoMedia(
-      '/visuals/web/features-v3/block4_model347_loop_4k.mp4?v=20260406a',
+      '/media/features/model-347-ong/video/model-347-loop.mp4?v=20260406a',
       t.home.blocks.fiscal.cards.model347.screenshotAlt,
-      '/visuals/web/features-v3/block4_model347_start_4k.webp?v=20260406a'
+      '/media/features/model-347-ong/stills/model-347-start.webp?v=20260406a'
     ),
     'fiscal.donationCertificates': createVideoMedia(
-      '/visuals/web/features-v3/block4_certificats_loop_4k.mp4?v=20260406b',
+      '/media/features/certificats-donacio/video/certificats-loop.mp4?v=20260406b',
       t.home.blocks.fiscal.cards.donationCertificates.screenshotAlt,
-      '/visuals/web/features-v3/block4_certificats_start_4k.webp?v=20260406b'
+      '/media/features/certificats-donacio/stills/certificats-start.webp?v=20260406b'
     ),
     'fiscal.cleanExcel': createVideoMedia(
-      '/visuals/web/features-v3/block4_excel_gestoria_loop_4k.mp4?v=20260406a',
+      '/media/features/model-347-ong/video/excel-gestoria-loop.mp4?v=20260406a',
       t.home.blocks.fiscal.cards.cleanExcel.screenshotAlt,
-      '/visuals/web/features-v3/block4_excel_gestoria_start_4k.webp?v=20260406a'
+      '/media/features/model-347-ong/stills/excel-gestoria-start.webp?v=20260406a'
     ),
     'projects.budgetLines': createVideoMedia(
-      '/visuals/web/features-v3/block5_pressupost_partides_loop_4k.mp4?v=20260406a',
+      '/media/features/projectes-justificacio/video/pressupost-partides-loop.mp4?v=20260406a',
       t.home.blocks.projects.cards.budgetLines.screenshotAlt,
-      '/visuals/web/features-v3/block5_pressupost_partides_start_4k.webp?v=20260406a'
+      '/media/features/projectes-justificacio/stills/pressupost-partides-start.webp?v=20260406a'
     ),
     'projects.expenseAssignment': createVideoMedia(
-      '/visuals/web/features-v3/block5_assignacio_despeses_loop_4k.mp4?v=20260406a',
+      '/media/features/projectes-justificacio/video/assignacio-despeses-loop.mp4?v=20260406a',
       t.home.blocks.projects.cards.expenseAssignment.screenshotAlt,
-      '/visuals/web/features-v3/block5_assignacio_despeses_start_4k.webp?v=20260406a'
+      '/media/features/projectes-justificacio/stills/assignacio-despeses-start.webp?v=20260406a'
     ),
     'projects.fieldCapture': createVideoMedia(
-      '/visuals/web/features-v3/block5_captura_terreny_loop_4k.mp4?v=20260406a',
+      '/media/features/projectes-justificacio/video/captura-terreny-loop.mp4?v=20260406a',
       t.home.blocks.projects.cards.fieldCapture.screenshotAlt,
-      '/visuals/web/features-v3/block5_captura_terreny_start_4k.webp?v=20260406a'
+      '/media/features/projectes-justificacio/stills/captura-terreny-start.webp?v=20260406a'
     ),
     'projects.funderExport': createVideoMedia(
-      '/visuals/web/features-v3/block5_export_financador_loop_4k.mp4?v=20260406a',
+      '/media/features/projectes-justificacio/video/export-financador-loop.mp4?v=20260406a',
       t.home.blocks.projects.cards.funderExport.screenshotAlt,
-      '/visuals/web/features-v3/block5_export_financador_start_4k.webp?v=20260406a'
+      '/media/features/projectes-justificacio/stills/export-financador-start.webp?v=20260406a'
     ),
     'control.dashboard': createVideoMedia(
-      '/visuals/web/features-v3/block6_dashboard_loop_4k.mp4?v=20260406a',
+      '/media/features/dashboard/video/dashboard-loop.mp4?v=20260406a',
       t.home.blocks.control.cards.dashboard.screenshotAlt,
-      '/visuals/web/features-v3/block6_dashboard_start_4k.webp?v=20260406a'
+      '/media/features/dashboard/stills/dashboard-start.webp?v=20260406a'
     ),
     'control.boardReport': createVideoMedia(
-      '/visuals/web/features-v3/block6_informe_junta_loop_4k.mp4?v=20260406a',
+      '/media/features/control-visibilitat-entitats/video/informe-junta-loop.mp4?v=20260406a',
       t.home.blocks.control.cards.boardReport.screenshotAlt,
-      '/visuals/web/features-v3/block6_informe_junta_start_4k.webp?v=20260406a'
+      '/media/features/control-visibilitat-entitats/stills/informe-junta-start.webp?v=20260406a'
     ),
     'control.dataExport': createVideoMedia(
-      '/visuals/web/features-v3/block6_exportacio_dades_loop_4k.mp4?v=20260406a',
+      '/media/features/control-visibilitat-entitats/video/exportacio-dades-loop.mp4?v=20260406a',
       t.home.blocks.control.cards.dataExport.screenshotAlt,
-      '/visuals/web/features-v3/block6_exportacio_dades_start_4k.webp?v=20260406a'
+      '/media/features/control-visibilitat-entitats/stills/exportacio-dades-start.webp?v=20260406a'
     ),
   };
 
@@ -1813,7 +1813,7 @@ export default async function HomePage({ params }: PageProps) {
                     </div>
                     <div className="overflow-hidden bg-slate-100/80">
                       <Image
-                        src="/visuals/web/web_pantalla_summa.webp"
+                        src="/media/editorial/web/summa-screen-overview.webp"
                         alt={t.home.hero.visualAlt}
                         width={1600}
                         height={1000}

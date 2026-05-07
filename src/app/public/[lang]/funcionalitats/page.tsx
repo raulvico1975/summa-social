@@ -94,32 +94,32 @@ const FEATURES_LAYOUT_COPY: Record<
 
 const WEB_VISUALS = {
   default: {
-    dashboard: '/visuals/web/web_dashboard.webp',
-    summary: '/visuals/web/web_pantalla_summa.webp',
-    conciliation: '/visuals/web/web_concilia_bancaria.webp',
-    remittances: '/visuals/web/web_divide_remeses.webp',
-    donations: '/visuals/web/web_divide_stripe.webp',
-    fiscal: '/visuals/web/web_certificats_182.webp',
-    expenses: '/visuals/web/web_gestio_docs.webp',
-    liquidations: '/visuals/web/web_liquidacions.webp',
-    returns: '/visuals/web/web_gestiona_devolucions.webp',
-    pending: '/visuals/web/web_pendents.webp',
-    reports: '/visuals/web/web_informes_juntes.webp',
-    projects: '/visuals/web/web_seguiment_projectes.webp',
+    dashboard: '/media/features/dashboard/stills/dashboard-overview.webp',
+    summary: '/media/editorial/web/summa-screen-overview.webp',
+    conciliation: '/media/features/conciliacio-bancaria/stills/conciliacio-bancaria-es.webp',
+    remittances: '/media/features/remeses-sepa/stills/divide-remeses-es.webp',
+    donations: '/media/features/control-donacions-ong/stills/stripe-donacions-es.webp',
+    fiscal: '/media/features/model-182/stills/certificats-182-es.webp',
+    expenses: '/media/features/expenses/stills/gestio-documents-es.webp',
+    liquidations: '/media/features/expenses/stills/liquidacions.webp',
+    returns: '/media/features/remeses-sepa/stills/gestiona-devolucions.webp',
+    pending: '/media/features/dashboard/stills/pendents.webp',
+    reports: '/media/features/control-visibilitat-entitats/stills/informes-juntes.webp',
+    projects: '/media/features/projectes-justificacio/stills/seguiment-projectes-es.webp',
   },
   ca: {
-    dashboard: '/visuals/web/web_dashboard.webp',
-    summary: '/visuals/web/web_pantalla_summa.webp',
-    conciliation: '/visuals/web/web_concilia_bancaria_ca.webp',
-    remittances: '/visuals/web/web_divideix_remeses_ca.webp',
-    donations: '/visuals/web/web_divideix_stripe_ca.webp',
-    fiscal: '/visuals/web/web_certificats_182_ca.webp',
-    expenses: '/visuals/web/web_gestio_docs_ca.webp',
-    liquidations: '/visuals/web/web_liquidacions.webp',
-    returns: '/visuals/web/web_gestiona_devolucions.webp',
-    pending: '/visuals/web/web_pendents.webp',
-    reports: '/visuals/web/web_informes_juntes.webp',
-    projects: '/visuals/web/web_seguiment_projectes_ca.webp',
+    dashboard: '/media/features/dashboard/stills/dashboard-overview.webp',
+    summary: '/media/editorial/web/summa-screen-overview.webp',
+    conciliation: '/media/features/conciliacio-bancaria/stills/conciliacio-bancaria-ca.webp',
+    remittances: '/media/features/remeses-sepa/stills/divide-remeses-ca.webp',
+    donations: '/media/features/control-donacions-ong/stills/stripe-donacions-ca.webp',
+    fiscal: '/media/features/model-182/stills/certificats-182-ca.webp',
+    expenses: '/media/features/expenses/stills/gestio-documents-ca.webp',
+    liquidations: '/media/features/expenses/stills/liquidacions.webp',
+    returns: '/media/features/remeses-sepa/stills/gestiona-devolucions.webp',
+    pending: '/media/features/dashboard/stills/pendents.webp',
+    reports: '/media/features/control-visibilitat-entitats/stills/informes-juntes.webp',
+    projects: '/media/features/projectes-justificacio/stills/seguiment-projectes-ca.webp',
   },
 } as const;
 
@@ -531,7 +531,7 @@ function getSectionShowcaseMedia(
   return {
     control: createImageMedia(visuals.dashboard, copy.sections.control.title),
     conciliation: createImageMedia(visuals.conciliation, copy.sections.conciliation.title),
-    donorsMembers: createImageMedia('/visuals/web/features-v3/block2_historic_donant_start_4k.webp', copy.sections.donorsMembers.title),
+    donorsMembers: createImageMedia('/media/features/gestio-donants/stills/historic-donant-start.webp', copy.sections.donorsMembers.title),
     payments: createImageMedia(visuals.remittances, copy.sections.payments.title),
     fiscal: createImageMedia(visuals.fiscal, copy.sections.fiscal.title),
     projects: createImageMedia(visuals.projects, copy.sections.projects.title),
@@ -679,7 +679,7 @@ export default async function FeaturesPage({ params }: PageProps) {
               : locale === 'fr'
                 ? 'Chargez la base initiale de membres ou donateurs sans créer chaque fiche.'
                 : 'Carrega a base inicial de sócios ou doadores sem criar fichas uma a uma.',
-          image: '/visuals/web/features-v3/block2_importacio_massiva_start_4k.webp',
+          image: '/media/features/gestio-donants/stills/importacio-massiva-start.webp',
           href: `/${detailLocale}/gestio-donants`,
           ctaLabel: copy.detailCta,
           badgeLabel: copy.screenBadge,
@@ -694,7 +694,7 @@ export default async function FeaturesPage({ params }: PageProps) {
               : locale === 'fr'
                 ? 'Consultez contributions, incidents et données fiscales dans la même fiche.'
                 : 'Consulta contribuições, incidências e dados fiscais na mesma ficha.',
-          image: '/visuals/web/features-v3/block2_historic_donant_start_4k.webp',
+          image: '/media/features/gestio-donants/stills/historic-donant-start.webp',
           href: `/${detailLocale}/gestio-donants`,
           ctaLabel: copy.detailCta,
           badgeLabel: copy.screenBadge,
@@ -779,7 +779,7 @@ export default async function FeaturesPage({ params }: PageProps) {
               : locale === 'fr'
                 ? 'Prépare la sortie finale pour que le cabinet travaille avec une base propre.'
                 : 'Prepara a saída final para que a contabilidade trabalhe com uma base limpa.',
-          image: '/visuals/web/features-v3/block4_excel_gestoria_start_4k.webp',
+          image: '/media/features/model-347-ong/stills/excel-gestoria-start.webp',
           href: `/${detailLocale}/model-182`,
           ctaLabel: copy.detailCta,
           badgeLabel: copy.screenBadge,

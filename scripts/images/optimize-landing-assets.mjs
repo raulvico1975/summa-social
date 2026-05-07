@@ -4,7 +4,7 @@ import fs from 'fs/promises';
 import path from 'path';
 import { spawn } from 'child_process';
 
-const LANDINGS_ROOT = path.join(process.cwd(), 'public', 'visuals', 'landings');
+const LANDINGS_ROOT = path.join(process.cwd(), 'public', 'media', 'landing-pages');
 const IMAGE_EXTENSIONS = new Set(['.jpg', '.jpeg', '.png', '.webp']);
 const VIDEO_EXTENSIONS = new Set(['.mp4', '.mov', '.m4v', '.webm']);
 
@@ -252,8 +252,8 @@ async function optimizeLandingAssets() {
     }
 
     const sourceDir = path.join(LANDINGS_ROOT, slug, 'source');
-    const optimizedDir = path.join(LANDINGS_ROOT, slug, 'optimized');
-    const animationsDir = path.join(LANDINGS_ROOT, slug, 'animations');
+    const optimizedDir = path.join(LANDINGS_ROOT, slug, 'stills');
+    const animationsDir = path.join(LANDINGS_ROOT, slug, 'video');
 
     const sourceFiles = await listSourceFiles(sourceDir);
     if (sourceFiles.length === 0) {
@@ -278,7 +278,7 @@ async function optimizeLandingAssets() {
         totalOutputs += 1;
 
         console.log(
-          `  - ${path.basename(sourceFile)} -> optimized/${path.basename(webpOutput)} (${formatBytes(inputStat.size)} -> ${formatBytes(webpStat.size)})`
+          `  - ${path.basename(sourceFile)} -> stills/${path.basename(webpOutput)} (${formatBytes(inputStat.size)} -> ${formatBytes(webpStat.size)})`
         );
 
         if (avifReady) {
@@ -288,7 +288,7 @@ async function optimizeLandingAssets() {
           totalOutputs += 1;
 
           console.log(
-            `  - ${path.basename(sourceFile)} -> optimized/${path.basename(avifOutput)} (${formatBytes(inputStat.size)} -> ${formatBytes(avifStat.size)})`
+            `  - ${path.basename(sourceFile)} -> stills/${path.basename(avifOutput)} (${formatBytes(inputStat.size)} -> ${formatBytes(avifStat.size)})`
           );
         }
 
@@ -305,7 +305,7 @@ async function optimizeLandingAssets() {
           totalOutputs += 1;
 
           console.log(
-            `  - ${path.basename(sourceFile)} -> animations/${path.basename(webmOutput)} (${formatBytes(inputStat.size)} -> ${formatBytes(webmStat.size)})`
+            `  - ${path.basename(sourceFile)} -> video/${path.basename(webmOutput)} (${formatBytes(inputStat.size)} -> ${formatBytes(webmStat.size)})`
           );
         }
 
@@ -316,7 +316,7 @@ async function optimizeLandingAssets() {
           totalOutputs += 1;
 
           console.log(
-            `  - ${path.basename(sourceFile)} -> animations/${path.basename(mp4Output)} (${formatBytes(inputStat.size)} -> ${formatBytes(mp4Stat.size)})`
+            `  - ${path.basename(sourceFile)} -> video/${path.basename(mp4Output)} (${formatBytes(inputStat.size)} -> ${formatBytes(mp4Stat.size)})`
           );
         }
 
@@ -326,14 +326,14 @@ async function optimizeLandingAssets() {
         totalOutputs += 1;
 
         console.log(
-          `  - ${path.basename(sourceFile)} -> optimized/${path.basename(posterOutput)} (${formatBytes(inputStat.size)} -> ${formatBytes(posterStat.size)})`
+          `  - ${path.basename(sourceFile)} -> stills/${path.basename(posterOutput)} (${formatBytes(inputStat.size)} -> ${formatBytes(posterStat.size)})`
         );
       }
     }
   }
 
   if (totalImages === 0 && totalVideos === 0) {
-    console.log('[landings-assets] No source assets found. Add files to public/visuals/landings/<slug>/source');
+    console.log('[landings-assets] No source assets found. Add files to public/media/landing-pages/<slug>/source');
     return;
   }
 

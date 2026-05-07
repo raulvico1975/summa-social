@@ -23,6 +23,6 @@ Peça curta per a la hero de la landing de conciliació bancària. Ha de vendre 
 
 ## Asset web
 
-- video: `public/visuals/landings/conciliacio-bancaria-ong/animations/conciliacio-bancaria-demo-ca.mp4`
-- captions: `public/visuals/landings/conciliacio-bancaria-ong/animations/conciliacio-bancaria-demo-ca.vtt`
-- poster: `public/visuals/landings/conciliacio-bancaria-ong/optimized/conciliacio-bancaria-demo-ca-poster.webp`
+- video: `public/media/landing-pages/conciliacio-bancaria-ong/video/conciliacio-bancaria-demo-ca.mp4`
+- captions: `public/media/landing-pages/conciliacio-bancaria-ong/video/conciliacio-bancaria-demo-ca.vtt`
+- poster: `public/media/landing-pages/conciliacio-bancaria-ong/stills/conciliacio-bancaria-demo-ca-poster.webp`
