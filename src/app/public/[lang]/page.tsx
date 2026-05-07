@@ -354,6 +354,19 @@ const HOME_REFRESH_COPY: Record<
       notFitTitle: string;
       notFitItems: string[];
     };
+    pricing: {
+      eyebrow: string;
+      title: string;
+      description: string;
+      priceIntro: string;
+      price: string;
+      priceSuffix: string;
+      note: string;
+      implementation: string;
+      includesTitle: string;
+      includes: string[];
+      cta: string;
+    };
     work: {
       eyebrow: string;
       title: string;
@@ -422,6 +435,24 @@ const HOME_REFRESH_COPY: Record<
         'No teniu pràcticament operativa econòmica',
         'Voleu comptabilitat formal completa dins l’eina',
       ],
+    },
+    pricing: {
+      eyebrow: 'Preu orientatiu',
+      title: 'Preu pensat per a entitats petites i mitjanes',
+      description:
+        'Moltes entitats continuen portant remeses, donants i justificacions amb Excels i processos manuals. Summa Social està pensat per controlar socis, donacions, conciliació bancària, remeses i fiscalitat sense dispersió.',
+      priceIntro: 'Plans actuals',
+      price: 'des de 90 €',
+      priceSuffix: 'al mes',
+      note: "La quota final depèn del volum i de les necessitats de l'entitat.",
+      implementation: "La implantació inicial i la migració des d'Excel es valoren segons cada cas.",
+      includesTitle: 'Inclou el nucli operatiu',
+      includes: [
+        'Socis, donants i historial econòmic',
+        'Conciliació bancària, remeses i devolucions',
+        'Fiscalitat, certificats i suport inicial',
+      ],
+      cta: 'Demanar una demo',
     },
     work: {
       eyebrow: 'Com treballem',
@@ -493,6 +524,24 @@ const HOME_REFRESH_COPY: Record<
         'Queréis contabilidad formal completa dentro de la herramienta',
       ],
     },
+    pricing: {
+      eyebrow: 'Precio orientativo',
+      title: 'Precio pensado para entidades pequeñas y medianas',
+      description:
+        'Muchas entidades siguen llevando remesas, donantes y justificaciones con Excels y procesos manuales. Summa Social está pensado para controlar socios, donaciones, conciliación bancaria, remesas y fiscalidad sin dispersión.',
+      priceIntro: 'Planes actuales',
+      price: 'desde 90 €',
+      priceSuffix: 'al mes',
+      note: 'La cuota final depende del volumen y de las necesidades de la entidad.',
+      implementation: 'La implantación inicial y la migración desde Excel se valoran según cada caso.',
+      includesTitle: 'Incluye el núcleo operativo',
+      includes: [
+        'Socios, donantes e historial económico',
+        'Conciliación bancaria, remesas y devoluciones',
+        'Fiscalidad, certificados y soporte inicial',
+      ],
+      cta: 'Pedir una demo',
+    },
     work: {
       eyebrow: 'Cómo trabajamos',
       title: 'Primero miramos si encaja con vuestra operativa.',
@@ -563,6 +612,24 @@ const HOME_REFRESH_COPY: Record<
         'Vous voulez une comptabilité formelle complète dans l’outil',
       ],
     },
+    pricing: {
+      eyebrow: 'Prix indicatif',
+      title: 'Un prix pensé pour les petites et moyennes structures',
+      description:
+        'Beaucoup de structures gèrent encore cotisations, donateurs et justificatifs avec des tableurs et des processus manuels. Summa Social est conçu pour centraliser membres, dons, rapprochement bancaire, prélèvements et fiscalité.',
+      priceIntro: 'Plans actuels',
+      price: 'à partir de 90 €',
+      priceSuffix: 'par mois',
+      note: 'Le tarif final dépend du volume et des besoins de chaque structure.',
+      implementation: 'La mise en place initiale et la migration depuis Excel sont évaluées au cas par cas.',
+      includesTitle: 'Inclut le noyau opérationnel',
+      includes: [
+        'Membres, donateurs et historique économique',
+        'Rapprochement bancaire, prélèvements et rejets',
+        'Fiscalité, certificats et support initial',
+      ],
+      cta: 'Demander une démo',
+    },
     work: {
       eyebrow: 'Comment nous travaillons',
       title: "Nous vérifions d'abord si cela colle à votre fonctionnement.",
@@ -632,6 +699,24 @@ const HOME_REFRESH_COPY: Record<
         'Quase não têm operativa económica',
         'Querem contabilidade formal completa dentro da ferramenta',
       ],
+    },
+    pricing: {
+      eyebrow: 'Preço orientativo',
+      title: 'Preço pensado para entidades pequenas e médias',
+      description:
+        'Muitas entidades continuam a gerir remessas, doadores e justificações com folhas de cálculo e processos manuais. O Summa Social foi pensado para controlar sócios, doações, reconciliação bancária, remessas e fiscalidade sem dispersão.',
+      priceIntro: 'Planos atuais',
+      price: 'desde 90 €',
+      priceSuffix: 'por mês',
+      note: 'A quota final depende do volume e das necessidades da entidade.',
+      implementation: 'A implementação inicial e a migração a partir de Excel são avaliadas caso a caso.',
+      includesTitle: 'Inclui o núcleo operativo',
+      includes: [
+        'Sócios, doadores e histórico económico',
+        'Reconciliação bancária, remessas e devoluções',
+        'Fiscalidade, certificados e suporte inicial',
+      ],
+      cta: 'Pedir uma demo',
     },
     work: {
       eyebrow: 'Como trabalhamos',
@@ -1995,6 +2080,66 @@ export default async function HomePage({ params }: PageProps) {
                 ))}
               </div>
             </article>
+          </div>
+        </div>
+      </section>
+
+      <section id="preu" className={`border-y border-slate-900 bg-slate-950 py-16 text-white lg:py-20 ${PUBLIC_SHELL_X}`}>
+        <div className="mx-auto grid max-w-6xl gap-8 lg:grid-cols-[0.98fr_1.02fr] lg:items-center">
+          <div className="space-y-6">
+            <div className="space-y-4">
+              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-sky-200">
+                {copy.pricing.eyebrow}
+              </p>
+              <h2 className="max-w-2xl text-3xl font-semibold tracking-tight text-white sm:text-[2.35rem]">
+                {copy.pricing.title}
+              </h2>
+              <p className="max-w-2xl text-base leading-7 text-slate-300 sm:text-lg">
+                {copy.pricing.description}
+              </p>
+            </div>
+
+            <Button asChild size="lg" className="rounded-full bg-white px-8 text-slate-950 hover:bg-slate-100">
+              <Link href={contactHref}>
+                {copy.pricing.cta}
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Link>
+            </Button>
+          </div>
+
+          <div className="rounded-[2rem] border border-white/10 bg-white/[0.06] p-6 shadow-[0_32px_90px_-48px_rgba(56,189,248,0.4)] ring-1 ring-white/10 backdrop-blur sm:p-8">
+            <div className="flex flex-col gap-5">
+              <div>
+                <p className="text-sm font-semibold uppercase tracking-[0.16em] text-sky-200">
+                  {copy.pricing.priceIntro}
+                </p>
+                <div className="mt-3 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                  <p className="whitespace-nowrap text-4xl font-semibold tracking-tight text-white sm:text-5xl">
+                    {copy.pricing.price}
+                  </p>
+                  <p className="text-base font-medium text-slate-300">{copy.pricing.priceSuffix}</p>
+                </div>
+              </div>
+              <p className="max-w-lg text-sm leading-6 text-slate-300">
+                {copy.pricing.note}
+              </p>
+            </div>
+
+            <div className="mt-8 border-t border-white/10 pt-6">
+              <p className="text-sm font-semibold text-white">{copy.pricing.includesTitle}</p>
+              <div className="mt-4 grid gap-3">
+                {copy.pricing.includes.map((item) => (
+                  <div key={item} className="flex gap-3 text-sm leading-6 text-slate-300">
+                    <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-sky-300" />
+                    <span>{item}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <p className="mt-6 rounded-[1.25rem] border border-white/10 bg-white/[0.06] px-4 py-3 text-sm leading-6 text-slate-300">
+              {copy.pricing.implementation}
+            </p>
           </div>
         </div>
       </section>
