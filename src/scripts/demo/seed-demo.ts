@@ -138,9 +138,12 @@ async function purgeCollection(
 
   if (snapshot.empty) return 0;
 
-  const batch = db.batch();
-  snapshot.docs.forEach((doc) => batch.delete(doc.ref));
-  await batch.commit();
+  for (let index = 0; index < snapshot.docs.length; index += 50) {
+    const batch = db.batch();
+    const chunk = snapshot.docs.slice(index, index + 50);
+    chunk.forEach((doc) => batch.delete(doc.ref));
+    await batch.commit();
+  }
 
   return snapshot.size;
 }
@@ -205,9 +208,12 @@ async function purgeBudgetLines(db: Firestore, projectsPath: string): Promise<nu
       .get();
 
     if (!budgetLinesSnapshot.empty) {
-      const batch = db.batch();
-      budgetLinesSnapshot.docs.forEach((doc) => batch.delete(doc.ref));
-      await batch.commit();
+      for (let index = 0; index < budgetLinesSnapshot.docs.length; index += 50) {
+        const batch = db.batch();
+        const chunk = budgetLinesSnapshot.docs.slice(index, index + 50);
+        chunk.forEach((doc) => batch.delete(doc.ref));
+        await batch.commit();
+      }
       totalDeleted += budgetLinesSnapshot.size;
     }
   }
@@ -220,8 +226,7 @@ async function writeBatch<T extends { id: string }>(
   collectionPath: string,
   items: T[]
 ): Promise<void> {
-  // Firestore batch limit is 500
-  const BATCH_SIZE = 450;
+  const BATCH_SIZE = 50;
 
   for (let i = 0; i < items.length; i += BATCH_SIZE) {
     const batch = db.batch();
@@ -262,21 +267,26 @@ async function writeBudgetLines(
 
   // Escriure a cada subcol·lecció
   for (const [projectId, lines] of byProject) {
-    const batch = db.batch();
-    for (const line of lines) {
-      const { id, projectId: _pid, ...raw } = line;
-      // Sanejar: eliminar camps undefined
-      const data = Object.fromEntries(
-        Object.entries(raw).filter(([, v]) => v !== undefined)
-      );
-      const ref = db
-        .collection(projectsPath)
-        .doc(projectId)
-        .collection('budgetLines')
-        .doc(id);
-      batch.set(ref, data);
+    for (let index = 0; index < lines.length; index += 50) {
+      const batch = db.batch();
+      const chunk = lines.slice(index, index + 50);
+
+      for (const line of chunk) {
+        const { id, projectId: _pid, ...raw } = line;
+        // Sanejar: eliminar camps undefined
+        const data = Object.fromEntries(
+          Object.entries(raw).filter(([, v]) => v !== undefined)
+        );
+        const ref = db
+          .collection(projectsPath)
+          .doc(projectId)
+          .collection('budgetLines')
+          .doc(id);
+        batch.set(ref, data);
+      }
+
+      await batch.commit();
     }
-    await batch.commit();
   }
 }
 
