@@ -166,14 +166,14 @@ const SPECIFIC_CASE_PATTERNS = [
   /el meu donant/,
   /no em quadra/,
   /a mi em surt/,
-  /no em surt/,
+  /no em surt\b/,
   /aquesta transaccio/,
   /esta remesa/,
   /esta factura/,
   /mi donante/,
   /no me cuadra/,
   /a mi me sale/,
-  /no me sale/,
+  /no me sale\b/,
   /esta transaccion/,
 ]
 
@@ -730,7 +730,18 @@ function hasToken(tokens: Set<string>, ...candidates: string[]): boolean {
 function detectProtectedOverride(message: string): RetrievalOverride | null {
   const normalized = normalizePlain(message)
 
-  if (/\bmoviments?\b/.test(normalized) && /\bsense categoritzar\b/.test(normalized)) {
+  // Natural-language protected routing: route common CA/ES phrasings only to
+  // already verified KB cards or guarded fallbacks. Do not create new procedures here.
+  if (
+    /\b(import|importar|importo|carregar|carrego|cargar|cargo|pujar|pujo|subir|subo)\w*\b/.test(normalized) &&
+    /\b(extracte|extracto|moviment|moviments|movimiento|movimientos)\b/.test(normalized) &&
+    /\b(banc|banco|compte|cuenta)\b/.test(normalized) &&
+    /\b(per on comenco|por donde empiezo|per on començo|por donde comienzo|comenco|començo|empiezo)\b/.test(normalized)
+  ) {
+    return { kind: 'card', cardId: 'guide-import-movements', minScore: 715, decisionReason: 'bank_import_start_orientation' }
+  }
+
+  if (/\b(moviments?|movimientos?)\b/.test(normalized) && /\b(sense categoritzar|sin categorizar)\b/.test(normalized)) {
     return { kind: 'card', cardId: 'howto-movement-unassigned-alerts', minScore: 710, decisionReason: 'uncategorized_movements_backlog' }
   }
 
@@ -738,12 +749,28 @@ function detectProtectedOverride(message: string): RetrievalOverride | null {
     return { kind: 'card', cardId: 'howto-movement-unassigned-alerts', minScore: 700, decisionReason: 'uncategorized_single_movement_safe' }
   }
 
+  if (
+    /\b(moviment|movimiento)\b/.test(normalized) &&
+    /\b(categoria|categorizar|categoritzat|categorizado)\b/.test(normalized) &&
+    /\b(equivocad|equivocada|malament|mal|corregir|arregl)\w*\b/.test(normalized)
+  ) {
+    return { kind: 'card', cardId: 'guide-edit-movement', minScore: 705, decisionReason: 'movement_wrong_category_correction' }
+  }
+
   if (/\bcrear\b/.test(normalized) && /\bmoviment\b/.test(normalized) && /\bsense importar/.test(normalized) && /\b(banc|banco|compte|cuenta)\b/.test(normalized)) {
     return { kind: 'card', cardId: 'howto-enter-expense', minScore: 705, decisionReason: 'manual_movement_without_bank_import' }
   }
 
-  if (/\bquota\b/.test(normalized) && /\b(pausa|pausar|pause|suspendre|suspender)\b/.test(normalized)) {
+  if (/\b(quota|cuota)\b/.test(normalized) && /\b(pausa|pausar|pause|suspendre|suspender)\b/.test(normalized)) {
     return { kind: 'fallback', cardId: 'fallback-no-answer', decisionReason: 'member_fee_pause_not_covered' }
+  }
+
+  if (
+    /\b(devolucio|devolucions|devolucion|devoluciones|retorn|retorno|devuelt)\w*\b/.test(normalized) &&
+    /\b(certificat|certificado|certificats|certificados)\b/.test(normalized) &&
+    /\b(donacio|donacion|donatiu|donativo|donacions|donaciones)\b/.test(normalized)
+  ) {
+    return { kind: 'card', cardId: 'guide-donor-certificate', minScore: 705, decisionReason: 'returns_affect_donation_certificate' }
   }
 
   if (/\b(no toca encara|todavia no toca|todavía no toca)\b/.test(normalized) && /\b(soci|donant|socio|donante|remesa)\b/.test(normalized)) {
@@ -877,7 +904,7 @@ function detectDirectIntentMatch(tokens: string[]): DirectIntentMatch | null {
   if (
     hasToken(set, 'banc', 'banco', 'compte', 'cuenta') &&
     hasToken(set, 'gestionar', 'gestiono', 'gestiono', 'seleccionar', 'selecciono', 'canviar', 'canvio', 'cambiar', 'cambio') &&
-    !hasToken(set, 'stripe', 'devolucio', 'devolucion', 'retorn', 'retorno')
+    !hasToken(set, 'stripe', 'devolucio', 'devolucion', 'retorn', 'retorno', 'soci', 'donant', 'socio', 'donante')
   ) {
     return { cardId: 'guide-select-bank-account', minScore: 685 }
   }

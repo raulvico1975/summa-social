@@ -80,3 +80,4 @@ Registre curt d'incidències de deploy bloquejat o incomplet.
 | 2026-05-02 18:52 | Capturar revisio App Hosting abans de publicar | BAIX | 663e164ad | 1c57a8af1 | BLOCKED_SAFE | gcloud no disponible per verificar la revisio efectiva d'App Hosting. | Pendent |
 | 2026-05-06 19:11 | Verificacions | ALT | 4fd8bab1d | a7dacae54 | BLOCKED_SAFE | La verificacio local no ha passat. | Pendent |
 | 2026-05-06 19:17 | Verificacions | ALT | 5d396d358 | a7dacae54 | BLOCKED_SAFE | La verificacio local no ha passat. | Pendent |
+| 2026-05-07 17:23 | Capturar revisio App Hosting abans de publicar | MITJA | 84b8db2ed | 9e443d239 | BLOCKED_SAFE | gcloud no disponible per verificar la revisio efectiva d'App Hosting. | Pendent |

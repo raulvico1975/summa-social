@@ -157,6 +157,10 @@ test('retrieveCard resolves missing project expenses due to uncategorized moveme
   const result = retrieveCard('Per què no em surten totes les despeses de la seu al llistat de despeses per imputar a projectes?', 'ca', cards)
   assert.equal(result.card.id, 'manual-project-expenses-filtered-feed')
   assert.equal(result.mode, 'card')
+
+  const natural = retrieveCard('Per què no em surten totes les despeses per imputar a projectes?', 'ca', cards)
+  assert.equal(natural.card.id, 'manual-project-expenses-filtered-feed')
+  assert.equal(natural.mode, 'card')
 })
 
 test('retrieveCard resolves upload invoice/receipt/payroll question', () => {
@@ -175,6 +179,10 @@ test('retrieveCard resolves natural-language bank statement import phrasing', ()
   assert.equal(es.card.id, 'guide-import-movements')
   assert.equal(es.mode, 'card')
   assert.equal(es.confidence, 'high')
+
+  const caStart = retrieveCard("Vull importar l'extracte del banc, per on començo?", 'ca', cards)
+  assert.equal(caStart.card.id, 'guide-import-movements')
+  assert.equal(caStart.mode, 'card')
 })
 
 test('retrieveCard keeps inline guide import cards eligible for broader banking phrasing', () => {
@@ -283,6 +291,16 @@ test('retrieveCard resolves uncategorized movement backlog questions', () => {
   const ca2 = retrieveCard('Hi ha un moviment que no sé què és. Puc deixar-lo sense categoritzar?', 'ca', cards)
   assert.equal(ca2.card.id, 'howto-movement-unassigned-alerts')
   assert.equal(ca2.mode, 'card')
+
+  const es = retrieveCard('¿Dónde veo solo los movimientos sin categorizar?', 'es', cards)
+  assert.equal(es.card.id, 'howto-movement-unassigned-alerts')
+  assert.equal(es.mode, 'card')
+})
+
+test('retrieveCard resolves wrong movement category correction phrasing', () => {
+  const result = retrieveCard('He posat una categoria equivocada en un moviment. Com ho arreglo?', 'ca', cards)
+  assert.equal(result.card.id, 'guide-edit-movement')
+  assert.equal(result.mode, 'card')
 })
 
 test('retrieveCard resolves natural invoice placement phrasing', () => {
@@ -301,6 +319,10 @@ test('retrieveCard falls back for member fee pause when the feature is not cover
   const result = retrieveCard('Puc posar una quota en pausa?', 'ca', cards)
   assert.equal(result.card.id, 'fallback-no-answer')
   assert.equal(result.mode, 'fallback')
+
+  const es = retrieveCard('¿Puedo poner la cuota de un socio en pausa?', 'es', cards)
+  assert.equal(es.card.id, 'fallback-no-answer')
+  assert.equal(es.mode, 'fallback')
 })
 
 test('retrieveCard resolves remittance low-members variants around inactive members and timing badges', () => {
@@ -335,6 +357,10 @@ test('retrieveCard resolves fiscal edge cases for model 182', () => {
   const aeat = retrieveCard('Puc presentar el Model 182 directament a l’AEAT sense passar per la gestoria?', 'ca', cards)
   assert.equal(aeat.card.id, 'fallback-fiscal-unclear')
   assert.equal(aeat.mode, 'fallback')
+
+  const returnsCertificate = retrieveCard('¿Las devoluciones afectan al certificado de donación?', 'es', cards)
+  assert.equal(returnsCertificate.card.id, 'guide-donor-certificate')
+  assert.equal(returnsCertificate.mode, 'card')
 })
 
 test('retrieveCard resolves import template and historical import questions', () => {
@@ -463,6 +489,10 @@ test('retrieveCard keeps IBAN update routed to the dedicated card', () => {
   const ca = retrieveCard("com modifico l'IBAN d'un soci", 'ca', cards)
   assert.equal(ca.card.id, 'howto-donor-update-iban')
   assert.equal(ca.mode, 'card')
+
+  const esIban = retrieveCard('Quiero cambiar el IBAN de un socio, ¿qué hago?', 'es', cards)
+  assert.equal(esIban.card.id, 'howto-donor-update-iban')
+  assert.equal(esIban.mode, 'card')
 
   const es = retrieveCard('como actualizo los datos de un socio', 'es', cards)
   assert.equal(es.card.id, 'howto-donor-update-details')
