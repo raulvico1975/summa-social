@@ -6,7 +6,7 @@
  * Característiques:
  * - Només escriptura via Admin SDK (bypassant Firestore Rules)
  * - orgId derivat de la membership de l'usuari (no del body)
- * - Validació de rol admin
+ * - Validació del permís categories.manage
  * - Bloqueig si la categoria té transaccions (CATEGORY_IN_USE)
  * - Bloqueig si la categoria és de sistema (SYSTEM_CATEGORY_LOCKED)
  * - Idempotent: si ja està arxivada, retorna success
@@ -20,7 +20,7 @@ import {
   verifyIdToken,
   validateUserMembership,
 } from '@/lib/api/admin-sdk';
-import { requireOperationalAccess } from '@/lib/api/require-operational-access';
+import { requirePermission } from '@/lib/api/require-permission';
 
 // =============================================================================
 // TIPUS
@@ -87,9 +87,12 @@ export async function POST(
     );
   }
 
-  // 4. Validar membership + accés operatiu (admin/user)
+  // 4. Validar membership + permís de gestió de categories
   const membership = await validateUserMembership(db, uid, orgId);
-  const accessError = requireOperationalAccess(membership);
+  const accessError = requirePermission(membership, {
+    code: 'CATEGORIES_MANAGE_REQUIRED',
+    check: (permissions) => permissions['categories.manage'],
+  });
   if (accessError) return accessError;
 
   // 6. Validar que fromCategory existeix i no està arxivada
