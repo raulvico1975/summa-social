@@ -733,6 +733,37 @@ function detectProtectedOverride(message: string): RetrievalOverride | null {
   // Natural-language protected routing: route common CA/ES phrasings only to
   // already verified KB cards or guarded fallbacks. Do not create new procedures here.
   if (
+    /\b(moviment|moviments|movimiento|movimientos)\b/.test(normalized) &&
+    !/\b(import|importar|importo|importacio|importacion)\w*\b/.test(normalized) &&
+    !(
+      /\b(canvi|canviar|cambio|cambiar)\w*\b/.test(normalized) &&
+      /\b(mes|periode|periodo)\b/.test(normalized)
+    ) &&
+    (
+      /\b(filtr|filtro|filtrar|veure|ver|miro|mirar)\w*\b/.test(normalized) ||
+      /\b(nomes|solo|sols)\b/.test(normalized)
+    ) &&
+    /\b(mes|mesos|meses|marc|marzo|abril|maig|mayo|juny|junio|juliol|julio|agost|agosto|setembre|septiembre|octubre|novembre|noviembre|desembre|diciembre|trimestre|periode|periodo)\b/.test(normalized)
+  ) {
+    return { kind: 'card', cardId: 'guide-movement-filters', minScore: 705, decisionReason: 'movement_period_filter_natural' }
+  }
+
+  if (
+    /\b(transferencia|transferencies|transferencia|ingres|ingreso|moviment|movimiento)\w*\b/.test(normalized) &&
+    /\b(entre comptes|entre cuentas|compte nostre|cuenta nuestra|comptes nostres|cuentas nuestras|comptes propis|cuentas propias)\b/.test(normalized)
+  ) {
+    return { kind: 'card', cardId: 'manual-internal-transfer', minScore: 705, decisionReason: 'internal_transfer_between_own_accounts' }
+  }
+
+  if (
+    /\b(ingres|ingressos|ingressat|ingresos|ingresado)\w*\b/.test(normalized) &&
+    /\b(veure|veig|ver|miro|mirar|dashboard|resum|resumen)\w*\b/.test(normalized) &&
+    /\b(trimestre|periode|periodo|mes|mesos|meses|any|ano|anio)\b/.test(normalized)
+  ) {
+    return { kind: 'card', cardId: 'howto-dashboard-income-period', minScore: 700, decisionReason: 'dashboard_income_period_natural' }
+  }
+
+  if (
     /\b(import|importar|importo|carregar|carrego|cargar|cargo|pujar|pujo|subir|subo)\w*\b/.test(normalized) &&
     /\b(extracte|extracto|moviment|moviments|movimiento|movimientos)\b/.test(normalized) &&
     /\b(banc|banco|compte|cuenta)\b/.test(normalized) &&
@@ -763,6 +794,30 @@ function detectProtectedOverride(message: string): RetrievalOverride | null {
 
   if (/\b(quota|cuota)\b/.test(normalized) && /\b(pausa|pausar|pause|suspendre|suspender)\b/.test(normalized)) {
     return { kind: 'fallback', cardId: 'fallback-no-answer', decisionReason: 'member_fee_pause_not_covered' }
+  }
+
+  if (
+    /\b(quota|cuota)\b/.test(normalized) &&
+    /\b(soci|socio|donant|donante)\b/.test(normalized) &&
+    /\b(canvi|canviar|cambiar|cambio|modific|actualitz|actualiz|pujar|subir|baixar|bajar|augmentar|aumentar)\w*\b/.test(normalized)
+  ) {
+    return { kind: 'card', cardId: 'howto-donor-update-fee', minScore: 710, decisionReason: 'donor_fee_update_natural' }
+  }
+
+  if (
+    /\b(soci|socio|donant|donante)\b/.test(normalized) &&
+    /\b(baixa|baja|marxa|marcha|deixa|deja)\b/.test(normalized) &&
+    /\b(historial|historico|conservar|mantenir|mantener|perdre|perder)\b/.test(normalized)
+  ) {
+    return { kind: 'card', cardId: 'guide-donor-inactive', minScore: 710, decisionReason: 'donor_inactive_keep_history' }
+  }
+
+  if (
+    /\b(soci|socio|donant|donante)\b/.test(normalized) &&
+    /\b(torna|vuelve|retorna|reactiv|activar|activo|actiu)\w*\b/.test(normalized) &&
+    /\b(altra vegada|otra vez|nou|nuevo|nova|nueva|de nou|de nuevo|reactiv|activar|activo)\b/.test(normalized)
+  ) {
+    return { kind: 'card', cardId: 'guide-donor-reactivate', minScore: 710, decisionReason: 'donor_reactivation_natural' }
   }
 
   if (
