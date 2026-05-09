@@ -12,11 +12,12 @@ import {
   estimateBlogReadingTimeMinutes,
   formatBlogReadingTime,
 } from '@/lib/blog/reading-time'
+import type { LocalizedBlogPost } from '@/lib/blog/localized'
 import type { PublicLocale } from '@/lib/public-locale'
 import { getPublicTranslations } from '@/i18n/public'
 
 const pageShellClass =
-  'min-h-screen bg-[radial-gradient(circle_at_top,rgba(14,165,233,0.12),transparent_32%),linear-gradient(180deg,#f8fbff_0%,#ffffff_28%,#f8fbff_100%)]'
+  'min-h-screen bg-[linear-gradient(180deg,#f8fbff_0%,#ffffff_34%,#f8fbff_100%)]'
 
 function isBlogConfigured() {
   return Boolean(process.env.BLOG_ORG_ID?.trim())
@@ -36,21 +37,17 @@ interface BlogPostViewProps {
   blogBasePath: string
 }
 
-export async function BlogPostView({
+interface BlogPostArticleViewProps {
+  locale: PublicLocale
+  blogBasePath: string
+  post: LocalizedBlogPost
+}
+
+export function BlogPostArticleView({
   locale,
-  slug,
   blogBasePath,
-}: BlogPostViewProps) {
-  if (!isBlogConfigured()) {
-    notFound()
-  }
-
-  const post = await getLocalizedBlogPostBySlug(slug, locale)
-
-  if (!post) {
-    notFound()
-  }
-
+  post,
+}: BlogPostArticleViewProps) {
   const copy = getBlogCopy(locale)
   const t = getPublicTranslations(locale)
   const featuresHref = `/${locale}#capabilities`
@@ -68,8 +65,8 @@ export async function BlogPostView({
     <main className={pageShellClass}>
       <PublicSiteHeader locale={locale} currentSection="blog" />
 
-      <section className={`pb-12 pt-10 lg:pt-14 ${PUBLIC_SHELL_X}`}>
-        <div className="mx-auto max-w-5xl">
+      <section className={`pb-8 pt-9 lg:pt-12 ${PUBLIC_SHELL_X}`}>
+        <div className="mx-auto max-w-[46rem]">
           <Button
             asChild
             variant="ghost"
@@ -82,57 +79,48 @@ export async function BlogPostView({
             </Link>
           </Button>
 
-          <div className="mt-7 overflow-hidden rounded-[2.35rem] border border-white/75 bg-white/94 shadow-[0_34px_100px_-64px_rgba(15,23,42,0.28)]">
-            <div className="grid gap-0 lg:grid-cols-[1.02fr_0.98fr]">
-              <div className="flex flex-col justify-between p-7 sm:p-9 lg:p-10">
-                <div className="space-y-5">
-                  <p className="text-sm font-medium text-foreground/46">
-                    {articleMeta}
-                  </p>
-                  <h1 className="max-w-4xl text-[2.6rem] font-semibold leading-[1] tracking-[-0.06em] text-foreground sm:text-[3.6rem] lg:text-[4.4rem]">
-                    {post.title}
-                  </h1>
-                  <p className="max-w-2xl text-[1.05rem] leading-8 text-foreground/68 sm:text-[1.12rem]">
-                    {post.excerpt}
-                  </p>
-                </div>
-              </div>
-
-              <div className="bg-[linear-gradient(180deg,rgba(248,250,252,0.96),rgba(241,245,249,0.76))] p-5 lg:p-6">
-                <div className="relative overflow-hidden rounded-[1.85rem] border border-white/80 bg-[linear-gradient(140deg,rgba(255,255,255,0.94),rgba(244,249,255,0.96))] shadow-[inset_0_1px_0_rgba(255,255,255,0.8)]">
-                  <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(14,165,233,0.12),transparent_28%),radial-gradient(circle_at_bottom_left,rgba(14,165,233,0.08),transparent_20%)]" />
-
-                  {post.coverImageUrl ? (
-                    <div className="relative aspect-[1.02/0.92] min-h-[300px]">
-                      <Image
-                        src={post.coverImageUrl}
-                        alt={post.coverImageAlt || post.title}
-                        fill
-                        unoptimized
-                        sizes="(min-width: 1024px) 40vw, 100vw"
-                        className="object-contain p-7 sm:p-8"
-                      />
-                    </div>
-                  ) : (
-                    <div className="relative aspect-[1.02/0.92] min-h-[300px]">
-                      <div className="absolute right-[-2.25rem] top-[-2.25rem] h-32 w-32 rounded-full bg-sky-100/80" />
-                      <div className="absolute bottom-[-1.4rem] left-[-1.1rem] h-24 w-24 rounded-full bg-sky-50/90" />
-                      <div className="absolute inset-x-8 bottom-9 space-y-3">
-                        <div className="h-3 rounded-full bg-slate-200/75" />
-                        <div className="h-3 w-3/4 rounded-full bg-slate-200/65" />
-                        <div className="h-3 w-1/2 rounded-full bg-slate-200/55" />
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
+          <div className="mt-8 space-y-5">
+            <p className="text-sm font-medium text-foreground/50">
+              {articleMeta}
+            </p>
+            <h1 className="max-w-[15ch] text-[2.1rem] font-semibold leading-[1.08] tracking-[-0.035em] text-foreground sm:text-[2.75rem] lg:text-[3.15rem]">
+              {post.title}
+            </h1>
+            <p className="max-w-2xl text-[1.06rem] leading-[1.68] text-foreground/68 sm:text-[1.1rem]">
+              {post.excerpt}
+            </p>
           </div>
         </div>
+
+        <figure className="mx-auto mt-8 max-w-5xl">
+          <div className="relative overflow-hidden rounded-2xl border border-slate-200/80 bg-slate-100 shadow-[0_24px_80px_-58px_rgba(15,23,42,0.28)]">
+            {post.coverImageUrl ? (
+              <div className="relative aspect-[16/9]">
+                <Image
+                  src={post.coverImageUrl}
+                  alt={post.coverImageAlt || post.title}
+                  fill
+                  unoptimized
+                  sizes="(min-width: 1024px) 960px, 100vw"
+                  className="object-cover"
+                  priority
+                />
+              </div>
+            ) : (
+              <div className="relative aspect-[16/9] bg-[linear-gradient(135deg,#f8fafc,#eaf6fd)]">
+                <div className="absolute inset-x-8 bottom-8 space-y-3 sm:inset-x-12 sm:bottom-12">
+                  <div className="h-3 rounded-full bg-slate-300/60" />
+                  <div className="h-3 w-3/4 rounded-full bg-slate-300/50" />
+                  <div className="h-3 w-1/2 rounded-full bg-slate-300/40" />
+                </div>
+              </div>
+            )}
+          </div>
+        </figure>
       </section>
 
-      <section className={`pb-14 ${PUBLIC_SHELL_X}`}>
-        <article className="mx-auto max-w-[54rem] rounded-[2.25rem] border border-white/75 bg-white/96 px-6 py-8 shadow-[0_36px_110px_-72px_rgba(15,23,42,0.24)] sm:px-10 sm:py-12 lg:px-14">
+      <section className={`pb-14 pt-2 ${PUBLIC_SHELL_X}`}>
+        <article className="mx-auto max-w-[46rem] border-t border-slate-200/70 px-1 pt-8 sm:pt-10">
           <div
             className="blog-rich-text"
             dangerouslySetInnerHTML={{ __html: post.contentHtml }}
@@ -141,7 +129,7 @@ export async function BlogPostView({
       </section>
 
       <section className={`pb-20 ${PUBLIC_SHELL_X}`}>
-        <div className="mx-auto flex max-w-[54rem] flex-wrap items-center justify-between gap-4 rounded-[1.8rem] border border-white/75 bg-white/90 px-5 py-4 shadow-[0_28px_90px_-70px_rgba(15,23,42,0.24)] sm:px-6">
+        <div className="mx-auto flex max-w-[46rem] flex-wrap items-center justify-between gap-4 border-t border-slate-200/70 pt-5">
           <Button asChild variant="outline" className="rounded-full">
             <Link href={blogBasePath}>{copy.browseBlog}</Link>
           </Button>
@@ -157,4 +145,22 @@ export async function BlogPostView({
       <PublicSiteFooter locale={locale} />
     </main>
   )
+}
+
+export async function BlogPostView({
+  locale,
+  slug,
+  blogBasePath,
+}: BlogPostViewProps) {
+  if (!isBlogConfigured()) {
+    notFound()
+  }
+
+  const post = await getLocalizedBlogPostBySlug(slug, locale)
+
+  if (!post) {
+    notFound()
+  }
+
+  return <BlogPostArticleView locale={locale} blogBasePath={blogBasePath} post={post} />
 }

@@ -12,9 +12,9 @@ import type { PublicLocale } from '@/lib/public-locale'
 import { cn } from '@/lib/utils'
 
 const pageShellClass =
-  'min-h-screen bg-[radial-gradient(circle_at_top,rgba(14,165,233,0.12),transparent_32%),linear-gradient(180deg,#f8fbff_0%,#ffffff_28%,#f8fbff_100%)]'
+  'min-h-screen bg-[linear-gradient(180deg,#f8fbff_0%,#ffffff_30%,#f8fbff_100%)]'
 const cardClass =
-  'group overflow-hidden rounded-[2.2rem] border border-white/75 bg-white/94 shadow-[0_28px_90px_-62px_rgba(15,23,42,0.24)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_36px_100px_-58px_rgba(15,23,42,0.28)]'
+  'group overflow-hidden rounded-2xl border border-slate-200/75 bg-white shadow-[0_22px_70px_-56px_rgba(15,23,42,0.22)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_32px_90px_-62px_rgba(15,23,42,0.28)]'
 
 function isBlogConfigured() {
   return Boolean(process.env.BLOG_ORG_ID?.trim())
@@ -73,22 +73,20 @@ function BlogPostMedia({
   featured?: boolean
 }) {
   const shellClass = featured
-    ? 'p-5 lg:p-6'
-    : 'border-b border-border/40 p-4'
+    ? ''
+    : 'border-b border-border/40'
   const frameClass = featured
-    ? 'aspect-[1.05/0.8] rounded-[1.8rem]'
-    : 'aspect-[1.18/0.82] rounded-[1.4rem]'
+    ? 'aspect-[16/10]'
+    : 'aspect-[16/10]'
 
   return (
-    <div className={cn('bg-[linear-gradient(180deg,rgba(248,250,252,0.96),rgba(241,245,249,0.74))]', shellClass)}>
+    <div className={cn('bg-slate-100', shellClass)}>
       <div
         className={cn(
-          'relative overflow-hidden border border-white/80 bg-[linear-gradient(140deg,rgba(255,255,255,0.94),rgba(244,249,255,0.96))] shadow-[inset_0_1px_0_rgba(255,255,255,0.8)]',
+          'relative overflow-hidden bg-slate-100',
           frameClass
         )}
       >
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(14,165,233,0.12),transparent_28%),radial-gradient(circle_at_bottom_left,rgba(14,165,233,0.08),transparent_20%)]" />
-
         {post.coverImageUrl ? (
           <div className="absolute inset-0">
             <Image
@@ -97,17 +95,15 @@ function BlogPostMedia({
               fill
               unoptimized
               sizes={featured ? '(min-width: 1024px) 42vw, 100vw' : '(min-width: 768px) 38vw, 100vw'}
-              className="object-contain p-6 sm:p-7"
+              className="object-cover"
             />
           </div>
         ) : (
-          <div className="absolute inset-0">
-            <div className="absolute right-[-2.25rem] top-[-2.25rem] h-32 w-32 rounded-full bg-sky-100/80" />
-            <div className="absolute bottom-[-1.4rem] left-[-1.1rem] h-24 w-24 rounded-full bg-sky-50/90" />
+          <div className="absolute inset-0 bg-[linear-gradient(135deg,#f8fafc,#eaf6fd)]">
             <div className="absolute inset-x-7 bottom-8 space-y-3">
-              <div className="h-3 rounded-full bg-slate-200/75" />
-              <div className="h-3 w-3/4 rounded-full bg-slate-200/65" />
-              <div className="h-3 w-1/2 rounded-full bg-slate-200/55" />
+              <div className="h-3 rounded-full bg-slate-300/60" />
+              <div className="h-3 w-3/4 rounded-full bg-slate-300/50" />
+              <div className="h-3 w-1/2 rounded-full bg-slate-300/40" />
             </div>
           </div>
         )}
@@ -188,7 +184,7 @@ export async function BlogIndexView({
                     <p className="text-sm font-medium text-foreground/46">
                       {formatCompactBlogDate(featuredPost.publishedAt, locale)}
                     </p>
-                    <h2 className="max-w-3xl text-[2.2rem] font-semibold leading-[1.02] tracking-[-0.055em] text-foreground sm:text-[3rem]">
+                    <h2 className="max-w-3xl text-[2rem] font-semibold leading-[1.08] tracking-[-0.035em] text-foreground sm:text-[2.65rem]">
                       {featuredPost.title}
                     </h2>
                     <p className="max-w-3xl text-[1.02rem] leading-8 text-foreground/68">
@@ -225,7 +221,7 @@ export async function BlogIndexView({
                       <p className="text-sm font-medium text-foreground/46">
                         {formatCompactBlogDate(post.publishedAt, locale)}
                       </p>
-                      <h2 className="text-[1.9rem] font-semibold leading-[1.08] tracking-[-0.045em] text-foreground">
+                      <h2 className="line-clamp-3 text-[1.65rem] font-semibold leading-[1.12] tracking-[-0.03em] text-foreground">
                         {post.title}
                       </h2>
                       <p className="text-[0.98rem] leading-7 text-foreground/68 line-clamp-4">

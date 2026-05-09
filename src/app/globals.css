@@ -157,8 +157,8 @@
 @layer components {
   .blog-rich-text {
     @apply blog-prose max-w-none text-foreground;
-    font-size: 1.06rem;
-    line-height: 1.9;
+    font-size: 1.02rem;
+    line-height: 1.74;
   }
 
   .blog-rich-text > :first-child {
@@ -171,17 +171,17 @@
   }
 
   .blog-rich-text :where(h2) {
-    font-size: clamp(1.9rem, 1.6rem + 0.9vw, 2.45rem);
-    line-height: 1.06;
-    margin-top: 3.15rem;
-    margin-bottom: 1rem;
+    font-size: clamp(1.55rem, 1.38rem + 0.55vw, 1.9rem);
+    line-height: 1.22;
+    margin-top: 2.75rem;
+    margin-bottom: 0.85rem;
   }
 
   .blog-rich-text :where(h3) {
-    font-size: clamp(1.35rem, 1.2rem + 0.45vw, 1.7rem);
-    line-height: 1.2;
-    margin-top: 2.35rem;
-    margin-bottom: 0.7rem;
+    font-size: clamp(1.22rem, 1.13rem + 0.3vw, 1.42rem);
+    line-height: 1.25;
+    margin-top: 2rem;
+    margin-bottom: 0.65rem;
   }
 
   .blog-rich-text :where(p, li) {
@@ -189,13 +189,13 @@
   }
 
   .blog-rich-text :where(p) {
-    margin-top: 1.1em;
-    margin-bottom: 1.1em;
+    margin-top: 1rem;
+    margin-bottom: 1rem;
   }
 
   .blog-rich-text :where(ul, ol) {
-    margin-top: 1.4em;
-    margin-bottom: 1.4em;
+    margin-top: 1.2em;
+    margin-bottom: 1.2em;
     padding-left: 1.2rem;
   }
 
@@ -205,13 +205,13 @@
   }
 
   .blog-rich-text :where(blockquote) {
-    border-left-color: hsl(var(--border));
-    color: hsl(var(--muted-foreground));
+    border-left-color: hsl(var(--primary) / 0.34);
+    color: hsl(var(--foreground) / 0.72);
     font-style: normal;
-    background: linear-gradient(180deg, hsl(var(--secondary) / 0.55), transparent);
+    background: hsl(var(--secondary) / 0.42);
     border-left-width: 3px;
-    border-radius: 1rem;
-    padding: 1rem 1.25rem;
+    border-radius: 0.9rem;
+    padding: 0.95rem 1.15rem;
   }
 
   .blog-rich-text :where(a) {
