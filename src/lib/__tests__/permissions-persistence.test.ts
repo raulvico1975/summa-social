@@ -24,6 +24,19 @@ function buildMembership(
   };
 }
 
+function buildMembershipWithRole(
+  role: MembershipValidation['role'],
+  overrides: MembershipValidation['userOverrides'] = null,
+  grants: MembershipValidation['userGrants'] = null
+): MembershipValidation {
+  return {
+    valid: true,
+    role,
+    userOverrides: overrides,
+    userGrants: grants,
+  };
+}
+
 test('persistència: write overrides + reload mantenen effectivePermissions', () => {
   const validated = validateAndCanonicalizeUserPermissionWrite({
     deny: ['moviments.read', 'projectes.manage'],
@@ -188,6 +201,28 @@ test('endpoint guard /api/projectes/:id/moviments: 403 si expenseInput=true enca
   assert.equal(denied.status, 403);
   const payload = await denied.json() as { code: string };
   assert.equal(payload.code, 'PROJECTES_BANK_READ_REQUIRED');
+});
+
+test('endpoint guard /api/categories/archive: exigeix categories.manage', async () => {
+  const userMembership = buildMembershipWithRole('user');
+  const userDenied = requirePermission(userMembership, {
+    code: 'CATEGORIES_MANAGE_REQUIRED',
+    check: (permissions) => permissions['categories.manage'],
+  });
+
+  assert.ok(userDenied);
+  if (!userDenied) return;
+  assert.equal(userDenied.status, 403);
+  const payload = await userDenied.json() as { code: string };
+  assert.equal(payload.code, 'CATEGORIES_MANAGE_REQUIRED');
+
+  const adminMembership = buildMembershipWithRole('admin');
+  const adminDenied = requirePermission(adminMembership, {
+    code: 'CATEGORIES_MANAGE_REQUIRED',
+    check: (permissions) => permissions['categories.manage'],
+  });
+
+  assert.equal(adminDenied, null);
 });
 
 test('validació d escriptura: rebutja grants de famílies no grantables', () => {
