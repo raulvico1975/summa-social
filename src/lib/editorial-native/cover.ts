@@ -49,10 +49,11 @@ function asString(value: unknown): string | null {
 }
 
 function deriveImagePrompt(post: NativeBlogPost): string {
-  return (
+  const basePrompt =
     post.draft.imagePrompt?.trim() ||
     `Editorial illustration, sober nonprofit operations scene, ${post.draft.title || post.idea.prompt || 'Summa Social blog article'}`
-  )
+
+  return `${basePrompt}. Do not include any written text, letters, numbers, words, captions, labels, logos, watermarks, or readable symbols in any language.`
 }
 
 function deriveCoverAlt(post: NativeBlogPost): string {
