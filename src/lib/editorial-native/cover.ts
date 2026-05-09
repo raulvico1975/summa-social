@@ -53,7 +53,13 @@ function deriveImagePrompt(post: NativeBlogPost): string {
     post.draft.imagePrompt?.trim() ||
     `Editorial illustration, sober nonprofit operations scene, ${post.draft.title || post.idea.prompt || 'Summa Social blog article'}`
 
-  return `${basePrompt}. Do not include any written text, letters, numbers, words, captions, labels, logos, watermarks, or readable symbols in any language.`
+  return [
+    basePrompt,
+    'Hard constraint: the image must be completely text-free.',
+    'Do not include written text in any language.',
+    'Do not include letters, numbers, words, captions, labels, signs, UI text, document text, logo text, watermarks, readable symbols, pseudo-text, fake handwriting, or typographic marks.',
+    'If the scene includes documents, forms, folders, screens, receipts, invoices, bank statements, or checklists, they must be blank or represented only with abstract lines and icons that are not readable text.',
+  ].join(' ')
 }
 
 function deriveCoverAlt(post: NativeBlogPost): string {
