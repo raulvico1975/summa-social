@@ -266,7 +266,7 @@ export async function generateNativeBlogCover(post: NativeBlogPost): Promise<{
       body: JSON.stringify({
         model: getImageModel(),
         input: prompt,
-        response_modalities: ['IMAGE'],
+        response_modalities: ['image'],
         generation_config: {
           image_config: {
             aspect_ratio: '16:9',
