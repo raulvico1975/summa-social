@@ -283,6 +283,27 @@ test('retrieveCard resolves import-status phrasing', () => {
   assert.equal(ca.mode, 'card')
 })
 
+test('retrieveCard resolves natural-language operational paraphrases in ca/es', () => {
+  const cases: Array<[string, 'ca' | 'es', string]> = [
+    ['on miro només els moviments de març?', 'ca', 'guide-movement-filters'],
+    ['donde veo solo los movimientos de marzo?', 'es', 'guide-movement-filters'],
+    ['aquest ingrés és entre comptes nostres, com ho marco?', 'ca', 'manual-internal-transfer'],
+    ['esta transferencia es entre cuentas nuestras, como la marco?', 'es', 'manual-internal-transfer'],
+    ['on puc veure què hem ingressat aquest trimestre?', 'ca', 'howto-dashboard-income-period'],
+    ['li vull pujar la quota mensual a un soci', 'ca', 'howto-donor-update-fee'],
+    ['quiero subirle la cuota mensual a un socio', 'es', 'howto-donor-update-fee'],
+    ['un soci marxa però no vull perdre el seu historial', 'ca', 'guide-donor-inactive'],
+    ['un socio se da de baja pero quiero conservar su historial', 'es', 'guide-donor-inactive'],
+    ['el socio vuelve y quiero activarlo otra vez', 'es', 'guide-donor-reactivate'],
+  ]
+
+  for (const [query, lang, expectedCardId] of cases) {
+    const result = retrieveCard(query, lang, cards)
+    assert.equal(result.card.id, expectedCardId, query)
+    assert.equal(result.mode, 'card', query)
+  }
+})
+
 test('retrieveCard resolves uncategorized movement backlog questions', () => {
   const ca = retrieveCard("Tinc 200 moviments sense categoritzar. M'he de posar a fer-los un per un?", 'ca', cards)
   assert.equal(ca.card.id, 'howto-movement-unassigned-alerts')
