@@ -54,6 +54,8 @@
     "status": "bash scripts/status.sh",
     "integrations:token:create": "node --import tsx scripts/integrations/create-private-token.ts",
     "integrations:token:revoke": "node --import tsx scripts/integrations/revoke-private-token.ts",
+    "mcp:summa-agent": "node --import tsx scripts/summa-agent-mcp.ts",
+    "mcp:summa-agent:verify": "node --import tsx scripts/verify-summa-agent-mcp.ts",
     "repos:audit": "node scripts/repo-ecosystem-audit.mjs",
     "worktree:list": "bash scripts/worktree.sh list",
     "worktree:close": "bash scripts/worktree.sh close",
