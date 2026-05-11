@@ -20,7 +20,7 @@ import {
 import { SUPPORT_EMAIL } from '@/lib/constants';
 import { getPublicTranslations } from '@/i18n/public';
 import { type PublicLandingHeroMedia } from '@/lib/public-landings';
-import { getPublicFeaturesHref } from '@/lib/public-site-paths';
+import { getPublicFeaturesHref, getPublicPricingHref } from '@/lib/public-site-paths';
 
 const surfaceClass =
   'rounded-[1.75rem] border border-border/60 bg-white/90 shadow-[0_22px_60px_-40px_rgba(15,23,42,0.18)] backdrop-blur';
@@ -286,6 +286,7 @@ const FOOTER_COPY: Record<
   PublicLocale,
   {
     sitemap: string;
+    pricing: string;
     socials: string;
     socialsNote: string;
     institutional: string;
@@ -293,24 +294,28 @@ const FOOTER_COPY: Record<
 > = {
   ca: {
     sitemap: 'Mapa del web',
+    pricing: 'Preus',
     socials: 'Xarxes',
     socialsNote: 'LinkedIn i Instagram aviat.',
     institutional: 'Desenvolupada dins l’ecosistema de Semilla de Software Libre.',
   },
   es: {
     sitemap: 'Mapa del sitio',
+    pricing: 'Precios',
     socials: 'Redes',
     socialsNote: 'LinkedIn e Instagram pronto.',
     institutional: 'Desarrollada dentro del ecosistema de Semilla de Software Libre.',
   },
   fr: {
     sitemap: 'Plan du site',
+    pricing: 'Tarifs',
     socials: 'Réseaux',
     socialsNote: 'LinkedIn et Instagram bientôt.',
     institutional: 'Développée au sein de l’écosystème de Semilla de Software Libre.',
   },
   pt: {
     sitemap: 'Mapa do site',
+    pricing: 'Preços',
     socials: 'Redes',
     socialsNote: 'LinkedIn e Instagram em breve.',
     institutional: 'Desenvolvida dentro do ecossistema da Semilla de Software Libre.',
@@ -366,6 +371,7 @@ const HOME_REFRESH_COPY: Record<
       includesTitle: string;
       includes: string[];
       cta: string;
+      detailCta: string;
     };
     work: {
       eyebrow: string;
@@ -453,6 +459,7 @@ const HOME_REFRESH_COPY: Record<
         'Fiscalitat, certificats i suport inicial',
       ],
       cta: 'Demanar una demo',
+      detailCta: 'Veure detall de preus',
     },
     work: {
       eyebrow: 'Com treballem',
@@ -541,6 +548,7 @@ const HOME_REFRESH_COPY: Record<
         'Fiscalidad, certificados y soporte inicial',
       ],
       cta: 'Pedir una demo',
+      detailCta: 'Ver detalle de precios',
     },
     work: {
       eyebrow: 'Cómo trabajamos',
@@ -629,6 +637,7 @@ const HOME_REFRESH_COPY: Record<
         'Fiscalité, certificats et support initial',
       ],
       cta: 'Demander une démo',
+      detailCta: 'Voir le détail des tarifs',
     },
     work: {
       eyebrow: 'Comment nous travaillons',
@@ -717,6 +726,7 @@ const HOME_REFRESH_COPY: Record<
         'Fiscalidade, certificados e suporte inicial',
       ],
       cta: 'Pedir uma demo',
+      detailCta: 'Ver detalhe dos preços',
     },
     work: {
       eyebrow: 'Como trabalhamos',
@@ -1550,6 +1560,7 @@ export default async function HomePage({ params }: PageProps) {
   const landingCopy = LANDING_COPY[locale];
   const copy = HOME_REFRESH_COPY[locale];
   const featuresHref = getPublicFeaturesHref(locale);
+  const pricingHref = getPublicPricingHref(locale);
   const contactHref = `/${locale}/contact`;
   const howWeWorkHref = `/${locale}#how-we-work`;
   const updatesHref = `/${locale}/novetats`;
@@ -2055,12 +2066,21 @@ export default async function HomePage({ params }: PageProps) {
               </p>
             </div>
 
-            <Button asChild size="lg" className="rounded-full bg-white px-8 text-slate-950 hover:bg-slate-100">
-              <Link href={contactHref}>
-                {copy.pricing.cta}
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+              <Button asChild size="lg" className="rounded-full bg-white px-8 text-slate-950 hover:bg-slate-100">
+                <Link href={contactHref}>
+                  {copy.pricing.cta}
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Link>
+              </Button>
+              <Link
+                href={pricingHref}
+                className="inline-flex items-center justify-center rounded-full border border-white/20 px-6 py-3 text-sm font-semibold text-white transition-colors hover:border-white/45 hover:bg-white/10"
+              >
+                {copy.pricing.detailCta}
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Link>
-            </Button>
+            </div>
           </div>
 
           <div className="rounded-[2rem] border border-white/10 bg-white/[0.06] p-6 shadow-[0_32px_90px_-48px_rgba(56,189,248,0.4)] ring-1 ring-white/10 backdrop-blur sm:p-8">
@@ -2174,6 +2194,9 @@ export default async function HomePage({ params }: PageProps) {
             <nav className="grid gap-3 text-sm text-muted-foreground">
               <Link href={featuresHref} className="hover:text-foreground hover:underline">
                 {t.common.features}
+              </Link>
+              <Link href={pricingHref} className="hover:text-foreground hover:underline">
+                {FOOTER_COPY[locale].pricing}
               </Link>
               <Link href={howWeWorkHref} className="hover:text-foreground hover:underline">
                 {t.home.howWeWork.title}
