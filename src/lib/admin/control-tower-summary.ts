@@ -32,6 +32,14 @@ export interface EntityRow {
   createdAt: string | null
   lastActivityAt: string | null
   taxId?: string
+  billingPlan?: 'initial' | 'management' | 'fiscal_documents'
+  billingStatus?: 'trial' | 'active' | 'past_due' | 'cancelled'
+  billingMonthlyAmount?: number
+  billingImplantationAmount?: number
+  billingNotes?: string
+  billingContactEmail?: string
+  billingStartedAt?: string
+  billingUpdatedAt?: string
   s9: EntityS9Summary
 }
 
@@ -753,6 +761,18 @@ export async function buildAdminControlTowerSummary(
         slug: String(data.slug ?? doc.id),
         status: (data.status as EntityRow['status']) ?? 'pending',
         ...(typeof data.taxId === 'string' ? { taxId: data.taxId } : {}),
+        ...(data.billingPlan === 'initial' || data.billingPlan === 'management' || data.billingPlan === 'fiscal_documents'
+          ? { billingPlan: data.billingPlan as EntityRow['billingPlan'] }
+          : {}),
+        ...(data.billingStatus === 'trial' || data.billingStatus === 'active' || data.billingStatus === 'past_due' || data.billingStatus === 'cancelled'
+          ? { billingStatus: data.billingStatus as EntityRow['billingStatus'] }
+          : {}),
+        ...(typeof data.billingMonthlyAmount === 'number' ? { billingMonthlyAmount: data.billingMonthlyAmount } : {}),
+        ...(typeof data.billingImplantationAmount === 'number' ? { billingImplantationAmount: data.billingImplantationAmount } : {}),
+        ...(typeof data.billingNotes === 'string' ? { billingNotes: data.billingNotes } : {}),
+        ...(typeof data.billingContactEmail === 'string' ? { billingContactEmail: data.billingContactEmail } : {}),
+        ...(typeof data.billingStartedAt === 'string' ? { billingStartedAt: data.billingStartedAt } : {}),
+        ...(typeof data.billingUpdatedAt === 'string' ? { billingUpdatedAt: data.billingUpdatedAt } : {}),
         createdAt,
         orgUpdatedAt: toIsoOrNull(data.updatedAt),
         configuredFiscalCategoryIds: normalizeStringArray(data.fiscalIncomeCategoryIds ?? data.fiscalCategoryIds),
@@ -782,6 +802,14 @@ export async function buildAdminControlTowerSummary(
         slug: entity.slug,
         status: entity.status,
         ...(entity.taxId ? { taxId: entity.taxId } : {}),
+        ...(entity.billingPlan ? { billingPlan: entity.billingPlan } : {}),
+        ...(entity.billingStatus ? { billingStatus: entity.billingStatus } : {}),
+        ...(typeof entity.billingMonthlyAmount === 'number' ? { billingMonthlyAmount: entity.billingMonthlyAmount } : {}),
+        ...(typeof entity.billingImplantationAmount === 'number' ? { billingImplantationAmount: entity.billingImplantationAmount } : {}),
+        ...(entity.billingNotes ? { billingNotes: entity.billingNotes } : {}),
+        ...(entity.billingContactEmail ? { billingContactEmail: entity.billingContactEmail } : {}),
+        ...(entity.billingStartedAt ? { billingStartedAt: entity.billingStartedAt } : {}),
+        ...(entity.billingUpdatedAt ? { billingUpdatedAt: entity.billingUpdatedAt } : {}),
         createdAt: entity.createdAt,
         lastActivityAt: lastActivityAt ?? entity.createdAt,
         s9,

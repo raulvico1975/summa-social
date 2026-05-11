@@ -2,6 +2,14 @@
 
 Registre curt d'incidències de deploy bloquejat o incomplet.
 
+## 2026-05-10 — Push directe a main amb bypass de regla PR
+
+- Commit: `4f36fea3d` (`mcp(summa-agent): afegeix adaptador privat`).
+- Canvi: MCP privat per Summa Agent sobre la private integration API v1.
+- Incidència: push directe a `main` acceptat per GitHub amb bypass de la regla que demana PR.
+- Impacte: sense deploy, sense `npm run publica`, sense tokens nous i sense producció afectada.
+- Resolució: `main` i `origin/main` sincronitzats al mateix SHA, validacions locals OK i validació real pendent fins carregar tokens existents de Baruma/Flores manualment.
+
 | Data | Fase | Risc | main | prod | Resultat | Què ha fallat | Com s'ha resolt |
 |------|------|------|------|------|----------|---------------|------------------|
 | 2026-02-15 12:14 | Preflight git | BAIX | 27f96f5 | 1205c8f | BLOCKED_SAFE | Hi ha canvis pendents sense tancar abans de publicar. | Pendent |

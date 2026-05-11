@@ -37,6 +37,23 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
+import {
   Building2,
   MoreHorizontal,
   Pause,
@@ -90,6 +107,137 @@ function resolveAuthLanguage(language: string): string {
 
 export type AdminArea = 'overview' | 'entities' | 'content' | 'technical'
 type ContentModule = 'blog' | 'novetats'
+type BillingPlan = 'none' | 'initial' | 'management' | 'fiscal_documents'
+type BillingStatus = 'none' | 'trial' | 'active' | 'past_due' | 'cancelled'
+
+type BillingFormState = {
+  plan: BillingPlan
+  status: BillingStatus
+  monthlyAmount: string
+  implantationAmount: string
+  contactEmail: string
+  startedAt: string
+  notes: string
+}
+
+const BILLING_COPY = {
+  ca: {
+    title: 'Pla comercial',
+    description: 'Registre intern informatiu. No limita accessos ni funcionalitats.',
+    edit: 'Editar pla',
+    noPlan: 'Sense pla',
+    plan: 'Pla',
+    status: 'Estat',
+    monthlyAmount: 'Import mensual pactat',
+    implantationAmount: 'Implantació pactada',
+    contactEmail: 'Email de facturació',
+    startedAt: 'Data inici',
+    notes: 'Notes internes',
+    save: 'Desar',
+    saving: 'Desant...',
+    saved: 'Pla comercial actualitzat',
+    saveError: 'No s’ha pogut actualitzar el pla comercial.',
+    none: 'Sense informar',
+    plans: {
+      initial: 'Inicial',
+      management: 'Gestió',
+      fiscal_documents: 'Fiscal + Documents',
+    },
+    statuses: {
+      trial: 'Prova',
+      active: 'Actiu',
+      past_due: 'Pendent de pagament',
+      cancelled: 'Cancel·lat',
+    },
+  },
+  es: {
+    title: 'Plan comercial',
+    description: 'Registro interno informativo. No limita accesos ni funcionalidades.',
+    edit: 'Editar plan',
+    noPlan: 'Sin plan',
+    plan: 'Plan',
+    status: 'Estado',
+    monthlyAmount: 'Importe mensual pactado',
+    implantationAmount: 'Implantación pactada',
+    contactEmail: 'Email de facturación',
+    startedAt: 'Fecha inicio',
+    notes: 'Notas internas',
+    save: 'Guardar',
+    saving: 'Guardando...',
+    saved: 'Plan comercial actualizado',
+    saveError: 'No se ha podido actualizar el plan comercial.',
+    none: 'Sin informar',
+    plans: {
+      initial: 'Inicial',
+      management: 'Gestión',
+      fiscal_documents: 'Fiscal + Documentos',
+    },
+    statuses: {
+      trial: 'Prueba',
+      active: 'Activo',
+      past_due: 'Pendiente de pago',
+      cancelled: 'Cancelado',
+    },
+  },
+  fr: {
+    title: 'Plan commercial',
+    description: 'Registre interne informatif. Ne limite ni accès ni fonctionnalités.',
+    edit: 'Modifier le plan',
+    noPlan: 'Sans plan',
+    plan: 'Plan',
+    status: 'État',
+    monthlyAmount: 'Montant mensuel convenu',
+    implantationAmount: 'Mise en place convenue',
+    contactEmail: 'Email de facturation',
+    startedAt: 'Date de début',
+    notes: 'Notes internes',
+    save: 'Enregistrer',
+    saving: 'Enregistrement...',
+    saved: 'Plan commercial mis à jour',
+    saveError: 'Impossible de mettre à jour le plan commercial.',
+    none: 'Non renseigné',
+    plans: {
+      initial: 'Initial',
+      management: 'Gestion',
+      fiscal_documents: 'Fiscal + Documents',
+    },
+    statuses: {
+      trial: 'Essai',
+      active: 'Actif',
+      past_due: 'Paiement en attente',
+      cancelled: 'Annulé',
+    },
+  },
+  pt: {
+    title: 'Plano comercial',
+    description: 'Registo interno informativo. Não limita acessos nem funcionalidades.',
+    edit: 'Editar plano',
+    noPlan: 'Sem plano',
+    plan: 'Plano',
+    status: 'Estado',
+    monthlyAmount: 'Valor mensal acordado',
+    implantationAmount: 'Implementação acordada',
+    contactEmail: 'Email de faturação',
+    startedAt: 'Data de início',
+    notes: 'Notas internas',
+    save: 'Guardar',
+    saving: 'A guardar...',
+    saved: 'Plano comercial atualizado',
+    saveError: 'Não foi possível atualizar o plano comercial.',
+    none: 'Sem informar',
+    plans: {
+      initial: 'Inicial',
+      management: 'Gestão',
+      fiscal_documents: 'Fiscal + Documentos',
+    },
+    statuses: {
+      trial: 'Teste',
+      active: 'Ativo',
+      past_due: 'Pagamento pendente',
+      cancelled: 'Cancelado',
+    },
+  },
+} as const
 
 type OverviewAction = {
   id: string
@@ -163,6 +311,17 @@ export function AdminControlTower({ area }: { area: AdminArea }) {
   const [seedResult, setSeedResult] = React.useState<{ ok: boolean; demoMode?: string; counts?: Record<string, number>; error?: string } | null>(null);
   const [showSeedConfirm, setShowSeedConfirm] = React.useState(false);
   const [selectedDemoMode, setSelectedDemoMode] = React.useState<'short' | 'work'>('short');
+  const [billingOrg, setBillingOrg] = React.useState<AdminControlTowerSummary['entities'][number] | null>(null);
+  const [billingForm, setBillingForm] = React.useState<BillingFormState>({
+    plan: 'none',
+    status: 'none',
+    monthlyAmount: '',
+    implantationAmount: '',
+    contactEmail: '',
+    startedAt: '',
+    notes: '',
+  });
+  const [isSavingBilling, setIsSavingBilling] = React.useState(false);
 
   const [backupOrgId, setBackupOrgId] = React.useState<string | null>(null);
   const [notifyingOrgId, setNotifyingOrgId] = React.useState<string | null>(null);
@@ -186,6 +345,7 @@ export function AdminControlTower({ area }: { area: AdminArea }) {
       }),
     [language]
   );
+  const billingCopy = BILLING_COPY[language] ?? BILLING_COPY.ca;
 
   const refreshSummary = React.useCallback(() => {
     setSummaryRefreshToken((prev) => prev + 1)
@@ -325,6 +485,73 @@ export function AdminControlTower({ area }: { area: AdminArea }) {
         description: tr('admin.copy.orgLinkCopyError', 'No s\'ha pogut copiar l\'enllaç'),
       })
     }
+  }
+
+  const openBillingDialog = (org: AdminControlTowerSummary['entities'][number]) => {
+    setBillingOrg(org)
+    setBillingForm({
+      plan: org.billingPlan ?? 'none',
+      status: org.billingStatus ?? 'none',
+      monthlyAmount: typeof org.billingMonthlyAmount === 'number' ? String(org.billingMonthlyAmount) : '',
+      implantationAmount: typeof org.billingImplantationAmount === 'number' ? String(org.billingImplantationAmount) : '',
+      contactEmail: org.billingContactEmail ?? '',
+      startedAt: org.billingStartedAt?.slice(0, 10) ?? '',
+      notes: org.billingNotes ?? '',
+    })
+  }
+
+  const parseBillingAmount = (value: string): number | null => {
+    const normalized = value.trim().replace(',', '.')
+    if (!normalized) return null
+    const amount = Number(normalized)
+    return Number.isFinite(amount) && amount >= 0 ? amount : null
+  }
+
+  const handleSaveBilling = async () => {
+    if (!billingOrg) return
+
+    setIsSavingBilling(true)
+    try {
+      const monthlyAmount = parseBillingAmount(billingForm.monthlyAmount)
+      const implantationAmount = parseBillingAmount(billingForm.implantationAmount)
+      const payload: Record<string, string | number | null> = {
+        billingPlan: billingForm.plan === 'none' ? null : billingForm.plan,
+        billingStatus: billingForm.status === 'none' ? null : billingForm.status,
+        billingMonthlyAmount: monthlyAmount,
+        billingImplantationAmount: implantationAmount,
+        billingContactEmail: billingForm.contactEmail.trim() || null,
+        billingStartedAt: billingForm.startedAt.trim() || null,
+        billingNotes: billingForm.notes.trim() || null,
+        billingUpdatedAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      }
+
+      await updateDoc(doc(firestore, 'organizations', billingOrg.id), payload)
+
+      toast({
+        title: billingCopy.saved,
+        description: billingOrg.name,
+      })
+      setBillingOrg(null)
+      refreshSummary()
+    } catch (error) {
+      console.error('Error updating billing plan:', error)
+      toast({
+        variant: 'destructive',
+        title: tr('common.error', 'Error'),
+        description: billingCopy.saveError,
+      })
+    } finally {
+      setIsSavingBilling(false)
+    }
+  }
+
+  const getBillingPlanLabel = (plan: AdminControlTowerSummary['entities'][number]['billingPlan']) => {
+    return plan ? billingCopy.plans[plan] : billingCopy.noPlan
+  }
+
+  const getBillingStatusLabel = (status: AdminControlTowerSummary['entities'][number]['billingStatus']) => {
+    return status ? billingCopy.statuses[status] : billingCopy.none
   }
 
   const handleToggleSuspend = async (org: AdminControlTowerSummary['entities'][number]) => {
@@ -780,6 +1007,12 @@ export function AdminControlTower({ area }: { area: AdminArea }) {
           {tr('admin.entities.copyPublicUrl', 'Copiar URL pública')}
         </DropdownMenuItem>
         <DropdownMenuItem
+          onClick={() => openBillingDialog(org)}
+        >
+          <Scale className="mr-2 h-4 w-4" />
+          {billingCopy.edit}
+        </DropdownMenuItem>
+        <DropdownMenuItem
           onClick={() => handleDownloadBackup(org.id, org.name)}
           disabled={backupOrgId === org.id}
         >
@@ -1030,6 +1263,7 @@ export function AdminControlTower({ area }: { area: AdminArea }) {
                           meta={[
                             { label: tr('admin.entities.createdLabel', 'Alta'), value: formatDateForAdmin(org.createdAt) },
                             { label: tr('admin.entities.activityLabel', 'Activitat'), value: formatRelativeActivity(org.lastActivityAt) },
+                            { label: billingCopy.title, value: getBillingPlanLabel(org.billingPlan) },
                           ]}
                           actions={renderEntityMoreMenu(
                             org,
@@ -1053,6 +1287,7 @@ export function AdminControlTower({ area }: { area: AdminArea }) {
                         <TableHead>{tr('admin.entities.table.name', 'Nom')}</TableHead>
                         <TableHead>{tr('admin.entities.table.status', 'Estat')}</TableHead>
                         <TableHead>{tr('admin.entities.table.created', 'Alta')}</TableHead>
+                        <TableHead>{billingCopy.title}</TableHead>
                         <TableHead>{tr('admin.entities.table.lastActivity', 'Última activitat')}</TableHead>
                         <TableHead>{tr('admin.entities.table.actions', 'Accions')}</TableHead>
                       </TableRow>
@@ -1072,6 +1307,12 @@ export function AdminControlTower({ area }: { area: AdminArea }) {
                             </TableCell>
                             <TableCell>{getStatusBadge(org.status)}</TableCell>
                             <TableCell>{formatDateForAdmin(org.createdAt)}</TableCell>
+                            <TableCell>
+                              <div className="space-y-1">
+                                <div className="text-sm font-medium">{getBillingPlanLabel(org.billingPlan)}</div>
+                                <div className="text-xs text-muted-foreground">{getBillingStatusLabel(org.billingStatus)}</div>
+                              </div>
+                            </TableCell>
                             <TableCell>{formatRelativeActivity(org.lastActivityAt)}</TableCell>
                             <TableCell>
                               <div className="flex flex-wrap items-center gap-1">
@@ -1113,7 +1354,7 @@ export function AdminControlTower({ area }: { area: AdminArea }) {
                         ))
                       ) : (
                         <TableRow>
-                          <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
+                          <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
                             {entitySearch.trim() ? tr('admin.entities.noSearchResults', 'No hi ha cap entitat que coincideixi amb la cerca.') : tr('admin.entities.empty', 'Sense entitats disponibles.')}
                           </TableCell>
                         </TableRow>
@@ -1677,6 +1918,119 @@ export function AdminControlTower({ area }: { area: AdminArea }) {
         open={isCreateDialogOpen}
         onOpenChange={setIsCreateDialogOpen}
       />
+
+      <Dialog open={!!billingOrg} onOpenChange={(open) => !open && setBillingOrg(null)}>
+        <DialogContent className="sm:w-[min(calc(100vw-3rem),42rem)]">
+          <DialogHeader>
+            <DialogTitle>{billingCopy.title}</DialogTitle>
+            <DialogDescription>
+              {billingOrg?.name ? `${billingOrg.name}. ` : ''}{billingCopy.description}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="billing-plan">{billingCopy.plan}</Label>
+              <Select
+                value={billingForm.plan}
+                onValueChange={(value) => setBillingForm((prev) => ({ ...prev, plan: value as BillingPlan }))}
+              >
+                <SelectTrigger id="billing-plan">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">{billingCopy.none}</SelectItem>
+                  <SelectItem value="initial">{billingCopy.plans.initial}</SelectItem>
+                  <SelectItem value="management">{billingCopy.plans.management}</SelectItem>
+                  <SelectItem value="fiscal_documents">{billingCopy.plans.fiscal_documents}</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="billing-status">{billingCopy.status}</Label>
+              <Select
+                value={billingForm.status}
+                onValueChange={(value) => setBillingForm((prev) => ({ ...prev, status: value as BillingStatus }))}
+              >
+                <SelectTrigger id="billing-status">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">{billingCopy.none}</SelectItem>
+                  <SelectItem value="trial">{billingCopy.statuses.trial}</SelectItem>
+                  <SelectItem value="active">{billingCopy.statuses.active}</SelectItem>
+                  <SelectItem value="past_due">{billingCopy.statuses.past_due}</SelectItem>
+                  <SelectItem value="cancelled">{billingCopy.statuses.cancelled}</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="billing-monthly">{billingCopy.monthlyAmount}</Label>
+              <Input
+                id="billing-monthly"
+                inputMode="decimal"
+                value={billingForm.monthlyAmount}
+                onChange={(event) => setBillingForm((prev) => ({ ...prev, monthlyAmount: event.target.value }))}
+                placeholder="79"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="billing-implantation">{billingCopy.implantationAmount}</Label>
+              <Input
+                id="billing-implantation"
+                inputMode="decimal"
+                value={billingForm.implantationAmount}
+                onChange={(event) => setBillingForm((prev) => ({ ...prev, implantationAmount: event.target.value }))}
+                placeholder="300"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="billing-email">{billingCopy.contactEmail}</Label>
+              <Input
+                id="billing-email"
+                type="email"
+                value={billingForm.contactEmail}
+                onChange={(event) => setBillingForm((prev) => ({ ...prev, contactEmail: event.target.value }))}
+                placeholder="facturacio@entitat.org"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="billing-started">{billingCopy.startedAt}</Label>
+              <Input
+                id="billing-started"
+                type="date"
+                value={billingForm.startedAt}
+                onChange={(event) => setBillingForm((prev) => ({ ...prev, startedAt: event.target.value }))}
+              />
+            </div>
+
+            <div className="space-y-2 md:col-span-2">
+              <Label htmlFor="billing-notes">{billingCopy.notes}</Label>
+              <Textarea
+                id="billing-notes"
+                value={billingForm.notes}
+                onChange={(event) => setBillingForm((prev) => ({ ...prev, notes: event.target.value }))}
+                rows={4}
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setBillingOrg(null)} disabled={isSavingBilling}>
+              {tr('common.cancel', 'Cancel·lar')}
+            </Button>
+            <Button onClick={handleSaveBilling} disabled={isSavingBilling}>
+              {isSavingBilling && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {isSavingBilling ? billingCopy.saving : billingCopy.save}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <AlertDialog open={!!suspendDialogOrg} onOpenChange={() => setSuspendDialogOrg(null)}>
         <AlertDialogContent>
