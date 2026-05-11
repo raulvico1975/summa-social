@@ -17,6 +17,9 @@ Si no trobes la teva pregunta, no et preocupis: mira el Manual d'Usuari complet 
 
 ## Índex de preguntes
 
+**💳 Preus i contractació** (0a-0c)
+*Informació comercial bàsica: plans públics, implantació inicial i facturació.*
+
 **🚀 Primers passos i orientació** (1-7¾)
 *T'acabes d'estrenar amb Summa Social i no saps per on agafar-ho? Aquí trobaràs respostes per perdre la por inicial. Inclou com veure les novetats del producte (7¾).*
 
@@ -52,6 +55,32 @@ Si no trobes la teva pregunta, no et preocupis: mira el Manual d'Usuari complet 
 
 **👥 Sobre l'entitat i l'equip** (93-100)
 *Gestionar permisos, incorporar gent nova, treballar amb múltiples comptes bancaris... Tot el que envolta l'organització de l'equip.*
+
+---
+
+## 💳 Preus i contractació
+
+---
+
+### 0a. Quins preus té Summa Social?
+
+Summa Social té tres plans públics mensuals:
+
+- **Inicial:** 49 €/mes, per a entitats petites que volen ordenar donants, moviments i obligacions bàsiques.
+- **Gestió:** 79 €/mes, per a entitats que treballen amb remeses, banc, certificats i fiscalitat anual.
+- **Fiscal + Documents:** 119 €/mes, per a entitats amb més volum, Stripe, projectes, justificació econòmica o més necessitat de suport.
+
+La pàgina pública de preus és `/{idioma}/preus`, per exemple `/ca/preus` o `/es/preus`.
+
+### 0b. Hi ha cost d'implantació?
+
+Sí. La implantació inicial es pressuposta segons l'estat de les dades, el volum de contactes i la complexitat del procés. Comença a partir de 300 €.
+
+### 0c. Els plans bloquegen funcionalitats?
+
+No. En aquesta fase no hi ha Stripe Billing, checkout, portal client ni automatització de cobrament dins de Summa Social.
+
+Els plans són una referència comercial i administrativa. No bloquegen funcionalitats dins de l'aplicació.
 
 ---
 

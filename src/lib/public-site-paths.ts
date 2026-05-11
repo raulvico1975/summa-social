@@ -11,6 +11,10 @@ export function getPublicFeaturesHref(locale: PublicLocale) {
   }
 }
 
+export function getPublicPricingHref(locale: PublicLocale) {
+  return `/${locale}/preus`
+}
+
 export function getPublicDetailedGuidesLocale(locale: PublicLocale): 'ca' | 'es' {
   return locale === 'ca' ? 'ca' : 'es'
 }
