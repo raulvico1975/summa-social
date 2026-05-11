@@ -10,7 +10,7 @@ import { PUBLIC_SHELL_X, PUBLIC_WIDE_SHELL } from '@/components/public/public-sh
 import { RotatingHeroPhrase } from '@/components/public/RotatingHeroPhrase';
 import { PublicSiteHeader } from '@/components/public/PublicSiteHeader';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, CheckCircle2, Download, FileCheck, Network, Settings, ShieldCheck, Upload } from 'lucide-react';
+import { ArrowRight, CheckCircle2, Download, FileCheck, Settings, Upload } from 'lucide-react';
 import {
   PUBLIC_LOCALES,
   isValidPublicLocale,
@@ -442,7 +442,7 @@ const HOME_REFRESH_COPY: Record<
       description:
         'Moltes entitats continuen portant remeses, donants i justificacions amb Excels i processos manuals. Summa Social està pensat per controlar socis, donacions, conciliació bancària, remeses i fiscalitat sense dispersió.',
       priceIntro: 'Plans actuals',
-      price: 'des de 90 €',
+      price: 'des de 49 €',
       priceSuffix: 'al mes',
       note: "La quota final depèn del volum i de les necessitats de l'entitat.",
       implementation: "La implantació inicial i la migració des d'Excel es valoren segons cada cas.",
@@ -530,7 +530,7 @@ const HOME_REFRESH_COPY: Record<
       description:
         'Muchas entidades siguen llevando remesas, donantes y justificaciones con Excels y procesos manuales. Summa Social está pensado para controlar socios, donaciones, conciliación bancaria, remesas y fiscalidad sin dispersión.',
       priceIntro: 'Planes actuales',
-      price: 'desde 90 €',
+      price: 'desde 49 €',
       priceSuffix: 'al mes',
       note: 'La cuota final depende del volumen y de las necesidades de la entidad.',
       implementation: 'La implantación inicial y la migración desde Excel se valoran según cada caso.',
@@ -618,7 +618,7 @@ const HOME_REFRESH_COPY: Record<
       description:
         'Beaucoup de structures gèrent encore cotisations, donateurs et justificatifs avec des tableurs et des processus manuels. Summa Social est conçu pour centraliser membres, dons, rapprochement bancaire, prélèvements et fiscalité.',
       priceIntro: 'Plans actuels',
-      price: 'à partir de 90 €',
+      price: 'à partir de 49 €',
       priceSuffix: 'par mois',
       note: 'Le tarif final dépend du volume et des besoins de chaque structure.',
       implementation: 'La mise en place initiale et la migration depuis Excel sont évaluées au cas par cas.',
@@ -706,7 +706,7 @@ const HOME_REFRESH_COPY: Record<
       description:
         'Muitas entidades continuam a gerir remessas, doadores e justificações com folhas de cálculo e processos manuais. O Summa Social foi pensado para controlar sócios, doações, reconciliação bancária, remessas e fiscalidade sem dispersão.',
       priceIntro: 'Planos atuais',
-      price: 'desde 90 €',
+      price: 'desde 49 €',
       priceSuffix: 'por mês',
       note: 'A quota final depende do volume e das necessidades da entidade.',
       implementation: 'A implementação inicial e a migração a partir de Excel são avaliadas caso a caso.',
@@ -1551,7 +1551,6 @@ export default async function HomePage({ params }: PageProps) {
   const copy = HOME_REFRESH_COPY[locale];
   const featuresHref = getPublicFeaturesHref(locale);
   const contactHref = `/${locale}/contact`;
-  const aboutHref = `/${locale}/qui-som`;
   const howWeWorkHref = `/${locale}#how-we-work`;
   const updatesHref = `/${locale}/novetats`;
   const headlineParts = splitTextAroundPhrase(t.home.heroTagline, HERO_ROTATING_SEGMENTS[locale]);
@@ -1998,49 +1997,6 @@ export default async function HomePage({ params }: PageProps) {
         </div>
       </section>
 
-      <section className={`border-y border-slate-200/70 bg-slate-50/80 py-14 lg:py-16 ${PUBLIC_SHELL_X}`}>
-        <div className="mx-auto grid max-w-6xl gap-8 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
-          <div className="max-w-2xl">
-            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-primary/85">
-              {landingCopy.trust.eyebrow}
-            </p>
-            <h2 className="mt-3 text-3xl font-semibold tracking-tight text-foreground sm:text-[2.2rem]">
-              {landingCopy.trust.title}
-            </h2>
-            <p className="mt-4 text-base leading-7 text-muted-foreground sm:text-lg">
-              {landingCopy.trust.description}
-            </p>
-            <Button asChild variant="outline" className="mt-6 rounded-full bg-white px-5">
-              <Link href={aboutHref}>
-                {t.common.about}
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Link>
-            </Button>
-          </div>
-
-          <div className="rounded-[1.75rem] border border-slate-200/80 bg-white/92 p-6 shadow-[0_24px_70px_-50px_rgba(15,23,42,0.26)] sm:p-7">
-            <div className="flex gap-4">
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-sky-50 text-primary">
-                <ShieldCheck className="h-5 w-5" />
-              </div>
-              <div>
-                <p className="text-sm font-semibold leading-6 text-foreground">
-                  {landingCopy.trust.panelLead}
-                </p>
-                <div className="mt-4 grid gap-3">
-                  {landingCopy.trust.points.map((point) => (
-                    <div key={point} className="flex gap-3 text-sm leading-6 text-slate-600">
-                      <Network className="mt-0.5 h-4 w-4 shrink-0 text-primary/75" />
-                      <span>{point}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
       <section className={`py-16 lg:py-20 ${PUBLIC_SHELL_X}`}>
         <div className="mx-auto max-w-6xl">
           <div className="max-w-3xl space-y-4">
@@ -2218,9 +2174,6 @@ export default async function HomePage({ params }: PageProps) {
             <nav className="grid gap-3 text-sm text-muted-foreground">
               <Link href={featuresHref} className="hover:text-foreground hover:underline">
                 {t.common.features}
-              </Link>
-              <Link href={aboutHref} className="hover:text-foreground hover:underline">
-                {t.common.about}
               </Link>
               <Link href={howWeWorkHref} className="hover:text-foreground hover:underline">
                 {t.home.howWeWork.title}
