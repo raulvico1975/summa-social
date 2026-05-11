@@ -120,12 +120,14 @@ Superficies que ChatGPT ha proposat NO tocar ara:
 
 Primer lot validat:
 
-- Categories: implementat només a `categories/archive`.
+- Categories: implementat a `categories/archive` amb `categories.manage`.
+- Projectes (legacy): implementat a `projects/archive` amb `projectes.manage`.
 - Remittances: documentat, però no implementat en aquest lot.
 
 Decisio aplicada:
 
 - `categories/archive` passa a exigir el permis existent `categories.manage`.
+- `projects/archive` passa a exigir el permis existent `projectes.manage`.
 - No es toca `categories/update`, que ja era admin-only.
 - No es toca cap ruta de remeses.
 
@@ -134,6 +136,7 @@ Decisio aplicada:
 | Ruta | Metode | Lectura/Escriptura | Auth actual | Permis existent proposat | Risc | Estat |
 | --- | --- | --- | --- | --- | --- | --- |
 | `src/app/api/categories/archive/route.ts` | `POST` | Llegeix categoria i moviments; escriu arxiu de categoria | Firebase ID token + membership + `requirePermission(categories.manage)` | `categories.manage` | Baix | Implementat: la UI ja limitava gestio de categories a admin i ara l'API queda alineada |
+| `src/app/api/projects/archive/route.ts` + `handler.ts` | `POST` | Llegeix eix origen/desti i moviments; escriu reassignacions en batch i arxiu de l'eix | Firebase ID token + membership + `requirePermission(projectes.manage)` | `projectes.manage` | Baix | Implementat: mateix contracte funcional i guardrails, ara amb permis granular explicit |
 | `src/app/api/categories/update/route.ts` | `POST` | Llegeix categoria; escriu camps editables `name` i `type` | Firebase ID token + `verifyAdminMembership` | `categories.manage` | Baix-mitja | Ja es admin-only; millor deixar per una fase de normalitzacio d'helpers |
 | `src/app/api/remittances/in/check/route.ts` | `GET` | Llegeix transaccio pare, filles i document de remesa | `verifyAdminMembership` | Pendent: probablement lectura/gestio de moviments, pero no decidit | Mitja | No tocar encara |
 | `src/app/api/remittances/in/process/route.ts` | `POST` | Escriu locks, remeses, filles, pendents i transaccio pare; batches <= 50 | Firebase ID token intern + `verifyAdminMembership` | Pendent: possible `moviments.importarExtractes` i/o `moviments.editar` | Alt | No tocar encara sense prova especifica de remeses |
@@ -189,6 +192,6 @@ Decisions que cal tancar abans de tocar mes codi executable:
 
 Recomanacio actual:
 
-- Donar per tancat el primer lot petit de `categories/archive` si les validacions es mantenen verdes.
+- Donar per tancat el primer lot petit de `categories/archive` + `projects/archive` si les validacions es mantenen verdes.
 - Deixar remeses per una fase separada amb prova especifica.
 - Mantenir el repo sense deploy mentre aquesta fase sigui d'auditoria i enduriment intern.

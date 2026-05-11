@@ -10,6 +10,15 @@ Aquest fitxer ja no pretén duplicar el document mestre.
 
 ## Resum dels canvis recents
 
+### 2026-05-09
+
+- API/integracions: `POST /api/categories/archive` exigeix `categories.manage` i `POST /api/projects/archive` exigeix `projectes.manage`; els arxivats ja no depenen nomes de validar membership
+- codi intern: `projects/archive` es refactoritza a `handler` dedicat amb el mateix contracte funcional (idempotencia, reassignacio en batch i validacions de desti/origen)
+- codi intern: el bot de suport amplia routing protegit CA/ES per parafrasis operatives (filtres de moviments per periode, transferencies internes, quota de soci, baixa/reactivacio)
+- documentacio per usuari: millora de llegibilitat del blog public (tipografia, jerarquia visual i portada integrada al detall) mantenint el mateix contingut editorial
+- codi intern: la generacio de portada amb Gemini reforca el guardrail de "sense text" i usa `response_modalities: ['image']` compatible amb l'API
+- operativa: la fase d'enduriment d'APIs passa de "categories només" a "categories + projectes" com a primer lot petit validat
+
 ### 2026-04-23
 
 - seguretat: lot de 6 fixes d'autoritzacio i aillament desplegat i validat en produccio
