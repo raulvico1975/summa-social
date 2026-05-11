@@ -189,6 +189,21 @@ export interface PublicTranslations {
       helper: string;
     };
   };
+  pricing: {
+    navLabel: string;
+    metaTitle: string;
+    metaDescription: string;
+    title: string;
+    subtitle: string;
+    implantationTitle: string;
+    implantationText: string;
+    cta: string;
+    plans: Array<{
+      name: string;
+      price: string;
+      description: string;
+    }>;
+  };
   home: {
     metaTitle: string;
     metaDescription: string;
@@ -1202,6 +1217,39 @@ const ca: PublicTranslations = {
       helper: "Explica'ns el teu cas i et respondrem per correu.",
     },
   },
+  pricing: {
+    navLabel: 'Preus',
+    metaTitle: 'Preus | Summa Social',
+    metaDescription:
+      'Plans de Summa Social per a entitats petites i mitjanes, amb implantació inicial segons dades i procés.',
+    title: 'Preus clars per ordenar la gestió econòmica de la vostra entitat',
+    subtitle:
+      'Tres plans mensuals segons volum i necessitats, sense automatitzar cobraments ni bloquejar funcionalitats per pla.',
+    implantationTitle: 'Implantació inicial',
+    implantationText:
+      "La implantació inicial es pressuposta segons l'estat de les dades, el volum de contactes i la complexitat del procés. Comença a partir de 300 €.",
+    cta: 'Parlem del vostre cas',
+    plans: [
+      {
+        name: 'Inicial',
+        price: '49 €/mes',
+        description:
+          'Per a entitats petites que volen ordenar donants, moviments i obligacions bàsiques.',
+      },
+      {
+        name: 'Gestió',
+        price: '79 €/mes',
+        description:
+          'Per a entitats que treballen amb remeses, banc, certificats i fiscalitat anual.',
+      },
+      {
+        name: 'Fiscal + Documents',
+        price: '119 €/mes',
+        description:
+          'Per a entitats amb més volum, Stripe, projectes, justificació econòmica o més necessitat de suport.',
+      },
+    ],
+  },
   home: {
     metaTitle: 'Summa Social | Gestió econòmica per a entitats',
     metaDescription:
@@ -1796,6 +1844,39 @@ const es: PublicTranslations = {
       invalidMessage: 'El mensaje debe tener al menos 10 caracteres.',
       helper: 'Cuéntanos tu caso y te responderemos por correo.',
     },
+  },
+  pricing: {
+    navLabel: 'Precios',
+    metaTitle: 'Precios | Summa Social',
+    metaDescription:
+      'Planes de Summa Social para entidades pequeñas y medianas, con implantación inicial según datos y proceso.',
+    title: 'Precios claros para ordenar la gestión económica de vuestra entidad',
+    subtitle:
+      'Tres planes mensuales según volumen y necesidades, sin automatizar cobros ni bloquear funcionalidades por plan.',
+    implantationTitle: 'Implantación inicial',
+    implantationText:
+      'La implantación inicial se presupuesta según el estado de los datos, el volumen de contactos y la complejidad del proceso. Empieza a partir de 300 €.',
+    cta: 'Hablemos de vuestro caso',
+    plans: [
+      {
+        name: 'Inicial',
+        price: '49 €/mes',
+        description:
+          'Para entidades pequeñas que quieren ordenar donantes, movimientos y obligaciones básicas.',
+      },
+      {
+        name: 'Gestión',
+        price: '79 €/mes',
+        description:
+          'Para entidades que trabajan con remesas, banco, certificados y fiscalidad anual.',
+      },
+      {
+        name: 'Fiscal + Documentos',
+        price: '119 €/mes',
+        description:
+          'Para entidades con más volumen, Stripe, proyectos, justificación económica o mayor necesidad de soporte.',
+      },
+    ],
   },
   home: {
     metaTitle: 'Summa Social | Gestión económica para entidades',
@@ -2392,6 +2473,39 @@ const fr: PublicTranslations = {
       helper: 'Expliquez-nous votre situation et nous vous répondrons par email.',
     },
   },
+  pricing: {
+    navLabel: 'Tarifs',
+    metaTitle: 'Tarifs | Summa Social',
+    metaDescription:
+      'Plans Summa Social pour petites et moyennes organisations, avec mise en place initiale selon les données et le processus.',
+    title: 'Des tarifs clairs pour structurer la gestion économique de votre organisation',
+    subtitle:
+      'Trois plans mensuels selon le volume et les besoins, sans paiement automatisé ni blocage fonctionnel par plan.',
+    implantationTitle: 'Mise en place initiale',
+    implantationText:
+      'La mise en place initiale est chiffrée selon l’état des données, le volume de contacts et la complexité du processus. Elle commence à partir de 300 €.',
+    cta: 'Parlons de votre cas',
+    plans: [
+      {
+        name: 'Initial',
+        price: '49 €/mois',
+        description:
+          'Pour les petites organisations qui veulent structurer donateurs, mouvements et obligations de base.',
+      },
+      {
+        name: 'Gestion',
+        price: '79 €/mois',
+        description:
+          'Pour les organisations qui gèrent prélèvements, banque, certificats et fiscalité annuelle.',
+      },
+      {
+        name: 'Fiscal + Documents',
+        price: '119 €/mois',
+        description:
+          'Pour les organisations avec plus de volume, Stripe, projets, justification économique ou besoin de support accru.',
+      },
+    ],
+  },
   home: {
     metaTitle: 'Summa Social | Gestion économique pour les associations',
     metaDescription:
@@ -2986,6 +3100,39 @@ const pt: PublicTranslations = {
       invalidMessage: 'A mensagem deve ter pelo menos 10 caracteres.',
       helper: 'Explique-nos o seu caso e responderemos por email.',
     },
+  },
+  pricing: {
+    navLabel: 'Preços',
+    metaTitle: 'Preços | Summa Social',
+    metaDescription:
+      'Planos do Summa Social para entidades pequenas e médias, com implementação inicial conforme dados e processo.',
+    title: 'Preços claros para ordenar a gestão económica da vossa entidade',
+    subtitle:
+      'Três planos mensais segundo volume e necessidades, sem automatizar cobranças nem bloquear funcionalidades por plano.',
+    implantationTitle: 'Implementação inicial',
+    implantationText:
+      'A implementação inicial é orçamentada segundo o estado dos dados, o volume de contactos e a complexidade do processo. Começa a partir de 300 €.',
+    cta: 'Falemos do vosso caso',
+    plans: [
+      {
+        name: 'Inicial',
+        price: '49 €/mês',
+        description:
+          'Para entidades pequenas que querem ordenar doadores, movimentos e obrigações básicas.',
+      },
+      {
+        name: 'Gestão',
+        price: '79 €/mês',
+        description:
+          'Para entidades que trabalham com remessas, banco, certificados e fiscalidade anual.',
+      },
+      {
+        name: 'Fiscal + Documentos',
+        price: '119 €/mês',
+        description:
+          'Para entidades com mais volume, Stripe, projetos, justificação económica ou maior necessidade de suporte.',
+      },
+    ],
   },
   home: {
     metaTitle: 'Summa Social | Gestão económica para entidades',

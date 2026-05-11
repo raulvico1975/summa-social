@@ -532,6 +532,9 @@ export type OrganizationStatus = 'active' | 'suspended' | 'pending';
  */
 export type OrganizationLanguage = 'ca' | 'es';
 
+export type OrganizationBillingPlan = 'initial' | 'management' | 'fiscal_documents';
+export type OrganizationBillingStatus = 'trial' | 'active' | 'past_due' | 'cancelled';
+
 /**
  * Feature flags per organització.
  * Permet activar/desactivar mòduls opcionals.
@@ -577,6 +580,15 @@ export type Organization = {
   returnEmailTemplate?: string | null; // Plantilla del correu de devolucions (fallback al sistema si null/absent)
   // Feature flags
   features?: OrganizationFeatures; // Mòduls opcionals activats/desactivats
+  // Registre comercial informatiu. No controla accés ni funcionalitats.
+  billingPlan?: OrganizationBillingPlan;
+  billingStatus?: OrganizationBillingStatus;
+  billingMonthlyAmount?: number;
+  billingImplantationAmount?: number;
+  billingNotes?: string;
+  billingContactEmail?: string;
+  billingStartedAt?: string;
+  billingUpdatedAt?: string;
   // Onboarding
   onboarding?: {
     welcomeSeenAt?: string;        // Data (YYYY-MM-DD) quan el primer admin va veure la modal

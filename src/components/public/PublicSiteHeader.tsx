@@ -5,17 +5,18 @@ import { PUBLIC_WIDE_SHELL } from '@/components/public/public-shell'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { getPublicTranslations } from '@/i18n/public'
 import type { PublicLocale } from '@/lib/public-locale'
-import { getPublicFeaturesHref } from '@/lib/public-site-paths'
+import { getPublicFeaturesHref, getPublicPricingHref } from '@/lib/public-site-paths'
 import { cn } from '@/lib/utils'
 
 interface PublicSiteHeaderProps {
   locale: PublicLocale
-  currentSection?: 'about' | 'features' | 'updates' | 'blog'
+  currentSection?: 'about' | 'features' | 'pricing' | 'updates' | 'blog'
 }
 
 export function PublicSiteHeader({ locale, currentSection }: PublicSiteHeaderProps) {
   const t = getPublicTranslations(locale)
   const featuresHref = getPublicFeaturesHref(locale)
+  const pricingHref = getPublicPricingHref(locale)
   const aboutHref = `/${locale}/qui-som`
   const updatesHref = `/${locale}/novetats`
   const blogHref = `/${locale}/blog`
@@ -42,6 +43,15 @@ export function PublicSiteHeader({ locale, currentSection }: PublicSiteHeaderPro
                 )}
               >
                 {t.common.features}
+              </Link>
+              <Link
+                href={pricingHref}
+                className={cn(
+                  'transition-colors hover:text-foreground',
+                  currentSection === 'pricing' && 'text-foreground'
+                )}
+              >
+                {t.pricing.navLabel}
               </Link>
               <Link
                 href={aboutHref}
@@ -102,6 +112,17 @@ export function PublicSiteHeader({ locale, currentSection }: PublicSiteHeaderPro
                 )}
               >
                 <span>{t.common.features}</span>
+                <ArrowRight className="h-4 w-4 text-muted-foreground transition-transform group-hover/item:translate-x-0.5" />
+              </Link>
+
+              <Link
+                href={pricingHref}
+                className={cn(
+                  'group/item flex items-center justify-between rounded-[1.15rem] px-4 py-3 text-sm font-medium text-foreground transition-colors hover:bg-sky-50',
+                  currentSection === 'pricing' && 'bg-sky-50'
+                )}
+              >
+                <span>{t.pricing.navLabel}</span>
                 <ArrowRight className="h-4 w-4 text-muted-foreground transition-transform group-hover/item:translate-x-0.5" />
               </Link>
 
