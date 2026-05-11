@@ -10,6 +10,13 @@ Aquest fitxer ja no pretén duplicar el document mestre.
 
 ## Resum dels canvis recents
 
+### 2026-05-10
+
+- codi intern: nou adaptador MCP privat `summa-agent-mcp` amb servidor/client i testos per exposar 4 eines controlades (`search_contacts`, `search_transactions`, `upload_pending_document`, `get_entity_operational_summary`)
+- API/integracions: l'adaptador consumeix exclusivament la `private integration API v1` existent amb `Authorization` i `Idempotency-Key`, sense ampliar contracte ni crear endpoints nous
+- documentacio per usuari: sense canvis; funcionalitat interna no exposada a clients
+- operativa: validacio real condicionada a tokens explicits d'entorn, amb verificacio cross-org esperant `ORG_NOT_ALLOWED` i evidencies redaccionades a `tmp/verification/*`
+
 ### 2026-04-23
 
 - seguretat: lot de 6 fixes d'autoritzacio i aillament desplegat i validat en produccio
