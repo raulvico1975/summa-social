@@ -195,13 +195,24 @@ export interface PublicTranslations {
     metaDescription: string;
     title: string;
     subtitle: string;
+    claim: string;
+    orientationTitle: string;
+    orientationText: string;
+    orientationPoints: string[];
     implantationTitle: string;
     implantationText: string;
+    implantationPrice: string;
+    implantationSubtext: string;
+    decisionTitle: string;
+    decisionText: string;
     cta: string;
     plans: Array<{
       name: string;
       price: string;
+      badge: string;
       description: string;
+      recommended?: boolean;
+      features: string[];
     }>;
   };
   home: {
@@ -1222,31 +1233,72 @@ const ca: PublicTranslations = {
     metaTitle: 'Preus | Summa Social',
     metaDescription:
       'Plans de Summa Social per a entitats petites i mitjanes, amb implantació inicial segons dades i procés.',
-    title: 'Preus clars per ordenar la gestió econòmica de la vostra entitat',
+    title: 'Preus simples per portar la gestió econòmica amb més control',
     subtitle:
-      'Tres plans mensuals segons volum i necessitats, sense automatitzar cobraments ni bloquejar funcionalitats per pla.',
+      'Summa Social combina moviments bancaris, donants, remeses, certificats i documentació en una eina pensada per a entitats socials petites i mitjanes.',
+    claim: 'Plans des de 49 €/mes.',
+    orientationTitle: 'Trieu el pla segons la complexitat de la gestió',
+    orientationText: '',
+    orientationPoints: [
+      'Quotes, socis i fiscalitat bàsica',
+      'Control bancari i revisió econòmica ordinària',
+      'Documents, gestoria i projectes',
+    ],
     implantationTitle: 'Implantació inicial',
     implantationText:
-      "La implantació inicial es pressuposta segons l'estat de les dades, el volum de contactes i la complexitat del procés. Comença a partir de 300 €.",
+      'Abans de treballar bé, cal ordenar les dades de partida: contactes, extractes, categories, remeses i criteris fiscals. Per això Summa Social inclou una implantació inicial pressupostada segons el cas.',
+    implantationPrice: 'A partir de 300 €',
+    implantationSubtext:
+      "L'import final depèn de l'estat de les dades, el volum de contactes i la complexitat de l'entitat.",
+    decisionTitle: 'Si dubteu, comenceu pel pla Gestió',
+    decisionText: '',
     cta: 'Parlem del vostre cas',
     plans: [
       {
         name: 'Inicial',
         price: '49 €/mes',
+        badge: 'Per començar',
         description:
-          'Per a entitats petites que volen ordenar donants, moviments i obligacions bàsiques.',
+          'Per a entitats petites que volen ordenar socis, quotes, certificats i la fiscalitat anual bàsica.',
+        features: [
+          'Socis, donants i contactes',
+          'Emissió de remeses',
+          'Certificats de donació',
+          'Model 182',
+        ],
       },
       {
         name: 'Gestió',
         price: '79 €/mes',
+        badge: 'Recomanat',
+        recommended: true,
         description:
-          'Per a entitats que treballen amb remeses, banc, certificats i fiscalitat anual.',
+          'El pla natural per a entitats que, a més de quotes i certificats, necessiten control bancari i revisió econòmica regular.',
+        features: [
+          'Tot el pla Inicial',
+          'Importació de moviments bancaris',
+          'Gestió de devolucions',
+          'Gestió de cobraments via Stripe',
+          'Pujada il·limitada de factures, nòmines, tiquets i documents vinculats a cada moviment bancari',
+          'Categorització amb IA',
+          'Model 347',
+        ],
       },
       {
-        name: 'Fiscal + Documents',
+        name: 'Complet',
         price: '119 €/mes',
+        badge: 'Gestoria i projectes',
         description:
-          'Per a entitats amb més volum, Stripe, projectes, justificació econòmica o més necessitat de suport.',
+          'Per a entitats que volen arribar a la gestoria i als projectes amb documents, despeses i justificacions més preparades.',
+        features: [
+          'Tot el pla Gestió',
+          'Assignació automàtica de documents pendents',
+          'Exportació per gestoria',
+          'Mòdul de projectes',
+          'Justificació econòmica de subvencions',
+          'Multidivisa amb càlcul automàtic',
+          'Captura de rebuts o tiquets amb fotografia i extracció amb IA',
+        ],
       },
     ],
   },
@@ -1850,31 +1902,72 @@ const es: PublicTranslations = {
     metaTitle: 'Precios | Summa Social',
     metaDescription:
       'Planes de Summa Social para entidades pequeñas y medianas, con implantación inicial según datos y proceso.',
-    title: 'Precios claros para ordenar la gestión económica de vuestra entidad',
+    title: 'Precios simples para llevar la gestión económica con más control',
     subtitle:
-      'Tres planes mensuales según volumen y necesidades, sin automatizar cobros ni bloquear funcionalidades por plan.',
+      'Summa Social combina movimientos bancarios, donantes, remesas, certificados y documentación en una herramienta pensada para entidades sociales pequeñas y medianas.',
+    claim: 'Planes desde 49 €/mes.',
+    orientationTitle: 'Elegid el plan según la complejidad de la gestión',
+    orientationText: '',
+    orientationPoints: [
+      'Cuotas, socios y fiscalidad básica',
+      'Control bancario y revisión económica ordinaria',
+      'Documentos, gestoría y proyectos',
+    ],
     implantationTitle: 'Implantación inicial',
     implantationText:
-      'La implantación inicial se presupuesta según el estado de los datos, el volumen de contactos y la complejidad del proceso. Empieza a partir de 300 €.',
+      'Antes de trabajar bien, hay que ordenar los datos de partida: contactos, extractos, categorías, remesas y criterios fiscales. Por eso Summa Social incluye una implantación inicial presupuestada según el caso.',
+    implantationPrice: 'A partir de 300 €',
+    implantationSubtext:
+      'El importe final depende del estado de los datos, el volumen de contactos y la complejidad de la entidad.',
+    decisionTitle: 'Si dudáis, empezad por el plan Gestión',
+    decisionText: '',
     cta: 'Hablemos de vuestro caso',
     plans: [
       {
         name: 'Inicial',
         price: '49 €/mes',
+        badge: 'Para empezar',
         description:
-          'Para entidades pequeñas que quieren ordenar donantes, movimientos y obligaciones básicas.',
+          'Para entidades pequeñas que quieren ordenar socios, cuotas, certificados y la fiscalidad anual básica.',
+        features: [
+          'Socios, donantes y contactos',
+          'Emisión de remesas',
+          'Certificados de donación',
+          'Modelo 182',
+        ],
       },
       {
         name: 'Gestión',
         price: '79 €/mes',
+        badge: 'Recomendado',
+        recommended: true,
         description:
-          'Para entidades que trabajan con remesas, banco, certificados y fiscalidad anual.',
+          'El plan natural para entidades que, además de cuotas y certificados, necesitan control bancario y revisión económica regular.',
+        features: [
+          'Todo el plan Inicial',
+          'Importación de movimientos bancarios',
+          'Gestión de devoluciones',
+          'Gestión de cobros vía Stripe',
+          'Subida ilimitada de facturas, nóminas, tickets y documentos vinculados a cada movimiento bancario',
+          'Categorización con IA',
+          'Modelo 347',
+        ],
       },
       {
-        name: 'Fiscal + Documentos',
+        name: 'Completo',
         price: '119 €/mes',
+        badge: 'Gestoría y proyectos',
         description:
-          'Para entidades con más volumen, Stripe, proyectos, justificación económica o mayor necesidad de soporte.',
+          'Para entidades que quieren llegar a la gestoría y a los proyectos con documentos, gastos y justificaciones más preparados.',
+        features: [
+          'Todo el plan Gestión',
+          'Asignación automática de documentos pendientes',
+          'Exportación para gestoría',
+          'Módulo de proyectos',
+          'Justificación económica de subvenciones',
+          'Multidivisa con cálculo automático',
+          'Captura de recibos o tickets con fotografía y extracción con IA',
+        ],
       },
     ],
   },
@@ -2478,31 +2571,72 @@ const fr: PublicTranslations = {
     metaTitle: 'Tarifs | Summa Social',
     metaDescription:
       'Plans Summa Social pour petites et moyennes organisations, avec mise en place initiale selon les données et le processus.',
-    title: 'Des tarifs clairs pour structurer la gestion économique de votre organisation',
+    title: 'Des tarifs simples pour gérer l’économie avec plus de contrôle',
     subtitle:
-      'Trois plans mensuels selon le volume et les besoins, sans paiement automatisé ni blocage fonctionnel par plan.',
+      'Summa Social réunit mouvements bancaires, donateurs, prélèvements, certificats et documentation dans un outil conçu pour les petites et moyennes organisations sociales.',
+    claim: 'Plans à partir de 49 €/mois.',
+    orientationTitle: 'Choisissez le plan selon la complexité de la gestion',
+    orientationText: '',
+    orientationPoints: [
+      'Cotisations, membres et fiscalité de base',
+      'Contrôle bancaire et revue économique régulière',
+      'Documents, comptabilité et projets',
+    ],
     implantationTitle: 'Mise en place initiale',
     implantationText:
-      'La mise en place initiale est chiffrée selon l’état des données, le volume de contacts et la complexité du processus. Elle commence à partir de 300 €.',
+      'Avant de bien travailler, il faut ordonner les données de départ : contacts, relevés, catégories, prélèvements et critères fiscaux. C’est pourquoi Summa Social inclut une mise en place initiale chiffrée selon le cas.',
+    implantationPrice: 'À partir de 300 €',
+    implantationSubtext:
+      'Le montant final dépend de l’état des données, du volume de contacts et de la complexité de l’organisation.',
+    decisionTitle: 'En cas de doute, commencez par le plan Gestion',
+    decisionText: '',
     cta: 'Parlons de votre cas',
     plans: [
       {
         name: 'Initial',
         price: '49 €/mois',
+        badge: 'Pour commencer',
         description:
-          'Pour les petites organisations qui veulent structurer donateurs, mouvements et obligations de base.',
+          'Pour les petites organisations qui veulent structurer membres, cotisations, certificats et fiscalité annuelle de base.',
+        features: [
+          'Membres, donateurs et contacts',
+          'Émission de prélèvements',
+          'Certificats de don',
+          'Modèle 182',
+        ],
       },
       {
         name: 'Gestion',
         price: '79 €/mois',
+        badge: 'Recommandé',
+        recommended: true,
         description:
-          'Pour les organisations qui gèrent prélèvements, banque, certificats et fiscalité annuelle.',
+          'Le plan naturel pour les organisations qui, en plus des cotisations et certificats, ont besoin de contrôle bancaire et de revue économique régulière.',
+        features: [
+          'Tout le plan Initial',
+          'Import de mouvements bancaires',
+          'Gestion des rejets',
+          'Gestion des encaissements via Stripe',
+          'Dépôt illimité de factures, fiches de paie, reçus et documents liés à chaque mouvement bancaire',
+          'Catégorisation avec IA',
+          'Modèle 347',
+        ],
       },
       {
-        name: 'Fiscal + Documents',
+        name: 'Complet',
         price: '119 €/mois',
+        badge: 'Comptabilité et projets',
         description:
-          'Pour les organisations avec plus de volume, Stripe, projets, justification économique ou besoin de support accru.',
+          'Pour les organisations qui veulent préparer la comptabilité et les projets avec documents, dépenses et justificatifs mieux structurés.',
+        features: [
+          'Tout le plan Gestion',
+          'Affectation automatique des documents en attente',
+          'Export pour la comptabilité',
+          'Module projets',
+          'Justification économique de subventions',
+          'Multidevise avec calcul automatique',
+          'Capture de reçus ou tickets par photo et extraction avec IA',
+        ],
       },
     ],
   },
@@ -3106,31 +3240,72 @@ const pt: PublicTranslations = {
     metaTitle: 'Preços | Summa Social',
     metaDescription:
       'Planos do Summa Social para entidades pequenas e médias, com implementação inicial conforme dados e processo.',
-    title: 'Preços claros para ordenar a gestão económica da vossa entidade',
+    title: 'Preços simples para gerir a economia com mais controlo',
     subtitle:
-      'Três planos mensais segundo volume e necessidades, sem automatizar cobranças nem bloquear funcionalidades por plano.',
+      'O Summa Social combina movimentos bancários, doadores, remessas, certificados e documentação numa ferramenta pensada para entidades sociais pequenas e médias.',
+    claim: 'Planos desde 49 €/mês.',
+    orientationTitle: 'Escolham o plano segundo a complexidade da gestão',
+    orientationText: '',
+    orientationPoints: [
+      'Quotas, sócios e fiscalidade básica',
+      'Controlo bancário e revisão económica ordinária',
+      'Documentos, contabilidade e projetos',
+    ],
     implantationTitle: 'Implementação inicial',
     implantationText:
-      'A implementação inicial é orçamentada segundo o estado dos dados, o volume de contactos e a complexidade do processo. Começa a partir de 300 €.',
+      'Antes de trabalhar bem, é preciso ordenar os dados de partida: contactos, extratos, categorias, remessas e critérios fiscais. Por isso o Summa Social inclui uma implementação inicial orçamentada segundo o caso.',
+    implantationPrice: 'A partir de 300 €',
+    implantationSubtext:
+      'O valor final depende do estado dos dados, do volume de contactos e da complexidade da entidade.',
+    decisionTitle: 'Em caso de dúvida, comecem pelo plano Gestão',
+    decisionText: '',
     cta: 'Falemos do vosso caso',
     plans: [
       {
         name: 'Inicial',
         price: '49 €/mês',
+        badge: 'Para começar',
         description:
-          'Para entidades pequenas que querem ordenar doadores, movimentos e obrigações básicas.',
+          'Para entidades pequenas que querem ordenar sócios, quotas, certificados e a fiscalidade anual básica.',
+        features: [
+          'Sócios, doadores e contactos',
+          'Emissão de remessas',
+          'Certificados de donativo',
+          'Modelo 182',
+        ],
       },
       {
         name: 'Gestão',
         price: '79 €/mês',
+        badge: 'Recomendado',
+        recommended: true,
         description:
-          'Para entidades que trabalham com remessas, banco, certificados e fiscalidade anual.',
+          'O plano natural para entidades que, além de quotas e certificados, precisam de controlo bancário e revisão económica regular.',
+        features: [
+          'Todo o plano Inicial',
+          'Importação de movimentos bancários',
+          'Gestão de devoluções',
+          'Gestão de cobranças via Stripe',
+          'Carregamento ilimitado de faturas, folhas de pagamento, recibos e documentos ligados a cada movimento bancário',
+          'Categorização com IA',
+          'Modelo 347',
+        ],
       },
       {
-        name: 'Fiscal + Documentos',
+        name: 'Completo',
         price: '119 €/mês',
+        badge: 'Contabilidade e projetos',
         description:
-          'Para entidades com mais volume, Stripe, projetos, justificação económica ou maior necessidade de suporte.',
+          'Para entidades que querem chegar à contabilidade e aos projetos com documentos, despesas e justificações mais preparadas.',
+        features: [
+          'Todo o plano Gestão',
+          'Atribuição automática de documentos pendentes',
+          'Exportação para contabilidade',
+          'Módulo de projetos',
+          'Justificação económica de subvenções',
+          'Multidivisa com cálculo automático',
+          'Captura de recibos ou tickets com fotografia e extração com IA',
+        ],
       },
     ],
   },
