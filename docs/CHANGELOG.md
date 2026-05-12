@@ -12,6 +12,7 @@ Aquest fitxer ja no pretén duplicar el document mestre.
 
 ### 2026-05-12
 
+- fiscalitat/permisos: certificats de donació amb API server-side acotada governada per `fiscal.certificats.generar`, sense requerir `moviments.read` ni exposar ledger general.
 - API/integracions: afegit pilot controlat `pending_documents.link` per vincular un `pendingDocument` existent amb un moviment concret, amb hash, import/data esperats, scope dedicat i auditoria.
 - MCP Summa Agent: nova eina privada `link_pending_document_to_transaction`; no toca imports, dates, categories, fiscalitat ni remeses, i bloqueja moviments que ja tenen document.
 

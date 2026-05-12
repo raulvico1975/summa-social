@@ -1816,6 +1816,7 @@ També els pots enviar directament des de la mateixa pantalla de **📄 Informes
 **Abans d'enviar, revisa això:**
 - El donant ha de tenir email informat
 - El teu usuari ha de tenir permís per generar certificats fiscals
+- Aquest permís pot permetre generar certificats sense donar accés a la secció **Moviments** ni a l'històric econòmic general
 - Si s'arriba al límit diari d'enviaments, el sistema t'avisa i pots continuar l'endemà
 
 > 💡 Si el total d'un donant és ≤ 0 (per devolucions), no es genera certificat.

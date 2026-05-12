@@ -21,6 +21,7 @@ Aquest document resumeix les mesures tècniques i organitzatives aplicades a Sum
 - rols bàsics `admin`, `user`, `viewer`
 - permisos granulars per membre (`userOverrides`, `userGrants`, `capabilities`)
 - validació server-side de rutes sensibles amb Admin SDK o guardrails específics
+- APIs fiscals acotades per minimització de dades, com certificats de donació amb `fiscal.certificats.generar` sense lectura general del ledger (`moviments.read`)
 - bypass SuperAdmin controlat només per a operativa de plataforma
 
 ### 2.3 Integritat de dades
