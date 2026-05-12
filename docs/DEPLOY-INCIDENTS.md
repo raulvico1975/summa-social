@@ -92,3 +92,4 @@ Registre curt d'incidències de deploy bloquejat o incomplet.
 | 2026-05-12 11:19 | Preflight git | BAIX | d7cf1601e | 5f2e7273f | BLOCKED_SAFE | NO POTS DIR "AUTORITZO DEPLOY": hi ha worktrees residuals o ambigus | Pendent |
 | 2026-05-12 11:23 | Capturar revisio App Hosting abans de publicar | ALT | 462276046 | 5f2e7273f | BLOCKED_SAFE | gcloud no disponible per verificar la revisio efectiva d'App Hosting. | Pendent |
 | 2026-05-12 18:13 | Capturar revisio App Hosting abans de publicar | ALT | 7dc2e55f9 | 42ae066e4 | BLOCKED_SAFE | gcloud no disponible per verificar la revisio efectiva d'App Hosting. | Pendent |
+| 2026-05-12 22:11 | Verificacions | MITJA | a30efd155 | fd1a1d939 | BLOCKED_SAFE | La verificacio local no ha passat perquè `npm` no era al PATH de la sessió Codex. | Resolt reexecutant el ritual amb `/usr/local/bin` al PATH. |
