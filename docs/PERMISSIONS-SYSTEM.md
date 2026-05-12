@@ -77,6 +77,20 @@ On s'enforça:
 
 - `GET /moviments` -> `sections.moviments && moviments.read`
 - `GET /projectes/:id/moviments` -> `projectes.manage && moviments.read`
+- `POST /api/fiscal/certificates/summary` -> `fiscal.certificats.generar`
+
+## Permisos fiscals acotats
+
+`fiscal.certificats.generar` permet generar certificats de donació i accedir a una lectura fiscal mínima per aquesta finalitat. No implica `moviments.read` ni autoritza lectura directa del ledger.
+
+La lectura acotada passa per `POST /api/fiscal/certificates/summary`:
+
+- s'autoritza amb ID token + membership + `fiscal.certificats.generar`
+- llegeix internament amb Admin SDK
+- retorna només dades certificables sanitzades
+- no retorna conceptes bancaris, notes, categories, documents, IBAN, comptes bancaris ni IDs reals de `transactions`
+
+Això permet perfils de gestió de donants que poden generar certificats sense veure `Moviments` ni l'històric econòmic general.
 
 ## Índex Firestore obligatori
 

@@ -111,10 +111,26 @@ Aquest criteri garanteix coherència entre certificats emesos a donants i la inf
 
 ---
 
+## Accés i minimització de dades
+
+Els certificats poden generar-se amb `fiscal.certificats.generar` sense concedir `moviments.read`.
+
+En perfils fiscals restringits, Summa Social usa una API server-side acotada (`POST /api/fiscal/certificates/summary`) que calcula imports amb la mateixa font fiscal consolidada però retorna només dades mínimes per al certificat:
+
+- dades fiscals del donant necessàries per emetre el certificat
+- any fiscal
+- import brut, devolucions, import net i recompte
+
+No retorna l'històric general de moviments, conceptes bancaris, categories, documents, IBAN, comptes bancaris, notes ni IDs reals de transacció.
+
+---
+
 ## Components que implementen aquest criteri
 
 - `donation-certificate-generator.tsx` — Generador massiu (Model 182 i certificats en lot)
 - `donor-detail-drawer.tsx` — Certificat anual individual des del detall del donant
+- `POST /api/fiscal/certificates/summary` — Resum fiscal acotat per certificats sense exposar ledger
+- `certificate-summaries.ts` — Projecció sanitzada de dades certificables
 - Enviament per email — Mateix PDF que la descàrrega
 
 ---
@@ -123,5 +139,6 @@ Aquest criteri garanteix coherència entre certificats emesos a donants i la inf
 
 | Versió | Data | Canvis |
 |--------|------|--------|
+| 1.2 | Maig 2026 | Afegit criteri d'accés acotat: generar certificats no implica lectura general de moviments |
 | 1.1 | Gener 2026 | Afegit criteri `archivedAt`: transaccions arxivades no compten |
 | 1.0 | Desembre 2025 | Versió inicial |
