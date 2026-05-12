@@ -2,6 +2,7 @@ import { createInterface } from 'node:readline';
 import { stdin as input, stdout as output } from 'node:process';
 import {
   createClientFromEnv,
+  type LinkPendingDocumentToTransactionInput,
   type OperationalSummaryInput,
   type SearchContactsInput,
   type SearchTransactionsInput,
@@ -77,6 +78,35 @@ const TOOLS: ToolDefinition[] = [
         contentType: { type: 'string' },
       },
       required: ['filePath', 'idempotencyKey'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'link_pending_document_to_transaction',
+    description: 'Vincula un document pendent amb un moviment concret de Summa, amb validacions estrictes i registre. Accio d un sol cas.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        orgId: { type: 'string' },
+        pendingDocumentId: { type: 'string' },
+        transactionId: { type: 'string' },
+        caseId: { type: 'string' },
+        documentHash: { type: 'string' },
+        expectedAmount: { type: 'number' },
+        expectedDate: { type: 'string', pattern: '^\\d{4}-\\d{2}-\\d{2}$' },
+        reviewerLabel: { type: 'string' },
+        note: { type: 'string' },
+      },
+      required: [
+        'pendingDocumentId',
+        'transactionId',
+        'caseId',
+        'documentHash',
+        'expectedAmount',
+        'expectedDate',
+        'reviewerLabel',
+        'note',
+      ],
       additionalProperties: false,
     },
   },
@@ -190,6 +220,8 @@ export class SummaAgentMcpServer {
         return textResult(await this.client.searchTransactions(args as SearchTransactionsInput));
       case 'upload_pending_document':
         return textResult(await this.client.uploadPendingDocument(args as unknown as UploadPendingDocumentInput));
+      case 'link_pending_document_to_transaction':
+        return textResult(await this.client.linkPendingDocumentToTransaction(args as unknown as LinkPendingDocumentToTransactionInput));
       case 'get_entity_operational_summary':
         return textResult(await this.client.getEntityOperationalSummary(args as OperationalSummaryInput));
       default:

@@ -11,19 +11,20 @@ Eines exposades:
 - `search_contacts`: lectura de contactes.
 - `search_transactions`: lectura de moviments.
 - `upload_pending_document`: pujada idempotent de document pendent per revisió humana.
+- `link_pending_document_to_transaction`: vinculació d'un document pendent amb un moviment concret, només amb OK granular i validacions estrictes.
 - `get_entity_operational_summary`: resum curt derivat de moviments recents i, opcionalment, cerca de contactes.
 
 Límit explícit: `get_entity_operational_summary` no llegeix documents pendents perquè la v1 no exposa `pending_documents.read`.
 
 ## Prohibicions
 
-- No modifica moviments bancaris.
+- No modifica imports, dates ni classificació de moviments bancaris.
 - No toca remeses.
 - No toca Model 182, Model 347 ni certificats.
 - No escriu directament a Firestore.
 - No crea donants automàticament.
 - No fa matching fiscal automàtic.
-- No afegeix endpoints nous a la private integration API v1.
+- No fa lots: la vinculació document-moviment és d'un sol cas per crida.
 
 ## Configuració local
 
@@ -54,10 +55,11 @@ npm run test:node
 
 Cobertura afegida:
 
-- llista exacta de les 4 eines MCP;
+- llista exacta de les eines MCP privades;
 - ús de rutes privades existents amb `Authorization`;
 - resum operatiu sense endpoints fiscals, remeses ni lectura no autoritzada de pending documents;
 - upload amb `Idempotency-Key` i sense tocar ledger.
+- vinculació document-moviment amb scope dedicat, hash del document, import/data esperats i bloqueig si el moviment ja té document.
 
 ## Validació real controlada
 

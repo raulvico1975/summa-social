@@ -13,7 +13,7 @@ function jsonResponse(body: unknown, status = 200): Response {
   });
 }
 
-test('MCP lists the four private Summa Agent tools', async () => {
+test('MCP lists the private Summa Agent tools', async () => {
   const client = new SummaPrivateIntegrationClient({
     baseUrl: 'http://summa.local',
     token: 'token-a',
@@ -33,6 +33,7 @@ test('MCP lists the four private Summa Agent tools', async () => {
     'search_contacts',
     'search_transactions',
     'upload_pending_document',
+    'link_pending_document_to_transaction',
     'get_entity_operational_summary',
   ]);
 });
@@ -141,4 +142,44 @@ test('upload pending document uses idempotency and never calls ledger routes', a
   } finally {
     await rm(dir, { recursive: true, force: true });
   }
+});
+
+test('link pending document calls only the private linking endpoint', async () => {
+  const calls: Array<{ url: string; init?: RequestInit }> = [];
+  const client = new SummaPrivateIntegrationClient({
+    baseUrl: 'http://summa.local',
+    token: 'token-a',
+    defaultOrgId: 'org-a',
+    fetchFn: async (url, init) => {
+      calls.push({ url: String(url), init });
+      return jsonResponse({
+        success: true,
+        linked: true,
+        pendingDocumentId: 'intpd_1',
+        transactionId: 'tx_1',
+      });
+    },
+  });
+
+  await client.linkPendingDocumentToTransaction({
+    pendingDocumentId: 'intpd_1',
+    transactionId: 'tx_1',
+    caseId: 'case-1',
+    documentHash: 'a'.repeat(64),
+    expectedAmount: 90,
+    expectedDate: '2026-05-04',
+    reviewerLabel: 'Raul',
+    note: 'OK granular pilot Baruma',
+  });
+
+  assert.equal(calls.length, 1);
+  assert.match(calls[0].url, /\/api\/integrations\/private\/pending-documents\/link-transaction\?/);
+  assert.doesNotMatch(calls[0].url, /remittances|donations|fiscal/);
+  const headers = calls[0].init?.headers as Record<string, string>;
+  assert.equal(headers.Authorization, 'Bearer token-a');
+  assert.equal(headers['Content-Type'], 'application/json');
+  const body = JSON.parse(String(calls[0].init?.body)) as Record<string, unknown>;
+  assert.equal(body.orgId, 'org-a');
+  assert.equal(body.pendingDocumentId, 'intpd_1');
+  assert.equal(body.transactionId, 'tx_1');
 });

@@ -12,6 +12,7 @@ const VALID_SCOPES: IntegrationScope[] = [
   'contacts.read',
   'transactions.read',
   'pending_documents.write',
+  'pending_documents.link',
 ];
 
 interface ParsedArgs {

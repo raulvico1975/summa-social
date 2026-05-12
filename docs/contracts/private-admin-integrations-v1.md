@@ -1,36 +1,37 @@
 # Integracions privades administratives (v1)
 
-Estat actual: **CONSOLIDAT**.
+Estat actual: **CONSOLIDAT + PILOT CONTROLAT DE VINCULACIO DOCUMENTAL**.
 
 La v1 existeix per donar entrada controlada a agents propis com `baruma-admin-agent` o `flores-admin-agent` sense reutilitzar autenticacio d'usuari ni exposar col.leccions sensibles.
 
-## Abast tancat
+## Abast operatiu
 
-La v1 queda **congelada** en aquest abast. No s'hi afegeixen mes scopes, mes rutes ni mes superfícies d'escriptura fins que existeixi un unic cas d'us v2 definit i validat.
+La base v1 continua limitada a lectura i entrada de documents pendents. El pilot controlat afegeix una sola accio nova: vincular un `pendingDocument` existent amb un moviment concret quan hi ha OK granular i validacions fortes.
 
 Scopes disponibles:
 
 - `contacts.read`
 - `transactions.read`
 - `pending_documents.write`
+- `pending_documents.link`
 
 Rutes disponibles:
 
 - `GET /api/integrations/private/contacts/search`
 - `GET /api/integrations/private/transactions/search`
 - `POST /api/integrations/private/pending-documents/upload`
+- `POST /api/integrations/private/pending-documents/link-transaction`
 
 Fora d'abast en aquesta fase:
 
 - cap `idToken` d'usuari
 - cap escriptura directa a ledger, fiscalitat o remeses
 - cap consola d'administracio d'integracions
-- cap scope extra
 - cap accés directe al ledger
 - cap canvi sobre fiscalitat
 - cap API publica
 - cap `Claude`/`Codex MCP` directe
-- cap endpoint nou "per si de cas"
+- cap endpoint nou "per si de cas": `link-transaction` existeix nomes pel cas validat document pendent + moviment
 - cap refactor global d'API en aquesta fase
 
 ## Validacio real en produccio (2026-04-16)
@@ -108,7 +109,8 @@ npm run integrations:token:create -- \
   --source-repo baruma-admin-agent \
   --scope contacts.read \
   --scope transactions.read \
-  --scope pending_documents.write
+  --scope pending_documents.write \
+  --scope pending_documents.link
 ```
 
 El comandament retorna el `clearToken` una sola vegada. Guarda'l fora de Firestore.
@@ -292,6 +294,67 @@ Resposta:
 }
 ```
 
+## Ruta 4: vincular pendingDocument amb moviment
+
+```http
+POST /api/integrations/private/pending-documents/link-transaction?orgId=org_123
+Authorization: Bearer <token>
+Content-Type: application/json
+```
+
+Scope:
+
+- `pending_documents.link`
+
+Body:
+
+```json
+{
+  "orgId": "org_123",
+  "pendingDocumentId": "intpd_abc123",
+  "transactionId": "tx_123",
+  "caseId": "baruma-case-la-teva-barra",
+  "documentHash": "4e437b126ebe1c5a4a7a7ff0a7c2f13d7805f34b7873c682c439c364c9ffdef4",
+  "expectedAmount": 738.2,
+  "expectedDate": "2026-05-04",
+  "reviewerLabel": "Raul",
+  "note": "OK granular pilot Baruma"
+}
+```
+
+Regles:
+
+- només accepta un document i un moviment per crida
+- el token ha de pertanyer a la mateixa organització
+- el `pendingDocument` ha d'existir i tenir `file.sha256`
+- el hash del document ha de coincidir
+- l'import del document, si existeix, i l'import del moviment han de coincidir en valor absolut
+- la data del moviment ha de coincidir amb `expectedDate`
+- el moviment no pot tenir ja cap document vinculat
+- si el document ja estava vinculat amb el mateix moviment i el moviment ja tenia document, la resposta és idempotent
+- no modifica imports, dates, categories, contactes, fiscalitat ni remeses
+
+Resposta:
+
+```json
+{
+  "success": true,
+  "linked": true,
+  "idempotent": false,
+  "pendingDocumentId": "intpd_abc123",
+  "transactionId": "tx_123",
+  "newState": {
+    "pendingStatus": "matched",
+    "matchedTransactionId": "tx_123",
+    "transactionHasDocument": true
+  },
+  "storage": {
+    "finalStoragePath": "organizations/org_123/documents/tx_123/factura.pdf",
+    "copied": true
+  }
+}
+```
+
 ## Errors estables
 
 - `401 UNAUTHORIZED`: token absent, invalid o revocat
@@ -304,6 +367,10 @@ Resposta:
 - `400 INVALID_DATE`: data invalida
 - `400 MISSING_IDEMPOTENCY_KEY`: falta `Idempotency-Key`
 - `409 IDEMPOTENCY_CONFLICT`: mateixa clau externa amb payload diferent
+- `409 DOCUMENT_HASH_MISMATCH`: el document pendent no coincideix amb el hash validat per l'agent
+- `409 TRANSACTION_ALREADY_HAS_DOCUMENT`: el moviment ja té document
+- `409 TRANSACTION_AMOUNT_MISMATCH`: l'import esperat no encaixa amb el moviment
+- `409 TRANSACTION_DATE_MISMATCH`: la data esperada no encaixa amb el moviment
 
 ## v2 candidates
 
@@ -311,7 +378,6 @@ Bloc de possibles extensions futures. Aquest apartat **no** obre contracte nou n
 
 - `pending_documents.read`
 - `contacts.upsert` molt restringit i acotat
-- `documents.link-to-transaction` nomes si encaixa amb el flux real de Summa
 - `transactions.write` en brut: explicitament fora d'abast
 
 ## Notes de seguretat
@@ -319,4 +385,4 @@ Bloc de possibles extensions futures. Aquest apartat **no** obre contracte nou n
 - l'auth d'integracio viu separada de `verifyIdToken(request)`
 - no es persisteixen secrets en clar als logs d'auditoria
 - no s'emmagatzemen payloads complets sensibles a l'auditoria
-- l'entrada d'escriptura va nomes a `pendingDocuments`
+- l'entrada d'escriptura general va nomes a `pendingDocuments`; la vinculacio pilot nomes pot escriure `pendingDocuments.status/matchedTransactionId/file.finalStoragePath` i `transactions.document`
