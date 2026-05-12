@@ -90,3 +90,4 @@ Registre curt d'incidències de deploy bloquejat o incomplet.
 | 2026-05-06 19:17 | Verificacions | ALT | 5d396d358 | a7dacae54 | BLOCKED_SAFE | La verificacio local no ha passat. | Pendent |
 | 2026-05-07 17:23 | Capturar revisio App Hosting abans de publicar | MITJA | 84b8db2ed | 9e443d239 | BLOCKED_SAFE | gcloud no disponible per verificar la revisio efectiva d'App Hosting. | Pendent |
 | 2026-05-12 11:19 | Preflight git | BAIX | d7cf1601e | 5f2e7273f | BLOCKED_SAFE | NO POTS DIR "AUTORITZO DEPLOY": hi ha worktrees residuals o ambigus | Pendent |
+| 2026-05-12 11:23 | Capturar revisio App Hosting abans de publicar | ALT | 462276046 | 5f2e7273f | BLOCKED_SAFE | gcloud no disponible per verificar la revisio efectiva d'App Hosting. | Pendent |
