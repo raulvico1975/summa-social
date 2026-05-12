@@ -12,6 +12,8 @@ Aquest fitxer ja no pretén duplicar el document mestre.
 
 ### 2026-05-12
 
+- novetats de producte: corregit el pipeline setmanal perquè la funció programada publiqui via canal server-to-server amb secret, generació editorial determinista CA/ES, filtre de commits interns i verificació post-publicació abans de donar la peça per bona.
+- operativa: deploy publicat pel ritual intern; App Hosting passa de `studio-build-2026-05-12-004` a `studio-build-2026-05-12-006`, SHA publicat `a40a49027`, sense publicació manual de cap novetat pendent.
 - fiscalitat/permisos: certificats de donació amb API server-side acotada governada per `fiscal.certificats.generar`, sense requerir `moviments.read` ni exposar ledger general.
 - API/integracions: afegit pilot controlat `pending_documents.link` per vincular un `pendingDocument` existent amb un moviment concret, amb hash, import/data esperats, scope dedicat i auditoria.
 - MCP Summa Agent: nova eina privada `link_pending_document_to_transaction`; no toca imports, dates, categories, fiscalitat ni remeses, i bloqueja moviments que ja tenen document.
