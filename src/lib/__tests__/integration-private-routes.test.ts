@@ -15,6 +15,13 @@ import {
   type PendingDocumentsUploadStore,
 } from '@/app/api/integrations/private/pending-documents/upload/handler';
 import {
+  handlePrivatePendingDocumentLinkTransaction,
+  type PendingDocumentLinkRecord,
+  type PendingDocumentLinkStorage,
+  type PendingDocumentLinkStore,
+  type TransactionLinkRecord,
+} from '@/app/api/integrations/private/pending-documents/link-transaction/handler';
+import {
   hashIntegrationToken,
   type IntegrationAuditEntry,
   type IntegrationAuthRepository,
@@ -184,6 +191,66 @@ class InMemoryUploadStorage implements PendingDocumentsUploadStorage {
   }
 }
 
+class InMemoryLinkStore implements PendingDocumentLinkStore {
+  readonly pendingDocuments = new Map<string, PendingDocumentLinkRecord>();
+  readonly transactions = new Map<string, TransactionLinkRecord>();
+
+  async getPendingDocument(orgId: string, pendingDocumentId: string) {
+    return this.pendingDocuments.get(`${orgId}/${pendingDocumentId}`) ?? null;
+  }
+
+  async getTransaction(orgId: string, transactionId: string) {
+    return this.transactions.get(`${orgId}/${transactionId}`) ?? null;
+  }
+
+  async linkDocumentToTransaction(args: {
+    orgId: string;
+    pendingDocumentId: string;
+    transactionId: string;
+    documentUrl: string;
+    finalStoragePath: string;
+  }) {
+    const pendingKey = `${args.orgId}/${args.pendingDocumentId}`;
+    const transactionKey = `${args.orgId}/${args.transactionId}`;
+    const pending = this.pendingDocuments.get(pendingKey);
+    const transaction = this.transactions.get(transactionKey);
+    if (!pending || !transaction) throw new Error('missing test fixture');
+
+    this.pendingDocuments.set(pendingKey, {
+      ...pending,
+      status: 'matched',
+      matchedTransactionId: args.transactionId,
+      file: pending.file
+        ? {
+            ...pending.file,
+            finalStoragePath: args.finalStoragePath,
+          }
+        : pending.file,
+    });
+    this.transactions.set(transactionKey, {
+      ...transaction,
+      document: args.documentUrl,
+    });
+  }
+}
+
+class InMemoryLinkStorage implements PendingDocumentLinkStorage {
+  async ensureLinkedFile(args: {
+    orgId: string;
+    transactionId: string;
+    file: NonNullable<PendingDocumentLinkRecord['file']>;
+  }) {
+    const finalStoragePath =
+      args.file.finalStoragePath ??
+      `organizations/${args.orgId}/documents/${args.transactionId}/${args.file.filename ?? 'document.pdf'}`;
+    return {
+      documentUrl: `https://storage.local/${encodeURIComponent(finalStoragePath)}`,
+      finalStoragePath,
+      copied: true,
+    };
+  }
+}
+
 function buildToken(overrides: Partial<IntegrationTokenRecord> = {}, clearToken = 'valid-token') {
   return {
     id: overrides.id ?? 'token-1',
@@ -198,6 +265,19 @@ function buildToken(overrides: Partial<IntegrationTokenRecord> = {}, clearToken 
     label: overrides.label ?? 'baruma',
     sourceRepo: overrides.sourceRepo ?? 'baruma-admin-agent',
   } satisfies IntegrationTokenRecord;
+}
+
+function createLinkRequest(body: Record<string, unknown>, token = 'link-token') {
+  return {
+    headers: new Headers({
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    }),
+    nextUrl: new URL('http://localhost/api/integrations/private/pending-documents/link-transaction?orgId=org-a'),
+    async json() {
+      return body;
+    },
+  } as never;
 }
 
 test('contacts search stays isolated per org', async () => {
@@ -416,4 +496,148 @@ test('pending documents upload is idempotent and does not duplicate the document
   assert.equal(secondBody.idempotent, true);
   assert.equal(secondBody.pendingDocument.id, firstBody.pendingDocument.id);
   assert.equal(store.docs.size, 1);
+});
+
+test('pending document link validates one reviewed match and updates transaction document', async () => {
+  const authRepository = new InMemoryAuthRepository([
+    buildToken({ scopes: ['pending_documents.link'] }, 'link-token'),
+  ]);
+  const store = new InMemoryLinkStore();
+  const storage = new InMemoryLinkStorage();
+  const hash = '4e437b126ebe1c5a4a7a7ff0a7c2f13d7805f34b7873c682c439c364c9ffdef4';
+
+  store.pendingDocuments.set('org-a/intpd_la_teva_barra', {
+    id: 'intpd_la_teva_barra',
+    status: 'draft',
+    matchedTransactionId: null,
+    amount: 738.2,
+    file: {
+      storagePath: 'organizations/org-a/pendingDocuments/intpd_la_teva_barra/26.05.04_La_Teva_Barra.pdf',
+      finalStoragePath: null,
+      filename: '26.05.04_La_Teva_Barra.pdf',
+      sha256: hash,
+    },
+  });
+  store.transactions.set('org-a/tx_la_teva_barra', {
+    id: 'tx_la_teva_barra',
+    amount: -738.2,
+    date: '2026-05-04',
+    document: null,
+  });
+
+  const response = await handlePrivatePendingDocumentLinkTransaction(
+    createLinkRequest({
+      orgId: 'org-a',
+      pendingDocumentId: 'intpd_la_teva_barra',
+      transactionId: 'tx_la_teva_barra',
+      caseId: 'baruma-case-la-teva-barra',
+      documentHash: hash,
+      expectedAmount: 738.2,
+      expectedDate: '2026-05-04',
+      reviewerLabel: 'Raul',
+      note: 'OK granular pilot Baruma',
+    }),
+    { authRepository, store, storage }
+  );
+
+  assert.equal(response.status, 200);
+  const body = await response.json() as {
+    success: boolean;
+    linked: boolean;
+    newState: { pendingStatus: string; transactionHasDocument: boolean };
+  };
+  assert.equal(body.success, true);
+  assert.equal(body.linked, true);
+  assert.equal(body.newState.pendingStatus, 'matched');
+  assert.equal(body.newState.transactionHasDocument, true);
+  assert.equal(store.pendingDocuments.get('org-a/intpd_la_teva_barra')?.matchedTransactionId, 'tx_la_teva_barra');
+  assert.match(store.transactions.get('org-a/tx_la_teva_barra')?.document ?? '', /^https:\/\/storage\.local\//);
+  assert.equal(authRepository.auditLog.at(-1)?.code, 'LINKED');
+});
+
+test('pending document link requires the dedicated link scope', async () => {
+  const authRepository = new InMemoryAuthRepository([
+    buildToken({ scopes: ['pending_documents.write'] }, 'link-token'),
+  ]);
+  const response = await handlePrivatePendingDocumentLinkTransaction(
+    createLinkRequest({
+      pendingDocumentId: 'intpd_1',
+      transactionId: 'tx_1',
+      caseId: 'case-1',
+      documentHash: 'a'.repeat(64),
+      expectedAmount: 10,
+      expectedDate: '2026-05-04',
+      reviewerLabel: 'Raul',
+      note: 'OK granular',
+    }),
+    { authRepository, store: new InMemoryLinkStore(), storage: new InMemoryLinkStorage() }
+  );
+
+  assert.equal(response.status, 403);
+  const body = await response.json() as { code: string };
+  assert.equal(body.code, 'SCOPE_DENIED');
+});
+
+test('pending document link blocks hash mismatches and existing transaction documents', async () => {
+  const authRepository = new InMemoryAuthRepository([
+    buildToken({ scopes: ['pending_documents.link'] }, 'link-token'),
+  ]);
+  const hash = 'b'.repeat(64);
+  const store = new InMemoryLinkStore();
+  store.pendingDocuments.set('org-a/intpd_1', {
+    id: 'intpd_1',
+    status: 'draft',
+    matchedTransactionId: null,
+    amount: 90,
+    file: {
+      storagePath: 'organizations/org-a/pendingDocuments/intpd_1/invoice.pdf',
+      finalStoragePath: null,
+      filename: 'invoice.pdf',
+      sha256: hash,
+    },
+  });
+  store.transactions.set('org-a/tx_1', {
+    id: 'tx_1',
+    amount: -90,
+    date: '2026-05-04',
+    document: null,
+  });
+
+  const hashMismatch = await handlePrivatePendingDocumentLinkTransaction(
+    createLinkRequest({
+      pendingDocumentId: 'intpd_1',
+      transactionId: 'tx_1',
+      caseId: 'case-1',
+      documentHash: 'c'.repeat(64),
+      expectedAmount: 90,
+      expectedDate: '2026-05-04',
+      reviewerLabel: 'Raul',
+      note: 'OK granular',
+    }),
+    { authRepository, store, storage: new InMemoryLinkStorage() }
+  );
+  assert.equal(hashMismatch.status, 409);
+  assert.equal((await hashMismatch.json() as { code: string }).code, 'DOCUMENT_HASH_MISMATCH');
+
+  store.transactions.set('org-a/tx_1', {
+    id: 'tx_1',
+    amount: -90,
+    date: '2026-05-04',
+    document: 'https://existing.local/document.pdf',
+  });
+  const existingDocument = await handlePrivatePendingDocumentLinkTransaction(
+    createLinkRequest({
+      pendingDocumentId: 'intpd_1',
+      transactionId: 'tx_1',
+      caseId: 'case-1',
+      documentHash: hash,
+      expectedAmount: 90,
+      expectedDate: '2026-05-04',
+      reviewerLabel: 'Raul',
+      note: 'OK granular',
+    }),
+    { authRepository, store, storage: new InMemoryLinkStorage() }
+  );
+  assert.equal(existingDocument.status, 409);
+  assert.equal((await existingDocument.json() as { code: string }).code, 'TRANSACTION_ALREADY_HAS_DOCUMENT');
 });

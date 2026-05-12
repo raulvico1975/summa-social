@@ -9,7 +9,8 @@ export const PRIVATE_INTEGRATION_TOKEN_TYPE = 'private_integration';
 export type IntegrationScope =
   | 'contacts.read'
   | 'transactions.read'
-  | 'pending_documents.write';
+  | 'pending_documents.write'
+  | 'pending_documents.link';
 
 export type IntegrationTokenStatus = 'active' | 'revoked';
 
@@ -112,7 +113,8 @@ function normalizeScopes(value: unknown): IntegrationScope[] {
     (scope): scope is IntegrationScope =>
       scope === 'contacts.read' ||
       scope === 'transactions.read' ||
-      scope === 'pending_documents.write'
+      scope === 'pending_documents.write' ||
+      scope === 'pending_documents.link'
   );
 }
 

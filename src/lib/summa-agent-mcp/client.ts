@@ -40,6 +40,18 @@ export interface UploadPendingDocumentInput {
   contentType?: string;
 }
 
+export interface LinkPendingDocumentToTransactionInput {
+  orgId?: string;
+  pendingDocumentId: string;
+  transactionId: string;
+  caseId: string;
+  documentHash: string;
+  expectedAmount: number;
+  expectedDate: string;
+  reviewerLabel: string;
+  note: string;
+}
+
 export interface OperationalSummaryInput {
   orgId?: string;
   dateFrom?: string;
@@ -200,6 +212,38 @@ export class SummaPrivateIntegrationClient {
           'Idempotency-Key': idempotencyKey,
         },
         body: form,
+      }
+    );
+
+    return parseJsonResponse(response);
+  }
+
+  async linkPendingDocumentToTransaction(input: LinkPendingDocumentToTransactionInput): Promise<JsonObject> {
+    const orgId = resolveOrgId(input.orgId, this.defaultOrgId);
+    assertIsoDate('expectedDate', input.expectedDate);
+
+    const body = {
+      orgId,
+      pendingDocumentId: input.pendingDocumentId,
+      transactionId: input.transactionId,
+      caseId: input.caseId,
+      documentHash: input.documentHash,
+      expectedAmount: input.expectedAmount,
+      expectedDate: input.expectedDate,
+      reviewerLabel: input.reviewerLabel,
+      note: input.note,
+    };
+
+    const params = new URLSearchParams({ orgId });
+    const response = await this.fetchFn(
+      `${this.baseUrl}/api/integrations/private/pending-documents/link-transaction?${params.toString()}`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${this.token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(body),
       }
     );
 
