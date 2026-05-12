@@ -327,3 +327,74 @@ test('validateWeeklyProductUpdateEditorial accepta el generador determinista', (
   const validation = validateWeeklyProductUpdateEditorial(generated);
   assert.deepEqual(validation, { ok: true });
 });
+
+test('generateWeeklyProductUpdateContent normalitza permisos a llenguatge d’usuari', () => {
+  const window = buildPreviousWeeklyWindow(new Date('2026-05-12T06:00:00.000Z'), 'Europe/Madrid');
+  const generated = generateWeeklyProductUpdateContent({
+    window,
+    commits: [
+      buildCommit({
+        message: 'fix(api): exigeix permís per arxivar projectes',
+        files: ['src/app/api/projects/archive/handler.ts'],
+        areas: ['projectes', 'integracions'],
+      }),
+      buildCommit({
+        message: 'fix(api): exigeix permís per arxivar categories',
+        files: ['src/app/api/categories/archive/route.ts'],
+        areas: ['integracions', 'configuracio'],
+      }),
+    ],
+  });
+
+  assert.equal(generated.title, 'Projectes i categories: arxivament amb permisos més estrictes');
+  assert.match(generated.contentLong, /L’arxivament de projectes exigeix el permís corresponent/);
+  assert.match(generated.contentLong, /a la configuració de categories/);
+  assert.doesNotMatch(generated.description, /veuràs exigeix permís/);
+  assert.doesNotMatch(generated.web.excerpt, /a a la/);
+});
+
+test('generateWeeklyProductUpdateContent genera ES sense fragments catalans de commit', () => {
+  const window = buildPreviousWeeklyWindow(new Date('2026-05-12T06:00:00.000Z'), 'Europe/Madrid');
+  const generated = generateWeeklyProductUpdateContent({
+    window,
+    commits: [
+      buildCommit({
+        message: 'fix(api): exigeix permís per arxivar projectes',
+        files: ['src/app/api/projects/archive/handler.ts'],
+        areas: ['projectes', 'integracions'],
+      }),
+    ],
+  });
+  const spanishText = [
+    generated.locales.es.title,
+    generated.locales.es.description,
+    generated.locales.es.contentLong,
+    generated.locales.es.web.excerpt,
+    generated.locales.es.web.content,
+  ].join('\n');
+
+  assert.match(spanishText, /El archivado de proyectos exige el permiso correspondiente/);
+  assert.doesNotMatch(spanishText, /exigeix|permís|arxivar projectes|llista|detall|Què/u);
+});
+
+test('validateWeeklyProductUpdateEditorial rebutja traduccio ES amb català', () => {
+  const generated = buildGeneratedContent();
+  const validation = validateWeeklyProductUpdateEditorial({
+    ...generated,
+    locales: {
+      es: {
+        title: 'Proyectos: exigeix permís per arxivar projectes',
+        description: 'Ahora en la llista verás exigeix permís.',
+        contentLong: generated.locales.es.contentLong,
+        web: {
+          title: 'Proyectos: exigeix permís per arxivar projectes',
+          excerpt: 'Cambios en la llista.',
+          content: generated.locales.es.web.content,
+        },
+      },
+    },
+  });
+
+  assert.equal(validation.ok, false);
+  assert.match(validation.errors.join('\n'), /invalid_spanish_translation/);
+});

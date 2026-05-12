@@ -6,6 +6,18 @@ export interface ProductUpdateEditorialPayload {
     excerpt?: string | null;
     content?: string | null;
   } | null;
+  locales?: {
+    es?: {
+      title?: string;
+      description?: string;
+      contentLong?: string;
+      web?: {
+        title?: string;
+        excerpt?: string | null;
+        content?: string | null;
+      } | null;
+    } | null;
+  } | null;
 }
 
 const GENERIC_PHRASES = [
@@ -24,10 +36,22 @@ const GENERIC_PHRASES = [
 ];
 
 const REQUIRED_WEEKLY_SECTIONS = [
-  'Que canvia:',
+  'Què canvia:',
   'On ho notaràs:',
-  'Que has de fer:',
+  'Què has de fer:',
   'Límit:',
+];
+
+const CATALAN_LEAKS_IN_SPANISH = [
+  'exigeix',
+  'permis',
+  'arxivar',
+  'projectes',
+  'llista',
+  'detall',
+  'que canvia',
+  'que has de fer',
+  'on ho notaras',
 ];
 
 function normalizeForPolicy(value: string): string {
@@ -52,11 +76,33 @@ function collectText(payload: ProductUpdateEditorialPayload): string {
     .join('\n');
 }
 
+function collectSpanishText(payload: ProductUpdateEditorialPayload): string {
+  return [
+    payload.locales?.es?.title,
+    payload.locales?.es?.description,
+    payload.locales?.es?.contentLong,
+    payload.locales?.es?.web?.title,
+    payload.locales?.es?.web?.excerpt,
+    payload.locales?.es?.web?.content,
+  ]
+    .filter((entry): entry is string => typeof entry === 'string' && entry.trim().length > 0)
+    .join('\n');
+}
+
+function containsCatalanLeak(normalizedSpanishText: string, leak: string): boolean {
+  const escaped = leak.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const pattern = leak.includes(' ')
+    ? new RegExp(`(^|\\s)${escaped}(\\s|$)`)
+    : new RegExp(`\\b${escaped}\\b`);
+  return pattern.test(normalizedSpanishText);
+}
+
 export function validateWeeklyProductUpdateEditorial(
   payload: ProductUpdateEditorialPayload
 ): { ok: true } | { ok: false; errors: string[] } {
   const errors: string[] = [];
   const normalizedText = normalizeForPolicy(collectText(payload));
+  const normalizedSpanishText = normalizeForPolicy(collectSpanishText(payload));
   const normalizedTitle = normalizeForPolicy(payload.title);
 
   if (normalizedTitle === 'millores setmanals a summa social') {
@@ -72,6 +118,14 @@ export function validateWeeklyProductUpdateEditorial(
   for (const section of REQUIRED_WEEKLY_SECTIONS) {
     if (!payload.contentLong.includes(section)) {
       errors.push(`contentLong must include section "${section}"`);
+    }
+  }
+
+  if (normalizedSpanishText.length > 0) {
+    for (const leak of CATALAN_LEAKS_IN_SPANISH) {
+      if (containsCatalanLeak(normalizedSpanishText, leak)) {
+        errors.push(`invalid_spanish_translation: ${leak}`);
+      }
     }
   }
 

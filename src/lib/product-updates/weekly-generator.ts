@@ -77,8 +77,8 @@ const AREA_LABELS: Record<string, { ca: string; es: string; locationCa: string; 
   projectes: {
     ca: 'Projectes',
     es: 'Proyectos',
-    locationCa: 'a la llista i el detall de projectes',
-    locationEs: 'en la lista y el detalle de proyectos',
+    locationCa: 'a la gestió de projectes',
+    locationEs: 'en la gestión de proyectos',
   },
   donants: {
     ca: 'Donants',
@@ -113,8 +113,8 @@ const AREA_LABELS: Record<string, { ca: string; es: string; locationCa: string; 
   suport: {
     ca: 'Ajuda',
     es: 'Ayuda',
-    locationCa: 'al bot i als continguts d’ajuda',
-    locationEs: 'en el bot y los contenidos de ayuda',
+    locationCa: 'al bot d’ajuda i als continguts d’ajuda',
+    locationEs: 'en el bot de ayuda y los contenidos de ayuda',
   },
   general: {
     ca: 'App',
@@ -122,6 +122,16 @@ const AREA_LABELS: Record<string, { ca: string; es: string; locationCa: string; 
     locationCa: 'als fluxos principals de Summa Social',
     locationEs: 'en los flujos principales de Summa Social',
   },
+};
+
+type EditorialChange = {
+  key: string;
+  ca: string;
+  es: string;
+  locationCa: string;
+  locationEs: string;
+  actionCa: string;
+  actionEs: string;
 };
 
 function headline(message: string): string {
@@ -162,6 +172,143 @@ function cleanCommitMessage(message: string): string {
     .replace(/\.$/, '');
 }
 
+function normalizeForMatch(value: string): string {
+  return value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[’']/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase();
+}
+
+function productLanguageChange(commit: WeeklyRelevantCommit): EditorialChange | null {
+  const message = normalizeForMatch(cleanCommitMessage(commit.message));
+
+  if (message.includes('exigeix permis per arxivar projectes')) {
+    return {
+      key: 'project-archive-permission',
+      ca: 'L’arxivament de projectes exigeix el permís corresponent',
+      es: 'El archivado de proyectos exige el permiso correspondiente',
+      locationCa: 'a la gestió de projectes',
+      locationEs: 'en la gestión de proyectos',
+      actionCa: 'Si no veus l’opció d’arxivar, demana-ho a una persona administradora de l’entitat',
+      actionEs: 'Si no ves la opción de archivar, pídeselo a una persona administradora de la entidad',
+    };
+  }
+
+  if (message.includes('exigeix permis per arxivar categories')) {
+    return {
+      key: 'category-archive-permission',
+      ca: 'L’arxivament de categories queda protegit pel mateix criteri de permisos',
+      es: 'El archivado de categorías queda protegido por el mismo criterio de permisos',
+      locationCa: 'a la configuració de categories',
+      locationEs: 'en la configuración de categorías',
+      actionCa: 'Si gestiones categories, revisa els permisos abans de delegar aquesta acció',
+      actionEs: 'Si gestionas categorías, revisa los permisos antes de delegar esta acción',
+    };
+  }
+
+  if (message.includes('amplia comprensio natural del bot')) {
+    return {
+      key: 'support-bot-understanding',
+      ca: 'El bot d’ajuda entén millor preguntes formulades amb llenguatge natural',
+      es: 'El bot de ayuda entiende mejor preguntas formuladas con lenguaje natural',
+      locationCa: 'al bot d’ajuda i als continguts d’ajuda',
+      locationEs: 'en el bot de ayuda y los contenidos de ayuda',
+      actionCa: 'Escriu la pregunta amb les teves paraules; no cal buscar el nom exacte del tema',
+      actionEs: 'Escribe la pregunta con tus palabras; no hace falta buscar el nombre exacto del tema',
+    };
+  }
+
+  if (message.includes('millora encaminament de preguntes naturals')) {
+    return {
+      key: 'support-bot-routing',
+      ca: 'El bot encamina millor les preguntes naturals cap al contingut d’ajuda adequat',
+      es: 'El bot dirige mejor las preguntas naturales hacia el contenido de ayuda adecuado',
+      locationCa: 'al bot d’ajuda i als continguts d’ajuda',
+      locationEs: 'en el bot de ayuda y los contenidos de ayuda',
+      actionCa: 'Prova consultes més directes quan necessitis trobar una resposta ràpida',
+      actionEs: 'Prueba consultas más directas cuando necesites encontrar una respuesta rápida',
+    };
+  }
+
+  if (message.includes('adapta lifecycle route al contracte de next')) {
+    return {
+      key: 'project-lifecycle-stability',
+      ca: 'Les accions sobre l’estat dels projectes responen de manera més consistent',
+      es: 'Las acciones sobre el estado de los proyectos responden de forma más consistente',
+      locationCa: 'a la gestió de projectes',
+      locationEs: 'en la gestión de proyectos',
+      actionCa: 'Continua fent servir les accions de projecte habituals i revisa els avisos si apareixen',
+      actionEs: 'Sigue usando las acciones de proyecto habituales y revisa los avisos si aparecen',
+    };
+  }
+
+  if (message.includes('afegeix textos de lifecycle de projectes')) {
+    return {
+      key: 'project-lifecycle-copy',
+      ca: 'Els missatges del cicle de vida dels projectes apareixen amb textos més complets',
+      es: 'Los mensajes del ciclo de vida de los proyectos aparecen con textos más completos',
+      locationCa: 'a la gestió de projectes',
+      locationEs: 'en la gestión de proyectos',
+      actionCa: 'Llegeix els missatges abans de confirmar canvis d’estat importants',
+      actionEs: 'Lee los mensajes antes de confirmar cambios de estado importantes',
+    };
+  }
+
+  if (message.includes('tanca projectes i elimina nomes projectes buits')) {
+    return {
+      key: 'project-close-empty-delete',
+      ca: 'Ara pots tancar projectes i només eliminar els que encara no tenen dades associades',
+      es: 'Ahora puedes cerrar proyectos y eliminar solo los que todavía no tienen datos asociados',
+      locationCa: 'a la gestió de projectes',
+      locationEs: 'en la gestión de proyectos',
+      actionCa: 'Tanca projectes finalitzats i reserva l’eliminació per a projectes creats per error',
+      actionEs: 'Cierra proyectos finalizados y reserva la eliminación para proyectos creados por error',
+    };
+  }
+
+  if (message.includes('nou resum del dashboard')) {
+    return {
+      key: 'dashboard-summary',
+      ca: 'El resum del dashboard mostra millor l’estat de l’activitat recent',
+      es: 'El resumen del dashboard muestra mejor el estado de la actividad reciente',
+      locationCa: 'al resum i als indicadors del dashboard',
+      locationEs: 'en el resumen y los indicadores del dashboard',
+      actionCa: 'Consulta el dashboard abans de revisar els detalls de cada àrea',
+      actionEs: 'Consulta el dashboard antes de revisar los detalles de cada área',
+    };
+  }
+
+  if (message.includes('millor context en projectes')) {
+    return {
+      key: 'project-context',
+      ca: 'La informació de projectes dona més context abans de prendre decisions',
+      es: 'La información de proyectos ofrece más contexto antes de tomar decisiones',
+      locationCa: 'a la gestió de projectes',
+      locationEs: 'en la gestión de proyectos',
+      actionCa: 'Revisa el context del projecte abans de confirmar canvis',
+      actionEs: 'Revisa el contexto del proyecto antes de confirmar cambios',
+    };
+  }
+
+  const cleaned = cleanCommitMessage(commit.message);
+  if (/handler|route|contracte de next|deploy|refactor/i.test(cleaned)) {
+    return null;
+  }
+
+  return {
+    key: normalizeForMatch(cleaned),
+    ca: cleaned,
+    es: '',
+    locationCa: AREA_LABELS[commit.areas[0] ?? 'general']?.locationCa ?? AREA_LABELS.general.locationCa,
+    locationEs: AREA_LABELS[commit.areas[0] ?? 'general']?.locationEs ?? AREA_LABELS.general.locationEs,
+    actionCa: 'Revisa els avisos del flux habitual quan apareguin',
+    actionEs: 'Revisa los avisos del flujo habitual cuando aparezcan',
+  };
+}
+
 function primaryArea(commits: WeeklyRelevantCommit[]): string {
   const counts = new Map<string, number>();
   for (const commit of commits) {
@@ -172,67 +319,72 @@ function primaryArea(commits: WeeklyRelevantCommit[]): string {
   return [...counts.entries()].sort((left, right) => right[1] - left[1])[0]?.[0] ?? 'general';
 }
 
-function visibleChanges(commits: WeeklyRelevantCommit[]): string[] {
-  const changes = commits
-    .map((commit) => cleanCommitMessage(commit.message))
-    .filter(Boolean)
-    .filter((message) => !/^update deploy logs$/i.test(message))
-    .slice(0, 3);
+function editorialChanges(commits: WeeklyRelevantCommit[]): EditorialChange[] {
+  const seen = new Set<string>();
+  const changes: EditorialChange[] = [];
 
-  return changes.length > 0 ? changes : ['ajustos visibles en fluxos operatius revisats aquesta setmana'];
+  for (const commit of commits) {
+    const change = productLanguageChange(commit);
+    if (!change || seen.has(change.key)) continue;
+    if (!change.es) continue;
+    seen.add(change.key);
+    changes.push(change);
+  }
+
+  return changes.slice(0, 4);
 }
 
 function buildCaContent(args: {
   label: string;
-  location: string;
-  changes: string[];
+  changes: EditorialChange[];
   week: WeeklyWindow;
+  intro?: string;
 }): string {
-  const primaryChange = args.changes[0];
-  const secondaryChange = args.changes[1] ?? 'missatges i comprovacions més clars abans de continuar';
+  const actionLines = Array.from(new Set(args.changes.map((change) => change.actionCa))).slice(0, 3);
+  const locationLines = Array.from(new Set(args.changes.map((change) => change.locationCa))).slice(0, 3);
 
   return [
-    `Aquesta setmana hem millorat ${args.label.toLowerCase()} amb canvis desplegats entre el ${args.week.weekStartLabel} i el ${args.week.weekEndLabel}.`,
+    args.intro ?? `Aquesta setmana hem millorat ${args.label.toLowerCase()} amb canvis desplegats entre el ${args.week.weekStartLabel} i el ${args.week.weekEndLabel}.`,
     '',
-    'Que canvia:',
-    `- ${primaryChange}.`,
-    `- ${secondaryChange}.`,
+    'Què canvia:',
+    ...args.changes.map((change) => `- ${change.ca}.`),
     '',
     'On ho notaràs:',
-    `- ${args.location}.`,
+    ...locationLines.map((location) => `- ${location}.`),
     '',
-    'Que has de fer:',
-    '- No cal configurar res; usa el flux habitual i revisa els avisos quan apareguin.',
+    'Què has de fer:',
+    ...actionLines.map((action) => `- ${action}.`),
     '',
     'Límit:',
-    '- No modifica dades ja guardades ni substitueix la revisió de l’equip.',
+    '- No modifica dades ja guardades.',
+    '- Només reforça com s’executen aquestes accions dins del flux habitual.',
   ].join('\n');
 }
 
 function buildEsContent(args: {
   label: string;
-  location: string;
-  changes: string[];
+  changes: EditorialChange[];
   week: WeeklyWindow;
+  intro?: string;
 }): string {
-  const primaryChange = args.changes[0];
-  const secondaryChange = args.changes[1] ?? 'mensajes y comprobaciones más claros antes de continuar';
+  const actionLines = Array.from(new Set(args.changes.map((change) => change.actionEs))).slice(0, 3);
+  const locationLines = Array.from(new Set(args.changes.map((change) => change.locationEs))).slice(0, 3);
 
   return [
-    `Esta semana hemos mejorado ${args.label.toLowerCase()} con cambios desplegados entre el ${args.week.weekStartLabel} y el ${args.week.weekEndLabel}.`,
+    args.intro ?? `Esta semana hemos mejorado ${args.label.toLowerCase()} con cambios desplegados entre el ${args.week.weekStartLabel} y el ${args.week.weekEndLabel}.`,
     '',
     'Qué cambia:',
-    `- ${primaryChange}.`,
-    `- ${secondaryChange}.`,
+    ...args.changes.map((change) => `- ${change.es}.`),
     '',
     'Dónde lo notarás:',
-    `- ${args.location}.`,
+    ...locationLines.map((location) => `- ${location}.`),
     '',
     'Qué tienes que hacer:',
-    '- No hace falta configurar nada; usa el flujo habitual y revisa los avisos cuando aparezcan.',
+    ...actionLines.map((action) => `- ${action}.`),
     '',
     'Límite:',
-    '- No modifica datos ya guardados ni sustituye la revisión del equipo.',
+    '- No modifica datos ya guardados.',
+    '- Solo refuerza cómo se ejecutan estas acciones dentro del flujo habitual.',
   ].join('\n');
 }
 
@@ -242,26 +394,63 @@ export function generateWeeklyProductUpdateContent(args: {
 }): WeeklyGeneratedContent {
   const area = primaryArea(args.commits);
   const areaCopy = AREA_LABELS[area] ?? AREA_LABELS.general;
-  const changes = visibleChanges(args.commits);
+  const changes = editorialChanges(args.commits);
+  if (changes.length === 0) {
+    throw new Error('needs_editorial_review');
+  }
   const firstChange = changes[0];
-  const title = truncate(`${areaCopy.ca}: ${firstChange}`, 60);
-  const esTitle = truncate(`${areaCopy.es}: ${firstChange}`, 60);
-  const description = truncate(`Ara ${areaCopy.locationCa} veuràs ${firstChange}.`, 140);
-  const esDescription = truncate(`Ahora ${areaCopy.locationEs} verás ${firstChange}.`, 140);
+  const hasArchivePermissions = changes.some((change) =>
+    change.key === 'project-archive-permission' || change.key === 'category-archive-permission'
+  );
+  const hasSupportBot = changes.some((change) =>
+    change.key === 'support-bot-understanding' || change.key === 'support-bot-routing'
+  );
+  const title = hasArchivePermissions && hasSupportBot
+    ? 'Projectes, categories i ajuda: més control i millor orientació'
+    : hasArchivePermissions
+    ? 'Projectes i categories: arxivament amb permisos més estrictes'
+    : truncate(`${areaCopy.ca}: ${firstChange.ca}`, 60);
+  const esTitle = hasArchivePermissions && hasSupportBot
+    ? 'Proyectos, categorías y ayuda: más control y mejor orientación'
+    : hasArchivePermissions
+    ? 'Proyectos y categorías: archivado con permisos más estrictos'
+    : truncate(`${areaCopy.es}: ${firstChange.es}`, 60);
+  const description = hasArchivePermissions && hasSupportBot
+    ? 'Ara l’arxivament queda més protegit i el bot d’ajuda entén millor preguntes naturals.'
+    : hasArchivePermissions
+    ? 'Ara l’arxivament de projectes i categories queda limitat als usuaris amb permís adequat.'
+    : truncate(`Ara ${firstChange.locationCa} veuràs ${firstChange.ca.toLowerCase()}.`, 140);
+  const esDescription = hasArchivePermissions && hasSupportBot
+    ? 'Ahora el archivado queda más protegido y el bot de ayuda entiende mejor preguntas naturales.'
+    : hasArchivePermissions
+    ? 'Ahora el archivado de proyectos y categorías queda limitado a usuarios con el permiso adecuado.'
+    : truncate(`Ahora ${firstChange.locationEs} verás ${firstChange.es.toLowerCase()}.`, 140);
   const contentLong = buildCaContent({
     label: areaCopy.ca,
-    location: areaCopy.locationCa,
     changes,
     week: args.window,
+    intro: hasArchivePermissions && hasSupportBot
+      ? `Aquesta setmana hem reforçat controls de projectes i categories i hem millorat el bot d’ajuda amb canvis desplegats entre el ${args.window.weekStartLabel} i el ${args.window.weekEndLabel}.`
+      : undefined,
   });
   const esContent = buildEsContent({
     label: areaCopy.es,
-    location: areaCopy.locationEs,
     changes,
     week: args.window,
+    intro: hasArchivePermissions && hasSupportBot
+      ? `Esta semana hemos reforzado controles de proyectos y categorías y hemos mejorado el bot de ayuda con cambios desplegados entre el ${args.window.weekStartLabel} y el ${args.window.weekEndLabel}.`
+      : undefined,
   });
-  const excerpt = truncate(`Canvis a ${areaCopy.locationCa}: ${firstChange}.`, 160);
-  const esExcerpt = truncate(`Cambios ${areaCopy.locationEs}: ${firstChange}.`, 160);
+  const excerpt = hasArchivePermissions && hasSupportBot
+    ? 'Més control en arxivament i millor comprensió del bot d’ajuda.'
+    : hasArchivePermissions
+    ? 'Arxivament de projectes i categories amb permisos més estrictes.'
+    : truncate(`Canvis ${firstChange.locationCa}: ${firstChange.ca}.`, 160);
+  const esExcerpt = hasArchivePermissions && hasSupportBot
+    ? 'Más control en archivado y mejor comprensión del bot de ayuda.'
+    : hasArchivePermissions
+    ? 'Archivado de proyectos y categorías con permisos más estrictos.'
+    : truncate(`Cambios ${firstChange.locationEs}: ${firstChange.es}.`, 160);
 
   return {
     title,
