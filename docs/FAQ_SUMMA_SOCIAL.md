@@ -1953,6 +1953,16 @@ Si un donant va fer donacions el 2021 i ho tens registrat, pots generar-li el ce
 
 ---
 
+### 78b. Puc donar permís per generar certificats sense donar accés a Moviments?
+
+**Sí.** Pots donar el permís de generar certificats fiscals sense donar accés a la secció **Moviments** ni a l'històric econòmic general.
+
+Summa calcula internament les dades fiscals necessàries per al certificat, però la persona usuària només rep el resultat certificable: donant, any, import brut, devolucions i import net. No veu factures pagades, transferències, conceptes bancaris, categories, documents, IBAN ni el llistat general de moviments.
+
+És el perfil recomanat per persones que gestionen socis i donants però no han de consultar tota la comptabilitat bancària.
+
+---
+
 ## 📁 Projectes i subvencions
 
 ---

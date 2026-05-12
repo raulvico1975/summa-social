@@ -740,6 +740,8 @@ El SuperAdmin **no és un rol d'organització**. Es gestiona globalment:
 - Claus crítiques: `moviments.importarExtractes`, `informes.exportar`, `fiscal.model182.generar`, `fiscal.model347.generar`, `fiscal.certificats.generar`.
 - `viewer` no genera fiscal per defecte.
 - Firestore Rules aplica model **fail-closed** sobre `capabilities` (admin bypass).
+- `fiscal.certificats.generar` autoritza la generació de certificats i l'API fiscal acotada de certificats; **no** concedeix lectura general del ledger ni substitueix `moviments.read`.
+- `moviments.read` continua sent la clau per llegir directament `transactions` i `donations` des del client. Els perfils fiscals restringits poden generar certificats via servidor sense veure Moviments ni l'històric econòmic general.
 
 ### Persistència de sessió
 
@@ -2725,6 +2727,14 @@ Evita errors AEAT 20701 per separacions artificials en denominacions socials.
 **Càlcul de l'import:**
 - Import = Σ donacions - Σ devolucions
 - Si import ≤ 0 → No es genera certificat
+
+**Lectura fiscal acotada per certificats:**
+- Endpoint: `POST /api/fiscal/certificates/summary`
+- Auth: Bearer ID token + validació de membership
+- Permís obligatori: `fiscal.certificats.generar`
+- No requereix `moviments.read`: l'endpoint usa Admin SDK i retorna només dades mínimes certificables.
+- No retorna conceptes bancaris, notes, categories, documents, IBAN, comptes bancaris ni IDs reals de moviments.
+- Finalitat: permetre que un perfil de gestió de donants generi certificats sense accés al ledger general.
 
 **Enviament per email des de l'app (operatiu):**
 - Endpoint: `POST /api/certificates/send-email`
@@ -5852,6 +5862,7 @@ Les fites històriques i els desplegaments anteriors es documenten a `docs/CHANG
 | **1.32** | **29 Gen 2026** | **Dinàmica de donants: nou panell d'anàlisi per període (altes, baixes, reactivacions, devolucions, aportació decreixent). Wizard SEPA pain.008 complet: 3 passos (config, selecció, revisió), periodicitat de quota (monthly/quarterly/semiannual/annual/manual), memòria d'execució (lastSepaRunDate), bulk selection amb filtre, col·lecció sepaCollectionRuns. Importador pressupost millorat: extracció codi del text amb patrons (A), a.1), a.1.1)), agrupació contextual per jerarquia, capítols destacats (ambre), vista sense/amb partides. Traduccions i18n donorDynamics (CA/ES). Doc GOVERN-DE-CODI-I-DEPLOY v3.0: classificació risc (BAIX/MITJÀ/ALT), ritual deploy per nivell, gate humà únic.** |
 | **1.33** | **30 Gen 2026** | **Health Check P0: panell d'integritat de dades al Dashboard (només admin). 5 blocs deterministes: A) categories legacy (docIds), B) dates formats mixtos/invàlids, C) coherència origen bancari (source↔bankAccountId), D) archivedAt en queries normals, E) signs per transactionType. UI amb details expandibles, badge recompte, taula exemples (max 5). Deduplicació global importació bancària (per rang dates), guardrails UX solapament extractes, camps bancaris readonly (description/amount) per moviments importats. Fitxer category-health.ts amb runHealthCheck().** |
 | **1.34** | **31 Gen 2026** | **Invariant A4 source↔bankAccountId: `bank`/`stripe` requereixen bankAccountId (P0 error si absent), `remittance` hereta del pare, `manual` no aplica. Health check actualitzat per detectar stripe sense bankAccountId. Camps (date/amount/description) bloquejats si bankAccountId present. Backfill dades legacy Flores (363 transaccions: 340 bank + 23 remittance).** |
+| **1.47** | **12 Mai 2026** | **Certificats fiscals amb accés acotat: nova API server-side `POST /api/fiscal/certificates/summary` governada per `fiscal.certificats.generar`, sense requerir `moviments.read` ni exposar ledger. El generador massiu i la fitxa del donant poden generar certificats anuals amb dades sanitzades (sense conceptes, documents, IBAN, categories ni IDs reals de moviments). Tests de permisos i minimització afegits.** |
 | **1.35** | **1 Feb 2026** | **Guardrails integritat Categories i Projectes Bàsics: prohibit delete físic (Firestore Rules), arxivat només via API amb reassignació obligatòria si count > 0, camps archivedAt/ByUid/FromAction protegits contra escriptura client. APIs `/api/categories/archive` i `/api/projects/archive` amb validació orgId derivat de membership. Health Check nou: blocs F (categories òrfenes) i G (projectes orfes). UI: icona Archive, ReassignModal, traduccions CA/ES/FR.** |
 | **1.46** | **11 Mar 2026** | **Moviments: cerca i filtres sense resultats parcials (carrega totes les pàgines necessàries abans de resoldre filtres secundaris, amb reintent si cal) i paginació estable. Stripe: es preserva el payout pare, es marca amb `stripeTransferId`, es bloqueja re-split/delete accidental, filles ocultes del ledger principal, confirmació final abans d'importar i escriptures chunkades ≤ 50 operacions amb rollback. Import bancari: `operationDate` reforçada com a contracte obligatori i separació explícita entre duplicats oficials (`DUPLICATE_SAFE`) i candidats heurístics revisables.** |
 | **1.44** | **17 Feb 2026** | **Importació bancària conservadora: nous camps `balanceAfter` i `operationDate` (sense backfill), regla de deduplicació forta per saldo (`bankAccountId + balanceAfter + amount + operationDate`) amb prioritat després de `bankRef`, i diagnòstic `duplicateReason="balance+amount+date"` en duplicats forts.** |

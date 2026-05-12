@@ -1,9 +1,9 @@
 'use client';
 
 import * as React from 'react';
-import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
+import { useFirebase } from '@/firebase';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
-import { collection, query, where, getDocs, doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc } from 'firebase/firestore';
 import type { Transaction, Donor, Organization } from '@/lib/data';
 import { formatCurrencyEU } from '@/lib/normalize';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -79,8 +79,10 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
 import { MOBILE_ACTIONS_BAR, MOBILE_CTA_PRIMARY, MOBILE_CTA_TRUNCATE } from '@/lib/ui/mobile-actions';
-import { calculateTransactionNetAmount } from '@/lib/model182';
-import { getUnifiedFiscalDonationsWithClient } from '@/lib/fiscal/getUnifiedFiscalDonations';
+import {
+  certificateMovementToTransaction,
+  type CertificateDonorSummary,
+} from '@/lib/fiscal/certificate-summaries';
 
 let jsPdfModulePromise: Promise<typeof import('jspdf')> | null = null;
 
@@ -107,6 +109,14 @@ interface DonorSummary {
 // Tipus ampliat per organització amb logo
 interface OrganizationWithLogo extends Organization {
   logoUrl?: string;
+}
+
+interface CertificateSummaryApiResponse {
+  success: boolean;
+  code?: string;
+  error?: string;
+  donorSummaries?: CertificateDonorSummary[];
+  totalReturns?: number;
 }
 
 // Netejar nom (treure espais extra)
@@ -320,66 +330,48 @@ export function DonationCertificateGenerator() {
 
   const loadDonations = React.useCallback(async () => {
     if (!canGenerateCertificates) return;
-    if (!firestore || !organizationId) return;
+    if (!organizationId || !user) return;
 
     setIsLoading(true);
     try {
-      const yearStart = `${selectedYear}-01-01`;
-      const yearEnd = `${selectedYear}-12-31`;
-
-      const contactsRef = collection(firestore, 'organizations', organizationId, 'contacts');
-      const donorsQuery = query(contactsRef, where('type', '==', 'donor'));
-      const donorsSnapshot = await getDocs(donorsQuery);
-      const donors: Donor[] = donorsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Donor));
-
-      const allTransactions = await getUnifiedFiscalDonationsWithClient({
-        firestore,
-        organizationId,
-        filters: {
-          dateFrom: yearStart,
-          dateTo: yearEnd,
+      const idToken = await user.getIdToken();
+      const response = await fetch('/api/fiscal/certificates/summary', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${idToken}`,
+          'Content-Type': 'application/json',
         },
+        body: JSON.stringify({
+          organizationId,
+          year: selectedYear,
+        }),
       });
 
-      const summaries: DonorSummary[] = [];
-      let globalReturnsCount = 0;
-      
-      for (const donor of donors) {
-        const donorTransactions = allTransactions.filter(tx => tx.contactId === donor.id);
-        const donorDonations = donorTransactions.filter(tx => calculateTransactionNetAmount(tx) > 0);
-        const donorReturns = donorTransactions.filter(tx => calculateTransactionNetAmount(tx) < 0);
-
-        const grossAmount = donorDonations.reduce((sum, tx) => sum + calculateTransactionNetAmount(tx), 0);
-        const returnedAmount = donorReturns.reduce((sum, tx) => sum + Math.abs(calculateTransactionNetAmount(tx)), 0);
-        const netAmount = Math.max(0, grossAmount - returnedAmount);
-        
-        if (netAmount > 0) {
-          globalReturnsCount += donorReturns.length;
-          
-          summaries.push({
-            donor,
-            donations: donorDonations.sort((a, b) => a.date.localeCompare(b.date)),
-            returns: donorReturns.sort((a, b) => a.date.localeCompare(b.date)),
-            totalAmount: netAmount,
-            grossAmount,
-            returnedAmount,
-            donationCount: donorDonations.length,
-            returnCount: donorReturns.length,
-            hasEmail: !!donor.email,
-          });
-        }
+      const payload = await response.json() as CertificateSummaryApiResponse;
+      if (!response.ok || !payload.success) {
+        throw new Error(payload.code ?? payload.error ?? 'CERTIFICATE_SUMMARY_ERROR');
       }
 
-      summaries.sort((a, b) => b.totalAmount - a.totalAmount);
+      const summaries: DonorSummary[] = (payload.donorSummaries ?? []).map((summary) => ({
+        donor: summary.donor as Donor,
+        donations: summary.donations.map(certificateMovementToTransaction),
+        returns: summary.returns.map(certificateMovementToTransaction),
+        totalAmount: summary.totalAmount,
+        grossAmount: summary.grossAmount,
+        returnedAmount: summary.returnedAmount,
+        donationCount: summary.donationCount,
+        returnCount: summary.returnCount,
+        hasEmail: summary.hasEmail,
+      }));
       
       setDonorSummaries(summaries);
       setSelectedDonors(new Set(summaries.map(s => s.donor.id)));
-      setTotalReturns(globalReturnsCount);
+      setTotalReturns(payload.totalReturns ?? 0);
       
-      if (globalReturnsCount > 0) {
+      if ((payload.totalReturns ?? 0) > 0) {
         toast({
           title: t.certificates.returnsDetected,
-          description: t.certificates.returnsDetectedDescription(globalReturnsCount),
+          description: t.certificates.returnsDetectedDescription(payload.totalReturns ?? 0),
           duration: 5000,
         });
       }
@@ -390,7 +382,7 @@ export function DonationCertificateGenerator() {
     } finally {
       setIsLoading(false);
     }
-  }, [canGenerateCertificates, firestore, organizationId, selectedYear, toast, t]);
+  }, [canGenerateCertificates, organizationId, selectedYear, toast, t, user]);
 
   // Només carregar donacions quan l'usuari ho demana explícitament
   React.useEffect(() => {

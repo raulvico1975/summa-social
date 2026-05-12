@@ -18,6 +18,25 @@ Aquest checklist assegura que els fluxos fiscals crítics no tenen regressions a
 
 ## 2. Checklist de verificació (PASS/FAIL)
 
+### Registre manual 2026-05-12 — Certificats fiscals sense accés al ledger general
+
+**Context:**
+Canvi de permisos i arquitectura de certificats perquè perfils de gestió de donants puguin generar, baixar i enviar certificats anuals sense `moviments.read`. El generador massiu i la fitxa del donant passen per una API server-side acotada que valida `fiscal.certificats.generar` i retorna només dades certificables sanitzades.
+
+**Comprovacions aplicades:**
+1. Revisió de permisos: `moviments.read` continua protegint lectura directa de `transactions` i `donations`; la nova API exigeix `fiscal.certificats.generar` i no accepta `moviments.read` com a substitut.
+2. Revisió de minimització: la resposta no inclou conceptes bancaris, notes, categories, documents, IBAN, comptes bancaris ni IDs reals de transacció.
+3. Verificació tècnica amb `./node_modules/.bin/tsc --noEmit`.
+4. Verificació tècnica amb `node --import tsx --test src/lib/__tests__/certificate-summary-route.test.ts src/lib/__tests__/certificate-summaries.test.ts src/lib/__tests__/permissions.test.ts src/lib/__tests__/permissions-persistence.test.ts src/lib/__tests__/firestore-rules-donations-access.test.ts`.
+5. Verificació de format amb `git diff --check`.
+
+**Resultat:**
+- [x] Un usuari amb `fiscal.certificats.generar` i sense `moviments.read` pot obtenir resum fiscal certificable via API.
+- [x] Un usuari sense `fiscal.certificats.generar` rep 403 encara que tingui `moviments.read`.
+- [x] El client no necessita llegir `transactions` ni `donations` per carregar certificats massius.
+- [x] La fitxa del donant no obre `onSnapshot` de moviments si l'usuari no té `moviments.read`.
+- [x] La guardrail fiscal queda coberta amb tests de permisos i de no exposició de ledger.
+
 ### Registre manual 2026-04-15 — Control 182 integrat a la fila i compactació de Moviments
 
 **Context:**

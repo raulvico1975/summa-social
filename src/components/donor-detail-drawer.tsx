@@ -10,6 +10,7 @@ import type { Donation } from '@/lib/types/donations';
 import { formatCurrencyEU } from '@/lib/normalize';
 import { useTranslations } from '@/i18n';
 import { useToast } from '@/hooks/use-toast';
+import { usePermissions } from '@/hooks/use-permissions';
 import { jsPDF } from 'jspdf';
 import { getPeriodicitySuffix } from '@/lib/donors/periodicity-suffix';
 import {
@@ -25,6 +26,7 @@ import {
   getIndividualDonationCertificateBlockMessage,
   getIndividualDonationCertificateBlockReason,
 } from '@/lib/fiscal/individual-donation-certificate';
+import type { CertificateDonorSummary } from '@/lib/fiscal/certificate-summaries';
 
 // UI Components
 import {
@@ -121,6 +123,9 @@ export function DonorDetailDrawer({
   const { organizationId, organization, orgSlug } = useCurrentOrganization();
   const { t, tr, language } = useTranslations();
   const { toast } = useToast();
+  const { can } = usePermissions();
+  const canReadMovements = can('moviments.read');
+  const canGenerateCertificates = can('fiscal.certificats.generar');
   const certificateLanguage = language === 'ca' ? 'ca' : 'es';
 
   const currentYear = new Date().getFullYear();
@@ -172,6 +177,14 @@ export function DonorDetailDrawer({
   const [permissionError, setPermissionError] = React.useState(false);
 
   React.useEffect(() => {
+    if (!canReadMovements) {
+      setTransactions([]);
+      setStripeDonations([]);
+      setIsLoading(false);
+      setPermissionError(false);
+      return;
+    }
+
     if (!organizationId || !donor || !open) {
       setIsLoading(false);
       return;
@@ -233,7 +246,7 @@ export function DonorDetailDrawer({
       unsubscribeTransactions();
       unsubscribeDonations();
     };
-  }, [firestore, organizationId, donor?.id, open]);
+  }, [canReadMovements, firestore, organizationId, donor?.id, open]);
 
   const fiscalTransactions = React.useMemo(() => {
     return mergeUnifiedFiscalDonations({
@@ -244,6 +257,9 @@ export function DonorDetailDrawer({
 
   // Anys disponibles (dels quals hi ha transaccions)
   const availableYears = React.useMemo(() => {
+    if (!canReadMovements && canGenerateCertificates) {
+      return Array.from({ length: 5 }, (_, index) => String(currentYear - index));
+    }
     if (fiscalTransactions.length === 0) return [String(currentYear)];
     const years = new Set<string>();
     fiscalTransactions.forEach(tx => {
@@ -253,7 +269,7 @@ export function DonorDetailDrawer({
     // Afegir any actual si no hi és
     years.add(String(currentYear));
     return Array.from(years).sort((a, b) => Number(b) - Number(a));
-  }, [fiscalTransactions, currentYear]);
+  }, [canGenerateCertificates, canReadMovements, fiscalTransactions, currentYear]);
 
   // Calcular resum fiscal (font única de veritat)
   const summary = React.useMemo<DonorSummaryResult>(() => {
@@ -274,11 +290,15 @@ export function DonorDetailDrawer({
 
   // Per defecte: historial obert si <= 5 donacions
   React.useEffect(() => {
+    if (!canReadMovements && canGenerateCertificates && open) {
+      setIsHistoryOpen(true);
+      return;
+    }
     if (fiscalTransactions.length > 0) {
       const donationsCount = fiscalTransactions.filter(isDrawerDonationCandidate).length;
       setIsHistoryOpen(donationsCount <= 5);
     }
-  }, [fiscalTransactions]);
+  }, [canGenerateCertificates, canReadMovements, fiscalTransactions, open]);
 
   // Filtrar transaccions per any i estat
   const effectiveReturnIdSet = React.useMemo(() => new Set(summary.effectiveReturnIds), [summary.effectiveReturnIds]);
@@ -625,10 +645,63 @@ export function DonorDetailDrawer({
     };
   };
 
+  const loadRestrictedAnnualCertificateScope = async (year: string) => {
+    if (!donor || !organizationId || !canGenerateCertificates) return null;
+
+    const authHeaders = await getAuthHeaders();
+    if (!authHeaders) return null;
+
+    const response = await fetch('/api/fiscal/certificates/summary', {
+      method: 'POST',
+      headers: authHeaders,
+      body: JSON.stringify({
+        organizationId,
+        donorId: donor.id,
+        year,
+      }),
+    });
+
+    const payload = await response.json() as {
+      success?: boolean;
+      code?: string;
+      error?: string;
+      donorSummaries?: CertificateDonorSummary[];
+    };
+
+    if (!response.ok || !payload.success) {
+      toast({
+        variant: 'destructive',
+        title: t.common.error,
+        description: t.donorDetail.certificate.error,
+      });
+      return null;
+    }
+
+    const summary = payload.donorSummaries?.[0];
+    if (!summary) {
+      toast({
+        variant: 'destructive',
+        title: t.common.error,
+        description: t.donorDetail.noDonationsInPeriod,
+      });
+      return null;
+    }
+
+    return {
+      yearLabel: year,
+      grossAmount: summary.grossAmount,
+      returnedAmount: summary.returnedAmount,
+      netAmount: summary.totalAmount,
+      donationsCount: summary.donationCount,
+    };
+  };
+
   // Generar certificat anual
   const generateAnnualCertificate = async (year: string) => {
     if (!donor || !organization) return;
-    const annualScope = resolveAnnualCertificateScope(year);
+    const annualScope = canReadMovements
+      ? resolveAnnualCertificateScope(year)
+      : await loadRestrictedAnnualCertificateScope(year);
     if (!annualScope) return;
 
     const { yearLabel, grossAmount, returnedAmount, netAmount, donationsCount } = annualScope;
@@ -1149,7 +1222,9 @@ export function DonorDetailDrawer({
       return;
     }
 
-    const annualScope = resolveAnnualCertificateScope(year);
+    const annualScope = canReadMovements
+      ? resolveAnnualCertificateScope(year)
+      : await loadRestrictedAnnualCertificateScope(year);
     if (!annualScope) return;
 
     const { yearLabel, grossAmount, returnedAmount, netAmount, donationsCount } = annualScope;
@@ -1640,7 +1715,7 @@ export function DonorDetailDrawer({
                   {/* Descarregar certificat anual */}
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="outline" size="sm" disabled={!donor.taxId || isGeneratingPdf}>
+                      <Button variant="outline" size="sm" disabled={!donor.taxId || isGeneratingPdf || !canGenerateCertificates}>
                         <Download className="h-4 w-4 mr-1" />
                         {t.donorDetail.annualCertificate}
                       </Button>
@@ -1662,7 +1737,7 @@ export function DonorDetailDrawer({
                       <Button
                         variant="outline"
                         size="sm"
-                        disabled={!donor.taxId || !donor.email || isSendingEmail}
+                        disabled={!donor.taxId || !donor.email || isSendingEmail || !canGenerateCertificates}
                         {...(!donor.email ? { title: t.certificates.email.errorNoEmail } : {})}
                       >
                         {isSendingEmail ? (
