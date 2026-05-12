@@ -10,6 +10,13 @@ Aquest fitxer ja no pretén duplicar el document mestre.
 
 ## Resum dels canvis recents
 
+### 2026-05-11
+
+- codi intern: la home publica (`src/app/public/[lang]/page.tsx`) ajusta el bloc comercial amb preu inicial actualitzat (`49 €`) per CA/ES/FR/PT, elimina la seccio de trajectoria/"qui som" i reorganitza la CTA del bloc de preus
+- API/integracions: sense canvis de contracte ni noves rutes; canvi limitat a navegacio i copy del web public
+- documentacio per usuari: la home i el footer public incorporen enllac directe al detall de preus (`getPublicPricingHref`) amb etiqueta localitzada per idioma
+- operativa: sense canvis de deploy/runbook; no hi ha requisits nous d'operacio
+
 ### 2026-04-23
 
 - seguretat: lot de 6 fixes d'autoritzacio i aillament desplegat i validat en produccio
