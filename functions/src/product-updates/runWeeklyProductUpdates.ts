@@ -8,26 +8,6 @@ import {
   type PublishProductUpdateRequest,
 } from "../../../src/lib/product-updates/weekly-product-update-runner";
 
-type GenerateWeeklyContentResponse = {
-  contentLong: string;
-  web?: {
-    excerpt: string;
-    content: string;
-  };
-  locales?: {
-    es?: {
-      title: string;
-      description: string;
-      contentLong: string;
-      web?: {
-        title: string;
-        excerpt: string;
-        content: string;
-      } | null;
-    };
-  };
-};
-
 type PublishEndpointResponse =
   | {
       success: true;
@@ -52,34 +32,6 @@ async function readJsonResponse<T>(response: Response): Promise<T | null> {
   const text = await response.text();
   if (!text.trim()) return null;
   return JSON.parse(text) as T;
-}
-
-async function callGenerateRoute(input: {
-  title: string;
-  description: string;
-  aiInput: {
-    changeBrief: string;
-    problemReal: string;
-    affects: string;
-    userAction: string;
-  };
-  webEnabled: true;
-  socialEnabled: false;
-}): Promise<GenerateWeeklyContentResponse> {
-  const response = await fetch(`${getAppBaseUrl().replace(/\/+$/, "")}/api/ai/generate-product-update`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(input),
-  });
-
-  const body = await readJsonResponse<{ error?: string } & GenerateWeeklyContentResponse>(response);
-  if (!response.ok || !body?.contentLong) {
-    throw new Error(body?.error || `AI route failed (${response.status})`);
-  }
-
-  return body;
 }
 
 async function callPublishRoute(
@@ -125,6 +77,49 @@ async function hasExistingExternalId(externalId: string): Promise<boolean> {
   return snapshot.exists;
 }
 
+async function verifyPublishedProductUpdate(args: { externalId: string }): Promise<boolean> {
+  const snapshot = await admin.firestore().doc(`productUpdates/${args.externalId}`).get();
+  if (!snapshot.exists) return false;
+
+  const data = snapshot.data() as Record<string, unknown> | undefined;
+  if (!data) return false;
+
+  const web = typeof data.web === "object" && data.web !== null
+    ? data.web as Record<string, unknown>
+    : null;
+
+  return (
+    data.isActive === true &&
+    data.locale === "ca" &&
+    typeof data.title === "string" &&
+    data.title.trim().length > 0 &&
+    typeof data.description === "string" &&
+    data.description.trim().length > 0 &&
+    typeof data.contentLong === "string" &&
+    data.contentLong.trim().length > 0 &&
+    data.publishedAt !== undefined &&
+    web?.enabled === true &&
+    typeof web.slug === "string" &&
+    web.slug.trim().length > 0 &&
+    typeof web.content === "string" &&
+    web.content.trim().length > 0 &&
+    !hasUndefinedDeep(data)
+  );
+}
+
+function hasUndefinedDeep(value: unknown): boolean {
+  if (value === undefined) return true;
+  if (value === null) return false;
+  if (Array.isArray(value)) return value.some(hasUndefinedDeep);
+  if (typeof value !== "object") return false;
+
+  for (const nested of Object.values(value as Record<string, unknown>)) {
+    if (hasUndefinedDeep(nested)) return true;
+  }
+
+  return false;
+}
+
 export const runWeeklyProductUpdates = functions
   .region("europe-west1")
   .runWith({
@@ -156,8 +151,8 @@ export const runWeeklyProductUpdates = functions
           until: weekEnd,
         }),
       hasExistingExternalId,
-      generateContent: callGenerateRoute,
       publishProductUpdate: callPublishRoute,
+      verifyPublishedProductUpdate,
       logger: {
         info: (event, payload) => functions.logger.info(event, payload),
         error: (event, payload) => functions.logger.error(event, payload),

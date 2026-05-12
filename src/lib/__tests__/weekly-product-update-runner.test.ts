@@ -4,6 +4,9 @@ import {
   runWeeklyProductUpdateJob,
   type PublishProductUpdateRequest,
 } from '@/lib/product-updates/weekly-product-update-runner';
+import { generateWeeklyProductUpdateContent } from '@/lib/product-updates/weekly-generator';
+import { buildPreviousWeeklyWindow } from '@/lib/product-updates/weekly-window';
+import { validateWeeklyProductUpdateEditorial } from '@/lib/product-updates/editorial-policy';
 
 function buildCommit(overrides: Partial<{
   sha: string;
@@ -17,7 +20,7 @@ function buildCommit(overrides: Partial<{
     sha: overrides.sha ?? 'abc123',
     message: overrides.message ?? 'feat: nou resum del dashboard',
     committedAt: overrides.committedAt ?? '2026-04-01T10:00:00.000Z',
-    files: overrides.files ?? ['src/app/dashboard/page.tsx'],
+    files: overrides.files ?? ['src/app/[orgSlug]/dashboard/page.tsx'],
     url: overrides.url ?? 'https://github.com/raulvico1975/summa-social/commit/abc123',
     areas: overrides.areas ?? ['dashboard'],
   };
@@ -39,6 +42,22 @@ function buildLogger() {
       },
     },
   };
+}
+
+function buildGeneratedContent() {
+  const window = buildPreviousWeeklyWindow(new Date('2026-04-06T06:00:00.000Z'), 'Europe/Madrid');
+  return generateWeeklyProductUpdateContent({
+    window,
+    commits: [
+      buildCommit(),
+      buildCommit({
+        sha: 'def456',
+        message: 'fix: millor context en projectes',
+        files: ['src/app/[orgSlug]/dashboard/projectes/page.tsx'],
+        areas: ['projectes'],
+      }),
+    ],
+  });
 }
 
 test('runWeeklyProductUpdateJob fa no-op si no hi ha commits rellevants', async () => {
@@ -78,30 +97,12 @@ test('runWeeklyProductUpdateJob publica una sola peça setmanal quan hi ha canvi
       buildCommit({
         sha: 'def456',
         message: 'fix: millor context en projectes',
-        files: ['src/app/projectes/page.tsx'],
+        files: ['src/app/[orgSlug]/dashboard/projectes/page.tsx'],
         areas: ['projectes'],
       }),
     ],
     hasExistingExternalId: async () => false,
-    generateContent: async () => ({
-      contentLong: '- Hem millorat la claredat del resum setmanal.\n- Els canvis es noten en l’ús del dia a dia.',
-      web: {
-        excerpt: 'Millores setmanals per treballar amb més claredat.',
-        content: '- Resum web.\n- Detall web.',
-      },
-      locales: {
-        es: {
-          title: 'Mejoras semanales',
-          description: 'Cambios útiles de la semana.',
-          contentLong: '- Resumen.\n- Detalle.',
-          web: {
-            title: 'Mejoras semanales',
-            excerpt: 'Cambios útiles de la semana.',
-            content: '- Resumen web.\n- Detalle web.',
-          },
-        },
-      },
-    }),
+    generateContent: async () => buildGeneratedContent(),
     publishProductUpdate: async (payload) => {
       publishedPayload = payload;
       return { status: 'success' };
@@ -116,6 +117,25 @@ test('runWeeklyProductUpdateJob publica una sola peça setmanal quan hi ha canvi
   assert.equal(payload.locale, 'ca');
   assert.equal(payload.web?.enabled, true);
   assert.equal(payload.isActive, true);
+});
+
+test('runWeeklyProductUpdateJob pot generar contingut setmanal sense cridar endpoint IA', async () => {
+  let publishedPayload: PublishProductUpdateRequest | null = null;
+
+  const result = await runWeeklyProductUpdateJob({
+    now: () => new Date('2026-04-06T06:00:00.000Z'),
+    listRelevantCommits: async () => [buildCommit()],
+    hasExistingExternalId: async () => false,
+    publishProductUpdate: async (payload) => {
+      publishedPayload = payload;
+      return { status: 'success' };
+    },
+    verifyPublishedProductUpdate: async () => true,
+  });
+
+  assert.equal(result.status, 'success');
+  assert.ok(publishedPayload);
+  assert.equal((publishedPayload as PublishProductUpdateRequest).title.startsWith('Dashboard:'), true);
 });
 
 test('runWeeklyProductUpdateJob tracta com a duplicat una setmana ja publicada', async () => {
@@ -142,18 +162,42 @@ test('runWeeklyProductUpdateJob tracta com a duplicat una setmana ja publicada',
   assert.equal(publishCalled, false);
 });
 
+test('runWeeklyProductUpdateJob no publica si els commits son interns', async () => {
+  let publishCalled = false;
+
+  const result = await runWeeklyProductUpdateJob({
+    now: () => new Date('2026-04-06T06:00:00.000Z'),
+    listRelevantCommits: async () => [
+      buildCommit({
+        message: 'refactor(product-updates): mou helpers interns',
+        files: ['src/lib/product-updates/weekly-product-update-runner.ts'],
+      }),
+      buildCommit({
+        message: 'fix: update deploy logs',
+        files: ['docs/DEPLOY-LOG.md'],
+      }),
+    ],
+    hasExistingExternalId: async () => false,
+    publishProductUpdate: async () => {
+      publishCalled = true;
+      return { status: 'success' };
+    },
+  });
+
+  assert.deepEqual(result, {
+    status: 'no_visible_product_changes',
+    externalId: 'weekly-product-update-2026-03-30_2026-04-05',
+    relevantCommitCount: 2,
+  });
+  assert.equal(publishCalled, false);
+});
+
 test('runWeeklyProductUpdateJob tracta com a segur un duplicate retornat per publish', async () => {
   const result = await runWeeklyProductUpdateJob({
     now: () => new Date('2026-04-06T06:00:00.000Z'),
     listRelevantCommits: async () => [buildCommit()],
     hasExistingExternalId: async () => false,
-    generateContent: async () => ({
-      contentLong: 'Contingut',
-      web: {
-        excerpt: 'Extracte',
-        content: 'Contingut web',
-      },
-    }),
+    generateContent: async () => buildGeneratedContent(),
     publishProductUpdate: async () => ({ status: 'duplicate' }),
   });
 
@@ -171,9 +215,7 @@ test('runWeeklyProductUpdateJob registra error controlat si GitHub falla', async
           throw new Error('GitHub request failed');
         },
         hasExistingExternalId: async () => false,
-        generateContent: async () => ({
-          contentLong: 'Contingut',
-        }),
+        generateContent: async () => buildGeneratedContent(),
         publishProductUpdate: async () => ({ status: 'success' }),
         logger,
       }),
@@ -215,13 +257,7 @@ test('runWeeklyProductUpdateJob registra error controlat si publish falla', asyn
         now: () => new Date('2026-04-06T06:00:00.000Z'),
         listRelevantCommits: async () => [buildCommit()],
         hasExistingExternalId: async () => false,
-        generateContent: async () => ({
-          contentLong: 'Contingut',
-          web: {
-            excerpt: 'Extracte',
-            content: 'Contingut web',
-          },
-        }),
+        generateContent: async () => buildGeneratedContent(),
         publishProductUpdate: async () => ({
           status: 'error',
           errorMessage: 'publish failed',
@@ -233,4 +269,132 @@ test('runWeeklyProductUpdateJob registra error controlat si publish falla', asyn
 
   assert.equal(errorEvents.at(-1)?.event, 'weekly_product_updates.error');
   assert.equal(errorEvents.at(-1)?.payload.errorMessage, 'publish failed');
+});
+
+test('runWeeklyProductUpdateJob falla si la publicacio no queda activa i visible', async () => {
+  const { errorEvents, logger } = buildLogger();
+
+  await assert.rejects(
+    () =>
+      runWeeklyProductUpdateJob({
+        now: () => new Date('2026-04-06T06:00:00.000Z'),
+        listRelevantCommits: async () => [buildCommit()],
+        hasExistingExternalId: async () => false,
+        publishProductUpdate: async () => ({ status: 'success' }),
+        verifyPublishedProductUpdate: async () => false,
+        logger,
+      }),
+    /published product update was not active/
+  );
+
+  assert.equal(errorEvents.at(-1)?.event, 'weekly_product_updates.error');
+});
+
+test('runWeeklyProductUpdateJob bloqueja contingut setmanal massa generic', async () => {
+  const { errorEvents, logger } = buildLogger();
+  let publishCalled = false;
+
+  await assert.rejects(
+    () =>
+      runWeeklyProductUpdateJob({
+        now: () => new Date('2026-04-06T06:00:00.000Z'),
+        listRelevantCommits: async () => [buildCommit()],
+        hasExistingExternalId: async () => false,
+        generateContent: async () => ({
+          title: 'Millores setmanals a Summa Social',
+          description: 'Gestió més àgil, precisa i segura.',
+          contentLong: 'Hem fet millores internes del funcionament general.',
+          web: {
+            excerpt: 'Millores internes.',
+            content: 'Millores internes del funcionament general.',
+          },
+        }),
+        publishProductUpdate: async () => {
+          publishCalled = true;
+          return { status: 'success' };
+        },
+        logger,
+      }),
+    /weekly editorial policy failed/
+  );
+
+  assert.equal(publishCalled, false);
+  assert.equal(errorEvents.at(-1)?.event, 'weekly_product_updates.error');
+});
+
+test('validateWeeklyProductUpdateEditorial accepta el generador determinista', () => {
+  const generated = buildGeneratedContent();
+  const validation = validateWeeklyProductUpdateEditorial(generated);
+  assert.deepEqual(validation, { ok: true });
+});
+
+test('generateWeeklyProductUpdateContent normalitza permisos a llenguatge d’usuari', () => {
+  const window = buildPreviousWeeklyWindow(new Date('2026-05-12T06:00:00.000Z'), 'Europe/Madrid');
+  const generated = generateWeeklyProductUpdateContent({
+    window,
+    commits: [
+      buildCommit({
+        message: 'fix(api): exigeix permís per arxivar projectes',
+        files: ['src/app/api/projects/archive/handler.ts'],
+        areas: ['projectes', 'integracions'],
+      }),
+      buildCommit({
+        message: 'fix(api): exigeix permís per arxivar categories',
+        files: ['src/app/api/categories/archive/route.ts'],
+        areas: ['integracions', 'configuracio'],
+      }),
+    ],
+  });
+
+  assert.equal(generated.title, 'Projectes i categories: arxivament amb permisos més estrictes');
+  assert.match(generated.contentLong, /L’arxivament de projectes exigeix el permís corresponent/);
+  assert.match(generated.contentLong, /a la configuració de categories/);
+  assert.doesNotMatch(generated.description, /veuràs exigeix permís/);
+  assert.doesNotMatch(generated.web.excerpt, /a a la/);
+});
+
+test('generateWeeklyProductUpdateContent genera ES sense fragments catalans de commit', () => {
+  const window = buildPreviousWeeklyWindow(new Date('2026-05-12T06:00:00.000Z'), 'Europe/Madrid');
+  const generated = generateWeeklyProductUpdateContent({
+    window,
+    commits: [
+      buildCommit({
+        message: 'fix(api): exigeix permís per arxivar projectes',
+        files: ['src/app/api/projects/archive/handler.ts'],
+        areas: ['projectes', 'integracions'],
+      }),
+    ],
+  });
+  const spanishText = [
+    generated.locales.es.title,
+    generated.locales.es.description,
+    generated.locales.es.contentLong,
+    generated.locales.es.web.excerpt,
+    generated.locales.es.web.content,
+  ].join('\n');
+
+  assert.match(spanishText, /El archivado de proyectos exige el permiso correspondiente/);
+  assert.doesNotMatch(spanishText, /exigeix|permís|arxivar projectes|llista|detall|Què/u);
+});
+
+test('validateWeeklyProductUpdateEditorial rebutja traduccio ES amb català', () => {
+  const generated = buildGeneratedContent();
+  const validation = validateWeeklyProductUpdateEditorial({
+    ...generated,
+    locales: {
+      es: {
+        title: 'Proyectos: exigeix permís per arxivar projectes',
+        description: 'Ahora en la llista verás exigeix permís.',
+        contentLong: generated.locales.es.contentLong,
+        web: {
+          title: 'Proyectos: exigeix permís per arxivar projectes',
+          excerpt: 'Cambios en la llista.',
+          content: generated.locales.es.web.content,
+        },
+      },
+    },
+  });
+
+  assert.equal(validation.ok, false);
+  assert.match(validation.errors.join('\n'), /invalid_spanish_translation/);
 });

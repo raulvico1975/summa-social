@@ -5,27 +5,19 @@ import {
   buildWeeklyGeneratedSeed,
   type WeeklyRelevantCommit,
 } from './generate-weekly-update';
+import { validateWeeklyProductUpdateEditorial } from './editorial-policy';
+import {
+  filterVisibleProductCommits,
+  generateWeeklyProductUpdateContent,
+  type WeeklyGeneratedContent,
+} from './weekly-generator';
 import { buildPreviousWeeklyWindow } from './weekly-window';
 
-interface WeeklyGeneratedContent {
-  contentLong: string;
-  web?: {
-    excerpt: string;
-    content: string;
-  };
-  locales?: {
-    es?: {
-      title: string;
-      description: string;
-      contentLong: string;
-      web?: {
-        title: string;
-        excerpt: string;
-        content: string;
-      } | null;
-    };
-  };
-}
+type WeeklyGeneratedContentResult = Omit<WeeklyGeneratedContent, 'title' | 'description' | 'locales'> & {
+  title?: string;
+  description?: string;
+  locales?: WeeklyGeneratedContent['locales'];
+};
 
 export interface PublishProductUpdateRequest {
   externalId: string;
@@ -51,7 +43,7 @@ export interface WeeklyProductUpdateRunnerDeps {
   timeZone?: string;
   listRelevantCommits: (args: { weekStart: string; weekEnd: string }) => Promise<WeeklyRelevantCommit[]>;
   hasExistingExternalId: (externalId: string) => Promise<boolean>;
-  generateContent: (input: {
+  generateContent?: (input: {
     title: string;
     description: string;
     aiInput: {
@@ -62,7 +54,11 @@ export interface WeeklyProductUpdateRunnerDeps {
     };
     webEnabled: true;
     socialEnabled: false;
-  }) => Promise<WeeklyGeneratedContent>;
+  }) => Promise<WeeklyGeneratedContentResult>;
+  verifyPublishedProductUpdate?: (args: {
+    externalId: string;
+    payload: PublishProductUpdateRequest;
+  }) => Promise<boolean>;
   publishProductUpdate: (payload: PublishProductUpdateRequest) => Promise<
     | { status: 'success' }
     | { status: 'duplicate' }
@@ -76,6 +72,7 @@ export interface WeeklyProductUpdateRunnerDeps {
 
 export type WeeklyProductUpdateRunnerResult =
   | { status: 'no_changes'; externalId: string; relevantCommitCount: number }
+  | { status: 'no_visible_product_changes'; externalId: string; relevantCommitCount: number }
   | { status: 'duplicate'; externalId: string; relevantCommitCount: number }
   | { status: 'success'; externalId: string; relevantCommitCount: number };
 
@@ -134,6 +131,22 @@ export async function runWeeklyProductUpdateJob(
       };
     }
 
+    const visibleCommits = filterVisibleProductCommits(commits);
+    if (visibleCommits.length === 0) {
+      logInfo(deps, 'weekly_product_updates.no_visible_product_changes', {
+        weekStart: window.weekStartLabel,
+        weekEnd: window.weekEndLabel,
+        relevantCommitCount,
+        externalId,
+        status: 'no_visible_product_changes',
+      });
+      return {
+        status: 'no_visible_product_changes',
+        externalId,
+        relevantCommitCount,
+      };
+    }
+
     const alreadyExists = await deps.hasExistingExternalId(externalId);
     if (alreadyExists) {
       logInfo(deps, 'weekly_product_updates.duplicate', {
@@ -152,15 +165,20 @@ export async function runWeeklyProductUpdateJob(
 
     const seed = buildWeeklyGeneratedSeed({
       window,
-      commits,
+      commits: visibleCommits,
     });
-    const generated = await deps.generateContent(seed.aiInput);
+    const generated = deps.generateContent
+      ? await deps.generateContent(seed.aiInput)
+      : generateWeeklyProductUpdateContent({
+          window,
+          commits: visibleCommits,
+        });
 
     const publishPayload: PublishProductUpdateRequest = {
       externalId,
       locale: 'ca',
-      title: seed.title,
-      description: seed.description,
+      title: generated.title ?? seed.title,
+      description: generated.description ?? seed.description,
       link: null,
       contentLong: generated.contentLong,
       guideUrl: null,
@@ -174,6 +192,11 @@ export async function runWeeklyProductUpdateJob(
       locales: generated.locales ?? null,
       isActive: true,
     };
+
+    const editorialValidation = validateWeeklyProductUpdateEditorial(publishPayload);
+    if (!editorialValidation.ok) {
+      throw new Error(`weekly editorial policy failed: ${editorialValidation.errors.join('; ')}`);
+    }
 
     logInfo(deps, 'weekly_product_updates.publish_attempt', {
       weekStart: window.weekStartLabel,
@@ -201,6 +224,13 @@ export async function runWeeklyProductUpdateJob(
 
     if (publishResult.status === 'error') {
       throw new Error(publishResult.errorMessage);
+    }
+
+    if (deps.verifyPublishedProductUpdate) {
+      const verified = await deps.verifyPublishedProductUpdate({ externalId, payload: publishPayload });
+      if (!verified) {
+        throw new Error('published product update was not active and web-visible after publish');
+      }
     }
 
     logInfo(deps, 'weekly_product_updates.success', {
