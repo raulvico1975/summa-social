@@ -18,6 +18,41 @@ Aquest checklist assegura que els fluxos fiscals crítics no tenen regressions a
 
 ## 2. Checklist de verificació (PASS/FAIL)
 
+### Registre manual 2026-05-13 — Diagnòstic de perfil restringit per certificats
+
+**Context:**
+Rocío informa que el flux de certificats no li funciona en producció. El diagnòstic ha de separar configuració de permisos, accés a seccions, API fiscal acotada, generació PDF, enviament per email i dades fiscals disponibles.
+
+**Protocol read-only:**
+1. Revisar el document `organizations/{orgId}/members/{uid}` de l'usuari afectat sense modificar-lo.
+2. Calcular permisos efectius a partir de `role`, `userOverrides` i `userGrants`.
+3. Confirmar explícitament:
+   - `fiscal.certificats.generar`
+   - `sections.donants`
+   - `sections.informes`
+   - `sections.moviments`
+   - `moviments.read`
+4. Executar el diagnòstic read-only:
+   `node --import tsx scripts/fiscal/check-member-certificate-access.ts --orgId <orgId> --email <email> --year <YYYY>`
+5. Classificar el resultat:
+   - **Permisos/secció:** l'usuari no pot entrar al camí des d'on ho intenta.
+   - **API summary:** `/api/fiscal/certificates/summary` retorna 403/500 o payload buit inesperat.
+   - **Dades fiscals:** no hi ha donacions certificables per l'any/donant.
+   - **PDF/email:** l'API fiscal funciona però falla la generació o l'enviament.
+   - **UI condicionada per ledger:** algun camí encara depèn de `moviments.read`.
+
+**Evidència aplicada 2026-05-13:**
+- Rocío té `fiscal.certificats.generar` i `sections.donants`.
+- Rocío té `sections.informes` denegat; per tant el camí `Informes -> Certificats` no és accessible amb la configuració actual.
+- Rocío té `moviments.read` i `sections.moviments` denegats, tal com es volia per no exposar el ledger general.
+- La simulació server-side de `/api/fiscal/certificates/summary` amb el seu UID i permisos efectius retorna 200 per 2025 i 2026.
+
+**Resultat esperat del sistema:**
+- [x] El camí de fitxa de donant pot generar certificat anual sense `moviments.read`.
+- [x] El camí d'Informes només funciona si també es concedeix `sections.informes`.
+- [x] La resposta de l'API fiscal acotada no conté camps de ledger ni IDs reals.
+- [x] Qualsevol regressió futura queda coberta per tests de contracte API i UI.
+
 ### Registre manual 2026-05-12 — Certificats fiscals sense accés al ledger general
 
 **Context:**

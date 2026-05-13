@@ -150,6 +150,35 @@ test('certificate summary route allows fiscal certificate permission without mov
   assert.equal('notes' in body.donorSummaries[0].donor, false);
 });
 
+test('certificate summary route allows Rocio-like donor profile without informes or movements sections', async () => {
+  const response = await handleCertificateSummaryPost(
+    makeRequest({ organizationId: 'org-1', year: '2025' }),
+    makeDeps({
+      deny: [
+        'fiscal.model347.generar',
+        'informes.exportar',
+        'moviments.editar',
+        'moviments.importarExtractes',
+        'moviments.read',
+        'projectes.expenseInput',
+        'projectes.manage',
+        'sections.configuracio',
+        'sections.informes',
+        'sections.moviments',
+        'sections.projectes',
+        'sections.proveidors',
+        'sections.treballadors',
+      ],
+    })
+  );
+
+  assert.equal(response.status, 200);
+  const body = await response.json();
+  assert.equal(body.success, true);
+  assert.equal(body.donorSummaries.length, 1);
+  assert.equal(body.donorSummaries[0].totalAmount, 120);
+});
+
 test('certificate summary route denies users without fiscal.certificats.generar', async () => {
   const response = await handleCertificateSummaryPost(
     makeRequest({ organizationId: 'org-1', year: '2025' }),
@@ -171,4 +200,31 @@ test('certificate summary route does not accept moviments.read as substitute per
   );
 
   assert.equal(response.status, 403);
+});
+
+test('certificate summary route denies non members before fiscal data access', async () => {
+  const store = makeStore();
+  const response = await handleCertificateSummaryPost(
+    makeRequest({ organizationId: 'org-1', year: '2025' }),
+    {
+      verifyIdTokenFn: async () => ({ uid: 'uid-1', email: 'user@example.org' }),
+      getAdminDbFn: () => new FakeDb(store) as never,
+      validateUserMembershipFn: async () => ({
+        valid: false,
+        role: null,
+        userOverrides: null,
+        userGrants: null,
+      }) as never,
+      getUnifiedFiscalDonationsWithAdminFn: async () => {
+        throw new Error('should not read fiscal data for non members');
+      },
+    }
+  );
+
+  assert.equal(response.status, 403);
+  assert.deepEqual(await response.json(), {
+    success: false,
+    error: 'NOT_MEMBER',
+    code: 'NOT_MEMBER',
+  });
 });
