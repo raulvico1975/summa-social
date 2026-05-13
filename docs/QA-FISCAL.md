@@ -46,6 +46,8 @@ Rocío informa que el flux de certificats no li funciona en producció. El diagn
 - Rocío té `sections.informes` denegat; per tant el camí `Informes -> Certificats` no és accessible amb la configuració actual.
 - Rocío té `moviments.read` i `sections.moviments` denegats, tal com es volia per no exposar el ledger general.
 - La simulació server-side de `/api/fiscal/certificates/summary` amb el seu UID i permisos efectius retorna 200 per 2025 i 2026.
+- Es van desplegar els índexs Firestore necessaris per al filtre `contactId + date` en `transactions` i `donations`; la prova read-only amb `donorId` va passar amb HTTP 200 després que els índexs quedessin `READY`.
+- Validació real d'usuària: Rocío confirma que el flux des de `Donants -> fitxa del donant/soci -> certificat anual` funciona correctament.
 
 **Resultat esperat del sistema:**
 - [x] El camí de fitxa de donant pot generar certificat anual sense `moviments.read`.
