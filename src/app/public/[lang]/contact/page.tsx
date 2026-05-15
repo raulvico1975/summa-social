@@ -18,6 +18,7 @@ import { getPublicTranslations } from '@/i18n/public';
 
 interface PageProps {
   params: Promise<{ lang: string }>;
+  searchParams?: Promise<{ plan?: string }>;
 }
 
 export function generateStaticParams() {
@@ -38,7 +39,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   };
 }
 
-export default async function ContactPage({ params }: PageProps) {
+export default async function ContactPage({ params, searchParams }: PageProps) {
   const { lang } = await params;
 
   if (!isValidPublicLocale(lang)) {
@@ -47,6 +48,10 @@ export default async function ContactPage({ params }: PageProps) {
 
   const locale = lang as PublicLocale;
   const t = getPublicTranslations(locale);
+  const resolvedSearchParams = searchParams ? await searchParams : {};
+  const planMessage = resolvedSearchParams.plan
+    ? t.contact.form.planMessages[resolvedSearchParams.plan]
+    : undefined;
 
   return (
     <main className="flex min-h-screen flex-col">
@@ -77,7 +82,9 @@ export default async function ContactPage({ params }: PageProps) {
                   invalidEmail: t.contact.form.invalidEmail,
                   invalidMessage: t.contact.form.invalidMessage,
                   helper: t.contact.form.helper,
+                  messagePlaceholder: t.contact.form.messagePlaceholder,
                 }}
+                initialMessage={planMessage}
               />
             </div>
 
