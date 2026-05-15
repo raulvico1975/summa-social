@@ -187,6 +187,8 @@ export interface PublicTranslations {
       invalidEmail: string;
       invalidMessage: string;
       helper: string;
+      messagePlaceholder: string;
+      planMessages: Record<string, string>;
     };
   };
   pricing: {
@@ -203,13 +205,17 @@ export interface PublicTranslations {
     implantationText: string;
     implantationPrice: string;
     implantationSubtext: string;
+    implantationNoteTitle: string;
+    implantationNoteText: string;
     decisionTitle: string;
     decisionText: string;
     cta: string;
     plans: Array<{
+      id: string;
       name: string;
       price: string;
       badge: string;
+      cta: string;
       description: string;
       recommended?: boolean;
       features: string[];
@@ -1207,10 +1213,10 @@ const ca: PublicTranslations = {
     },
   },
   contact: {
-    title: 'Parlem de la teva entitat',
-    subtitle: 'Si vols veure si Summa Social encaixa amb la teva ONG, escriu-nos.',
+    title: 'Expliqueu-nos una mica la vostra entitat i us direm com començar.',
+    subtitle: 'Revisarem quin pla encaixa millor i quin acompanyament inicial necessiteu.',
     description:
-      'Ens agrada entendre primer la realitat de cada entitat abans de proposar res.',
+      'Abans d’activar cap quota mensual, us confirmarem el pla, l’import inicial i els primers passos.',
     responseTime: 'Respondrem tan aviat com sigui possible.',
     directEmailLabel: 'Correu directe',
     form: {
@@ -1225,7 +1231,14 @@ const ca: PublicTranslations = {
       invalidName: 'Escriu un nom vàlid.',
       invalidEmail: 'Escriu un correu electrònic vàlid.',
       invalidMessage: 'El missatge ha de tenir almenys 10 caràcters.',
-      helper: "Explica'ns el teu cas i et respondrem per correu.",
+      helper: 'Revisarem quin pla encaixa millor, quin acompanyament inicial necessiteu i quin seria l’import inicial abans d’activar cap quota mensual.',
+      messagePlaceholder:
+        'Expliqueu-nos breument quants socis o donants teniu, si feu remeses, si voleu importar moviments bancaris o si necessiteu preparar models fiscals.',
+      planMessages: {
+        initial: 'Vull començar amb el pla Inicial.',
+        management: 'Vull començar amb el pla Gestió.',
+        complete: 'Voldria parlar del pla Complet.',
+      },
     },
   },
   pricing: {
@@ -1250,14 +1263,19 @@ const ca: PublicTranslations = {
     implantationPrice: 'A partir de 300 €',
     implantationSubtext:
       "L'import final depèn de l'estat de les dades, el volum de contactes i la complexitat de l'entitat.",
+    implantationNoteTitle: 'Abans de començar, revisem el vostre cas.',
+    implantationNoteText:
+      "La implantació inicial es pressuposta segons el volum de dades i l’acompanyament necessari. No pagareu cap quota mensual fins que hàgim acordat el pla, l’import inicial i els primers passos.",
     decisionTitle: 'Si dubteu, comenceu pel pla Gestió',
     decisionText: '',
     cta: 'Parlem del vostre cas',
     plans: [
       {
+        id: 'initial',
         name: 'Inicial',
         price: '49 €/mes',
         badge: 'Per començar',
+        cta: 'Vull començar amb Inicial',
         description:
           'Per a entitats petites que volen ordenar socis, quotes, certificats i la fiscalitat anual bàsica.',
         features: [
@@ -1268,9 +1286,11 @@ const ca: PublicTranslations = {
         ],
       },
       {
+        id: 'management',
         name: 'Gestió',
         price: '79 €/mes',
         badge: 'Recomanat',
+        cta: 'Vull començar amb Gestió',
         recommended: true,
         description:
           'El pla natural per a entitats que, a més de quotes i certificats, necessiten control bancari i revisió econòmica regular.',
@@ -1278,16 +1298,18 @@ const ca: PublicTranslations = {
           'Tot el pla Inicial',
           'Importació de moviments bancaris',
           'Gestió de devolucions',
-          'Gestió de cobraments via Stripe',
+          'Gestió de cobraments en línia',
           'Pujada il·limitada de factures, nòmines, tiquets i documents vinculats a cada moviment bancari',
           'Categorització amb IA',
           'Model 347',
         ],
       },
       {
+        id: 'complete',
         name: 'Complet',
         price: '119 €/mes',
         badge: 'Gestoria i projectes',
+        cta: 'Parlem del pla Complet',
         description:
           'Per a entitats que volen arribar a la gestoria i als projectes amb documents, despeses i justificacions més preparades.',
         features: [
@@ -1876,10 +1898,10 @@ const es: PublicTranslations = {
     },
   },
   contact: {
-    title: 'Hablemos de tu entidad',
-    subtitle: 'Si quieres ver si Summa Social encaja con tu ONG, escríbenos.',
+    title: 'Cuéntanos un poco sobre vuestra entidad y os diremos cómo empezar.',
+    subtitle: 'Revisaremos qué plan encaja mejor y qué acompañamiento inicial necesitáis.',
     description:
-      'Nos gusta entender primero la realidad de cada entidad antes de proponer nada.',
+      'Antes de activar ninguna cuota mensual, os confirmaremos el plan, el importe inicial y los primeros pasos.',
     responseTime: 'Responderemos lo antes posible.',
     directEmailLabel: 'Correo directo',
     form: {
@@ -1894,7 +1916,14 @@ const es: PublicTranslations = {
       invalidName: 'Escribe un nombre válido.',
       invalidEmail: 'Escribe un correo electrónico válido.',
       invalidMessage: 'El mensaje debe tener al menos 10 caracteres.',
-      helper: 'Cuéntanos tu caso y te responderemos por correo.',
+      helper: 'Revisaremos qué plan encaja mejor, qué acompañamiento inicial necesitáis y cuál sería el importe inicial antes de activar ninguna cuota mensual.',
+      messagePlaceholder:
+        'Cuéntanos brevemente cuántos socios o donantes tenéis, si hacéis remesas, si queréis importar movimientos bancarios o si necesitáis preparar modelos fiscales.',
+      planMessages: {
+        initial: 'Quiero empezar con el plan Inicial.',
+        management: 'Quiero empezar con el plan Gestión.',
+        complete: 'Me gustaría hablar del plan Completo.',
+      },
     },
   },
   pricing: {
@@ -1919,14 +1948,19 @@ const es: PublicTranslations = {
     implantationPrice: 'A partir de 300 €',
     implantationSubtext:
       'El importe final depende del estado de los datos, el volumen de contactos y la complejidad de la entidad.',
+    implantationNoteTitle: 'Antes de empezar, revisamos vuestro caso.',
+    implantationNoteText:
+      'La implantación inicial se presupuesta según el volumen de datos y el acompañamiento necesario. No pagaréis ninguna cuota mensual hasta que hayamos acordado el plan, el importe inicial y los primeros pasos.',
     decisionTitle: 'Si dudáis, empezad por el plan Gestión',
     decisionText: '',
     cta: 'Hablemos de vuestro caso',
     plans: [
       {
+        id: 'initial',
         name: 'Inicial',
         price: '49 €/mes',
         badge: 'Para empezar',
+        cta: 'Quiero empezar con Inicial',
         description:
           'Para entidades pequeñas que quieren ordenar socios, cuotas, certificados y la fiscalidad anual básica.',
         features: [
@@ -1937,9 +1971,11 @@ const es: PublicTranslations = {
         ],
       },
       {
+        id: 'management',
         name: 'Gestión',
         price: '79 €/mes',
         badge: 'Recomendado',
+        cta: 'Quiero empezar con Gestión',
         recommended: true,
         description:
           'El plan natural para entidades que, además de cuotas y certificados, necesitan control bancario y revisión económica regular.',
@@ -1947,16 +1983,18 @@ const es: PublicTranslations = {
           'Todo el plan Inicial',
           'Importación de movimientos bancarios',
           'Gestión de devoluciones',
-          'Gestión de cobros vía Stripe',
+          'Gestión de cobros en línea',
           'Subida ilimitada de facturas, nóminas, tickets y documentos vinculados a cada movimiento bancario',
           'Categorización con IA',
           'Modelo 347',
         ],
       },
       {
+        id: 'complete',
         name: 'Completo',
         price: '119 €/mes',
         badge: 'Gestoría y proyectos',
+        cta: 'Hablemos del plan Completo',
         description:
           'Para entidades que quieren llegar a la gestoría y a los proyectos con documentos, gastos y justificaciones más preparados.',
         features: [
@@ -2545,10 +2583,10 @@ const fr: PublicTranslations = {
     },
   },
   contact: {
-    title: 'Parlons de votre organisation',
-    subtitle: 'Si vous voulez voir si Summa Social convient à votre association, écrivez-nous.',
+    title: 'Expliquez-nous un peu votre organisation et nous vous dirons comment commencer.',
+    subtitle: 'Nous verrons quel plan convient le mieux et quel accompagnement initial vous faut.',
     description:
-      'Nous préférons comprendre la réalité de chaque organisation avant de proposer quoi que ce soit.',
+      'Avant toute mensualité, nous confirmerons le plan, le montant initial et les premières étapes.',
     responseTime: 'Nous vous répondrons dans les meilleurs délais.',
     directEmailLabel: 'Email direct',
     form: {
@@ -2563,7 +2601,14 @@ const fr: PublicTranslations = {
       invalidName: 'Saisissez un nom valide.',
       invalidEmail: 'Saisissez une adresse email valide.',
       invalidMessage: 'Le message doit contenir au moins 10 caractères.',
-      helper: 'Expliquez-nous votre situation et nous vous répondrons par email.',
+      helper: 'Nous verrons quel plan convient le mieux, quel accompagnement initial vous faut et quel serait le montant initial avant toute mensualité.',
+      messagePlaceholder:
+        'Expliquez-nous brièvement combien de membres ou de donateurs vous avez, si vous émettez des prélèvements, si vous voulez importer des mouvements bancaires ou préparer des déclarations fiscales.',
+      planMessages: {
+        initial: 'Je veux commencer avec le plan Initial.',
+        management: 'Je veux commencer avec le plan Gestion.',
+        complete: 'Je voudrais parler du plan Complet.',
+      },
     },
   },
   pricing: {
@@ -2588,14 +2633,19 @@ const fr: PublicTranslations = {
     implantationPrice: 'À partir de 300 €',
     implantationSubtext:
       'Le montant final dépend de l’état des données, du volume de contacts et de la complexité de l’organisation.',
+    implantationNoteTitle: 'Avant de commencer, nous étudions votre situation.',
+    implantationNoteText:
+      'La mise en place initiale est chiffrée selon le volume de données et l’accompagnement nécessaire. Vous ne paierez aucune mensualité tant que nous n’aurons pas convenu du plan, du montant initial et des premières étapes.',
     decisionTitle: 'En cas de doute, commencez par le plan Gestion',
     decisionText: '',
     cta: 'Parlons de votre cas',
     plans: [
       {
+        id: 'initial',
         name: 'Initial',
         price: '49 €/mois',
         badge: 'Pour commencer',
+        cta: 'Je veux commencer avec Initial',
         description:
           'Pour les petites organisations qui veulent structurer membres, cotisations, certificats et fiscalité annuelle de base.',
         features: [
@@ -2606,9 +2656,11 @@ const fr: PublicTranslations = {
         ],
       },
       {
+        id: 'management',
         name: 'Gestion',
         price: '79 €/mois',
         badge: 'Recommandé',
+        cta: 'Je veux commencer avec Gestion',
         recommended: true,
         description:
           'Le plan naturel pour les organisations qui, en plus des cotisations et certificats, ont besoin de contrôle bancaire et de revue économique régulière.',
@@ -2616,16 +2668,18 @@ const fr: PublicTranslations = {
           'Tout le plan Initial',
           'Import de mouvements bancaires',
           'Gestion des rejets',
-          'Gestion des encaissements via Stripe',
+          'Gestion des encaissements en ligne',
           'Dépôt illimité de factures, fiches de paie, reçus et documents liés à chaque mouvement bancaire',
           'Catégorisation avec IA',
           'Modèle 347',
         ],
       },
       {
+        id: 'complete',
         name: 'Complet',
         price: '119 €/mois',
         badge: 'Comptabilité et projets',
+        cta: 'Parlons du plan Complet',
         description:
           'Pour les organisations qui veulent préparer la comptabilité et les projets avec documents, dépenses et justificatifs mieux structurés.',
         features: [
@@ -3214,10 +3268,10 @@ const pt: PublicTranslations = {
     },
   },
   contact: {
-    title: 'Falemos da sua organização',
-    subtitle: 'Se quiser perceber se o Summa Social encaixa na sua ONG, escreva-nos.',
+    title: 'Falem-nos um pouco da vossa entidade e diremos como começar.',
+    subtitle: 'Veremos que plano encaixa melhor e que acompanhamento inicial precisam.',
     description:
-      'Preferimos compreender primeiro a realidade de cada entidade antes de propor seja o que for.',
+      'Antes de ativar qualquer mensalidade, confirmaremos o plano, o valor inicial e os primeiros passos.',
     responseTime: 'Responderemos o mais brevemente possível.',
     directEmailLabel: 'Email direto',
     form: {
@@ -3232,7 +3286,14 @@ const pt: PublicTranslations = {
       invalidName: 'Escreva um nome válido.',
       invalidEmail: 'Escreva um email válido.',
       invalidMessage: 'A mensagem deve ter pelo menos 10 caracteres.',
-      helper: 'Explique-nos o seu caso e responderemos por email.',
+      helper: 'Veremos que plano encaixa melhor, que acompanhamento inicial precisam e qual seria o valor inicial antes de ativar qualquer mensalidade.',
+      messagePlaceholder:
+        'Explique-nos brevemente quantos sócios ou doadores têm, se fazem remessas, se querem importar movimentos bancários ou se precisam de preparar modelos fiscais.',
+      planMessages: {
+        initial: 'Quero começar com o plano Inicial.',
+        management: 'Quero começar com o plano Gestão.',
+        complete: 'Gostaria de falar sobre o plano Completo.',
+      },
     },
   },
   pricing: {
@@ -3257,14 +3318,19 @@ const pt: PublicTranslations = {
     implantationPrice: 'A partir de 300 €',
     implantationSubtext:
       'O valor final depende do estado dos dados, do volume de contactos e da complexidade da entidade.',
+    implantationNoteTitle: 'Antes de começar, analisamos o vosso caso.',
+    implantationNoteText:
+      'A implementação inicial é orçamentada segundo o volume de dados e o acompanhamento necessário. Não pagarão nenhuma mensalidade até acordarmos o plano, o valor inicial e os primeiros passos.',
     decisionTitle: 'Em caso de dúvida, comecem pelo plano Gestão',
     decisionText: '',
     cta: 'Falemos do vosso caso',
     plans: [
       {
+        id: 'initial',
         name: 'Inicial',
         price: '49 €/mês',
         badge: 'Para começar',
+        cta: 'Quero começar com Inicial',
         description:
           'Para entidades pequenas que querem ordenar sócios, quotas, certificados e a fiscalidade anual básica.',
         features: [
@@ -3275,9 +3341,11 @@ const pt: PublicTranslations = {
         ],
       },
       {
+        id: 'management',
         name: 'Gestão',
         price: '79 €/mês',
         badge: 'Recomendado',
+        cta: 'Quero começar com Gestão',
         recommended: true,
         description:
           'O plano natural para entidades que, além de quotas e certificados, precisam de controlo bancário e revisão económica regular.',
@@ -3285,16 +3353,18 @@ const pt: PublicTranslations = {
           'Todo o plano Inicial',
           'Importação de movimentos bancários',
           'Gestão de devoluções',
-          'Gestão de cobranças via Stripe',
+          'Gestão de cobranças online',
           'Carregamento ilimitado de faturas, folhas de pagamento, recibos e documentos ligados a cada movimento bancário',
           'Categorização com IA',
           'Modelo 347',
         ],
       },
       {
+        id: 'complete',
         name: 'Completo',
         price: '119 €/mês',
         badge: 'Contabilidade e projetos',
+        cta: 'Falemos do plano Completo',
         description:
           'Para entidades que querem chegar à contabilidade e aos projetos com documentos, despesas e justificações mais preparadas.',
         features: [

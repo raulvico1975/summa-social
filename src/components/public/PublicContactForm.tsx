@@ -27,16 +27,18 @@ interface PublicContactFormProps {
     invalidEmail: string;
     invalidMessage: string;
     helper: string;
+    messagePlaceholder: string;
   };
+  initialMessage?: string;
 }
 
 type SubmitStatus = 'idle' | 'sending' | 'success' | 'error';
 
-export function PublicContactForm({ locale, labels }: PublicContactFormProps) {
+export function PublicContactForm({ locale, labels, initialMessage = '' }: PublicContactFormProps) {
   const [name, setName] = useState('');
   const [senderEmail, setSenderEmail] = useState('');
   const [organization, setOrganization] = useState('');
-  const [message, setMessage] = useState('');
+  const [message, setMessage] = useState(initialMessage);
   const [website, setWebsite] = useState('');
   const [status, setStatus] = useState<SubmitStatus>('idle');
   const [feedback, setFeedback] = useState('');
@@ -169,6 +171,7 @@ export function PublicContactForm({ locale, labels }: PublicContactFormProps) {
         <Textarea
           id="contact-message"
           value={message}
+          placeholder={labels.messagePlaceholder}
           onChange={(event) => {
             resetFeedback();
             setMessage(event.target.value);

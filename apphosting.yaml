@@ -26,6 +26,8 @@ env:
     secret: GOOGLE_API_KEY
   - variable: RESEND_API_KEY
     secret: RESEND_API_KEY
+  - variable: CONTACT_FORM_TO_EMAIL
+    secret: CONTACT_FORM_TO_EMAIL
   - variable: BLOG_ORG_ID
     secret: BLOG_ORG_ID
   - variable: BLOG_PUBLISH_SECRET
