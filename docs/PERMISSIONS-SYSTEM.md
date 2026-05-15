@@ -92,6 +92,16 @@ La lectura acotada passa per `POST /api/fiscal/certificates/summary`:
 
 Això permet perfils de gestió de donants que poden generar certificats sense veure `Moviments` ni l'històric econòmic general.
 
+Important: `fiscal.certificats.generar` autoritza l'acció fiscal, però no obre seccions de navegació. Per generar certificats anuals des de la fitxa del donant, el perfil necessita `sections.donants`. Per usar `Informes -> Certificats`, també necessita `sections.informes`. Cap dels dos camins requereix `moviments.read`.
+
+Perfil validat en producció (13/05/2026): gestió de donants amb `sections.donants = true`, `fiscal.certificats.generar = true`, `sections.informes = false`, `sections.moviments = false` i `moviments.read = false`. Aquest perfil pot generar certificats anuals des de la fitxa de cada donant/soci i no pot accedir ni a Informes ni a Moviments.
+
+Diagnòstic read-only recomanat davant incidències de perfils restringits:
+
+```bash
+node --import tsx scripts/fiscal/check-member-certificate-access.ts --orgId <orgId> --email <email> --year <YYYY>
+```
+
 ## Índex Firestore obligatori
 
 Per evitar `500` a `GET /api/projectes/:id/moviments` (query amb `where('projectId','==', ...)` + `orderBy('date','desc')`), cal un índex compost:

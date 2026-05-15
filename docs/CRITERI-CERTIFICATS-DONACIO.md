@@ -115,6 +115,8 @@ Aquest criteri garanteix coherència entre certificats emesos a donants i la inf
 
 Els certificats poden generar-se amb `fiscal.certificats.generar` sense concedir `moviments.read`.
 
+Per a perfils de gestió de donants sense accés a Informes, el flux suportat és generar el certificat anual des de la fitxa del donant o soci. Aquest cas està validat en producció amb un perfil que no té `sections.informes`, `sections.moviments` ni `moviments.read`.
+
 En perfils fiscals restringits, Summa Social usa una API server-side acotada (`POST /api/fiscal/certificates/summary`) que calcula imports amb la mateixa font fiscal consolidada però retorna només dades mínimes per al certificat:
 
 - dades fiscals del donant necessàries per emetre el certificat

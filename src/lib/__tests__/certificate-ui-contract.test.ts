@@ -1,0 +1,26 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
+function readProjectFile(path: string): string {
+  return readFileSync(join(process.cwd(), path), 'utf8');
+}
+
+test('mass certificate generator uses scoped API instead of client ledger reads', () => {
+  const source = readProjectFile('src/components/donation-certificate-generator.tsx');
+
+  assert.equal(source.includes("from '@/lib/fiscal/getUnifiedFiscalDonations'"), false);
+  assert.equal(source.includes('getUnifiedFiscalDonationsWithClient'), false);
+  assert.equal(source.includes("collection(firestore, 'organizations', organizationId, 'transactions')"), false);
+  assert.equal(source.includes("collection(firestore, 'organizations', organizationId, 'donations')"), false);
+  assert.equal(source.includes("fetch('/api/fiscal/certificates/summary'"), true);
+});
+
+test('donor drawer does not subscribe to movement history for certificate-only profiles', () => {
+  const source = readProjectFile('src/components/donor-detail-drawer.tsx');
+
+  assert.equal(source.includes("fetch('/api/fiscal/certificates/summary'"), true);
+  assert.equal(source.includes('if (!canReadMovements)'), true);
+  assert.equal(source.includes('loadRestrictedAnnualCertificateScope'), true);
+});

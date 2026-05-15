@@ -129,16 +129,18 @@ export default async function PricingPage({ params }: PageProps) {
                     </li>
                   ))}
                 </ul>
-                {plan.recommended ? (
-                  <div className="mt-auto pt-6">
-                    <Button asChild className="w-full">
-                      <Link href={`/${locale}/contact`}>{t.pricing.cta}</Link>
-                    </Button>
-                  </div>
-                ) : null}
+                <div className="mt-auto pt-6">
+                  <Button asChild className="w-full">
+                    <Link href={`/${locale}/contact?plan=${plan.id}`}>{plan.cta}</Link>
+                  </Button>
+                </div>
               </div>
             </article>
           ))}
+        </div>
+        <div className="mt-6 rounded-lg border border-primary/20 bg-primary/5 p-5">
+          <h2 className="text-base font-semibold">{t.pricing.implantationNoteTitle}</h2>
+          <p className="mt-2 text-sm leading-6 text-muted-foreground">{t.pricing.implantationNoteText}</p>
         </div>
       </section>
 

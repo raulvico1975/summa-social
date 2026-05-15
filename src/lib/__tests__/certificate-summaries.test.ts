@@ -31,9 +31,11 @@ test('certificate summaries expose only fiscal certificate data, not ledger deta
       amount: 100,
       category: 'secret',
       document: 'invoice.pdf',
+      bankAccountId: 'bank-secret',
+      sepaMandate: 'sepa-secret',
       contactId: 'donor-1',
       transactionType: 'donation',
-    },
+    } as Transaction,
     {
       id: 'tx-return',
       date: '2025-03-01',
@@ -63,6 +65,21 @@ test('certificate summaries expose only fiscal certificate data, not ledger deta
   assert.equal('note' in summary.donations[0], false);
   assert.equal('category' in summary.donations[0], false);
   assert.equal('document' in summary.donations[0], false);
+  assert.deepEqual(Object.keys(summary.donor).sort(), [
+    'address',
+    'donorType',
+    'email',
+    'id',
+    'name',
+    'taxId',
+    'zipCode',
+  ]);
+  assert.deepEqual(Object.keys(summary.donations[0]).sort(), [
+    'amount',
+    'date',
+    'id',
+    'transactionType',
+  ]);
 });
 
 test('certificate movement conversion keeps generated PDFs on sanitized data', () => {
