@@ -101,6 +101,7 @@ export type PublicLandingHeroMedia = NonNullable<PublicLandingContent['hero']['m
 interface PublicLandingDefinition {
   slug: string;
   metadata: Record<PublicLocale, PublicLandingMetadata>;
+  indexedLocales: PublicLocale[];
   content: Partial<Record<PublicLocale, PublicLandingContent>> & { ca: PublicLandingContent };
 }
 
@@ -3776,6 +3777,7 @@ const PUBLIC_LANDINGS: PublicLandingDefinition[] = [
   {
     slug: 'model-182',
     metadata: MODEL_182_METADATA,
+    indexedLocales: ['ca', 'es'],
     content: {
       ca: withRelatedLandings(MODEL_182_CONTENT_CA, 'ca', 'model-182'),
       es: withRelatedLandings(MODEL_182_CONTENT_ES, 'es', 'model-182'),
@@ -3786,6 +3788,7 @@ const PUBLIC_LANDINGS: PublicLandingDefinition[] = [
   {
     slug: 'certificats-donacio',
     metadata: DONATION_CERTIFICATES_METADATA,
+    indexedLocales: ['ca', 'es'],
     content: {
       ca: withRelatedLandings(DONATION_CERTIFICATES_CONTENT_CA, 'ca', 'certificats-donacio'),
       es: withRelatedLandings(DONATION_CERTIFICATES_CONTENT_ES, 'es', 'certificats-donacio'),
@@ -3796,6 +3799,7 @@ const PUBLIC_LANDINGS: PublicLandingDefinition[] = [
   {
     slug: 'model-347-ong',
     metadata: MODEL_347_ONG_METADATA,
+    indexedLocales: ['ca', 'es'],
     content: {
       ca: withRelatedLandings(MODEL_347_ONG_CONTENT_CA, 'ca', 'model-347-ong'),
       es: withRelatedLandings(MODEL_347_ONG_CONTENT_ES, 'es', 'model-347-ong'),
@@ -3806,6 +3810,7 @@ const PUBLIC_LANDINGS: PublicLandingDefinition[] = [
   {
     slug: 'remeses-sepa',
     metadata: SEPA_REMITTANCES_METADATA,
+    indexedLocales: ['ca', 'es'],
     content: {
       ca: withRelatedLandings(SEPA_REMITTANCES_CONTENT_CA, 'ca', 'remeses-sepa'),
       es: withRelatedLandings(SEPA_REMITTANCES_CONTENT_ES, 'es', 'remeses-sepa'),
@@ -3816,6 +3821,7 @@ const PUBLIC_LANDINGS: PublicLandingDefinition[] = [
   {
     slug: 'devolucions-rebuts-socis',
     metadata: RETURNED_RECEIPTS_METADATA,
+    indexedLocales: ['ca', 'es'],
     content: {
       ca: withRelatedLandings(RETURNED_RECEIPTS_CONTENT_CA, 'ca', 'devolucions-rebuts-socis'),
       es: withRelatedLandings(RETURNED_RECEIPTS_CONTENT_ES, 'es', 'devolucions-rebuts-socis'),
@@ -3826,6 +3832,7 @@ const PUBLIC_LANDINGS: PublicLandingDefinition[] = [
   {
     slug: 'importar-extracte-bancari',
     metadata: BANK_STATEMENT_IMPORT_METADATA,
+    indexedLocales: ['ca', 'es'],
     content: {
       ca: withRelatedLandings(BANK_STATEMENT_IMPORT_CONTENT_CA, 'ca', 'importar-extracte-bancari'),
       es: withRelatedLandings(BANK_STATEMENT_IMPORT_CONTENT_ES, 'es', 'importar-extracte-bancari'),
@@ -3836,6 +3843,7 @@ const PUBLIC_LANDINGS: PublicLandingDefinition[] = [
   {
     slug: 'conciliacio-bancaria-ong',
     metadata: BANK_RECONCILIATION_ONG_METADATA,
+    indexedLocales: ['ca', 'es'],
     content: {
       ca: withRelatedLandings(BANK_RECONCILIATION_ONG_CONTENT_CA, 'ca', 'conciliacio-bancaria-ong'),
       es: withRelatedLandings(BANK_RECONCILIATION_ONG_CONTENT_ES, 'es', 'conciliacio-bancaria-ong'),
@@ -3846,6 +3854,7 @@ const PUBLIC_LANDINGS: PublicLandingDefinition[] = [
   {
     slug: 'control-donacions-ong',
     metadata: DONATIONS_CONTROL_ONG_METADATA,
+    indexedLocales: ['ca', 'es'],
     content: {
       ca: withRelatedLandings(DONATIONS_CONTROL_ONG_CONTENT_CA, 'ca', 'control-donacions-ong'),
       es: withRelatedLandings(DONATIONS_CONTROL_ONG_CONTENT_ES, 'es', 'control-donacions-ong'),
@@ -3856,6 +3865,7 @@ const PUBLIC_LANDINGS: PublicLandingDefinition[] = [
   {
     slug: 'gestio-projectes-justificacio',
     metadata: PROJECT_MANAGEMENT_METADATA,
+    indexedLocales: ['ca', 'es'],
     content: {
       ca: withRelatedLandings(PROJECT_MANAGEMENT_CONTENT_CA, 'ca', 'gestio-projectes-justificacio'),
       es: withRelatedLandings(PROJECT_MANAGEMENT_CONTENT_ES, 'es', 'gestio-projectes-justificacio'),
@@ -3866,6 +3876,7 @@ const PUBLIC_LANDINGS: PublicLandingDefinition[] = [
   {
     slug: 'control-visibilitat-entitats',
     metadata: CONTROL_VISIBILITY_METADATA,
+    indexedLocales: ['ca', 'es'],
     content: {
       ca: withRelatedLandings(CONTROL_VISIBILITY_CONTENT_CA, 'ca', 'control-visibilitat-entitats'),
       es: withRelatedLandings(CONTROL_VISIBILITY_CONTENT_ES, 'es', 'control-visibilitat-entitats'),
@@ -3876,6 +3887,7 @@ const PUBLIC_LANDINGS: PublicLandingDefinition[] = [
   {
     slug: 'software-gestion-ong',
     metadata: SOFTWARE_MANAGEMENT_ONG_METADATA,
+    indexedLocales: ['ca'],
     content: {
       ca: withRelatedLandings(SOFTWARE_MANAGEMENT_ONG_CONTENT_CA, 'ca', 'software-gestion-ong'),
       es: buildPendingContent('es', LANDING_NAMES['software-gestion-ong'].es),
@@ -3886,6 +3898,7 @@ const PUBLIC_LANDINGS: PublicLandingDefinition[] = [
   {
     slug: 'programa-associacions',
     metadata: ASSOCIATIONS_PROGRAM_METADATA,
+    indexedLocales: ['ca'],
     content: {
       ca: withRelatedLandings(ASSOCIATIONS_PROGRAM_CONTENT_CA, 'ca', 'programa-associacions'),
       es: buildPendingContent('es', LANDING_NAMES['programa-associacions'].es),
@@ -3896,6 +3909,7 @@ const PUBLIC_LANDINGS: PublicLandingDefinition[] = [
   {
     slug: 'gestio-donants',
     metadata: DONOR_MANAGEMENT_METADATA,
+    indexedLocales: ['ca', 'es'],
     content: {
       ca: withRelatedLandings(DONOR_MANAGEMENT_CONTENT_CA, 'ca', 'gestio-donants'),
       es: withRelatedLandings(DONOR_MANAGEMENT_CONTENT_ES, 'es', 'gestio-donants'),
@@ -3913,6 +3927,20 @@ export function getPublicLandingBySlug(slug: string): PublicLandingDefinition | 
 
 export function getPublicLandingSlugs(): string[] {
   return PUBLIC_LANDINGS.map((landing) => landing.slug);
+}
+
+export function getPublicLandingIndexedLocales(landing: PublicLandingDefinition): PublicLocale[] {
+  return landing.indexedLocales.filter((locale) => Boolean(landing.content[locale]));
+}
+
+export function getPublicLandingSitemapEntries(): Array<{ slug: string; locale: PublicLocale; metadata: PublicLandingMetadata }> {
+  return PUBLIC_LANDINGS.flatMap((landing) =>
+    getPublicLandingIndexedLocales(landing).map((locale) => ({
+      slug: landing.slug,
+      locale,
+      metadata: getPublicLandingMetadata(landing, locale),
+    }))
+  );
 }
 
 export function getPublicLandingMetadata(landing: PublicLandingDefinition, locale: PublicLocale): PublicLandingMetadata {
