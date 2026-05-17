@@ -2,6 +2,7 @@ import type { MetadataRoute } from 'next';
 import { PUBLIC_LOCALES } from '@/lib/public-locale';
 import { listBlogPosts } from '@/lib/blog/firestore';
 import { listPublicProductUpdates } from '@/lib/product-updates/public';
+import { getPublicLandingSitemapEntries } from '@/lib/public-landings';
 
 const BASE_URL = 'https://summasocial.app';
 const PUBLIC_BASE_PATHS = ['', '/funcionalitats', '/qui-som', '/contact', '/privacy', '/novetats', '/blog'] as const;
@@ -28,6 +29,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.7,
     },
   ];
+
+  const landingEntries: MetadataRoute.Sitemap = getPublicLandingSitemapEntries().map((entry) => ({
+    url: `${BASE_URL}/${entry.locale}/${entry.slug}`,
+    lastModified: now,
+    changeFrequency: 'monthly',
+    priority: entry.locale === 'ca' ? 0.82 : 0.74,
+  }));
 
   let updates: Awaited<ReturnType<typeof listPublicProductUpdates>> = [];
   let blogPosts: Awaited<ReturnType<typeof listBlogPosts>> = [];
@@ -62,5 +70,5 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     }))
   );
 
-  return [...staticEntries, ...legacyBlogEntry, ...updateEntries, ...localizedBlogEntries];
+  return [...staticEntries, ...landingEntries, ...legacyBlogEntry, ...updateEntries, ...localizedBlogEntries];
 }

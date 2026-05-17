@@ -8,9 +8,9 @@
  *
  * @see docs/DEV-SOLO-MANUAL.md secció "Arquitectura de rutes i layouts"
  */
-import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { PUBLIC_LOCALES, isValidPublicLocale, type PublicLocale } from '@/lib/public-locale';
+import { PublicJsonLd, buildPublicSiteJsonLd } from '@/lib/public-seo';
 
 /**
  * Genera els params estàtics per a totes les pàgines públiques [lang].
@@ -40,6 +40,7 @@ export default async function PublicLayout({ children, params }: PublicLayoutPro
   // No renderitzem <html> ni <body> aquí — ja ho fa src/app/layout.tsx
   return (
     <div className="font-sans antialiased">
+      <PublicJsonLd data={buildPublicSiteJsonLd(lang as PublicLocale)} />
       {children}
     </div>
   );

@@ -13,6 +13,7 @@ import {
   getPublicLandingMetadata,
   getPublicLandingContent,
 } from '@/lib/public-landings';
+import { PublicJsonLd, buildPublicBreadcrumbJsonLd } from '@/lib/public-seo';
 import { getPublicTranslations } from '@/i18n/public';
 
 interface PageProps {
@@ -60,15 +61,24 @@ export default async function PublicLandingPage({ params }: PageProps) {
   const content = getPublicLandingContent(landing, locale);
 
   return (
-    <PublicLandingTemplate
-      locale={locale}
-      content={content}
-      labels={{
-        backToHome: t.common.backToHome,
-        contact: t.common.contact,
-        privacy: t.common.privacy,
-        appName: t.common.appName,
-      }}
-    />
+    <>
+      <PublicJsonLd
+        data={buildPublicBreadcrumbJsonLd({
+          locale,
+          path: `/${landingSlug}`,
+          currentName: content.hero.title,
+        })}
+      />
+      <PublicLandingTemplate
+        locale={locale}
+        content={content}
+        labels={{
+          backToHome: t.common.backToHome,
+          contact: t.common.contact,
+          privacy: t.common.privacy,
+          appName: t.common.appName,
+        }}
+      />
+    </>
   );
 }
