@@ -914,9 +914,9 @@ const DONATION_CERTIFICATES_CONTENT_ES: PublicLandingContent = {
 
 const SEPA_REMITTANCES_METADATA: Record<PublicLocale, PublicLandingMetadata> = {
   ca: {
-    title: 'Remeses SEPA per a quotes de socis | Software de gestió per a entitats | Summa Social',
+    title: 'Remeses SEPA per cobrar quotes de socis | Summa Social',
     description:
-      'Prepara remeses SEPA de quotes de socis sense fulls de càlcul. Revisa IBAN, imports i genera el fitxer per al banc amb Summa Social.',
+      'Prepara remeses SEPA per cobrar quotes de socis: revisa imports, IBAN i cobraments abans de generar el fitxer per al banc.',
   },
   es: {
     title: 'Remesas SEPA para cuotas de socios | Software de gestión para entidades | Summa Social',
@@ -935,8 +935,8 @@ const SEPA_REMITTANCES_METADATA: Record<PublicLocale, PublicLandingMetadata> = {
 
 const SEPA_REMITTANCES_CONTENT_CA: PublicLandingContent = {
   hero: {
-    title: 'Cobrar quotes de socis amb remeses SEPA sense fulls de càlcul',
-    subtitle: 'Genera les remeses de cobrament de manera clara i ordenada.',
+    title: 'Programa per cobrar quotes de socis amb remeses SEPA',
+    subtitle: "Prepara el cobrament de quotes recurrents amb més control abans d'enviar el fitxer al banc.",
     media: {
       type: 'video',
       src: '/media/landing-pages/remeses-sepa/video/remeses-sepa-demo-2026-04-28.mp4',
@@ -949,9 +949,9 @@ const SEPA_REMITTANCES_CONTENT_CA: PublicLandingContent = {
       alt: 'Vídeo demostratiu de la generació de remeses SEPA de quotes de socis amb Summa Social',
     },
     introParagraphs: [
-      'Moltes entitats cobren les quotes dels seus socis mitjançant domiciliació bancària. Però preparar les remeses SEPA acostuma a implicar fulls de càlcul, revisions manuals i molta cura per evitar errors.',
-      'Cal comprovar els IBAN, revisar qui toca cobrar aquell mes, generar el fitxer correcte i enviar-lo al banc.',
-      "Summa Social simplifica aquest procés. L'aplicació permet preparar les remeses de cobrament de quotes a partir de les dades reals dels socis i generar el fitxer que el banc necessita.",
+      "Si la teva associació cobra quotes de socis per domiciliació bancària, el problema no és només generar un fitxer SEPA. Abans cal saber qui toca cobrar, amb quin import, amb quin IBAN i si hi ha dades incompletes o incidències pendents.",
+      'Quan aquest procés es fa amb fulls de càlcul, correus i banca online separada, és fàcil duplicar feina, deixar socis fora de la remesa o enviar imports incorrectes.',
+      "Summa Social ajuda a preparar remeses SEPA a partir de la base real de socis i quotes de l'entitat, revisar els cobraments previstos i generar el fitxer que després es puja al banc.",
     ],
   },
   visualProof: {
@@ -979,41 +979,38 @@ const SEPA_REMITTANCES_CONTENT_CA: PublicLandingContent = {
     ],
   },
   problem: {
-    title: 'El problema habitual amb les remeses de quotes',
-    intro: 'Quan les remeses es preparen manualment, és fàcil trobar-se amb situacions com aquestes:',
+    title: 'El problema no és només generar el fitxer SEPA',
+    intro: "El risc real apareix abans d'enviar res al banc: quan les dades dels socis, els imports i les periodicitats no estan prou ordenades.",
     points: [
-      'socis amb IBAN incorrecte o incomplet',
-      'dificultat per saber a qui toca cobrar aquell mes',
-      'errors en els imports de les quotes',
-      'fitxers generats amb Excel que després el banc rebutja',
+      "socis amb IBAN incorrecte, incomplet o pendent de revisar",
+      'dificultat per saber a qui toca cobrar aquell mes o trimestre',
+      "imports diferents segons tipus de quota, alta o situació del soci",
+      'fulls de càlcul que no sempre coincideixen amb la base real de socis',
+      'fitxers que el banc pot rebutjar si les dades no estan ben preparades',
     ],
     outroParagraphs: [
-      "A més, quan l'entitat té molts socis, el procés pot convertir-se en una tasca administrativa molt pesada.",
+      "A més, quan l'entitat té molts socis, el procés pot convertir-se en una tasca administrativa pesada i difícil de revisar.",
     ],
   },
   solution: {
-    title: 'Com ho resol Summa Social',
-    intro: 'Summa Social permet preparar les remeses de cobrament directament des de la informació dels socis. El procés és simple:',
+    title: 'Com ajuda Summa Social a preparar les remeses',
+    intro: "Summa Social centralitza socis, quotes i dades bancàries perquè l'entitat pugui revisar els cobraments abans de generar la remesa.",
     steps: [
       {
-        title: "Selecciona el compte bancari de l'entitat",
-        body: 'El sistema utilitza les dades del compte que cobrarà les quotes.',
+        title: 'Selecciona la base de socis i quotes',
+        body: 'L’equip pot preparar el cobrament a partir dels socis i les quotes que pertoquen en cada període.',
       },
       {
-        title: 'El sistema identifica els socis que toca cobrar',
-        body: 'Segons la periodicitat de la quota, es pot preparar la remesa corresponent.',
+        title: 'Revisa imports, IBAN i dades incompletes',
+        body: 'Abans de generar el fitxer, es poden revisar cobraments previstos, dades bancàries i possibles incidències.',
       },
       {
-        title: 'Revises la selecció',
-        body: "Abans de generar la remesa, es pot comprovar qui s'inclou i qui no.",
+        title: 'Genera el fitxer SEPA',
+        body: "L'entitat descarrega el fitxer preparat per pujar-lo al banc.",
       },
       {
-        title: 'Es genera el fitxer SEPA',
-        body: "L'entitat descarrega el fitxer amb el format que necessita el banc.",
-      },
-      {
-        title: 'Puges el fitxer al banc',
-        body: 'Amb el fitxer carregat al banc, es pot executar el cobrament de les quotes.',
+        title: 'Fes seguiment de devolucions i incidències',
+        body: 'Quan hi ha rebuts retornats, el seguiment queda vinculat al flux de quotes, socis i donants.',
       },
     ],
   },
@@ -1021,10 +1018,12 @@ const SEPA_REMITTANCES_CONTENT_CA: PublicLandingContent = {
     title: 'Què permet gestionar Summa Social',
     intro: "Amb Summa Social, l'entitat pot:",
     items: [
-      'preparar remeses de cobrament de quotes',
-      'gestionar socis amb diferents periodicitats de pagament',
-      'detectar socis amb dades bancàries incompletes',
-      "revisar fàcilment els cobraments abans d'enviar-los al banc",
+      'preparar remeses SEPA de quotes',
+      'gestionar periodicitats de cobrament',
+      'revisar IBAN i dades bancàries',
+      "revisar els cobraments previstos abans d'enviar-los al banc",
+      'generar el fitxer SEPA per al banc',
+      'fer seguiment posterior de devolucions',
     ],
     outroParagraphs: [
       "Tot el procés queda integrat amb la base de dades de donants i amb la gestió econòmica de l'entitat.",
@@ -1033,21 +1032,23 @@ const SEPA_REMITTANCES_CONTENT_CA: PublicLandingContent = {
   operationalBenefits: {
     title: 'Beneficis operatius',
     items: [
-      'Menys feina administrativa: no cal preparar fitxers manuals cada vegada.',
-      "Menys risc d'errors: els cobraments es generen a partir de les dades dels socis.",
-      'Més control sobre les quotes: és més fàcil veure qui paga, quan paga i quant paga.',
+      'Menys dependència de fulls de càlcul per preparar cada remesa.',
+      "Més control abans d'enviar el fitxer al banc.",
+      "Menys risc d'oblidar socis o aplicar imports incorrectes.",
+      'Millor traçabilitat entre quotes, socis i devolucions.',
+      "Un procés més fàcil de revisar per l'equip administratiu.",
     ],
   },
   forSmallAndMidEntities: {
-    title: 'Pensat per a entitats socials',
+    title: 'Què és una remesa SEPA per a una associació?',
     paragraphs: [
-      'Aquest sistema és especialment útil per a entitats que tenen socis amb quotes recurrents, cobren per domiciliació bancària i volen simplificar la gestió de les remeses.',
-      'Summa Social no és un gestor bancari complet. És una eina pensada perquè les entitats socials puguin gestionar les quotes de manera clara i ordenada.',
+      "Una remesa SEPA és el fitxer que una associació envia al banc per cobrar quotes domiciliades als seus socis. Per preparar-la bé cal tenir actualitzats els socis, els IBAN, els imports, la periodicitat de cobrament i les possibles incidències abans d'enviar el fitxer.",
+      'Summa Social no substitueix el banc ni la gestoria. És una eina pensada perquè les entitats socials puguin preparar i revisar el cobrament de quotes de manera clara i ordenada abans de pujar el fitxer al banc.',
     ],
   },
   finalCta: {
-    title: 'Parlem de la teva entitat',
-    text: 'Si la teva entitat cobra quotes de socis cada mes o cada trimestre, contacta amb nosaltres i veurem si Summa Social us pot ajudar a ordenar aquest procés.',
+    title: 'Revisem com cobreu quotes ara',
+    text: 'Si la teva entitat cobra quotes de socis cada mes, trimestre o any, podem revisar el vostre procés actual i veure si Summa Social us ajudaria a preparar les remeses amb menys feina manual.',
     linkLabel: 'Contacta amb nosaltres',
     href: '/ca/contact',
   },
