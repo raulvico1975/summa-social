@@ -218,7 +218,7 @@ const RELATED_LANDINGS_BY_SLUG: Record<PublicLandingSlug, PublicLandingSlug[]> =
   'devolucions-rebuts-socis': ['remeses-sepa', 'control-donacions-ong', 'model-182'],
   'conciliacio-bancaria-ong': ['remeses-sepa', 'control-donacions-ong', 'model-182', 'gestio-projectes-justificacio'],
   'importar-extracte-bancari': ['conciliacio-bancaria-ong', 'model-347-ong', 'control-donacions-ong'],
-  'gestio-donants': ['control-donacions-ong', 'certificats-donacio', 'model-182'],
+  'gestio-donants': ['control-donacions-ong', 'remeses-sepa', 'certificats-donacio'],
   'control-donacions-ong': ['certificats-donacio', 'model-182', 'remeses-sepa'],
   'gestio-projectes-justificacio': ['conciliacio-bancaria-ong', 'remeses-sepa', 'control-visibilitat-entitats'],
   'control-visibilitat-entitats': ['model-182', 'gestio-projectes-justificacio', 'conciliacio-bancaria-ong'],
@@ -919,9 +919,9 @@ const SEPA_REMITTANCES_METADATA: Record<PublicLocale, PublicLandingMetadata> = {
       'Prepara remeses SEPA per cobrar quotes de socis: revisa imports, IBAN i cobraments abans de generar el fitxer per al banc.',
   },
   es: {
-    title: 'Remesas SEPA para cuotas de socios | Software de gestión para entidades | Summa Social',
+    title: 'Remesas SEPA para cobrar cuotas de socios | Summa Social',
     description:
-      'Prepara remesas SEPA de cuotas de socios sin hojas de cálculo. Revisa IBAN, importes y genera el fichero para el banco con Summa Social.',
+      'Prepara remesas SEPA para cobrar cuotas de socios: revisa importes, IBAN y cobros antes de generar el fichero para el banco.',
   },
   fr: {
     title: 'Prelevements SEPA | Summa Social',
@@ -1056,8 +1056,8 @@ const SEPA_REMITTANCES_CONTENT_CA: PublicLandingContent = {
 
 const SEPA_REMITTANCES_CONTENT_ES: PublicLandingContent = {
   hero: {
-    title: 'Cobrar cuotas de socios con remesas SEPA sin hojas de cálculo',
-    subtitle: 'Genera las remesas de cobro de forma clara y ordenada.',
+    title: 'Programa para cobrar cuotas de socios con remesas SEPA',
+    subtitle: 'Prepara el cobro de cuotas recurrentes con más control antes de enviar el fichero al banco.',
     media: {
       type: 'video',
       src: '/media/landing-pages/remeses-sepa/video/remeses-sepa-demo-2026-04-28.mp4',
@@ -1070,9 +1070,9 @@ const SEPA_REMITTANCES_CONTENT_ES: PublicLandingContent = {
       alt: 'Vídeo demostrativo de la generación de remesas SEPA de cuotas de socios con Summa Social',
     },
     introParagraphs: [
-      'Muchas entidades cobran las cuotas de sus socios mediante domiciliación bancaria. Pero preparar las remesas SEPA suele implicar hojas de cálculo, revisiones manuales y mucho cuidado para evitar errores.',
-      'Hay que comprobar los IBAN, revisar a quién toca cobrar ese mes, generar el fichero correcto y enviarlo al banco.',
-      'Summa Social simplifica este proceso. La aplicación permite preparar las remesas de cobro de cuotas a partir de los datos reales de los socios y generar el fichero que el banco necesita.',
+      'Si vuestra asociación cobra cuotas de socios por domiciliación bancaria, el problema no es solo generar un fichero SEPA. Antes hay que saber a quién toca cobrar, con qué importe, con qué IBAN y si hay datos incompletos o incidencias pendientes.',
+      'Cuando este proceso se hace con hojas de cálculo, correos y banca online separada, es fácil duplicar trabajo, dejar socios fuera de la remesa o enviar importes incorrectos.',
+      'Summa Social ayuda a preparar remesas SEPA a partir de la base real de socios y cuotas de la entidad, revisar los cobros previstos y generar el fichero que después se sube al banco.',
     ],
   },
   visualProof: {
@@ -1100,41 +1100,38 @@ const SEPA_REMITTANCES_CONTENT_ES: PublicLandingContent = {
     ],
   },
   problem: {
-    title: 'El problema habitual con las remesas de cuotas',
-    intro: 'Cuando las remesas se preparan manualmente, es fácil encontrarse con situaciones como estas:',
+    title: 'El problema no es solo generar el fichero SEPA',
+    intro: 'El riesgo real aparece antes de enviar nada al banco: cuando los datos de los socios, los importes y las periodicidades no están suficientemente ordenados.',
     points: [
-      'socios con IBAN incorrecto o incompleto',
-      'dificultad para saber a quién toca cobrar ese mes',
-      'errores en los importes de las cuotas',
-      'ficheros generados con Excel que después el banco rechaza',
+      'socios con IBAN incorrecto, incompleto o pendiente de revisar',
+      'dificultad para saber a quién toca cobrar ese mes o trimestre',
+      'importes diferentes según tipo de cuota, alta o situación del socio',
+      'hojas de cálculo que no siempre coinciden con la base real de socios',
+      'ficheros que el banco puede rechazar si los datos no están bien preparados',
     ],
     outroParagraphs: [
       'Además, cuando la entidad tiene muchos socios, el proceso puede convertirse en una tarea administrativa muy pesada.',
     ],
   },
   solution: {
-    title: 'Cómo lo resuelve Summa Social',
-    intro: 'Summa Social permite preparar las remesas de cobro directamente desde la información de los socios. El proceso es simple:',
+    title: 'Cómo ayuda Summa Social a preparar las remesas',
+    intro: 'Summa Social centraliza socios, cuotas y datos bancarios para que la entidad pueda revisar los cobros antes de generar la remesa.',
     steps: [
       {
-        title: 'Selecciona la cuenta bancaria de la entidad',
-        body: 'El sistema utiliza los datos de la cuenta que cobrará las cuotas.',
+        title: 'Selecciona la base de socios y cuotas',
+        body: 'El equipo puede preparar el cobro a partir de los socios y las cuotas que corresponden en cada periodo.',
       },
       {
-        title: 'El sistema identifica a los socios que toca cobrar',
-        body: 'Según la periodicidad de la cuota, puede prepararse la remesa correspondiente.',
+        title: 'Revisa importes, IBAN y datos incompletos',
+        body: 'Antes de generar el fichero, se pueden revisar cobros previstos, datos bancarios y posibles incidencias.',
       },
       {
-        title: 'Revisas la selección',
-        body: 'Antes de generar la remesa, puede comprobarse quién se incluye y quién no.',
+        title: 'Genera el fichero SEPA',
+        body: 'La entidad descarga el fichero preparado para subirlo al banco.',
       },
       {
-        title: 'Se genera el fichero SEPA',
-        body: 'La entidad descarga el fichero con el formato que necesita el banco.',
-      },
-      {
-        title: 'Subes el fichero al banco',
-        body: 'Con el fichero cargado en el banco, ya puede ejecutarse el cobro de las cuotas.',
+        title: 'Haz seguimiento de devoluciones e incidencias',
+        body: 'Cuando hay recibos devueltos, el seguimiento queda vinculado al flujo de cuotas, socios y donantes.',
       },
     ],
   },
@@ -1142,10 +1139,12 @@ const SEPA_REMITTANCES_CONTENT_ES: PublicLandingContent = {
     title: 'Qué permite gestionar Summa Social',
     intro: 'Con Summa Social, la entidad puede:',
     items: [
-      'preparar remesas de cobro de cuotas',
-      'gestionar socios con distintas periodicidades de pago',
-      'detectar socios con datos bancarios incompletos',
-      'revisar fácilmente los cobros antes de enviarlos al banco',
+      'preparar remesas SEPA de cuotas',
+      'gestionar periodicidades de cobro',
+      'revisar IBAN y datos bancarios',
+      'revisar los cobros previstos antes de enviarlos al banco',
+      'generar el fichero SEPA para el banco',
+      'hacer seguimiento posterior de devoluciones',
     ],
     outroParagraphs: [
       'Todo el proceso queda integrado con la base de datos de donantes y con la gestión económica de la entidad.',
@@ -1154,21 +1153,23 @@ const SEPA_REMITTANCES_CONTENT_ES: PublicLandingContent = {
   operationalBenefits: {
     title: 'Beneficios operativos',
     items: [
-      'Menos trabajo administrativo: no hace falta preparar ficheros manuales cada vez.',
-      'Menos riesgo de errores: los cobros se generan a partir de los datos de los socios.',
-      'Más control sobre las cuotas: es más fácil ver quién paga, cuándo paga y cuánto paga.',
+      'Menos dependencia de hojas de cálculo para preparar cada remesa.',
+      'Más control antes de enviar el fichero al banco.',
+      'Menos riesgo de olvidar socios o aplicar importes incorrectos.',
+      'Mejor trazabilidad entre cuotas, socios y devoluciones.',
+      'Un proceso más fácil de revisar para el equipo administrativo.',
     ],
   },
   forSmallAndMidEntities: {
-    title: 'Pensado para entidades sociales',
+    title: 'Qué es una remesa SEPA para una asociación',
     paragraphs: [
-      'Este sistema es especialmente útil para entidades que tienen socios con cuotas recurrentes, cobran por domiciliación bancaria y quieren simplificar la gestión de las remesas.',
-      'Summa Social no es un gestor bancario completo. Es una herramienta pensada para que las entidades sociales puedan gestionar las cuotas de forma clara y ordenada.',
+      'Una remesa SEPA es el fichero que una asociación envía al banco para cobrar cuotas domiciliadas a sus socios. Para prepararla bien hay que tener actualizados los socios, los IBAN, los importes, la periodicidad de cobro y las posibles incidencias antes de enviar el fichero.',
+      'Summa Social no sustituye al banco ni a la gestoría. Es una herramienta pensada para que las entidades sociales puedan preparar y revisar el cobro de cuotas de forma clara y ordenada antes de subir el fichero al banco.',
     ],
   },
   finalCta: {
-    title: 'Hablemos de vuestra entidad',
-    text: 'Si vuestra entidad cobra cuotas de socios cada mes o cada trimestre, contactad con nosotros y veremos si Summa Social puede ayudaros a ordenar este proceso.',
+    title: 'Revisamos cómo cobráis cuotas ahora',
+    text: 'Si vuestra entidad cobra cuotas de socios cada mes, trimestre o año, podemos revisar vuestro proceso actual y ver si Summa Social os ayudaría a preparar las remesas con menos trabajo manual.',
     linkLabel: 'Contacta con nosotros',
     href: '/es/contact',
   },
