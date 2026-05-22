@@ -6,6 +6,7 @@ import { PUBLIC_LOCALES } from '@/lib/public-locale';
 import {
   type ProductUpdateContentLocale,
 } from '@/lib/product-updates/localized';
+import { validateWeeklyProductUpdateEditorial } from '@/lib/product-updates/editorial-policy';
 import { generateSpanishProductUpdateVariant } from '@/lib/product-updates/server-localization';
 
 type ProductUpdateChannel = 'app' | 'web';
@@ -518,6 +519,16 @@ function buildRevalidationPaths(locales: string[], slug: string | null): string[
   return [...paths];
 }
 
+function isWeeklyPublicProductUpdate(payload: PublishProductUpdatePayload): boolean {
+  return Boolean(
+    payload.web?.enabled &&
+    (
+      payload.externalId.startsWith('weekly-product-update-') ||
+      payload.web.slug.startsWith('novetats-setmanals-')
+    )
+  );
+}
+
 function validatePublishPayload(raw: unknown): {
   ok: true;
   value: PublishProductUpdatePayload;
@@ -681,6 +692,20 @@ export async function handleProductUpdatesPublish(
     }
 
     const payload = validation.value;
+    if (isWeeklyPublicProductUpdate(payload)) {
+      const editorialValidation = validateWeeklyProductUpdateEditorial(payload);
+      if (!editorialValidation.ok) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: 'invalid_editorial_policy',
+            details: editorialValidation.errors,
+          },
+          { status: 400 }
+        );
+      }
+    }
+
     const db = deps.getAdminDbFn();
     const docRef = db.doc(`productUpdates/${payload.externalId}`);
     const existing = await docRef.get();

@@ -98,20 +98,74 @@ function buildWeeklySchedulerPayload() {
   return {
     locale: 'ca',
     externalId: 'weekly-product-update-2026-03-30_2026-04-05',
-    title: 'Millores setmanals a Summa Social',
-    description: 'Aquesta setmana arriben millores pràctiques en fluxos clau.',
+    title: 'Dashboard: resum descarregable per revisar indicadors',
+    description: 'Ara pots descarregar el resum del dashboard per revisar indicadors econòmics fora de Summa.',
     link: null,
-    contentLong: 'Hem simplificat accions habituals perquè el flux sigui més clar.',
+    contentLong: [
+      'Aquesta setmana hem millorat el dashboard amb canvis desplegats entre el 30/03/2026 i el 05/04/2026.',
+      '',
+      'Què canvia:',
+      '- Ara pots descarregar el resum del dashboard en PDF o Excel.',
+      '',
+      'On ho notaràs:',
+      '- Al resum i als indicadors del dashboard.',
+      '',
+      'Què has de fer:',
+      '- Consulta el dashboard i descarrega el resum quan hagis de compartir indicadors.',
+      '',
+      'Límit:',
+      '- No modifica dades ja guardades ni canvia els criteris de càlcul.',
+    ].join('\n'),
     guideUrl: null,
     videoUrl: null,
     web: {
       enabled: true,
       slug: 'novetats-setmanals-2026-03-30-2026-04-05',
-      excerpt: 'Millores setmanals perquè treballis amb més claredat.',
-      content: 'Resum setmanal de millores útils per al dia a dia.',
+      excerpt: 'Descàrrega del resum del dashboard per revisar indicadors fora de Summa.',
+      content: [
+        'Aquesta setmana hem millorat el dashboard amb canvis desplegats entre el 30/03/2026 i el 05/04/2026.',
+        '',
+        'Què canvia:',
+        '- Ara pots descarregar el resum del dashboard en PDF o Excel.',
+        '',
+        'On ho notaràs:',
+        '- Al resum i als indicadors del dashboard.',
+        '',
+        'Què has de fer:',
+        '- Consulta el dashboard i descarrega el resum quan hagis de compartir indicadors.',
+        '',
+        'Límit:',
+        '- No modifica dades ja guardades ni canvia els criteris de càlcul.',
+      ].join('\n'),
     },
     locales: buildSpanishLocalization(),
     isActive: false,
+  };
+}
+
+function buildBadWeeklyPublicPayload() {
+  return {
+    locale: 'ca',
+    externalId: 'weekly-product-update-2026-04-27_2026-05-03',
+    title: 'Millores setmanals a Summa Social',
+    description: 'Descobreix les noves millores a Summa Social, dissenyades per fer la teva gestió administrativa més àgil, precisa i segura en el dia a dia.',
+    link: null,
+    contentLong: [
+      "Aquesta setmana hem desplegat millores clau a Summa Social pensades per simplificar les teves tasques administratives habituals.",
+      "L'objectiu és reduir friccions i millorar la fiabilitat de la informació que gestiones.",
+      "- Hem incorporat la garantia institucional Semilla en els fluxos de treball.",
+      "- Hem perfeccionat la validació de dades per assegurar que la teva gestió sigui més exacta.",
+      "- El sistema ara identifica millor les teves necessitats per oferir-te respostes més precises.",
+    ].join('\n'),
+    guideUrl: null,
+    videoUrl: null,
+    web: {
+      enabled: true,
+      slug: 'novetats-setmanals-2026-04-27-2026-05-03',
+      excerpt: 'Descobreix les noves millores a Summa Social, dissenyades per fer la teva gestió administrativa més àgil, precisa i segura en el dia a dia.',
+      content: 'No cal que facis cap canvi en la configuració, ja que aquestes millores s’han aplicat automàticament perquè gaudeixis d’una operativa més fluida des d’ara mateix.',
+    },
+    isActive: true,
   };
 }
 
@@ -315,4 +369,26 @@ test('handleProductUpdatesPublish accepta payload mínim del scheduler sense sou
   assert.equal(stored?.isActive, false);
   assert.equal((stored?.web as { slug?: string } | null)?.slug, 'novetats-setmanals-2026-03-30-2026-04-05');
   assert.equal('sourceMeta' in (stored ?? {}), false);
+});
+
+test('handleProductUpdatesPublish rebutja novetat setmanal publica sense qualitat editorial', async () => {
+  const response = await handleProductUpdatesPublish(
+    createRequest(buildBadWeeklyPublicPayload()),
+    {
+      getAdminDbFn: () => new FakeDb(new Map()) as never,
+      nowTimestampFn: () => 'now',
+      getPublishSecretFn: () => 'top-secret',
+      getPublicBaseUrlFn: () => 'https://summasocial.app',
+      getPublicLocalesFn: () => ['ca'],
+      localizeProductUpdateFn: async () => null,
+      revalidatePathsFn: async () => {},
+    }
+  );
+
+  assert.equal(response.status, 400);
+  const body = await response.json() as { success: boolean; error?: string; details?: string[] };
+  assert.equal(body.success, false);
+  assert.equal(body.error, 'invalid_editorial_policy');
+  assert.match(body.details?.join('\n') ?? '', /weekly title must name the affected area/);
+  assert.match(body.details?.join('\n') ?? '', /generic editorial phrase is not allowed/);
 });
