@@ -8,11 +8,11 @@ export interface ProductUpdateEditorialPayload {
   } | null;
   locales?: {
     es?: {
-      title?: string;
-      description?: string;
-      contentLong?: string;
+      title?: string | null;
+      description?: string | null;
+      contentLong?: string | null;
       web?: {
-        title?: string;
+        title?: string | null;
         excerpt?: string | null;
         content?: string | null;
       } | null;
@@ -21,25 +21,106 @@ export interface ProductUpdateEditorialPayload {
 }
 
 const GENERIC_PHRASES = [
+  'gestio administrativa mes agil',
   'gestio mes agil',
   'gestio mes agil precisa i segura',
+  'precisa i segura',
   'mes precisa i segura',
   'millora l experiencia',
   'garantia institucional',
   'identifica millor les necessitats',
+  'identifica millor les teves necessitats',
   'optimitzacio del proces',
   'mes robustesa',
   'millores internes',
   'funcionament general',
   'operativa mes fluida',
   'reduir friccions',
+  'millores setmanals a summa social',
 ];
 
+// Public weekly updates must read as useful operational notes, not as generic release copy.
 const REQUIRED_WEEKLY_SECTIONS = [
-  'Què canvia:',
-  'On ho notaràs:',
-  'Què has de fer:',
-  'Límit:',
+  'que canvia',
+  'on ho notaras',
+  'que has de fer',
+  'limit',
+];
+
+const FUNCTIONAL_AREA_TERMS = [
+  'banc',
+  'moviment',
+  'conciliacio',
+  'remesa',
+  'sepa',
+  'donant',
+  'soci',
+  'certificat',
+  'model 182',
+  'model 347',
+  'document',
+  'justificant',
+  'factura',
+  'projecte',
+  'subvencio',
+  'justificacio',
+  'permis',
+  'rol',
+  'arxiva',
+  'revisio',
+  'stripe',
+  'pagament',
+  'devolucio',
+  'dashboard',
+  'informe',
+  'exportacio',
+];
+
+const VISIBLE_CHANGE_TERMS = [
+  'ara',
+  'pots',
+  'trobaras',
+  'veuras',
+  'mostra',
+  'apareix',
+  'descarregar',
+  'export',
+  'revis',
+  'arxiva',
+  'tanca',
+  'elimina',
+  'exigeix',
+  'limita',
+  'permet',
+  'respon',
+  'enten',
+];
+
+const USER_ACTION_TERMS = [
+  'no cal',
+  'continua',
+  'consulta',
+  'revisa',
+  'llegeix',
+  'prova',
+  'demana',
+  'fes',
+  'tanca',
+  'reserva',
+  'descarrega',
+];
+
+const LIMIT_TERMS = [
+  'no modifica',
+  'no canvia',
+  'no cobreix',
+  'no inclou',
+  'nomes',
+  'queda fora',
+  'encara',
+  'limit',
+  'limita',
+  'sense',
 ];
 
 const CATALAN_LEAKS_IN_SPANISH = [
@@ -62,6 +143,52 @@ function normalizeForPolicy(value: string): string {
     .replace(/\s+/g, ' ')
     .trim()
     .toLowerCase();
+}
+
+function normalizeSectionTitle(value: string): string {
+  return normalizeForPolicy(value).replace(/:$/, '').trim();
+}
+
+function extractSections(contentLong: string): Map<string, string> {
+  const sections = new Map<string, string>();
+  let currentSection: string | null = null;
+  let buffer: string[] = [];
+
+  const flush = () => {
+    if (!currentSection) return;
+    sections.set(currentSection, buffer.join('\n').trim());
+    buffer = [];
+  };
+
+  for (const line of contentLong.split('\n')) {
+    const normalizedLine = normalizeSectionTitle(line);
+    if (REQUIRED_WEEKLY_SECTIONS.includes(normalizedLine)) {
+      flush();
+      currentSection = normalizedLine;
+      continue;
+    }
+
+    if (currentSection) {
+      buffer.push(line);
+    }
+  }
+
+  flush();
+  return sections;
+}
+
+function hasAnyTerm(normalizedText: string, terms: string[]): boolean {
+  return terms.some((term) => normalizedText.includes(term));
+}
+
+function hasSubstantialSection(sectionText: string): boolean {
+  const normalized = normalizeForPolicy(sectionText);
+  if (!normalized) return false;
+
+  const words = normalized.split(/\s+/).filter(Boolean);
+  if (words.length < 5) return false;
+
+  return !GENERIC_PHRASES.some((phrase) => normalized === phrase || normalized.includes(phrase));
 }
 
 function collectText(payload: ProductUpdateEditorialPayload): string {
@@ -115,10 +242,36 @@ export function validateWeeklyProductUpdateEditorial(
     }
   }
 
+  const sections = extractSections(payload.contentLong);
   for (const section of REQUIRED_WEEKLY_SECTIONS) {
-    if (!payload.contentLong.includes(section)) {
-      errors.push(`contentLong must include section "${section}"`);
+    const sectionText = sections.get(section);
+    if (!sectionText) {
+      errors.push(`contentLong must include section "${section}:"`);
+      continue;
     }
+
+    if (!hasSubstantialSection(sectionText)) {
+      errors.push(`contentLong section "${section}:" must include concrete non-generic content`);
+    }
+  }
+
+  if (!hasAnyTerm(normalizedText, FUNCTIONAL_AREA_TERMS)) {
+    errors.push('weekly update must mention a concrete functional or economic area');
+  }
+
+  const changeSection = normalizeForPolicy(sections.get('que canvia') ?? '');
+  if (!hasAnyTerm(changeSection, VISIBLE_CHANGE_TERMS)) {
+    errors.push('section "que canvia:" must describe a visible user-facing change');
+  }
+
+  const actionSection = normalizeForPolicy(sections.get('que has de fer') ?? '');
+  if (!hasAnyTerm(actionSection, USER_ACTION_TERMS)) {
+    errors.push('section "que has de fer:" must state a concrete user action or that no action is needed');
+  }
+
+  const limitSection = normalizeForPolicy(sections.get('limit') ?? '');
+  if (!hasAnyTerm(limitSection, LIMIT_TERMS)) {
+    errors.push('section "limit:" must state what is not covered or what has not changed');
   }
 
   if (normalizedSpanishText.length > 0) {

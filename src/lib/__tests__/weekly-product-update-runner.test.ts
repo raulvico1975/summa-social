@@ -328,6 +328,57 @@ test('validateWeeklyProductUpdateEditorial accepta el generador determinista', (
   assert.deepEqual(validation, { ok: true });
 });
 
+test('validateWeeklyProductUpdateEditorial rebutja la novetat generica del 04/05/2026', () => {
+  const validation = validateWeeklyProductUpdateEditorial({
+    title: 'Millores setmanals a Summa Social',
+    description: 'Descobreix les noves millores a Summa Social, dissenyades per fer la teva gestió administrativa més àgil, precisa i segura en el dia a dia.',
+    contentLong: [
+      "Aquesta setmana hem desplegat millores clau a Summa Social pensades per simplificar les teves tasques administratives habituals.",
+      "L'objectiu és reduir friccions i millorar la fiabilitat de la informació que gestiones.",
+      '- Hem incorporat la garantia institucional Semilla en els fluxos de treball.',
+      '- Hem perfeccionat la validació de dades per assegurar que la teva gestió sigui més exacta.',
+      '- El sistema ara identifica millor les teves necessitats per oferir-te respostes més precises.',
+    ].join('\n'),
+    web: {
+      excerpt: 'Descobreix les noves millores a Summa Social, dissenyades per fer la teva gestió administrativa més àgil, precisa i segura en el dia a dia.',
+      content: 'No cal que facis cap canvi en la configuració, ja que aquestes millores s’han aplicat automàticament perquè gaudeixis d’una operativa més fluida des d’ara mateix.',
+    },
+  });
+
+  assert.equal(validation.ok, false);
+  assert.match(validation.errors.join('\n'), /weekly title must name the affected area/);
+  assert.match(validation.errors.join('\n'), /generic editorial phrase is not allowed: garantia institucional/);
+  assert.match(validation.errors.join('\n'), /contentLong must include section "que canvia:"/);
+});
+
+test('validateWeeklyProductUpdateEditorial rebutja seccions presents amb contingut buit o generic', () => {
+  const validation = validateWeeklyProductUpdateEditorial({
+    title: 'Dashboard: millores visibles en el resum',
+    description: 'Ara el dashboard mostra millor el resum econòmic de l’entitat.',
+    contentLong: [
+      'Què canvia:',
+      '- Millores internes del funcionament general.',
+      '',
+      'On ho notaràs:',
+      '- Al dashboard.',
+      '',
+      'Què has de fer:',
+      '- Revisa-ho.',
+      '',
+      'Límit:',
+      '- Cap.',
+    ].join('\n'),
+    web: {
+      excerpt: 'Millores internes al dashboard.',
+      content: 'Millores internes del funcionament general.',
+    },
+  });
+
+  assert.equal(validation.ok, false);
+  assert.match(validation.errors.join('\n'), /generic editorial phrase is not allowed: millores internes/);
+  assert.match(validation.errors.join('\n'), /section "limit:" must state what is not covered/);
+});
+
 test('generateWeeklyProductUpdateContent normalitza permisos a llenguatge d’usuari', () => {
   const window = buildPreviousWeeklyWindow(new Date('2026-05-12T06:00:00.000Z'), 'Europe/Madrid');
   const generated = generateWeeklyProductUpdateContent({
