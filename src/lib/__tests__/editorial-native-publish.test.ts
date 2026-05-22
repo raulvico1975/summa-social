@@ -76,6 +76,22 @@ test('buildPublishInputFromNativePost maps the native draft to the publish contr
   assert.equal(payload.translations?.es?.contentHtml?.includes('<h1>'), true)
 })
 
+test('buildPublishInputFromNativePost requires localized ES cover alt for covered posts', () => {
+  const post = buildPost()
+  post.draft.coverImageUrl = 'https://example.com/covers/remesa.png'
+  post.draft.coverImageAlt = 'Coberta de remeses'
+
+  assert.throws(
+    () => buildPublishInputFromNativePost(post),
+    /Falta el text alternatiu ES de la portada/
+  )
+
+  post.draft.translations!.es!.coverImageAlt = 'Portada de remesas'
+  const payload = buildPublishInputFromNativePost(post)
+
+  assert.equal(payload.translations?.es?.coverImageAlt, 'Portada de remesas')
+})
+
 test('prepareNativeBlogPostForPublish promotes localhost cover URLs before firestore publish', async () => {
   const post = buildPost()
   post.draft.coverImageUrl = 'http://localhost:9002/blog-covers/com-revisar-una-remesa.png'

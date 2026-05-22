@@ -73,6 +73,18 @@ async function main() {
     category: 'criteri-operatiu',
     publishedAt,
     baseLocale: 'ca' as const,
+    translations: {
+      es: {
+        title: title.replace('Prova tècnica temporal', 'Prueba técnica temporal'),
+        seoTitle: `${title.replace('Prova tècnica temporal', 'Prueba técnica temporal')} | Summa Social`,
+        metaDescription:
+          'Publicación temporal de prueba para verificar el flujo de publicar y retirar del blog público.',
+        excerpt:
+          'Publicación temporal de prueba para verificar el flujo de publicar y retirar del blog público.',
+        contentHtml:
+          '<p>Esta es una publicación temporal de prueba. Se retirará automáticamente después de la verificación.</p>',
+      },
+    },
   }
 
   const publishResponse = await fetch(publishEndpoint, {

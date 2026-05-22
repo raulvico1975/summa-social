@@ -134,6 +134,15 @@ export function buildPublishInputFromNativePost(post: NativeBlogPost): BlogPostP
     throw new Error("Falten camps obligatoris del draft abans de publicar-lo.")
   }
 
+  const esTranslation = post.draft.translations?.es
+  if (!esTranslation) {
+    throw new Error('Falta la traducció ES del draft abans de publicar-lo.')
+  }
+
+  if (post.draft.coverImageUrl && !esTranslation.coverImageAlt?.trim()) {
+    throw new Error('Falta el text alternatiu ES de la portada abans de publicar el draft.')
+  }
+
   const payload: BlogPostPublishInput = {
     title,
     slug,
@@ -154,21 +163,19 @@ export function buildPublishInputFromNativePost(post: NativeBlogPost): BlogPostP
     }
   }
 
-  if (post.draft.translations?.es) {
-    payload.translations = {
-      es: {
-        title: post.draft.translations.es.title,
-        seoTitle: post.draft.translations.es.seoTitle,
-        metaDescription: post.draft.translations.es.metaDescription,
-        excerpt: post.draft.translations.es.excerpt,
-        contentHtml:
-          post.draft.translations.es.contentHtml ||
-          renderEditorialMarkdownToHtml(post.draft.translations.es.contentMarkdown),
-        ...(post.draft.coverImageUrl && post.draft.coverImageAlt
-          ? { coverImageAlt: post.draft.coverImageAlt }
-          : {}),
-      },
-    }
+  payload.translations = {
+    es: {
+      title: esTranslation.title,
+      seoTitle: esTranslation.seoTitle,
+      metaDescription: esTranslation.metaDescription,
+      excerpt: esTranslation.excerpt,
+      contentHtml:
+        esTranslation.contentHtml ||
+        renderEditorialMarkdownToHtml(esTranslation.contentMarkdown),
+      ...(post.draft.coverImageUrl
+        ? { coverImageAlt: esTranslation.coverImageAlt?.trim() ?? '' }
+        : {}),
+    },
   }
 
   return payload
