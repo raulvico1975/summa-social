@@ -1,17 +1,17 @@
 # Rollback Plan (auto) — Summa Social
 
-Generat: 2026-05-28 08:47
+Generat: 2026-05-28 08:58
 Risc: ALT
 Backup curt: NO_REQUIRED
 SHA prod abans de publicar: 6327773fa
-SHA branca a publicar (main): b1d2f9d62
+SHA branca a publicar (main): 97f2040a7
 
 ## Si cal marxa enrere rapida
 
 Opcio recomanada (preserva historial):
 ```bash
 git checkout main
-git revert b1d2f9d62 --no-edit
+git revert 97f2040a7 --no-edit
 git push origin main
 bash scripts/deploy.sh main
 ```
