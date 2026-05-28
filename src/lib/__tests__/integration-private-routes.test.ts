@@ -139,7 +139,12 @@ class InMemoryUploadStore implements PendingDocumentsUploadStore {
         sizeBytes: number;
         sha256: string;
       };
+      status: 'draft' | 'confirmed';
+      type: 'invoice' | 'payroll' | 'receipt' | 'unknown';
+      invoiceNumber: string | null;
       supplierName: string | null;
+      supplierId: string | null;
+      categoryId: string | null;
       invoiceDate: string | null;
       amount: number | null;
       sourceRepo: string | null;
@@ -154,8 +159,8 @@ class InMemoryUploadStore implements PendingDocumentsUploadStore {
 
     this.docs.set(key, {
       id: args.pendingDocumentId,
-      status: 'draft',
-      type: 'unknown',
+      status: args.input.status,
+      type: args.input.type,
       file: {
         storagePath: args.storagePath,
         filename: args.input.file.name,
@@ -163,8 +168,11 @@ class InMemoryUploadStore implements PendingDocumentsUploadStore {
         sizeBytes: args.input.file.sizeBytes,
         sha256: args.input.file.sha256,
       },
+      invoiceNumber: args.input.invoiceNumber,
       invoiceDate: args.input.invoiceDate,
       amount: args.input.amount,
+      supplierId: args.input.supplierId,
+      categoryId: args.input.categoryId,
       integrationMeta: {
         sourceRepo: args.input.sourceRepo,
         externalMessageId: args.input.externalMessageId,
@@ -431,7 +439,7 @@ test('transactions search stays isolated per org and excludes remittance childre
   assert.deepEqual(body.transactions.map((transaction) => transaction.id), ['tx-a-visible']);
 });
 
-function createUploadRequest(idempotencyKey: string) {
+function createUploadRequest(idempotencyKey: string, overrides: Record<string, string | null> = {}) {
   const headers = new Headers({
     Authorization: 'Bearer upload-token',
     'Idempotency-Key': idempotencyKey,
@@ -448,6 +456,13 @@ function createUploadRequest(idempotencyKey: string) {
   formData.set('invoiceDate', '2026-04-15');
   formData.set('amount', '123.45');
   formData.set('externalMessageId', 'gmail-msg-1');
+  for (const [key, value] of Object.entries(overrides)) {
+    if (value === null) {
+      formData.delete(key);
+    } else {
+      formData.set(key, value);
+    }
+  }
 
   return {
     headers,
@@ -496,6 +511,71 @@ test('pending documents upload is idempotent and does not duplicate the document
   assert.equal(secondBody.idempotent, true);
   assert.equal(secondBody.pendingDocument.id, firstBody.pendingDocument.id);
   assert.equal(store.docs.size, 1);
+});
+
+test('pending documents upload can create a confirmed invoice when required fields are present', async () => {
+  const authRepository = new InMemoryAuthRepository([
+    buildToken({ scopes: ['pending_documents.write'] }, 'upload-token'),
+  ]);
+  const store = new InMemoryUploadStore();
+
+  const response = await handlePrivatePendingDocumentsUpload(
+    createUploadRequest('mail-confirmed-1', {
+      status: 'confirmed',
+      type: 'invoice',
+      invoiceNumber: 'F-2026-15',
+      supplierId: 'supplier-acme',
+      categoryId: 'cat-services',
+    }),
+    {
+      authRepository,
+      store,
+      storage: new InMemoryUploadStorage(),
+    }
+  );
+
+  const body = await response.json() as {
+    success: boolean;
+    pendingDocument: {
+      status: string;
+      type: string;
+      invoiceNumber: string | null;
+      supplierId: string | null;
+      categoryId: string | null;
+    };
+  };
+
+  assert.equal(response.status, 201);
+  assert.equal(body.success, true);
+  assert.equal(body.pendingDocument.status, 'confirmed');
+  assert.equal(body.pendingDocument.type, 'invoice');
+  assert.equal(body.pendingDocument.invoiceNumber, 'F-2026-15');
+  assert.equal(body.pendingDocument.supplierId, 'supplier-acme');
+  assert.equal(body.pendingDocument.categoryId, 'cat-services');
+});
+
+test('pending documents upload rejects confirmed invoices without Summa required fields', async () => {
+  const authRepository = new InMemoryAuthRepository([
+    buildToken({ scopes: ['pending_documents.write'] }, 'upload-token'),
+  ]);
+
+  const response = await handlePrivatePendingDocumentsUpload(
+    createUploadRequest('mail-confirmed-missing-category', {
+      status: 'confirmed',
+      type: 'invoice',
+      invoiceNumber: 'F-2026-15',
+      supplierId: 'supplier-acme',
+    }),
+    {
+      authRepository,
+      store: new InMemoryUploadStore(),
+      storage: new InMemoryUploadStorage(),
+    }
+  );
+
+  assert.equal(response.status, 400);
+  const body = await response.json() as { code: string };
+  assert.equal(body.code, 'CONFIRMED_CATEGORY_REQUIRED');
 });
 
 test('pending document link validates one reviewed match and updates transaction document', async () => {

@@ -1,40 +1,38 @@
 # Impacte funcional i sincronitzacio documental
 
 ## Metadata
-- date: 2026-05-12
-- change_scope: certificats fiscals amb accés acotat sense lectura general del ledger
+- date: 2026-05-28
+- change_scope: integracio privada per pujar documents pendents ja confirmats des de Summa Agent
 
 ## Declaracio obligatoria
 - help_topics_updated: []
-- manual_updated: yes
-- manual_sections:
-  - certificats de donacio
-- faq_updated: yes
-- faq_questions:
-  - Puc donar permis per generar certificats sense donar acces a Moviments?
-- justification_if_no_change: ""
+- manual_updated: no
+- manual_sections: []
+- faq_updated: no
+- faq_questions: []
+- justification_if_no_change: "Canvi privat d'integracio administrativa; no altera pantalles ni instruccions d'usuari final."
 
 ## Notes
 
 Què ha canviat
 
-- Els certificats de donació poden generar-se amb el permís `fiscal.certificats.generar` sense concedir `moviments.read`.
-- El generador massiu d'Informes i la fitxa del donant passen per una API server-side acotada que retorna només dades fiscals mínimes per al certificat.
-- Els perfils restringits no llegeixen directament `transactions` ni `donations` des del client i no veuen el ledger general.
+- La ruta privada `pending-documents/upload` continua creant `draft` per defecte.
+- La mateixa ruta pot crear un `pendingDocument` en estat `confirmed` quan un agent privat envia `status=confirmed` i tots els camps obligatoris de Summa Social.
+- El document confirmat queda preparat per al flux existent de conciliacio amb extractes bancaris; no vincula cap moviment per si sol.
 
 Per què importa a l'usuari
 
-- La persona que gestiona donants pot generar, baixar i enviar certificats anuals sense accedir a Moviments.
-- Es manté la separació entre finalitat fiscal i accés econòmic general.
-- Es redueix exposició de dades sensibles com factures, transferències, conceptes bancaris, categories, documents, IBAN o notes internes.
+- Permet que Summa Agent alimenti Summa Social amb factures ja validades sense duplicar el motor de conciliacio.
+- Summa Social conserva la seva logica: documents pendents confirmats, suggeriments quan entra l'extracte i conciliacio revisable.
+- No canvia imports, moviments, fiscalitat, remeses ni saldos.
 
 Com ho notarà
 
-- Un perfil amb `fiscal.certificats.generar` i sense `moviments.read` podrà carregar certificats a Informes.
-- Des de la fitxa del donant podrà generar el certificat anual sense obrir l'històric de moviments.
-- Moviments i l'històric econòmic general continuaran bloquejats si no té els permisos corresponents.
+- La UI de Summa Social no canvia.
+- Els documents creats per una integracio privada poden aparèixer directament a la pestanya de pendents confirmats si arriben amb camps suficients.
+- Si falta algun camp obligatori, la API rebutja la creacio confirmada i manté el contracte existent.
 
 Ha de fer alguna acció?
 
 - No.
-- Cal mantenir configurats els permisos de perfils restringits sense `moviments.read` si no han de veure el ledger.
+- Cal que l'agent extern enviï `supplierId`, `categoryId`, `invoiceNumber`, `invoiceDate` i `amount` quan vulgui crear factures confirmades.

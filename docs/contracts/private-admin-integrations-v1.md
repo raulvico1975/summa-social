@@ -242,7 +242,12 @@ Content-Type: multipart/form-data
 Camps `multipart/form-data`:
 
 - `file` obligatori
+- `status` opcional: `draft` per defecte; `confirmed` nomes quan l'agent envia tots els camps obligatoris de Summa Social
+- `type` opcional: `unknown` per defecte; per `status=confirmed` ha de ser `invoice`, `payroll` o `receipt`
+- `invoiceNumber` opcional; obligatori per `status=confirmed` amb `type=invoice` o `type=payroll`
 - `supplierName` opcional
+- `supplierId` opcional; obligatori per `status=confirmed` amb `type=invoice` o `type=payroll`
+- `categoryId` opcional; obligatori per qualsevol `status=confirmed`
 - `invoiceDate` opcional, format `YYYY-MM-DD`
 - `amount` opcional
 - `sourceRepo` opcional
@@ -251,7 +256,9 @@ Camps `multipart/form-data`:
 
 Regles:
 
-- es crea un `pendingDocument` en estat `draft`
+- per defecte es crea un `pendingDocument` en estat `draft`
+- si s'envia `status=confirmed`, el document queda directament preparat per al flux propi de conciliacio de Summa Social quan s'importi l'extracte bancari
+- un `confirmed` extern no vincula cap moviment per si sol; nomes deixa el document en el mateix estat funcional que un document confirmat dins la UI de pendents
 - no toca ledger ni fiscalitat
 - l'upload es guarda a Storage sota un path determinista
 - mateixa `Idempotency-Key` + mateix payload => mateix resultat funcional
@@ -263,7 +270,12 @@ curl -X POST "http://localhost:9002/api/integrations/private/pending-documents/u
   -H "Authorization: Bearer $SUMMA_TOKEN" \
   -H "Idempotency-Key: gmail-msg-123" \
   -F "file=@./factura.pdf" \
+  -F "status=confirmed" \
+  -F "type=invoice" \
+  -F "invoiceNumber=F-2026-15" \
   -F "supplierName=ACME, S.L." \
+  -F "supplierId=supplier_acme" \
+  -F "categoryId=cat_services" \
   -F "invoiceDate=2026-04-15" \
   -F "amount=123.45" \
   -F "externalMessageId=gmail-msg-123"
@@ -277,16 +289,19 @@ Resposta:
   "idempotent": false,
   "pendingDocument": {
     "id": "intpd_abc123",
-    "status": "draft",
-    "type": "unknown",
+    "status": "confirmed",
+    "type": "invoice",
     "file": {
       "filename": "factura.pdf",
       "contentType": "application/pdf",
       "sizeBytes": 48231,
       "sha256": "..."
     },
+    "invoiceNumber": "F-2026-15",
     "invoiceDate": "2026-04-15",
     "amount": 123.45,
+    "supplierId": "supplier_acme",
+    "categoryId": "cat_services",
     "supplierName": "ACME, S.L.",
     "sourceRepo": "baruma-admin-agent",
     "externalMessageId": "gmail-msg-123"
@@ -365,6 +380,12 @@ Resposta:
 - `400 INVALID_CURSOR`: cursor invalida
 - `400 CURSOR_NOT_FOUND`: cursor desconeguda
 - `400 INVALID_DATE`: data invalida
+- `400 INVALID_CONFIRMED_TYPE`: un document confirmat ha de ser `invoice`, `payroll` o `receipt`
+- `400 CONFIRMED_AMOUNT_REQUIRED`: falta import en un document confirmat
+- `400 CONFIRMED_INVOICE_DATE_REQUIRED`: falta data en un document confirmat
+- `400 CONFIRMED_CATEGORY_REQUIRED`: falta categoria en un document confirmat
+- `400 CONFIRMED_INVOICE_NUMBER_REQUIRED`: falta numero en factura/nomina confirmada
+- `400 CONFIRMED_SUPPLIER_REQUIRED`: falta proveidor en factura/nomina confirmada
 - `400 MISSING_IDEMPOTENCY_KEY`: falta `Idempotency-Key`
 - `409 IDEMPOTENCY_CONFLICT`: mateixa clau externa amb payload diferent
 - `409 DOCUMENT_HASH_MISMATCH`: el document pendent no coincideix amb el hash validat per l'agent
