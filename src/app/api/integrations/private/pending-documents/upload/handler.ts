@@ -22,7 +22,12 @@ type RequestLike = Pick<NextRequest, 'headers' | 'formData' | 'nextUrl'>;
 interface UploadFormInput {
   orgId: string | null;
   file: File | null;
+  status: 'draft' | 'confirmed' | null;
+  type: 'invoice' | 'payroll' | 'receipt' | 'unknown' | null;
+  invoiceNumber: string | null;
   supplierName: string | null;
+  supplierId: string | null;
+  categoryId: string | null;
   invoiceDate: string | null;
   amount: number | null;
   sourceRepo: string | null;
@@ -39,7 +44,12 @@ interface PreparedUploadInput {
     bytes: Buffer;
     sha256: string;
   };
+  status: 'draft' | 'confirmed';
+  type: 'invoice' | 'payroll' | 'receipt' | 'unknown';
+  invoiceNumber: string | null;
   supplierName: string | null;
+  supplierId: string | null;
+  categoryId: string | null;
   invoiceDate: string | null;
   amount: number | null;
   sourceRepo: string | null;
@@ -64,7 +74,10 @@ interface PendingDocumentStoredRecord {
     sha256: string | null;
   };
   invoiceDate: string | null;
+  invoiceNumber: string | null;
   amount: number | null;
+  supplierId: string | null;
+  categoryId: string | null;
   integrationMeta: {
     sourceRepo: string | null;
     externalMessageId: string | null;
@@ -124,10 +137,19 @@ function parseOptionalAmount(value: FormDataEntryValue | null): number | null {
 
 function parseUploadInput(formData: FormData, headers: Headers): UploadFormInput {
   const fileEntry = formData.get('file');
+  const status = normalizeOptionalString(formData.get('status'));
+  const type = normalizeOptionalString(formData.get('type'));
   return {
     orgId: normalizeOptionalString(formData.get('orgId')),
     file: fileEntry instanceof File ? fileEntry : null,
+    status: status === 'draft' || status === 'confirmed' ? status : null,
+    type: type === 'invoice' || type === 'payroll' || type === 'receipt' || type === 'unknown'
+      ? type
+      : null,
+    invoiceNumber: normalizeOptionalString(formData.get('invoiceNumber')),
     supplierName: normalizeOptionalString(formData.get('supplierName')),
+    supplierId: normalizeOptionalString(formData.get('supplierId')),
+    categoryId: normalizeOptionalString(formData.get('categoryId')),
     invoiceDate: normalizeOptionalString(formData.get('invoiceDate')),
     amount: parseOptionalAmount(formData.get('amount')),
     sourceRepo: normalizeOptionalString(formData.get('sourceRepo')),
@@ -168,20 +190,28 @@ function buildIdempotencyId(
 }
 
 function buildUploadRequestHash(input: PreparedUploadInput): string {
+  const hashPayload: Record<string, unknown> = {
+    v: 1,
+    orgId: input.orgId,
+    filename: input.file.name,
+    contentType: input.file.contentType,
+    sizeBytes: input.file.sizeBytes,
+    sha256: input.file.sha256,
+    supplierName: input.supplierName,
+    invoiceDate: input.invoiceDate,
+    amount: input.amount,
+    sourceRepo: input.sourceRepo,
+    externalMessageId: input.externalMessageId,
+  };
+
+  if (input.status !== 'draft') hashPayload.status = input.status;
+  if (input.type !== 'unknown') hashPayload.type = input.type;
+  if (input.invoiceNumber !== null) hashPayload.invoiceNumber = input.invoiceNumber;
+  if (input.supplierId !== null) hashPayload.supplierId = input.supplierId;
+  if (input.categoryId !== null) hashPayload.categoryId = input.categoryId;
+
   return hashOpaqueValue(
-    JSON.stringify({
-      v: 1,
-      orgId: input.orgId,
-      filename: input.file.name,
-      contentType: input.file.contentType,
-      sizeBytes: input.file.sizeBytes,
-      sha256: input.file.sha256,
-      supplierName: input.supplierName,
-      invoiceDate: input.invoiceDate,
-      amount: input.amount,
-      sourceRepo: input.sourceRepo,
-      externalMessageId: input.externalMessageId,
-    })
+    JSON.stringify(hashPayload)
   );
 }
 
@@ -209,7 +239,10 @@ function toPendingDocumentResponse(record: PendingDocumentStoredRecord) {
       sha256: record.file.sha256,
     },
     invoiceDate: record.invoiceDate,
+    invoiceNumber: record.invoiceNumber,
     amount: record.amount,
+    supplierId: record.supplierId,
+    categoryId: record.categoryId,
     supplierName: record.integrationMeta?.supplierName ?? null,
     sourceRepo: record.integrationMeta?.sourceRepo ?? null,
     externalMessageId: record.integrationMeta?.externalMessageId ?? null,
@@ -218,8 +251,11 @@ function toPendingDocumentResponse(record: PendingDocumentStoredRecord) {
 
 function createFieldSources(input: PreparedUploadInput) {
   const fieldSources: Record<string, 'manual'> = {};
+  if (input.invoiceNumber) fieldSources.invoiceNumber = 'manual';
   if (input.invoiceDate) fieldSources.invoiceDate = 'manual';
   if (input.amount !== null) fieldSources.amount = 'manual';
+  if (input.supplierId) fieldSources.supplierId = 'manual';
+  if (input.categoryId) fieldSources.categoryId = 'manual';
   return Object.keys(fieldSources).length > 0 ? fieldSources : null;
 }
 
@@ -294,7 +330,10 @@ function createFirestoreUploadStore(): PendingDocumentsUploadStore {
           sha256: typeof file.sha256 === 'string' ? file.sha256 : null,
         },
         invoiceDate: typeof data.invoiceDate === 'string' ? data.invoiceDate : null,
+        invoiceNumber: typeof data.invoiceNumber === 'string' ? data.invoiceNumber : null,
         amount: typeof data.amount === 'number' ? data.amount : null,
+        supplierId: typeof data.supplierId === 'string' ? data.supplierId : null,
+        categoryId: typeof data.categoryId === 'string' ? data.categoryId : null,
         integrationMeta: integrationMeta
           ? {
               sourceRepo:
@@ -318,8 +357,8 @@ function createFirestoreUploadStore(): PendingDocumentsUploadStore {
 
       try {
         await ref.create({
-          status: 'draft',
-          type: 'unknown',
+          status: input.status,
+          type: input.type,
           file: {
             storagePath,
             filename: input.file.name,
@@ -327,11 +366,11 @@ function createFirestoreUploadStore(): PendingDocumentsUploadStore {
             sizeBytes: input.file.sizeBytes,
             sha256: input.file.sha256,
           },
-          invoiceNumber: null,
+          invoiceNumber: input.invoiceNumber,
           invoiceDate: input.invoiceDate,
           amount: input.amount,
-          supplierId: null,
-          categoryId: null,
+          supplierId: input.supplierId,
+          categoryId: input.categoryId,
           extracted: null,
           fieldSources,
           sepa: null,
@@ -339,7 +378,7 @@ function createFirestoreUploadStore(): PendingDocumentsUploadStore {
           reportId: null,
           createdAt: FieldValue.serverTimestamp(),
           updatedAt: FieldValue.serverTimestamp(),
-          confirmedAt: null,
+          confirmedAt: input.status === 'confirmed' ? FieldValue.serverTimestamp() : null,
           integrationMeta: {
             tokenId: context.tokenId,
             label: context.label,
@@ -447,6 +486,31 @@ async function prepareUploadInput(
     return { error: { code: 'SOURCE_REPO_MISMATCH', message: 'sourceRepo does not match token metadata' } };
   }
 
+  const status = raw.status ?? 'draft';
+  const type = raw.type ?? 'unknown';
+  if (status === 'confirmed') {
+    if (type !== 'invoice' && type !== 'payroll' && type !== 'receipt') {
+      return { error: { code: 'INVALID_CONFIRMED_TYPE', message: 'confirmed documents require type invoice, payroll or receipt' } };
+    }
+    if (raw.amount === null) {
+      return { error: { code: 'CONFIRMED_AMOUNT_REQUIRED', message: 'confirmed documents require amount' } };
+    }
+    if (!raw.invoiceDate) {
+      return { error: { code: 'CONFIRMED_INVOICE_DATE_REQUIRED', message: 'confirmed documents require invoiceDate' } };
+    }
+    if (!raw.categoryId) {
+      return { error: { code: 'CONFIRMED_CATEGORY_REQUIRED', message: 'confirmed documents require categoryId' } };
+    }
+    if (type !== 'receipt') {
+      if (!raw.invoiceNumber) {
+        return { error: { code: 'CONFIRMED_INVOICE_NUMBER_REQUIRED', message: 'confirmed invoices and payroll documents require invoiceNumber' } };
+      }
+      if (!raw.supplierId) {
+        return { error: { code: 'CONFIRMED_SUPPLIER_REQUIRED', message: 'confirmed invoices and payroll documents require supplierId' } };
+      }
+    }
+  }
+
   const bytes = Buffer.from(await raw.file.arrayBuffer());
   const safeFileName = sanitizeFilename(raw.file.name);
 
@@ -459,7 +523,12 @@ async function prepareUploadInput(
       bytes,
       sha256: sha256Hex(bytes),
     },
+    status,
+    type,
+    invoiceNumber: raw.invoiceNumber,
     supplierName: raw.supplierName,
+    supplierId: raw.supplierId,
+    categoryId: raw.categoryId,
     invoiceDate: raw.invoiceDate,
     amount: raw.amount,
     sourceRepo: raw.sourceRepo ?? context.sourceRepo ?? null,
