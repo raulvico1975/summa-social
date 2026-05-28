@@ -200,8 +200,19 @@ async function run() {
       tags: ['test', 'blog'],
       category: 'Producte',
       publishedAt: new Date().toISOString(),
+      baseLocale: 'ca',
       coverImageUrl: uploadedCoverImageUrl,
       coverImageAlt: 'Portada test',
+      translations: {
+        es: {
+          title: 'Post de prueba con imagen',
+          seoTitle: 'Post de prueba con imagen | Summa Social',
+          metaDescription: 'Post de prueba con portada',
+          excerpt: 'Resumen de prueba con imagen',
+          contentHtml: '<p>Contenido mínimo de prueba</p>',
+          coverImageAlt: 'Portada de prueba',
+        },
+      },
     }
 
     const withoutImagePayload = {
@@ -214,6 +225,16 @@ async function run() {
       tags: ['test', 'blog'],
       category: 'Producte',
       publishedAt: new Date().toISOString(),
+      baseLocale: 'ca',
+      translations: {
+        es: {
+          title: 'Post de prueba sin imagen',
+          seoTitle: 'Post de prueba sin imagen | Summa Social',
+          metaDescription: 'Post de prueba sin portada',
+          excerpt: 'Resumen de prueba sin imagen',
+          contentHtml: '<p>Contenido mínimo de prueba</p>',
+        },
+      },
     }
 
     const withImage = await publish(withImagePayload, localPublishSecret)

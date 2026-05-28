@@ -96,6 +96,16 @@ function normalizeInlineMarkdownInHtml(contentHtml: string): string {
     .join('')
 }
 
+function normalizeMarkdownHeadingsInHtml(contentHtml: string): string {
+  return contentHtml.replace(
+    /<p\b([^>]*)>\s*(?:&quot;|")?\s*(#{2,4})\s+([^<]*?)(?:&quot;|")?\s*<\/p>/gi,
+    (_match, _attrs, markers: string, text: string) => {
+      const level = Math.min(4, Math.max(2, markers.length))
+      return `<h${level}>${text.trim()}</h${level}>`
+    }
+  )
+}
+
 function stripDuplicateLeadHeading(contentHtml: string, title?: string): string {
   if (!title) return contentHtml
 
@@ -114,6 +124,7 @@ export function normalizeBlogContentHtml(contentHtml: string, title?: string): s
   const trimmed = contentHtml.trim()
   if (!trimmed) return trimmed
 
-  const normalizedInlineMarkdown = normalizeInlineMarkdownInHtml(trimmed)
+  const normalizedMarkdownHeadings = normalizeMarkdownHeadingsInHtml(trimmed)
+  const normalizedInlineMarkdown = normalizeInlineMarkdownInHtml(normalizedMarkdownHeadings)
   return stripDuplicateLeadHeading(normalizedInlineMarkdown, title).trim()
 }

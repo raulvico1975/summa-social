@@ -16,13 +16,6 @@ function buildValidPayload() {
     category: 'Producte',
     coverImageUrl: 'https://example.com/cover.jpg',
     coverImageAlt: 'Portada del primer post',
-    publishedAt: '2026-03-19T10:00:00.000Z',
-  }
-}
-
-function buildLocalizedPayload() {
-  return {
-    ...buildValidPayload(),
     baseLocale: 'ca' as const,
     translations: {
       es: {
@@ -34,6 +27,13 @@ function buildLocalizedPayload() {
         coverImageAlt: 'Portada del primer post en castellano',
       },
     },
+    publishedAt: '2026-03-19T10:00:00.000Z',
+  }
+}
+
+function buildLocalizedPayload() {
+  return {
+    ...buildValidPayload(),
   }
 }
 
@@ -169,10 +169,12 @@ test('validateBlogPost accepts a valid payload', () => {
 
   assert.equal(result.ok, true)
   if (result.ok) {
+    assert.equal(result.value.baseLocale, 'ca')
     assert.equal(result.value.slug, 'primer-post')
     assert.deepEqual(result.value.tags, ['summa', 'blog'])
     assert.equal(result.value.coverImageAlt, 'Portada del primer post')
     assert.equal(result.value.publishedAt, '2026-03-19T10:00:00.000Z')
+    assert.equal(result.value.translations?.es?.title, 'Primer post en castellano')
   }
 })
 
@@ -184,6 +186,18 @@ test('validateBlogPost accepts an es translation payload', () => {
     assert.equal(result.value.baseLocale, 'ca')
     assert.equal(result.value.translations?.es?.title, 'Primer post en castellano')
     assert.equal(result.value.translations?.es?.contentHtml, '<p>Contenido HTML en castellano</p>')
+  }
+})
+
+test('validateBlogPost keeps ES translation optional for the external publish contract', () => {
+  const payload = buildValidPayload()
+  delete (payload as Partial<typeof payload>).translations
+
+  const result = validateBlogPost(payload)
+
+  assert.equal(result.ok, true)
+  if (result.ok) {
+    assert.equal(result.value.translations, undefined)
   }
 })
 
@@ -237,6 +251,7 @@ test('validateBlogPost omits cover fields when they are not provided', () => {
   const payload = buildValidPayload()
   delete (payload as Partial<typeof payload>).coverImageUrl
   delete (payload as Partial<typeof payload>).coverImageAlt
+  delete (payload.translations.es as Partial<typeof payload.translations.es>).coverImageAlt
 
   const result = validateBlogPost(payload)
 
@@ -256,6 +271,31 @@ test('validateBlogPost rejects coverImageAlt without coverImageUrl', () => {
   assert.equal(result.ok, false)
   if (!result.ok) {
     assert.ok(result.errors.includes('coverImageAlt requires coverImageUrl'))
+  }
+})
+
+test('validateBlogPost requires localized ES cover alt when a translated post has cover image', () => {
+  const payload = buildLocalizedPayload()
+  delete (payload.translations.es as Partial<typeof payload.translations.es>).coverImageAlt
+
+  const result = validateBlogPost(payload)
+
+  assert.equal(result.ok, false)
+  if (!result.ok) {
+    assert.ok(result.errors.includes('translations.es.coverImageAlt is required when coverImageUrl is present'))
+  }
+})
+
+test('validateBlogPost rejects obvious Catalan copy in ES editorial fields', () => {
+  const payload = buildLocalizedPayload()
+  payload.translations.es.coverImageAlt =
+    'Il·lustració editorial sobre devolucions de rebuts i control de quotes a una entitat'
+
+  const result = validateBlogPost(payload)
+
+  assert.equal(result.ok, false)
+  if (!result.ok) {
+    assert.ok(result.errors.includes('translations.es.coverImageAlt appears to be in the wrong locale'))
   }
 })
 
@@ -437,6 +477,7 @@ test('handleBlogPublish does not persist empty cover fields when omitted', async
   const payload = buildValidPayload()
   delete (payload as Partial<typeof payload>).coverImageUrl
   delete (payload as Partial<typeof payload>).coverImageAlt
+  delete (payload.translations.es as Partial<typeof payload.translations.es>).coverImageAlt
 
   const response = await withFirestorePublishMode(async () =>
     handleBlogPublish(

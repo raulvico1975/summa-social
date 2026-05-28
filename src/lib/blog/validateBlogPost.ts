@@ -1,4 +1,5 @@
 import type { BlogPost } from '@/lib/blog/types'
+import { validateBlogPostEditorialQuality } from '@/lib/blog/editorialQuality'
 import { normalizeBlogContentHtml } from '@/lib/blog/normalizeContentHtml'
 
 export type BlogPostPublishInput = Omit<BlogPost, 'id' | 'createdAt' | 'updatedAt'>
@@ -88,12 +89,12 @@ function normalizeOptionalCoverImageAlt(
 function normalizeBaseLocale(
   value: unknown,
   errors: string[]
-): 'ca' | undefined {
-  if (value === undefined) return undefined
+): 'ca' {
+  if (value === undefined) return 'ca'
 
   if (value !== 'ca') {
     errors.push('baseLocale must be "ca"')
-    return undefined
+    return 'ca'
   }
 
   return 'ca'
@@ -181,6 +182,8 @@ function normalizeTranslations(
   if (unsupportedKeys.length > 0) {
     errors.push(`translations only supports: es`)
   }
+
+  if (value.es === undefined) return undefined
 
   const es = normalizeEsTranslation(value.es, coverImageUrl, errors)
   if (!es) return undefined
@@ -281,10 +284,6 @@ export function validateBlogPost(payload: unknown): BlogPostValidationResult {
     errors.push('coverImageAlt requires coverImageUrl')
   }
 
-  if (errors.length > 0) {
-    return { ok: false, errors }
-  }
-
   const value: BlogPostPublishInput = {
     title,
     slug,
@@ -297,9 +296,7 @@ export function validateBlogPost(payload: unknown): BlogPostValidationResult {
     publishedAt,
   }
 
-  if (baseLocale !== undefined) {
-    value.baseLocale = baseLocale
-  }
+  value.baseLocale = baseLocale
 
   if (coverImageUrl !== undefined) {
     value.coverImageUrl = coverImageUrl
@@ -311,6 +308,14 @@ export function validateBlogPost(payload: unknown): BlogPostValidationResult {
 
   if (translations) {
     value.translations = translations
+  }
+
+  if (errors.length === 0) {
+    errors.push(...validateBlogPostEditorialQuality(value))
+  }
+
+  if (errors.length > 0) {
+    return { ok: false, errors }
   }
 
   return {

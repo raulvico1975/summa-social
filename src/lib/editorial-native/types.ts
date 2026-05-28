@@ -29,6 +29,7 @@ export interface NativeBlogDraftTranslation {
   excerpt: string
   contentMarkdown: string
   contentHtml: string
+  coverImageAlt?: string | null
 }
 
 export interface NativeBlogDraft {
@@ -101,4 +102,3 @@ export interface NativeBlogGenerateInput {
   problem?: string | null
   objective?: string | null
 }
-

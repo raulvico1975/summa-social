@@ -37,3 +37,11 @@ test('normalizeBlogContentHtml does not alter markdown markers inside code block
     '<pre><code>**no tocar** *ni això*</code></pre><p>Però <strong>això sí</strong> i <em>això també</em>.</p>'
   )
 })
+
+test('normalizeBlogContentHtml upgrades paragraph-wrapped markdown headings', () => {
+  const html = '<p>"### 1. La conciliació contínua"</p><p>Cos amb **criteri**.</p>'
+
+  const result = normalizeBlogContentHtml(html, 'Model 182')
+
+  assert.equal(result, '<h3>1. La conciliació contínua</h3><p>Cos amb <strong>criteri</strong>.</p>')
+})
