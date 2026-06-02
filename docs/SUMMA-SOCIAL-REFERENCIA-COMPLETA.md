@@ -1613,6 +1613,7 @@ Quan l'usuari selecciona una periodicitat al Pas 1, el sistema pre-marca automà
 **Memòria d'execució (run memory):**
 
 - Camp `sepaPain008LastRunAt` al contacte: data de l'última execució pain.008 que va incloure aquest donant
+- Camp `sepaPain008LastRunId` al contacte: ID del document `sepaCollectionRuns` vigent que va incloure aquest donant
 - Import/export Excel: columna "Últim cobrament SEPA"
 - Permet identificar quins socis ja s'han cobrat recentment
 - Útil per evitar duplicitats en remeses parcials
@@ -1621,27 +1622,48 @@ Quan l'usuari selecciona una periodicitat al Pas 1, el sistema pre-marca automà
 
 Cada execució del wizard crea un document amb:
 - `type = SEPA_COLLECTION`
+- `status`: `exported | voided` (si falta, es tracta com `exported`)
 - `scheme`: CORE | B2B
 - `bankAccountId`, `collectionDate`, `createdAt`, `createdBy`, `exportedAt`
 - `messageId` i `sepaFile.storagePath|filename|messageId`
 - `itemCount`, `totalCents`
-- `included[]`: contactId, amountCents, UMR i seqüència
+- `included[]`: contactId, amountCents, UMR, seqüència i snapshot previ `previousSepaPain008LastRunAt|Id`
 - `excluded[]`: contactId i motiu d'exclusió
+- `correctedFromRunId`: només en una remesa nova que substitueix una anul·lada
+- `correctedByRunId`: només en la remesa anul·lada quan ja existeix la substituta
+- `voidedAt`, `voidedByUid`, `voidReason`, `voidRollback`: auditoria d'anul·lació
+
+**Anul·lar i regenerar:**
+
+- L'historial permet **Anul·lar i regenerar** una remesa pain.008 exportada però incorrecta
+- No s'esborra el run ni el XML de Storage: el run queda `status=voided` i el XML es mostra com **"No utilitzar"**
+- L'operació es fa via API/Admin SDK (`POST /api/sepa-collection-runs/{runId}/void`), no amb writes client-side
+- L'API restaura la memòria SEPA dels socis inclosos:
+  - si hi ha snapshot, restaura `previousSepaPain008LastRunAt|Id`
+  - si és legacy i el contacte apunta al mateix run o al mateix mes, restaura l'execució activa anterior o `null`
+  - si detecta una execució posterior activa, no toca el soci
+- Les escriptures es fan en batches de màxim 50 operacions
+- Després d'anul·lar, la UI canvia a **Nova remesa** i preomple només `bankAccountId` i `collectionDate` si existeixen al run
 
 **Historial d'XML generats:**
 
 - La mateixa ruta `Donants → Remeses de cobrament` incorpora una pestanya **Historial**
-- L'historial llegeix `sepaCollectionRuns`, mostra el resum de cada execució i permet **tornar a descarregar el XML** si el `storagePath` continua disponible
+- L'historial principal mostra només runs vigents (`status !== voided`)
+- Les anul·lades queden en una secció secundària plegada **Remeses anul·lades**, auditables i descarregables si el `storagePath` continua disponible
+- L'historial llegeix `sepaCollectionRuns`, mostra el resum de cada execució i permet **tornar a descarregar el XML**
+- Una remesa nova amb `correctedFromRunId` mostra **"Substitueix una remesa anul·lada"**
 - És un repositori intern de traçabilitat; no envia res al banc ni crea moviments comptables
 
 **Fitxers:**
 - `src/components/sepa-collection/SepaCollectionWizard.tsx` — Wizard principal
 - `src/components/sepa-collection/SepaCollectionRunsHistory.tsx` — Vista d'historial de remeses
 - `src/components/sepa-collection/SepaCollectionWorkspace.tsx` — Pestanyes Nova remesa / Historial
+- `src/app/api/sepa-collection-runs/[runId]/void/route.ts` — API d'anul·lació i restauració de memòria SEPA
 - `src/components/sepa-collection/StepConfig.tsx` — Pas configuració
 - `src/components/sepa-collection/StepSelection.tsx` — Pas selecció
 - `src/components/sepa-collection/StepReview.tsx` — Pas revisió
 - `src/lib/sepa/pain008/run-history.ts` — Resum i normalització de runs persistits
+- `src/lib/sepa/pain008/void-run.ts` — Regles pures de rollback en anul·lació
 - `src/lib/sepa/pain008/generate-pain008.ts` — Generador XML
 - `src/lib/sepa/pain008/donor-collection-status.ts` — Lògica isDueForCollection
 - `src/lib/sepa/pain008/sequence-type.ts` — Lògica SeqTp (FRST/RCUR/OOFF/FNAL)

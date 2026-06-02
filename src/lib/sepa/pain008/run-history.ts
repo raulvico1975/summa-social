@@ -5,6 +5,8 @@ import type {
   SepaScheme,
 } from '@/lib/data';
 
+export type SepaCollectionRunHistoryStatus = 'exported' | 'voided';
+
 type LegacySepaCollectionRunRecord = Partial<SepaCollectionRunRecord> & {
   id?: string;
   requestedCollectionDate?: string | null;
@@ -12,6 +14,7 @@ type LegacySepaCollectionRunRecord = Partial<SepaCollectionRunRecord> & {
 
 export interface SepaCollectionRunHistorySummary {
   id?: string;
+  status: SepaCollectionRunHistoryStatus;
   scheme: SepaScheme | null;
   bankAccountId: string | null;
   collectionDate: string | null;
@@ -24,6 +27,22 @@ export interface SepaCollectionRunHistorySummary {
   filename: string | null;
   storagePath: string | null;
   messageId: string | null;
+  voidedAt: string | null;
+  voidedByUid: string | null;
+  voidReason: string | null;
+  correctedFromRunId: string | null;
+  correctedByRunId: string | null;
+}
+
+export interface SplitSepaCollectionRunHistorySummaries {
+  active: SepaCollectionRunHistorySummary[];
+  voided: SepaCollectionRunHistorySummary[];
+}
+
+export function normalizeSepaCollectionRunStatus(
+  status: unknown
+): SepaCollectionRunHistoryStatus {
+  return status === 'voided' ? 'voided' : 'exported';
 }
 
 function asStringOrNull(value: unknown): string | null {
@@ -51,6 +70,7 @@ export function summarizeSepaCollectionRunRecord(
 
   return {
     id: run.id,
+    status: normalizeSepaCollectionRunStatus(run.status),
     scheme: run.scheme ?? null,
     bankAccountId: asStringOrNull(run.bankAccountId),
     collectionDate: asStringOrNull(run.collectionDate) ?? asStringOrNull(run.requestedCollectionDate),
@@ -63,5 +83,19 @@ export function summarizeSepaCollectionRunRecord(
     filename: asStringOrNull(run.sepaFile?.filename),
     storagePath: asStringOrNull(run.sepaFile?.storagePath),
     messageId: asStringOrNull(run.sepaFile?.messageId) ?? asStringOrNull(run.messageId),
+    voidedAt: asStringOrNull(run.voidedAt),
+    voidedByUid: asStringOrNull(run.voidedByUid),
+    voidReason: asStringOrNull(run.voidReason),
+    correctedFromRunId: asStringOrNull(run.correctedFromRunId),
+    correctedByRunId: asStringOrNull(run.correctedByRunId),
+  };
+}
+
+export function splitSepaCollectionRunHistorySummaries(
+  runs: SepaCollectionRunHistorySummary[]
+): SplitSepaCollectionRunHistorySummaries {
+  return {
+    active: runs.filter((run) => run.status !== 'voided'),
+    voided: runs.filter((run) => run.status === 'voided'),
   };
 }

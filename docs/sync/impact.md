@@ -1,8 +1,8 @@
 # Impacte funcional i sincronitzacio documental
 
 ## Metadata
-- date: 2026-05-28
-- change_scope: integracio privada per pujar documents pendents ja confirmats des de Summa Agent
+- date: 2026-06-02
+- change_scope: anul-lar i regenerar remeses SEPA pain.008 de cobrament
 
 ## Declaracio obligatoria
 - help_topics_updated: []
@@ -10,29 +10,33 @@
 - manual_sections: []
 - faq_updated: no
 - faq_questions: []
-- justification_if_no_change: "Canvi privat d'integracio administrativa; no altera pantalles ni instruccions d'usuari final."
+- justification_if_no_change: "El canvi actualitza la pantalla operativa i la referencia completa interna, pero no modifica el manual d'usuari canonica docs/manual-usuari-summa-social.md ni la FAQ publica. La UI incorpora els textos necessaris i docs/QA-FISCAL.md afegeix el checklist VF-17."
 
 ## Notes
 
-Què ha canviat
+Que ha canviat
 
-- La ruta privada `pending-documents/upload` continua creant `draft` per defecte.
-- La mateixa ruta pot crear un `pendingDocument` en estat `confirmed` quan un agent privat envia `status=confirmed` i tots els camps obligatoris de Summa Social.
-- El document confirmat queda preparat per al flux existent de conciliacio amb extractes bancaris; no vincula cap moviment per si sol.
+- L'historial de `Donants -> Remeses de cobrament` separa XML vigents i XML anul-lats.
+- Un run pain.008 vigent es pot marcar com anul-lat amb **Anul-lar i regenerar**.
+- L'anul-lacio restaura la memoria SEPA dels socis inclosos via API/Admin SDK i batches de maxim 50 operacions.
+- Les noves remeses generades des d'una anul-lada guarden `correctedFromRunId`; la remesa anul-lada pot guardar `correctedByRunId`.
+- Els elements `included[]` guarden snapshot previ de `sepaPain008LastRunAt|Id` per permetre rollback exacte en futures anul-lacions.
 
-Per què importa a l'usuari
+Per que importa a l'usuari
 
-- Permet que Summa Agent alimenti Summa Social amb factures ja validades sense duplicar el motor de conciliacio.
-- Summa Social conserva la seva logica: documents pendents confirmats, suggeriments quan entra l'extracte i conciliacio revisable.
-- No canvia imports, moviments, fiscalitat, remeses ni saldos.
+- Permet corregir una remesa de cobrament ja exportada abans d'usar-la, sense eliminar l'evidencia ni manipular Firestore a ma.
+- Evita que els socis mensuals quedin bloquejats artificialment quan cal regenerar el mateix mes excloent alguns socis.
+- Manté l'XML antic descarregable però clarament marcat com **No utilitzar**.
 
-Com ho notarà
+Com ho notara
 
-- La UI de Summa Social no canvia.
-- Els documents creats per una integracio privada poden aparèixer directament a la pestanya de pendents confirmats si arriben amb camps suficients.
-- Si falta algun camp obligatori, la API rebutja la creacio confirmada i manté el contracte existent.
+- A Historial veu el boto **Anul-lar i regenerar** en els XML vigents.
+- Les anul-lades passen a la seccio plegada **Remeses anul-lades**.
+- En anul-lar correctament, la UI torna a **Nova remesa** amb compte i data preomplerts si existien al run.
+- Una remesa substituta mostra **Substitueix una remesa anul-lada**.
 
-Ha de fer alguna acció?
+Ha de fer alguna accio?
 
-- No.
-- Cal que l'agent extern enviï `supplierId`, `categoryId`, `invoiceNumber`, `invoiceDate` i `amount` quan vulgui crear factures confirmades.
+- No hi ha migracio massiva.
+- Per al cas legacy de juny, el flux general d'anul-lacio restaura per mateix mes o execucio anterior si no hi havia snapshot.
+- Abans de produccio cal mantenir l'evidencia automatica i el checklist fiscal VF-17 documentat.

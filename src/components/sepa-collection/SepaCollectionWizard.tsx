@@ -10,6 +10,7 @@ import { collection, query, where, doc, addDoc, writeBatch, serverTimestamp, set
 import { ref, uploadString } from 'firebase/storage';
 import type { Donor, BankAccount, SepaCollectionRun, SepaCollectionRunRecord, SepaCollectionItem, SepaSequenceType } from '@/lib/data';
 import { generatePain008Xml, generateMessageId, validateCollectionRun, filterEligibleDonors, determineSequenceType, computeDonorCollectionStatus, type DonorCollectionStatus } from '@/lib/sepa/pain008';
+import { buildSepaCollectionCorrectionFields } from '@/lib/sepa/pain008/correction';
 import { ArrowLeft, ArrowRight, Download, AlertTriangle, CheckCircle2, XCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
@@ -23,7 +24,21 @@ type WizardStep = 'config' | 'selection' | 'review';
 
 const STEPS: WizardStep[] = ['config', 'selection', 'review'];
 
-export function SepaCollectionWizard() {
+export interface SepaCollectionRegenerationSeed {
+  runId: string;
+  bankAccountId: string | null;
+  collectionDate: string | null;
+}
+
+interface SepaCollectionWizardProps {
+  regenerationSeed?: SepaCollectionRegenerationSeed | null;
+  onRegenerationConsumed?: () => void;
+}
+
+export function SepaCollectionWizard({
+  regenerationSeed,
+  onRegenerationConsumed,
+}: SepaCollectionWizardProps) {
   const router = useRouter();
   const { firestore, auth, storage } = useFirebase();
   const { organizationId, organization, orgSlug } = useCurrentOrganization();
@@ -77,6 +92,17 @@ export function SepaCollectionWizard() {
 
   const [selectedDonorIds, setSelectedDonorIds] = React.useState<Set<string>>(new Set());
   const [hasUserEditedSelection, setHasUserEditedSelection] = React.useState(false);
+
+  React.useEffect(() => {
+    if (!regenerationSeed) return;
+    setConfigData({
+      bankAccountId: regenerationSeed.bankAccountId ?? '',
+      collectionDate: regenerationSeed.collectionDate ?? '',
+    });
+    setSelectedDonorIds(new Set());
+    setHasUserEditedSelection(false);
+    setCurrentStep('config');
+  }, [regenerationSeed]);
 
   // Compute collection status for each eligible donor (pure, memoized)
   const donorStatuses = React.useMemo(() => {
@@ -250,6 +276,7 @@ export function SepaCollectionWizard() {
         // Build run data for persistence (without items array for Firestore)
         const runForDb: SepaCollectionRunRecord = {
           type: 'SEPA_COLLECTION',
+          status: 'exported',
           scheme: 'CORE' as const,
           bankAccountId: configData.bankAccountId,
           collectionDate: configData.collectionDate,
@@ -269,14 +296,23 @@ export function SepaCollectionWizard() {
             amountCents: item.amountCents,
             umr: item.umr,
             sequenceType: item.sequenceType,
+            previousSepaPain008LastRunAt: selectedDonors.find(d => d.id === item.donorId)?.sepaPain008LastRunAt ?? null,
+            previousSepaPain008LastRunId: selectedDonors.find(d => d.id === item.donorId)?.sepaPain008LastRunId ?? null,
+            runId,
           })),
           excluded: excluded.map(ex => ({
             contactId: ex.donor.id,
             reason: ex.reason,
           })),
+          ...buildSepaCollectionCorrectionFields(regenerationSeed?.runId),
         };
 
         await setDoc(runRef, runForDb);
+
+        if (regenerationSeed?.runId) {
+          const previousRunRef = doc(runsCollection, regenerationSeed.runId);
+          await setDoc(previousRunRef, { correctedByRunId: runId }, { merge: true });
+        }
 
         // ═══════════════════════════════════════════════════════════════════════════
         // CREAR REGISTRE OPERATIU sepaPain008Runs (memòria de runs)
@@ -306,8 +342,7 @@ export function SepaCollectionWizard() {
           filtersSnapshot: null, // No tenim accés als filtres aquí, es podria afegir si cal
         };
 
-        const pain008RunRef = await addDoc(pain008RunsCollection, pain008RunData);
-        const pain008RunId = pain008RunRef.id;
+        await addDoc(pain008RunsCollection, pain008RunData);
 
         // ═══════════════════════════════════════════════════════════════════════════
         // ACTUALITZAR DONANTS AMB TRACKING (batches de 50)
@@ -323,7 +358,7 @@ export function SepaCollectionWizard() {
             const donorRef = doc(contactsCollection!, donorId);
             batch.update(donorRef, {
               sepaPain008LastRunAt: configData.collectionDate,
-              sepaPain008LastRunId: pain008RunId,
+              sepaPain008LastRunId: runId,
             });
           }
 
@@ -356,6 +391,7 @@ export function SepaCollectionWizard() {
 
       // Navigate back to donors
       router.push(`/${orgSlug}/dashboard/donants`);
+      onRegenerationConsumed?.();
 
     } catch (error) {
       console.error('Error exporting SEPA:', error);
