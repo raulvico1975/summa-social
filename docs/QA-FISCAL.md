@@ -610,6 +610,11 @@ Canvi funcional en `Remeses SEPA pain.008`: possibilitat d'anul·lar una execuci
 - [ ] Els comptadors SEPA dels socis queden coherents.
 - [ ] No hi ha impacte fiscal directe.
 
+**Hotfix legacy 2026-06-02:**
+- [x] El rollback també restaura contactes quan `sepaPain008LastRunId` apunta a `sepaPain008Runs/{legacyId}` i aquest registre té `collectionRunId` igual al document `sepaCollectionRuns` anul·lat.
+- [x] La cerca del run anterior ignora remeses amb `status === 'voided'`.
+- [x] La reparació puntual de la remesa real queda preparada en `dry-run`, però no s'executa sense autorització explícita de Raül.
+
 ---
 
 ## 3. Resultat de la sessió
@@ -620,6 +625,7 @@ Canvi funcional en `Remeses SEPA pain.008`: possibilitat d'anul·lar una execuci
 | 2026-03-19 | Codex | - | - | - | - | - | - | - | - | - | - | - | - | - | - | - | - | - | Integracio `main -> prod` per Stripe fiscal/UI sense canvis funcionals nous. En aquesta sessio s'han executat `scripts/verify-local.sh`, `scripts/verify-ci.sh`, `npm run typecheck` i `npm test` a `deploy/main-to-prod-stripe-20260319`. No s'han marcat PASS manuals del checklist fiscal perque no s'han executat proves manuals VF. |
 | 2026-03-27 | Codex | - | - | - | - | - | - | - | - | - | - | - | - | - | - | - | - | - | Ajust tecnic d'exportacio a `donations-report-generator` per normalitzar el buffer binari que es passa a `Blob`, sense tocar calcul fiscal ni criteri de dades. Evidencia automatica executada al branch net `codex/blog-bilingual-locale`: `npm run typecheck`, tests de blog bilingue i `scripts/verify-local.sh` OK. No s'han marcat PASS manuals del checklist fiscal perque no hi ha canvi funcional de flux fiscal. |
 | 2026-03-29 | Codex | - | - | - | - | - | - | - | - | - | - | - | - | - | - | - | - | - | Retoc visual del modal d'exclosos del Model 182 i blindatge del `Dialog`/`AlertDialog` per evitar overflow horitzontal i CTA fora de vista. Evidencia manual: captura i comprovacio real del modal a 860, 720, 640 i 390 px sense scroll horitzontal (`bodyScrollWidth == viewportWidth`), amb CTA visibles i text embolcallat correctament. Evidencia automatica: `npm run typecheck` i `npm run build` OK al worktree net de publicacio. |
+| 2026-06-02 | Codex | - | - | - | - | - | - | - | - | - | - | - | - | - | - | - | - | - | Hotfix SEPA pain.008 per rollback legacy quan `sepaPain008LastRunId` apunta a `sepaPain008Runs` i no directament a `sepaCollectionRuns`. Evidencia automatica executada: `npm run typecheck`, `npm test`, `npm run i18n:check`, `npm run i18n:check-tr-keys`, `scripts/verify-local.sh` i `scripts/verify-ci.sh` OK. Dry-run reparacio real: 209 inclosos, 209 restaurables, 205 cap a run anterior, 4 a null, 0 aplicats. Reparacio real no executada. |
 | YYYY-MM-DD | Nom | - | - | - | - | - | - | - | - | - | - | - | - | - | - | - | - | - | |
 
 ---
