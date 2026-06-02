@@ -458,7 +458,7 @@ export type Donor = Contact & {
   sepaPain008LastRunAt?: string | null;
 
   /**
-   * ID del document sepaPain008Runs que va incloure aquest donant
+   * ID del document sepaCollectionRuns que va incloure aquest donant
    */
   sepaPain008LastRunId?: string | null;
 };
@@ -930,6 +930,9 @@ export interface SepaCollectionRunRecordIncludedItem {
   amountCents: number;
   umr: string;
   sequenceType: SepaSequenceType;
+  previousSepaPain008LastRunAt?: string | null;
+  previousSepaPain008LastRunId?: string | null;
+  runId?: string | null;
 }
 
 export interface SepaCollectionRunRecordExcludedItem {
@@ -939,6 +942,7 @@ export interface SepaCollectionRunRecordExcludedItem {
 
 export interface SepaCollectionRunRecord {
   type: 'SEPA_COLLECTION';
+  status?: 'exported' | 'voided';
   scheme: SepaScheme;
   bankAccountId: string;
   collectionDate: string;                  // YYYY-MM-DD
@@ -955,6 +959,17 @@ export interface SepaCollectionRunRecord {
   totalCents?: number | null;
   included?: SepaCollectionRunRecordIncludedItem[] | null;
   excluded?: SepaCollectionRunRecordExcludedItem[] | null;
+  voidedAt?: string | null;
+  voidedByUid?: string | null;
+  voidReason?: string | null;
+  correctedFromRunId?: string | null;
+  correctedByRunId?: string | null;
+  voidRollback?: {
+    restoredCount: number;
+    skippedCount: number;
+    includedCount: number;
+    completedAt: string;
+  } | null;
 }
 
 /**

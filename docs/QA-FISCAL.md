@@ -586,15 +586,41 @@ Hi ha remeses de devolucions legacy on el pare té `isRemittance=true` però no 
 
 ---
 
+### VF-17 Anul·lar i regenerar remesa SEPA pain.008
+
+**Context:**
+Canvi funcional en `Remeses SEPA pain.008`: possibilitat d'anul·lar una execució XML generada i regenerar-la, restaurant la memòria de cobrament dels socis inclosos. No crea moviments bancaris, no toca donacions fiscals, no modifica Model 182 ni certificats.
+
+**Proves manuals mínimes:**
+1. Crear una remesa pain.008 demo amb 3 socis mensuals.
+2. Verificar que els 3 socis queden amb `sepaPain008LastRunAt` informat.
+3. Anar a Historial i executar **Anul·lar i regenerar**.
+4. Verificar que el run antic queda a **Remeses anul·lades** i no al llistat principal.
+5. Verificar que els socis tornen a estar disponibles per generar remesa del mateix mes.
+6. Generar una nova remesa excloent 1 soci.
+7. Verificar que la nova remesa queda com a vigent.
+8. Verificar que la nova mostra “Substitueix una remesa anul·lada”.
+9. Verificar que l'XML antic encara es pot descarregar, però surt clarament com “No utilitzar”.
+10. Verificar que no s'ha creat cap moviment ni donació fiscal.
+
+**Resultat esperat:**
+- [ ] La remesa anul·lada queda auditada.
+- [ ] La nova remesa és la vigent.
+- [ ] L'usuari no veu dues remeses de juny al mateix nivell.
+- [ ] Els comptadors SEPA dels socis queden coherents.
+- [ ] No hi ha impacte fiscal directe.
+
+---
+
 ## 3. Resultat de la sessió
 
-| Data | Executor | VF-1 | VF-2 | VF-3 | VF-4 | VF-5 | VF-6 | VF-7 | VF-8 | VF-9 | VF-10 | VF-11 | VF-12 | VF-13 | VF-14 | VF-15 | Notes |
-|------|----------|------|------|------|------|------|------|------|------|------|-------|-------|-------|-------|-------|-------|-------|
-| 2026-03-02 | Codex | - | - | PASS | PASS | - | - | - | - | - | - | - | - | - | - | - | Hotfix devolucions febrer 2026 validat: net donant i Model 182 alineats (returns + donationStatus=returned), tests fiscals ampliats, `scripts/verify-local.sh` i `scripts/verify-ci.sh` OK. |
-| 2026-03-19 | Codex | - | - | - | - | - | - | - | - | - | - | - | - | - | - | - | Integracio `main -> prod` per Stripe fiscal/UI sense canvis funcionals nous. En aquesta sessio s'han executat `scripts/verify-local.sh`, `scripts/verify-ci.sh`, `npm run typecheck` i `npm test` a `deploy/main-to-prod-stripe-20260319`. No s'han marcat PASS manuals del checklist fiscal perque no s'han executat proves manuals VF. |
-| 2026-03-27 | Codex | - | - | - | - | - | - | - | - | - | - | - | - | - | - | - | Ajust tecnic d'exportacio a `donations-report-generator` per normalitzar el buffer binari que es passa a `Blob`, sense tocar calcul fiscal ni criteri de dades. Evidencia automatica executada al branch net `codex/blog-bilingual-locale`: `npm run typecheck`, tests de blog bilingue i `scripts/verify-local.sh` OK. No s'han marcat PASS manuals del checklist fiscal perque no hi ha canvi funcional de flux fiscal. |
-| 2026-03-29 | Codex | - | - | - | - | - | - | - | - | - | - | - | - | - | - | - | Retoc visual del modal d'exclosos del Model 182 i blindatge del `Dialog`/`AlertDialog` per evitar overflow horitzontal i CTA fora de vista. Evidencia manual: captura i comprovacio real del modal a 860, 720, 640 i 390 px sense scroll horitzontal (`bodyScrollWidth == viewportWidth`), amb CTA visibles i text embolcallat correctament. Evidencia automatica: `npm run typecheck` i `npm run build` OK al worktree net de publicacio. |
-| YYYY-MM-DD | Nom | - | - | - | - | - | - | - | - | - | - | - | - | - | - | - | |
+| Data | Executor | VF-1 | VF-2 | VF-3 | VF-4 | VF-5 | VF-6 | VF-7 | VF-8 | VF-9 | VF-10 | VF-11 | VF-12 | VF-13 | VF-14 | VF-15 | VF-16 | VF-17 | Notes |
+|------|----------|------|------|------|------|------|------|------|------|------|-------|-------|-------|-------|-------|-------|-------|-------|-------|
+| 2026-03-02 | Codex | - | - | PASS | PASS | - | - | - | - | - | - | - | - | - | - | - | - | - | Hotfix devolucions febrer 2026 validat: net donant i Model 182 alineats (returns + donationStatus=returned), tests fiscals ampliats, `scripts/verify-local.sh` i `scripts/verify-ci.sh` OK. |
+| 2026-03-19 | Codex | - | - | - | - | - | - | - | - | - | - | - | - | - | - | - | - | - | Integracio `main -> prod` per Stripe fiscal/UI sense canvis funcionals nous. En aquesta sessio s'han executat `scripts/verify-local.sh`, `scripts/verify-ci.sh`, `npm run typecheck` i `npm test` a `deploy/main-to-prod-stripe-20260319`. No s'han marcat PASS manuals del checklist fiscal perque no s'han executat proves manuals VF. |
+| 2026-03-27 | Codex | - | - | - | - | - | - | - | - | - | - | - | - | - | - | - | - | - | Ajust tecnic d'exportacio a `donations-report-generator` per normalitzar el buffer binari que es passa a `Blob`, sense tocar calcul fiscal ni criteri de dades. Evidencia automatica executada al branch net `codex/blog-bilingual-locale`: `npm run typecheck`, tests de blog bilingue i `scripts/verify-local.sh` OK. No s'han marcat PASS manuals del checklist fiscal perque no hi ha canvi funcional de flux fiscal. |
+| 2026-03-29 | Codex | - | - | - | - | - | - | - | - | - | - | - | - | - | - | - | - | - | Retoc visual del modal d'exclosos del Model 182 i blindatge del `Dialog`/`AlertDialog` per evitar overflow horitzontal i CTA fora de vista. Evidencia manual: captura i comprovacio real del modal a 860, 720, 640 i 390 px sense scroll horitzontal (`bodyScrollWidth == viewportWidth`), amb CTA visibles i text embolcallat correctament. Evidencia automatica: `npm run typecheck` i `npm run build` OK al worktree net de publicacio. |
+| YYYY-MM-DD | Nom | - | - | - | - | - | - | - | - | - | - | - | - | - | - | - | - | - | |
 
 ---
 

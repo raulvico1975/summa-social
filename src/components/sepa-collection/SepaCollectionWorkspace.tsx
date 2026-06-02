@@ -4,7 +4,7 @@ import * as React from 'react';
 import { Clock3, PlusCircle } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useTranslations } from '@/i18n';
-import { SepaCollectionWizard } from './SepaCollectionWizard';
+import { SepaCollectionWizard, type SepaCollectionRegenerationSeed } from './SepaCollectionWizard';
 import { SepaCollectionRunsHistory } from './SepaCollectionRunsHistory';
 
 type SepaCollectionView = 'create' | 'history';
@@ -12,6 +12,12 @@ type SepaCollectionView = 'create' | 'history';
 export function SepaCollectionWorkspace() {
   const { t, tr } = useTranslations();
   const [view, setView] = React.useState<SepaCollectionView>('create');
+  const [regenerationSeed, setRegenerationSeed] = React.useState<SepaCollectionRegenerationSeed | null>(null);
+
+  const handleRegenerate = React.useCallback((seed: SepaCollectionRegenerationSeed) => {
+    setRegenerationSeed(seed);
+    setView('create');
+  }, []);
 
   return (
     <Tabs value={view} onValueChange={(value) => setView(value as SepaCollectionView)} className="w-full space-y-4 lg:space-y-5">
@@ -41,11 +47,14 @@ export function SepaCollectionWorkspace() {
 
       <div className="w-full">
         <TabsContent value="create" forceMount className={view === 'create' ? 'mt-0' : 'hidden'}>
-          <SepaCollectionWizard />
+          <SepaCollectionWizard
+            regenerationSeed={regenerationSeed}
+            onRegenerationConsumed={() => setRegenerationSeed(null)}
+          />
         </TabsContent>
 
         <TabsContent value="history" forceMount className={view === 'history' ? 'mt-0' : 'hidden'}>
-          <SepaCollectionRunsHistory />
+          <SepaCollectionRunsHistory onRegenerate={handleRegenerate} />
         </TabsContent>
       </div>
     </Tabs>

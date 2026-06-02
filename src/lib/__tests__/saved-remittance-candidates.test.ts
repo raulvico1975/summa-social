@@ -13,6 +13,7 @@ function makeRun(
   const hasFilename = Object.prototype.hasOwnProperty.call(overrides, 'filename');
   return {
     id: overrides.id,
+    status: overrides.status ?? 'exported',
     scheme: 'CORE',
     bankAccountId: overrides.bankAccountId ?? 'bank-1',
     collectionDate: overrides.collectionDate ?? '2026-04-20',
@@ -25,6 +26,11 @@ function makeRun(
     filename: hasFilename ? overrides.filename ?? null : 'remesa.xml',
     storagePath: hasStoragePath ? overrides.storagePath ?? null : `organizations/org-1/sepaCollectionRuns/${overrides.id}/remesa.xml`,
     messageId: overrides.messageId ?? `MSG-${overrides.id}`,
+    voidedAt: overrides.voidedAt ?? null,
+    voidedByUid: overrides.voidedByUid ?? null,
+    voidReason: overrides.voidReason ?? null,
+    correctedFromRunId: overrides.correctedFromRunId ?? null,
+    correctedByRunId: overrides.correctedByRunId ?? null,
   };
 }
 
