@@ -8,6 +8,7 @@ import {
   type SepaCollectionRunHistorySummary,
 } from '../../src/lib/sepa/pain008/run-history';
 import {
+  belongsToVoidedCollectionRun,
   decideDonorVoidRollback,
   findPreviousActiveSepaRunForContact,
   hasLaterActiveSepaRunForContact,
@@ -53,6 +54,91 @@ describe('normalizeSepaCollectionRunStatus', () => {
 });
 
 describe('void run donor rollback', () => {
+  it('contacte amb sepaPain008LastRunId = runId restaura cap a anterior', () => {
+    const decision = decideDonorVoidRollback({
+      runId: 'run-jun',
+      runCollectionDate: '2026-06-01',
+      includedItem: { contactId: 'donor-1', amountCents: 1000, umr: 'UMR-1', sequenceType: 'RCUR' },
+      contact: {
+        id: 'donor-1',
+        sepaPain008LastRunAt: '2026-06-01',
+        sepaPain008LastRunId: 'run-jun',
+      },
+      previousRun: { id: 'run-may', collectionDate: '2026-05-05' },
+      hasLaterActiveRun: false,
+    });
+
+    assert.deepEqual(decision, {
+      action: 'restore',
+      sepaPain008LastRunAt: '2026-05-05',
+      sepaPain008LastRunId: 'run-may',
+      reason: 'current-run',
+    });
+  });
+
+  it('contacte amb sepaPain008Runs legacy que apunta al run anul·lat restaura', () => {
+    const belongs = belongsToVoidedCollectionRun({
+      contact: {
+        id: 'donor-1',
+        sepaPain008LastRunAt: '2026-06-01',
+        sepaPain008LastRunId: 'legacy-pain008-run',
+      },
+      collectionRun: { id: 'run-jun', collectionDate: '2026-06-01' },
+      includedContactIds: ['donor-1'],
+      legacyCollectionRunId: 'run-jun',
+    });
+    const decision = decideDonorVoidRollback({
+      runId: 'run-jun',
+      runCollectionDate: '2026-06-01',
+      includedItem: { contactId: 'donor-1', amountCents: 1000, umr: 'UMR-1', sequenceType: 'RCUR' },
+      contact: {
+        id: 'donor-1',
+        sepaPain008LastRunAt: '2026-06-01',
+        sepaPain008LastRunId: 'legacy-pain008-run',
+      },
+      previousRun: null,
+      hasLaterActiveRun: false,
+      belongsToVoidedCollectionRun: belongs,
+    });
+
+    assert.equal(belongs, true);
+    assert.deepEqual(decision, {
+      action: 'restore',
+      sepaPain008LastRunAt: null,
+      sepaPain008LastRunId: null,
+      reason: 'belongs-to-voided-run',
+    });
+  });
+
+  it('contacte amb id legacy no resolt no restaura només per coincidir en el mes', () => {
+    const belongs = belongsToVoidedCollectionRun({
+      contact: {
+        id: 'donor-1',
+        sepaPain008LastRunAt: '2026-06-15',
+        sepaPain008LastRunId: 'legacy-unknown',
+      },
+      collectionRun: { id: 'run-jun', collectionDate: '2026-06-01' },
+      includedContactIds: ['donor-1'],
+      legacyCollectionRunId: null,
+    });
+    const decision = decideDonorVoidRollback({
+      runId: 'run-jun',
+      runCollectionDate: '2026-06-01',
+      includedItem: { contactId: 'donor-1', amountCents: 1000, umr: 'UMR-1', sequenceType: 'RCUR' },
+      contact: {
+        id: 'donor-1',
+        sepaPain008LastRunAt: '2026-06-15',
+        sepaPain008LastRunId: 'legacy-unknown',
+      },
+      previousRun: { id: 'run-may', collectionDate: '2026-05-05' },
+      hasLaterActiveRun: false,
+      belongsToVoidedCollectionRun: belongs,
+    });
+
+    assert.equal(belongs, false);
+    assert.deepEqual(decision, { action: 'skip', reason: 'not-current-run' });
+  });
+
   it('restaura snapshot previ si existeix', () => {
     const decision = decideDonorVoidRollback({
       runId: 'run-jun',
@@ -152,6 +238,36 @@ describe('void run donor rollback', () => {
 
     assert.equal(hasLater, true);
     assert.deepEqual(decision, { action: 'skip', reason: 'later-active-run' });
+  });
+
+  it('ignora runs voided quan busca execució anterior activa', () => {
+    const runs: VoidRunCandidate[] = [
+      {
+        id: 'run-apr',
+        status: 'exported',
+        collectionDate: '2026-04-05',
+        included: [{ contactId: 'donor-1', amountCents: 1000, umr: 'UMR-1', sequenceType: 'RCUR' }],
+      },
+      {
+        id: 'run-may-voided',
+        status: 'voided',
+        collectionDate: '2026-05-05',
+        included: [{ contactId: 'donor-1', amountCents: 1000, umr: 'UMR-1', sequenceType: 'RCUR' }],
+      },
+      {
+        id: 'run-jun',
+        status: 'exported',
+        collectionDate: '2026-06-01',
+        included: [{ contactId: 'donor-1', amountCents: 1000, umr: 'UMR-1', sequenceType: 'RCUR' }],
+      },
+    ];
+
+    const previousRun = findPreviousActiveSepaRunForContact(runs, 'donor-1', 'run-jun', '2026-06-01');
+
+    assert.deepEqual(previousRun, {
+      id: 'run-apr',
+      collectionDate: '2026-04-05',
+    });
   });
 });
 
