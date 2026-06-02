@@ -1,0 +1,5 @@
+Hola [Nombre], he visto que en [Entidad] [referencia real verificada].
+
+Te queria preguntar algo muy concreto: [pregunta sobre banco, cuotas, donantes, justificaciones, certificados o remesas].
+
+Estoy hablando con varias entidades pequenas sobre como resuelven esa parte.

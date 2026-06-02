@@ -1,0 +1,24 @@
+[
+  {
+    "id": "lead-exemple-001",
+    "entitat": "Associacio Exemple",
+    "web": "https://exemple.org",
+    "persona_contacte": "Maria Administracio",
+    "rol": "gestio",
+    "canal": "",
+    "prioritat": "alta",
+    "estat": "revisat",
+    "fets_verificats": "Memoria 2025 publicada. Projectes de cooperacio i subvencions publiques visibles.",
+    "hipotesi_comercial": "Podria tenir feina recurrent de justificacio economica per projecte.",
+    "risc": "",
+    "angle": "Preguntar com porten el seguiment economic de projectes subvencionats.",
+    "missatge_proposat": "",
+    "data_ultim_contacte": "",
+    "proper_pas": "Preparar pregunta d'obertura basada en memoria 2025.",
+    "notes": "",
+    "pla_probable": "",
+    "motiu_pla_probable": "",
+    "dolor_probable": "Justificacio de subvencions",
+    "pregunta_obertura": "Com porteu ara el seguiment economic de cada projecte subvencionat?"
+  }
+]

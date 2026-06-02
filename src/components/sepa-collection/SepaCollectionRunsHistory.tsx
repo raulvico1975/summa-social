@@ -5,11 +5,13 @@ import { collection, limit, orderBy, query, where } from 'firebase/firestore';
 import { getDownloadURL, ref } from 'firebase/storage';
 import {
   AlertTriangle,
+  Ban,
   CalendarDays,
   ChevronDown,
   Download,
   FolderArchive,
   RefreshCw,
+  RotateCcw,
   Search,
   Users,
 } from 'lucide-react';
@@ -19,6 +21,16 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { useTranslations } from '@/i18n';
 import { useToast } from '@/hooks/use-toast';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
@@ -29,7 +41,12 @@ import type {
   SepaCollectionRunRecord,
   SepaCollectionRunRecordIncludedItem,
 } from '@/lib/data';
-import { summarizeSepaCollectionRunRecord } from '@/lib/sepa/pain008/run-history';
+import {
+  summarizeSepaCollectionRunRecord,
+  splitSepaCollectionRunHistorySummaries,
+  type SepaCollectionRunHistorySummary,
+} from '@/lib/sepa/pain008/run-history';
+import type { SepaCollectionRegenerationSeed } from './SepaCollectionWizard';
 
 function formatCurrency(cents: number) {
   return new Intl.NumberFormat('ca-ES', {
@@ -208,12 +225,18 @@ function RunIncludedDetails({
   );
 }
 
-export function SepaCollectionRunsHistory() {
-  const { firestore, storage } = useFirebase();
+interface SepaCollectionRunsHistoryProps {
+  onRegenerate?: (seed: SepaCollectionRegenerationSeed) => void;
+}
+
+export function SepaCollectionRunsHistory({ onRegenerate }: SepaCollectionRunsHistoryProps) {
+  const { firestore, storage, auth } = useFirebase();
   const { organizationId } = useCurrentOrganization();
   const { toast } = useToast();
   const { tr } = useTranslations();
   const [downloadingRunId, setDownloadingRunId] = React.useState<string | null>(null);
+  const [voidingRun, setVoidingRun] = React.useState<SepaCollectionRunHistorySummary | null>(null);
+  const [isVoiding, setIsVoiding] = React.useState(false);
 
   const bankAccountsCollection = useMemoFirebase(
     () => organizationId ? collection(firestore, 'organizations', organizationId, 'bankAccounts') : null,
@@ -257,11 +280,19 @@ export function SepaCollectionRunsHistory() {
     return (runs ?? []).map((run) => summarizeSepaCollectionRunRecord(run));
   }, [runs]);
 
-  const totalRunAmount = React.useMemo(() => {
-    return summaries.reduce((sum, run) => sum + run.totalCents, 0);
+  const activeSummaries = React.useMemo(() => {
+    return splitSepaCollectionRunHistorySummaries(summaries).active;
   }, [summaries]);
 
-  const lastExportedAt = summaries[0]?.exportedAt ?? summaries[0]?.createdAt ?? null;
+  const voidedSummaries = React.useMemo(() => {
+    return splitSepaCollectionRunHistorySummaries(summaries).voided;
+  }, [summaries]);
+
+  const totalRunAmount = React.useMemo(() => {
+    return activeSummaries.reduce((sum, run) => sum + run.totalCents, 0);
+  }, [activeSummaries]);
+
+  const lastExportedAt = activeSummaries[0]?.exportedAt ?? activeSummaries[0]?.createdAt ?? null;
 
   const handleDownload = React.useCallback(async (runId: string, storagePath: string | null, filename: string | null) => {
     if (!storagePath) return;
@@ -287,6 +318,188 @@ export function SepaCollectionRunsHistory() {
       setDownloadingRunId(null);
     }
   }, [storage, toast, tr]);
+
+  const handleVoidAndRegenerate = React.useCallback(async () => {
+    if (!voidingRun?.id || !organizationId || !auth.currentUser) return;
+
+    setIsVoiding(true);
+    try {
+      const idToken = await auth.currentUser.getIdToken();
+      const response = await fetch(`/api/sepa-collection-runs/${voidingRun.id}/void`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${idToken}`,
+        },
+        body: JSON.stringify({
+          orgId: organizationId,
+          reason: tr('sepaPain008.history.void.defaultReason', 'Anul·lació per regeneració'),
+        }),
+      });
+      const payload = await response.json().catch(() => null);
+      if (!response.ok || !payload?.success) {
+        throw new Error(payload?.code || payload?.error || 'VOID_FAILED');
+      }
+
+      toast({
+        title: tr('sepaPain008.history.void.successTitle', 'Remesa anul·lada'),
+        description: tr(
+          'sepaPain008.history.void.successDescription',
+          'Els socis inclosos tornen a estar disponibles per generar una remesa corregida.'
+        ),
+      });
+
+      onRegenerate?.({
+        runId: voidingRun.id,
+        bankAccountId: voidingRun.bankAccountId,
+        collectionDate: voidingRun.collectionDate,
+      });
+      setVoidingRun(null);
+    } catch (voidError) {
+      console.error('SEPA_COLLECTION_VOID_FAILED', voidError);
+      toast({
+        variant: 'destructive',
+        title: tr('sepaPain008.history.void.errorTitle', 'No s’ha pogut anul·lar la remesa'),
+        description: tr('sepaPain008.history.void.errorDescription', 'Revisa l’error i torna-ho a provar.'),
+      });
+    } finally {
+      setIsVoiding(false);
+    }
+  }, [auth, onRegenerate, organizationId, toast, tr, voidingRun]);
+
+  const renderRunCard = React.useCallback((run: SepaCollectionRunHistorySummary) => {
+    const accountName = run.bankAccountId ? bankAccountsById.get(run.bankAccountId)?.name : null;
+    const isDownloading = downloadingRunId === run.id;
+    const rawRun = run.id ? runsById.get(run.id) : null;
+    const includedItems = rawRun?.included ?? [];
+    const isVoided = run.status === 'voided';
+
+    return (
+      <section key={run.id} className="rounded-2xl border bg-card p-4 shadow-sm sm:p-5">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div className="min-w-0 space-y-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge variant={isVoided ? 'destructive' : 'secondary'}>
+                {isVoided
+                  ? tr('sepaPain008.history.status.voided', 'XML anul·lat · No utilitzar')
+                  : tr('sepaPain008.history.status.active', 'XML vigent')}
+              </Badge>
+              <Badge variant="secondary">
+                {run.collectionDate
+                  ? tr('sepaPain008.history.collectionDateBadge', 'Cobrament {date}')
+                      .replace('{date}', formatShortDate(run.collectionDate))
+                  : tr('sepaPain008.history.noCollectionDate', 'Sense data de cobrament')}
+              </Badge>
+              <Badge variant="outline">{run.scheme ?? 'CORE'}</Badge>
+              {accountName && (
+                <Badge variant="outline">{accountName}</Badge>
+              )}
+            </div>
+
+            <div className="min-w-0">
+              <h3 className="truncate text-base font-semibold sm:text-lg">
+                {run.filename ?? tr('sepaPain008.history.noFilename', 'XML sense nom de fitxer')}
+              </h3>
+              <p className="mt-1 text-sm text-muted-foreground">
+                {tr('sepaPain008.history.generatedAt', 'Generada el {date}')
+                  .replace('{date}', formatDateTime(run.exportedAt ?? run.createdAt))}
+              </p>
+              {run.correctedFromRunId && (
+                <p className="mt-1 text-sm font-medium text-amber-700">
+                  {tr('sepaPain008.history.correctedFrom', 'Substitueix una remesa anul·lada')}
+                </p>
+              )}
+              {isVoided && run.voidReason && (
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {run.voidReason}
+                </p>
+              )}
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-3 lg:items-end">
+            <div className="text-left lg:text-right">
+              <p className="text-2xl font-semibold">{formatCurrency(run.totalCents)}</p>
+              <p className="text-sm text-muted-foreground">
+                {tr('sepaPain008.history.itemsCount', '{count} cobraments')
+                  .replace('{count}', String(run.itemCount))}
+              </p>
+            </div>
+
+            <div className="flex flex-col gap-2 sm:flex-row lg:flex-col">
+              <Button
+                type="button"
+                variant="outline"
+                disabled={!run.storagePath || isDownloading}
+                onClick={() => handleDownload(run.id ?? '', run.storagePath, run.filename)}
+              >
+                {isDownloading ? (
+                  <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Download className="mr-2 h-4 w-4" />
+                )}
+                {run.storagePath
+                  ? tr('sepaPain008.history.downloadXml', 'Descarregar XML')
+                  : tr('sepaPain008.history.xmlUnavailable', 'XML no disponible')}
+              </Button>
+
+              {!isVoided && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setVoidingRun(run)}
+                >
+                  <RotateCcw className="mr-2 h-4 w-4" />
+                  {tr('sepaPain008.history.void.action', 'Anul·lar i regenerar')}
+                </Button>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          <div className="rounded-xl border bg-muted/20 p-3">
+            <div className="flex items-center gap-2 text-xs uppercase tracking-wide text-muted-foreground">
+              <Users className="h-3.5 w-3.5" />
+              <span>{tr('sepaPain008.history.included', 'Incloses')}</span>
+            </div>
+            <p className="mt-2 text-sm font-medium text-foreground">
+              {run.includedCount}
+            </p>
+          </div>
+
+          <div className="rounded-xl border bg-muted/20 p-3">
+            <div className="flex items-center gap-2 text-xs uppercase tracking-wide text-muted-foreground">
+              <AlertTriangle className="h-3.5 w-3.5" />
+              <span>{tr('sepaPain008.history.excluded', 'Excloses')}</span>
+            </div>
+            <p className="mt-2 text-sm font-medium text-foreground">
+              {run.excludedCount}
+            </p>
+          </div>
+
+          <div className="rounded-xl border bg-muted/20 p-3">
+            <div className="flex items-center gap-2 text-xs uppercase tracking-wide text-muted-foreground">
+              <CalendarDays className="h-3.5 w-3.5" />
+              <span>{tr('sepaPain008.history.createdAt', 'Creada')}</span>
+            </div>
+            <p className="mt-2 text-sm font-medium text-foreground">
+              {formatDateTime(isVoided ? run.voidedAt ?? run.createdAt : run.createdAt)}
+            </p>
+          </div>
+        </div>
+
+        {includedItems.length > 0 && (
+          <RunIncludedDetails
+            runId={run.id ?? ''}
+            items={includedItems}
+            donorsById={donorsById}
+            tr={tr}
+          />
+        )}
+      </section>
+    );
+  }, [bankAccountsById, donorsById, downloadingRunId, handleDownload, runsById, tr]);
 
   return (
     <section className="w-full space-y-3">
@@ -339,7 +552,7 @@ export function SepaCollectionRunsHistory() {
                 <p className="text-sm text-muted-foreground">
                   {tr('sepaPain008.history.summary.totalRuns', 'Remeses desades')}
                 </p>
-                <p className="mt-2 text-2xl font-semibold">{summaries.length}</p>
+                <p className="mt-2 text-2xl font-semibold">{activeSummaries.length}</p>
               </div>
               <div className="rounded-2xl border bg-muted/30 p-4">
                 <p className="text-sm text-muted-foreground">
@@ -356,114 +569,80 @@ export function SepaCollectionRunsHistory() {
             </div>
 
             <div className="space-y-3">
-              {summaries.map((run) => {
-                const accountName = run.bankAccountId ? bankAccountsById.get(run.bankAccountId)?.name : null;
-                const isDownloading = downloadingRunId === run.id;
-                const rawRun = run.id ? runsById.get(run.id) : null;
-                const includedItems = rawRun?.included ?? [];
-
-                return (
-                  <section key={run.id} className="rounded-2xl border bg-card p-4 shadow-sm sm:p-5">
-                    <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                      <div className="min-w-0 space-y-3">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <Badge variant="secondary">
-                            {run.collectionDate
-                              ? tr('sepaPain008.history.collectionDateBadge', 'Cobrament {date}')
-                                  .replace('{date}', formatShortDate(run.collectionDate))
-                              : tr('sepaPain008.history.noCollectionDate', 'Sense data de cobrament')}
-                          </Badge>
-                          <Badge variant="outline">{run.scheme ?? 'CORE'}</Badge>
-                          {accountName && (
-                            <Badge variant="outline">{accountName}</Badge>
-                          )}
-                        </div>
-
-                        <div className="min-w-0">
-                          <h3 className="truncate text-base font-semibold sm:text-lg">
-                            {run.filename ?? tr('sepaPain008.history.noFilename', 'XML sense nom de fitxer')}
-                          </h3>
-                          <p className="mt-1 text-sm text-muted-foreground">
-                            {tr('sepaPain008.history.generatedAt', 'Generada el {date}')
-                              .replace('{date}', formatDateTime(run.exportedAt ?? run.createdAt))}
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="flex flex-col gap-3 lg:items-end">
-                        <div className="text-left lg:text-right">
-                          <p className="text-2xl font-semibold">{formatCurrency(run.totalCents)}</p>
-                          <p className="text-sm text-muted-foreground">
-                            {tr('sepaPain008.history.itemsCount', '{count} cobraments')
-                              .replace('{count}', String(run.itemCount))}
-                          </p>
-                        </div>
-
-                        <Button
-                          type="button"
-                          variant="outline"
-                          disabled={!run.storagePath || isDownloading}
-                          onClick={() => handleDownload(run.id ?? '', run.storagePath, run.filename)}
-                        >
-                          {isDownloading ? (
-                            <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                          ) : (
-                            <Download className="mr-2 h-4 w-4" />
-                          )}
-                          {run.storagePath
-                            ? tr('sepaPain008.history.downloadXml', 'Descarregar XML')
-                            : tr('sepaPain008.history.xmlUnavailable', 'XML no disponible')}
-                        </Button>
-                      </div>
-                    </div>
-
-                    <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                      <div className="rounded-xl border bg-muted/20 p-3">
-                        <div className="flex items-center gap-2 text-xs uppercase tracking-wide text-muted-foreground">
-                          <Users className="h-3.5 w-3.5" />
-                          <span>{tr('sepaPain008.history.included', 'Incloses')}</span>
-                        </div>
-                        <p className="mt-2 text-sm font-medium text-foreground">
-                          {run.includedCount}
-                        </p>
-                      </div>
-
-                      <div className="rounded-xl border bg-muted/20 p-3">
-                        <div className="flex items-center gap-2 text-xs uppercase tracking-wide text-muted-foreground">
-                          <AlertTriangle className="h-3.5 w-3.5" />
-                          <span>{tr('sepaPain008.history.excluded', 'Excloses')}</span>
-                        </div>
-                        <p className="mt-2 text-sm font-medium text-foreground">
-                          {run.excludedCount}
-                        </p>
-                      </div>
-
-                      <div className="rounded-xl border bg-muted/20 p-3">
-                        <div className="flex items-center gap-2 text-xs uppercase tracking-wide text-muted-foreground">
-                          <CalendarDays className="h-3.5 w-3.5" />
-                          <span>{tr('sepaPain008.history.createdAt', 'Creada')}</span>
-                        </div>
-                        <p className="mt-2 text-sm font-medium text-foreground">
-                          {formatDateTime(run.createdAt)}
-                        </p>
-                      </div>
-                    </div>
-
-                    {includedItems.length > 0 && (
-                      <RunIncludedDetails
-                        runId={run.id ?? ''}
-                        items={includedItems}
-                        donorsById={donorsById}
-                        tr={tr}
-                      />
-                    )}
-                  </section>
-                );
-              })}
+              {activeSummaries.length === 0 ? (
+                <div className="rounded-2xl border border-dashed bg-muted/20 px-6 py-8 text-center">
+                  <FolderArchive className="mx-auto h-8 w-8 text-muted-foreground" />
+                  <p className="mt-3 text-sm text-muted-foreground">
+                    {tr('sepaPain008.history.noActiveRuns', 'No hi ha cap XML vigent.')}
+                  </p>
+                </div>
+              ) : (
+                activeSummaries.map(renderRunCard)
+              )}
             </div>
+
+            {voidedSummaries.length > 0 && (
+              <Collapsible className="rounded-2xl border bg-muted/10">
+                <CollapsibleTrigger asChild>
+                  <button
+                    type="button"
+                    className="group flex w-full items-center justify-between gap-3 px-4 py-3 text-left sm:px-5"
+                  >
+                    <div className="flex min-w-0 items-center gap-2">
+                      <Ban className="h-4 w-4 shrink-0 text-muted-foreground" />
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-foreground">
+                          {tr('sepaPain008.history.voidedSection', 'Remeses anul·lades')}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {tr('sepaPain008.history.voidedSectionCount', '{count} remeses')
+                            .replace('{count}', String(voidedSummaries.length))}
+                        </p>
+                      </div>
+                    </div>
+                    <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200 group-data-[state=open]:rotate-180" />
+                  </button>
+                </CollapsibleTrigger>
+                <CollapsibleContent className="space-y-3 border-t p-3 sm:p-4">
+                  {voidedSummaries.map(renderRunCard)}
+                </CollapsibleContent>
+              </Collapsible>
+            )}
           </>
         )}
       </div>
+
+      <AlertDialog open={Boolean(voidingRun)} onOpenChange={(open) => !open && !isVoiding && setVoidingRun(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {tr('sepaPain008.history.void.confirmTitle', 'Anul·lar aquesta remesa?')}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {tr(
+                'sepaPain008.history.void.confirmDescription',
+                'Aquest XML quedarà marcat com a anul·lat i no s’haurà d’utilitzar. Els socis inclosos tornaran a quedar disponibles per generar una nova remesa corregida.'
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isVoiding}>
+              {tr('sepaPain008.history.void.cancel', 'Cancel·lar')}
+            </AlertDialogCancel>
+            <AlertDialogAction
+              disabled={isVoiding}
+              onClick={(event) => {
+                event.preventDefault();
+                void handleVoidAndRegenerate();
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isVoiding && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
+              {tr('sepaPain008.history.void.confirmAction', 'Anul·lar i regenerar')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </section>
   );
 }
