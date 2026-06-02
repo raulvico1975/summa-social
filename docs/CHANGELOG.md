@@ -10,6 +10,11 @@ Aquest fitxer ja no pretén duplicar el document mestre.
 
 ## Resum dels canvis recents
 
+### 2026-06-02
+
+- remeses SEPA pain.008: hotfix del rollback d'**Anul·lar i regenerar** perquè també reconegui contactes amb `sepaPain008LastRunId` apuntant a registres legacy `sepaPain008Runs`, quan aquests tenen `collectionRunId` cap a la remesa anul·lada.
+- operativa: preparada eina puntual de reparació en `dry-run` per als contactes afectats de la remesa de juny; la reparació real exigeix autorització explícita i no s'executa dins del deploy.
+
 ### 2026-05-12
 
 - novetats de producte: corregit el pipeline setmanal perquè la funció programada publiqui via canal server-to-server amb secret, generació editorial determinista CA/ES, filtre de commits interns i verificació post-publicació abans de donar la peça per bona.

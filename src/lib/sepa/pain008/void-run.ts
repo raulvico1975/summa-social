@@ -21,12 +21,17 @@ export interface PreviousSepaRun {
   collectionDate: string;
 }
 
+export interface VoidedCollectionRunIdentity {
+  id: string;
+  collectionDate?: string | null;
+}
+
 export type DonorVoidRollbackDecision =
   | {
       action: 'restore';
       sepaPain008LastRunAt: string | null;
       sepaPain008LastRunId: string | null;
-      reason: 'snapshot' | 'current-run' | 'legacy-same-month';
+      reason: 'snapshot' | 'current-run' | 'legacy-same-month' | 'belongs-to-voided-run';
     }
   | {
       action: 'skip';
@@ -113,6 +118,26 @@ export function hasLaterActiveSepaRunForContact(
   });
 }
 
+export function belongsToVoidedCollectionRun(input: {
+  contact: VoidRunContactState;
+  collectionRun: VoidedCollectionRunIdentity;
+  includedContactIds: Iterable<string>;
+  legacyCollectionRunId?: string | null;
+}): boolean {
+  const includedContactIds = new Set(input.includedContactIds);
+  if (!includedContactIds.has(input.contact.id)) return false;
+
+  if (input.contact.sepaPain008LastRunId === input.collectionRun.id) {
+    return true;
+  }
+
+  if (input.legacyCollectionRunId === input.collectionRun.id) {
+    return true;
+  }
+
+  return false;
+}
+
 export function decideDonorVoidRollback(input: {
   runId: string;
   runCollectionDate: string | null | undefined;
@@ -120,6 +145,7 @@ export function decideDonorVoidRollback(input: {
   contact: VoidRunContactState;
   previousRun: PreviousSepaRun | null;
   hasLaterActiveRun: boolean;
+  belongsToVoidedCollectionRun?: boolean;
 }): DonorVoidRollbackDecision {
   const { runId, runCollectionDate, includedItem, contact, previousRun } = input;
 
@@ -142,6 +168,15 @@ export function decideDonorVoidRollback(input: {
       sepaPain008LastRunAt: previousRun?.collectionDate ?? null,
       sepaPain008LastRunId: previousRun?.id ?? null,
       reason: 'current-run',
+    };
+  }
+
+  if (input.belongsToVoidedCollectionRun) {
+    return {
+      action: 'restore',
+      sepaPain008LastRunAt: previousRun?.collectionDate ?? null,
+      sepaPain008LastRunId: previousRun?.id ?? null,
+      reason: 'belongs-to-voided-run',
     };
   }
 

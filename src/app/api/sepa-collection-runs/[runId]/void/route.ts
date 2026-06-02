@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import type { Firestore } from 'firebase-admin/firestore';
 import {
   BATCH_SIZE,
   getAdminDb,
@@ -9,6 +10,7 @@ import { requireOperationalAccess } from '@/lib/api/require-operational-access';
 import type { SepaCollectionRunRecord, SepaCollectionRunRecordIncludedItem } from '@/lib/data';
 import { normalizeSepaCollectionRunStatus } from '@/lib/sepa/pain008/run-history';
 import {
+  belongsToVoidedCollectionRun,
   decideDonorVoidRollback,
   findPreviousActiveSepaRunForContact,
   hasLaterActiveSepaRunForContact,
@@ -42,6 +44,52 @@ function asIncludedItems(value: unknown): SepaCollectionRunRecordIncludedItem[] 
   return value.filter((item): item is SepaCollectionRunRecordIncludedItem => {
     if (!item || typeof item !== 'object') return false;
     return typeof (item as { contactId?: unknown }).contactId === 'string';
+  });
+}
+
+async function resolveLegacySepaPain008CollectionRunId(input: {
+  db: Firestore;
+  orgId: string;
+  sepaPain008LastRunId: string | null | undefined;
+}): Promise<string | null> {
+  const lastRunId = cleanString(input.sepaPain008LastRunId);
+  if (!lastRunId) return null;
+
+  const snap = await input.db
+    .doc(`organizations/${input.orgId}/sepaPain008Runs/${lastRunId}`)
+    .get();
+  if (!snap.exists) return null;
+
+  const data = snap.data() as { collectionRunId?: unknown } | undefined;
+  return cleanString(data?.collectionRunId);
+}
+
+async function belongsToVoidedCollectionRunFromFirestore(input: {
+  db: Firestore;
+  orgId: string;
+  contact: VoidRunContactState;
+  collectionRun: { id: string; collectionDate?: string | null };
+  includedContactIds: Set<string>;
+}): Promise<boolean> {
+  if (!input.includedContactIds.has(input.contact.id)) return false;
+
+  let legacyCollectionRunId: string | null = null;
+  if (
+    input.contact.sepaPain008LastRunId &&
+    input.contact.sepaPain008LastRunId !== input.collectionRun.id
+  ) {
+    legacyCollectionRunId = await resolveLegacySepaPain008CollectionRunId({
+      db: input.db,
+      orgId: input.orgId,
+      sepaPain008LastRunId: input.contact.sepaPain008LastRunId,
+    });
+  }
+
+  return belongsToVoidedCollectionRun({
+    contact: input.contact,
+    collectionRun: input.collectionRun,
+    includedContactIds: input.includedContactIds,
+    legacyCollectionRunId,
   });
 }
 
@@ -110,6 +158,7 @@ export async function POST(
     }
 
     const included = asIncludedItems(runData.included);
+    const includedContactIds = new Set(included.map((item) => item.contactId));
     const allRunsSnap = await db.collection(`organizations/${orgId}/sepaCollectionRuns`).get();
     const allRuns: VoidRunCandidate[] = allRunsSnap.docs.map((doc) => {
       const data = doc.data() as Partial<SepaCollectionRunRecord>;
@@ -164,6 +213,13 @@ export async function POST(
         runId,
         runData.collectionDate
       );
+      const belongsToCurrentRun = await belongsToVoidedCollectionRunFromFirestore({
+        db,
+        orgId,
+        contact,
+        collectionRun: { id: runId, collectionDate: runData.collectionDate },
+        includedContactIds,
+      });
       const decision = decideDonorVoidRollback({
         runId,
         runCollectionDate: runData.collectionDate,
@@ -171,6 +227,7 @@ export async function POST(
         contact,
         previousRun,
         hasLaterActiveRun,
+        belongsToVoidedCollectionRun: belongsToCurrentRun,
       });
 
       if (decision.action === 'skip') {
