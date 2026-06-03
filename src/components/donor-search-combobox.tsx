@@ -226,6 +226,7 @@ export function DonorSearchCombobox({
       <>
         {trigger}
         <Dialog
+          disableCloseSideEffects
           open={open}
           onOpenChange={(nextOpen) => {
             setOpen(nextOpen);
@@ -234,7 +235,7 @@ export function DonorSearchCombobox({
             }
           }}
         >
-          <DialogContent className="max-h-[85vh] w-[min(92vw,40rem)] max-w-[40rem] overflow-hidden p-0">
+          <DialogContent className="z-[120] max-h-[85vh] w-[min(92vw,40rem)] max-w-[40rem] overflow-hidden p-0 sm:w-[40rem]">
             <DialogHeader className="border-b px-6 py-4 pr-12">
               <DialogTitle>{dialogTitle || 'Selecciona donant o soci'}</DialogTitle>
             </DialogHeader>

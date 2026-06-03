@@ -3222,8 +3222,8 @@ export function TransactionsTable({
 
       {/* Return Assignment Dialog */}
       <Dialog open={isReturnDialogOpen} onOpenChange={(open) => !open && handleCloseReturnDialog()}>
-        <DialogContent className="w-[calc(100vw-2rem)] max-h-[85vh] overflow-y-auto sm:max-w-3xl">
-          <DialogHeader className="min-w-0 pr-8">
+        <DialogContent className="z-[110] flex max-h-[90vh] w-[calc(100vw-1rem)] max-w-[72rem] flex-col gap-0 overflow-hidden p-0 sm:w-[96vw] sm:max-w-[72rem]">
+          <DialogHeader className="border-b px-4 py-3 pr-12 sm:px-6 sm:py-4">
             <DialogTitle className="flex items-center gap-2 text-red-600">
               <Undo2 className="h-5 w-5" />
               {canUseManualSplit
@@ -3238,169 +3238,181 @@ export function TransactionsTable({
           </DialogHeader>
           
           {returnTransaction && (
-            <div className="min-w-0 space-y-4 py-4">
-              {/* Info de la devolució */}
-              <div className="min-w-0 overflow-hidden rounded-lg border border-red-200 bg-red-50 p-3">
-                <p className="text-sm font-medium text-red-800">{t.movements.table.returnInfo}</p>
-                <p className="break-words text-sm text-red-600">{returnTransaction.description}</p>
-                <p className="text-lg font-bold text-red-700 mt-1">
-                  {formatCurrencyEU(returnTransaction.amount)}
-                </p>
-                <p className="text-xs text-red-500">{formatDate(returnTransaction.date)}</p>
-              </div>
-
-              {canUseManualSplit && (
-                <div className="space-y-3 rounded-lg border p-3">
-                  <div className="flex flex-wrap gap-2">
-                    <Button
-                      type="button"
-                      variant={returnMode === 'single' ? 'default' : 'outline'}
-                      onClick={() => setReturnMode('single')}
-                    >
-                      Assignació simple
-                    </Button>
-                    <Button
-                      type="button"
-                      variant={returnMode === 'multi' ? 'default' : 'outline'}
-                      onClick={() => setReturnMode('multi')}
-                    >
-                      Assignació múltiple
-                    </Button>
-                  </div>
+            <div className="min-h-0 flex-1 overflow-y-auto px-4 py-3 sm:px-6 sm:py-4">
+              <div className="grid min-w-0 gap-3 sm:gap-4 lg:grid-cols-[minmax(16rem,0.42fr)_minmax(0,1fr)] lg:items-start">
+                {/* Info de la devolució */}
+                <div className="min-w-0 overflow-hidden rounded-lg border border-red-200 bg-red-50 p-3 sm:p-4 lg:sticky lg:top-0">
+                  <p className="text-sm font-medium text-red-800">{t.movements.table.returnInfo}</p>
+                  <p className="mt-2 break-words text-sm leading-relaxed text-red-600">{returnTransaction.description}</p>
+                  <p className="mt-2 text-xl font-bold text-red-700 sm:mt-3 sm:text-2xl">
+                    {formatCurrencyEU(returnTransaction.amount)}
+                  </p>
+                  <p className="mt-1 text-xs text-red-500">{formatDate(returnTransaction.date)}</p>
                 </div>
-              )}
 
-              {returnMode === 'multi' && canUseManualSplit ? (
-                <div className="space-y-3 rounded-lg border p-3">
-                  <div className="grid grid-cols-[minmax(0,1fr)_140px_48px] gap-2 px-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                    <span>Soci</span>
-                    <span>Import</span>
-                    <span className="text-right">Acció</span>
-                  </div>
-
-                  <div className="space-y-2">
-                    {splitRows.map((row, index) => (
-                      <div
-                        key={`split-row-${index}`}
-                        className="grid grid-cols-[minmax(0,1fr)_140px_48px] gap-2"
-                      >
-                        <DonorSearchCombobox
-                          className="min-w-0"
-                          donors={returnAssignableDonors}
-                          value={row.contactId}
-                          onSelect={(contactId) => updateSplitRow(index, { contactId })}
-                          badgesByDonorId={returnAssignableDonorBadges}
-                        />
-                        <Input
-                          type="number"
-                          inputMode="decimal"
-                          step="0.01"
-                          min="0"
-                          value={Number.isFinite(row.amount) && row.amount !== 0 ? row.amount : ''}
-                          onChange={(event) => {
-                            const rawValue = event.target.value.replace(',', '.');
-                            updateSplitRow(index, {
-                              amount: rawValue === '' ? Number.NaN : Number(rawValue),
-                            });
-                          }}
-                          placeholder="0,00"
-                        />
+                <div className="min-w-0 space-y-4">
+                  {canUseManualSplit && (
+                    <div className="space-y-2 rounded-lg border p-2 sm:space-y-3 sm:p-3">
+                      <div className="grid grid-cols-1 gap-2 sm:inline-grid sm:grid-cols-2">
                         <Button
                           type="button"
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => removeSplitRow(index)}
-                          aria-label={`Eliminar fila ${index + 1}`}
+                          variant={returnMode === 'single' ? 'default' : 'outline'}
+                          onClick={() => setReturnMode('single')}
+                          className="justify-center"
                         >
-                          <Trash2 className="h-4 w-4" />
+                          Assignació simple
+                        </Button>
+                        <Button
+                          type="button"
+                          variant={returnMode === 'multi' ? 'default' : 'outline'}
+                          onClick={() => setReturnMode('multi')}
+                          className="justify-center"
+                        >
+                          Assignació múltiple
                         </Button>
                       </div>
-                    ))}
-                  </div>
-
-                  <div className="flex flex-wrap items-center justify-between gap-3">
-                    <Button type="button" variant="outline" onClick={addSplitRow}>
-                      <Plus className="mr-2 h-4 w-4" />
-                      Afegir soci
-                    </Button>
-
-                    <div className="text-right text-sm">
-                      <p className="text-muted-foreground">
-                        Suma: {formatCurrencyEU(
-                          splitRows.reduce((sum, row) => sum + (Number.isFinite(row.amount) ? row.amount : 0), 0)
-                        )} / {formatCurrencyEU(parentReturnTotal)}
-                      </p>
-                      {splitValidationError ? (
-                        <p className="font-medium text-red-600">{splitValidationError}</p>
-                      ) : (
-                        <p className="flex items-center justify-end gap-1 font-medium text-green-600">
-                          <Check className="h-4 w-4" />
-                          Suma correcta
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <>
-                  <div className="space-y-2">
-                    <Label>{t.movements.table.affectedDonor}</Label>
-                    <DonorSearchCombobox
-                      className="min-w-0"
-                      donors={returnAssignableDonors}
-                      value={returnDonorId}
-                      onSelect={(donorId) => {
-                        setReturnDonorId(donorId);
-                        setReturnLinkedTxId(null);
-                      }}
-                      badgesByDonorId={returnAssignableDonorBadges}
-                    />
-                  </div>
-
-                  {returnDonorId && (
-                    <div className="space-y-2">
-                      <Label>{t.movements.table.originalDonation}</Label>
-                      {isLoadingDonations ? (
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                          {t.movements.table.loadingDonations}
-                        </div>
-                      ) : donorDonations.length === 0 ? (
-                        <p className="text-sm text-muted-foreground">
-                          {t.movements.table.noDonationsFound}
-                        </p>
-                      ) : (
-                        <Select
-                          value={returnLinkedTxId || 'none'}
-                          onValueChange={(v) => setReturnLinkedTxId(v === 'none' ? null : v)}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder={t.movements.table.linkToDonation} />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="none">{t.movements.table.noLink}</SelectItem>
-                            {donorDonations.filter(d => d.id).map(donation => (
-                              <SelectItem key={donation.id} value={donation.id}>
-                                {formatDate(donation.date)} - {formatCurrencyEU(donation.amount)}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      )}
-                      {returnLinkedTxId && (
-                        <p className="text-xs text-green-600 flex items-center gap-1">
-                          <Check className="h-3 w-3" />
-                          {t.movements.table.linkedDonationInfo}
-                        </p>
-                      )}
                     </div>
                   )}
-                </>
-              )}
+
+                  {returnMode === 'multi' && canUseManualSplit ? (
+                    <div className="space-y-2 rounded-lg border p-2 sm:space-y-3 sm:p-3">
+                      <div className="hidden grid-cols-[minmax(0,1fr)_9rem_3rem] gap-3 px-1 text-xs font-medium uppercase tracking-wide text-muted-foreground sm:grid">
+                        <span>Soci</span>
+                        <span>Import</span>
+                        <span className="text-right">Acció</span>
+                      </div>
+
+                      <div className="flex justify-start">
+                        <Button type="button" variant="outline" onClick={addSplitRow} className="w-full sm:w-auto">
+                          <Plus className="mr-2 h-4 w-4" />
+                          Afegir soci
+                        </Button>
+                      </div>
+
+                      <div className="border-t pt-2 sm:pt-3">
+                        <div className="rounded-md bg-muted/40 px-3 py-2 text-left text-sm sm:ml-auto sm:min-w-[16rem] sm:text-right">
+                          <p className="text-muted-foreground">
+                            Suma: {formatCurrencyEU(
+                              splitRows.reduce((sum, row) => sum + (Number.isFinite(row.amount) ? row.amount : 0), 0)
+                            )} / {formatCurrencyEU(parentReturnTotal)}
+                          </p>
+                          {splitValidationError ? (
+                            <p className="font-medium text-red-600">{splitValidationError}</p>
+                          ) : (
+                            <p className="flex items-center gap-1 font-medium text-green-600 sm:justify-end">
+                              <Check className="h-4 w-4" />
+                              Suma correcta
+                            </p>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="max-h-[min(42vh,28rem)] space-y-2 overflow-y-auto pr-1">
+                        {splitRows.map((row, index) => (
+                          <div
+                            key={`split-row-${index}`}
+                            className="grid gap-2 rounded-md border bg-background p-2 sm:grid-cols-[minmax(0,1fr)_9rem_3rem] sm:items-center sm:border-0 sm:p-0"
+                          >
+                            <DonorSearchCombobox
+                              className="h-11 min-w-0 justify-start"
+                              donors={returnAssignableDonors}
+                              value={row.contactId}
+                              onSelect={(contactId) => updateSplitRow(index, { contactId })}
+                              badgesByDonorId={returnAssignableDonorBadges}
+                              presentation="dialog"
+                            />
+                            <Input
+                              type="number"
+                              inputMode="decimal"
+                              step="0.01"
+                              min="0"
+                              value={Number.isFinite(row.amount) && row.amount !== 0 ? row.amount : ''}
+                              onChange={(event) => {
+                                const rawValue = event.target.value.replace(',', '.');
+                                updateSplitRow(index, {
+                                  amount: rawValue === '' ? Number.NaN : Number(rawValue),
+                                });
+                              }}
+                              placeholder="0,00"
+                              className="h-11"
+                            />
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => removeSplitRow(index)}
+                              aria-label={`Eliminar fila ${index + 1}`}
+                              className="h-11 w-11 justify-self-end text-muted-foreground hover:text-destructive"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="space-y-2">
+                        <Label>{t.movements.table.affectedDonor}</Label>
+                        <DonorSearchCombobox
+                          className="h-11 min-w-0 justify-start"
+                          donors={returnAssignableDonors}
+                          value={returnDonorId}
+                          onSelect={(donorId) => {
+                            setReturnDonorId(donorId);
+                            setReturnLinkedTxId(null);
+                          }}
+                          badgesByDonorId={returnAssignableDonorBadges}
+                          presentation="dialog"
+                        />
+                      </div>
+
+                      {returnDonorId && (
+                        <div className="space-y-2">
+                          <Label>{t.movements.table.originalDonation}</Label>
+                          {isLoadingDonations ? (
+                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                              {t.movements.table.loadingDonations}
+                            </div>
+                          ) : donorDonations.length === 0 ? (
+                            <p className="text-sm text-muted-foreground">
+                              {t.movements.table.noDonationsFound}
+                            </p>
+                          ) : (
+                            <Select
+                              value={returnLinkedTxId || 'none'}
+                              onValueChange={(v) => setReturnLinkedTxId(v === 'none' ? null : v)}
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder={t.movements.table.linkToDonation} />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="none">{t.movements.table.noLink}</SelectItem>
+                                {donorDonations.filter(d => d.id).map(donation => (
+                                  <SelectItem key={donation.id} value={donation.id}>
+                                    {formatDate(donation.date)} - {formatCurrencyEU(donation.amount)}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          )}
+                          {returnLinkedTxId && (
+                            <p className="text-xs text-green-600 flex items-center gap-1">
+                              <Check className="h-3 w-3" />
+                              {t.movements.table.linkedDonationInfo}
+                            </p>
+                          )}
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+              </div>
             </div>
           )}
 
-          <DialogFooter>
+          <DialogFooter className="flex-row justify-end gap-2 border-t bg-background px-4 py-3 sm:px-6 sm:py-4 sm:space-x-0">
             <DialogClose asChild>
               <Button variant="outline">{t.common.cancel}</Button>
             </DialogClose>
