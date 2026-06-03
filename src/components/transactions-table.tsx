@@ -77,6 +77,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useTranslations } from '@/i18n';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
 import { useReturnManagement } from '@/components/transactions/hooks/useReturnManagement';
+import { useTransactionsRealtime } from '@/components/transactions/hooks/useTransactionsRealtime';
 import { useTransactionCategorization } from '@/components/transactions/hooks/useTransactionCategorization';
 import { useTransactionActions } from '@/components/transactions/hooks/useTransactionActions';
 import { EditTransactionDialog } from '@/components/transactions/EditTransactionDialog';
@@ -127,6 +128,10 @@ import {
   buildContactInlineUpdate,
   matchesInlineReactiveFilter,
 } from '@/lib/transactions/inline-update-state';
+import {
+  mergeTransactionsRealtimeWindow,
+  TRANSACTIONS_REALTIME_PAGE_SIZE,
+} from '@/lib/transactions/realtime-window';
 import { hasEffectiveContactRole } from '@/lib/contacts/contact-role-options';
 import type { Donation } from '@/lib/types/donations';
 import { classificationMemoryCollection } from '@/lib/transaction-classification/memory';
@@ -685,6 +690,53 @@ export function TransactionsTable({
         return acc;
     }, {} as Record<string, string>) || {},
   [availableProjects]);
+
+  const transactionSearchContext = React.useMemo(() => ({
+    contactNamesById: Object.fromEntries(
+      Object.entries(contactMap).map(([contactId, contact]) => [contactId, contact.name])
+    ),
+    categoryLabelsById: availableCategories?.reduce((acc, category) => {
+      acc[category.id] = category.name;
+      return acc;
+    }, {} as Record<string, string>) ?? {},
+    projectNamesById: projectMap,
+  }), [availableCategories, contactMap, projectMap]);
+
+  const { window: transactionsRealtimeWindow } = useTransactionsRealtime({
+    firestore,
+    organizationId,
+    enabled: Boolean(organizationId && user && pagedTransactions !== null && !isLoadingTransactions),
+    loadedCount: pagedTransactions?.length ?? 0,
+    periodQuery,
+    showArchived: showArchivedInLedger,
+    movementType: serverMovementType,
+    search: trimmedDeferredSearchQuery,
+    contactId: contactIdFilter,
+    source: sourceFilter,
+    bankAccountId: bankAccountFilter,
+    searchContext: transactionSearchContext,
+  });
+
+  const realtimeLockedTransactionIds = React.useMemo(
+    () => Object.keys(inlineUpdatePendingByTxId),
+    [inlineUpdatePendingByTxId]
+  );
+
+  React.useEffect(() => {
+    if (!transactionsRealtimeWindow) return;
+
+    setPagedTransactions((prev) =>
+      mergeTransactionsRealtimeWindow(
+        prev,
+        transactionsRealtimeWindow.transactions,
+        transactionsRealtimeWindow.scannedIds,
+        {
+          lockedIds: realtimeLockedTransactionIds,
+          minimumCount: TRANSACTIONS_REALTIME_PAGE_SIZE,
+        }
+      )
+    );
+  }, [realtimeLockedTransactionIds, transactionsRealtimeWindow]);
 
   const allTransactionsById = React.useMemo(() => {
     return (pagedTransactions ?? []).reduce((acc, tx) => {
