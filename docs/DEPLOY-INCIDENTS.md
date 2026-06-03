@@ -2,6 +2,13 @@
 
 Registre curt d'incidències de deploy bloquejat o incomplet.
 
+## 2026-06-03 — Deploy pendent per smoke obsolet de `/ca/contact`
+
+- Incidencia: `npm run publica` va deixar el deploy en estat `PENDENT` perque el smoke de contingut public buscava el text antic `Parlem de la teva entitat` a `/ca/contact`.
+- Diagnosi: produccio servia HTTP 200 amb `x-middleware-rewrite: /public/ca/contact`, formulari visible i el copy actual `Expliqueu-nos una mica la vostra entitat...`; `/public/ca/contact` tambe servia el contingut correcte.
+- Causa: smoke test obsolet, no regressio de ruta, no cache antic i no problema de traduccions.
+- Resolucio: marker del smoke actualitzat al copy public vigent de la pagina de contacte.
+
 ## 2026-05-10 — Push directe a main amb bypass de regla PR
 
 - Commit: `4f36fea3d` (`mcp(summa-agent): afegeix adaptador privat`).
