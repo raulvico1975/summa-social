@@ -7,7 +7,12 @@ import { X } from "lucide-react"
 import { useTranslations } from "@/i18n"
 import { cn } from "@/lib/utils"
 
-const Dialog: React.FC<React.ComponentPropsWithoutRef<typeof DialogPrimitive.Root>> = ({
+interface DialogProps extends React.ComponentPropsWithoutRef<typeof DialogPrimitive.Root> {
+  disableCloseSideEffects?: boolean;
+}
+
+const Dialog: React.FC<DialogProps> = ({
+  disableCloseSideEffects,
   onOpenChange,
   children,
   ...props
@@ -22,7 +27,7 @@ const Dialog: React.FC<React.ComponentPropsWithoutRef<typeof DialogPrimitive.Roo
         }
       });
     }
-    if (!open) {
+    if (!open && !disableCloseSideEffects) {
       // 1. Treure focus immediatament
       if (document.activeElement instanceof HTMLElement) {
         document.activeElement.blur();
@@ -41,7 +46,7 @@ const Dialog: React.FC<React.ComponentPropsWithoutRef<typeof DialogPrimitive.Roo
       });
     }
     onOpenChange?.(open);
-  }, [onOpenChange]);
+  }, [disableCloseSideEffects, onOpenChange]);
 
   return (
     <DialogPrimitive.Root onOpenChange={handleOpenChange} {...props}>
