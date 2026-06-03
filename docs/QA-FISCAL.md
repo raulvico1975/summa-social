@@ -18,6 +18,30 @@ Aquest checklist assegura que els fluxos fiscals crítics no tenen regressions a
 
 ## 2. Checklist de verificació (PASS/FAIL)
 
+### Registre manual 2026-06-03 — Modal ampla per gestionar devolucions
+
+**Context:**
+Millora UX/UI de la modal `Gestionar devolució` a `Moviments` perquè la revisió de devolucions i la multiassignació de socis siguin més llegibles. El canvi amplia el diàleg, separa el resum de la devolució del formulari d'assignació i fa que el selector de socis s'obri en diàleg. No toca càlculs fiscals, imports, persistència ni el flux funcional de devolucions.
+
+**Fitxers afectats:**
+- `src/components/transactions-table.tsx`
+- `src/components/donor-search-combobox.tsx`
+- `src/components/ui/dialog.tsx`
+- `docs/QA-FISCAL.md`
+
+**Comprovacions aplicades:**
+1. Revisió manual del diff per confirmar que el canvi és UI-only sobre layout, scroll, amplada del diàleg i presentació del selector.
+2. Confirmació que no s'han modificat `createManualReturnSplit`, `useReturnManagement`, càlculs de suma, validacions d'imports, criteris de `contactId`, `transactionType`, `remittanceStatus`, `remittanceResolvedCount`, Firestore rules ni esquemes.
+3. Revisió del selector `DonorSearchCombobox` en mode `presentation="dialog"` dins la modal de devolucions, validant que el tancament del diàleg intern no deixa la modal pare inerta.
+4. Verificació tècnica prevista i obligatòria sobre el commit candidat: `npm run typecheck`, `git diff --check` i `scripts/verify-local.sh`.
+5. Verificació manual prevista en local/demo: desktop sense overflow horitzontal crític, mòbil en una columna, mode simple intacte i mode múltiple amb afegir socis, cercar per nom/DNI/email, eliminar fila i recalcular suma/error.
+
+**Resultat:**
+- [x] El canvi és UI-only i no altera fiscalitat, imports, persistència ni invariants de devolucions.
+- [x] La modal de devolucions guanya amplada útil i separa millor resum i assignació.
+- [x] La multiassignació dona prioritat visual a la selecció de soci i manté la suma/error visibles.
+- [x] La guardrail fiscal queda coberta amb aquesta evidència i les validacions obligatòries del canvi.
+
 ### Registre manual 2026-05-13 — Diagnòstic de perfil restringit per certificats
 
 **Context:**
