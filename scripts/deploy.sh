@@ -1454,7 +1454,7 @@ post_deploy_check() {
     if ! wait_for_text_marker \
       "Contacte públic (/ca/contact)" \
       "${RESOLVED_DEPLOY_BASE_URL}/ca/contact" \
-      "Parlem de la teva entitat"; then
+      "Expliqueu-nos una mica la vostra entitat"; then
       public_ok=false
     fi
     if ! wait_for_text_marker \
