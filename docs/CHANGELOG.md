@@ -10,6 +10,10 @@ Aquest fitxer ja no pretén duplicar el document mestre.
 
 ## Resum dels canvis recents
 
+### 2026-06-03
+
+- Moviments: el llistat actualitza automàticament els canvis dins la finestra activa de consulta, com documents adjunts, devolucions assignades o remeses processades/desfetes, sense alterar fiscalitat ni model de dades.
+
 ### 2026-06-02
 
 - remeses SEPA pain.008: hotfix del rollback d'**Anul·lar i regenerar** perquè també reconegui contactes amb `sepaPain008LastRunId` apuntant a registres legacy `sepaPain008Runs`, quan aquests tenen `collectionRunId` cap a la remesa anul·lada.
