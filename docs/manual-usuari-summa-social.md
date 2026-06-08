@@ -821,6 +821,19 @@ Els filtres aplicats apareixen com a "pills" sota el header. Pots eliminar-los c
 
 Si veus un missatge com **"Carregant més moviments"**, espera uns segons. Si apareix **"No s'ha pogut completar la cerca"**, fes clic a **"Reintenta"** o neteja filtres per tornar a un estat estable.
 
+### Actualització automàtica de la llista
+
+Si tens la pantalla de **Moviments** oberta, els canvis recents dins del rang que estàs consultant es reflecteixen **automàticament**, sense haver de recarregar la pàgina.
+
+Per exemple:
+- si adjuntes un document a un moviment
+- si assignes una devolució
+- si processes o desfàs una remesa
+
+La fila afectada s'actualitza sola dins la llista activa.
+
+> 💡 **Important:** aquest refresc automàtic està pensat per al que tens obert en aquell moment. Si canvies filtres, treballes amb períodes molt amplis o busques un moviment antic, pot ser necessari esperar un moment, reintentar la cerca o refrescar la pantalla.
+
 ### El menú d'opcions (⋮)
 
 | Opció | Descripció |
