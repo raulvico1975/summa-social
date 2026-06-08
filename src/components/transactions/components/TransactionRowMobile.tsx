@@ -42,6 +42,7 @@ import {
   canSplitStripeRemittance as canSplitStripeRemittanceCandidate,
   isStripeLikeTransaction,
 } from '@/lib/transactions/stripe-detection';
+import { shouldShowFiscalDonationBadge } from '@/lib/transactions/is-donation-candidate';
 import {
   type StripeImputationSummary,
 } from '@/lib/stripe/activeStripeImputation';
@@ -163,6 +164,7 @@ export const TransactionRowMobile = React.memo(function TransactionRowMobile({
   const stripeDonorEntries = stripeImputationSummary?.donorEntries ?? [];
   const hasSingleStripeDonor = stripeImputationSummary?.donorCount === 1;
   const hasMultipleStripeDonors = (stripeImputationSummary?.donorCount ?? 0) > 1;
+  const hasStripeFiscalImputation = (stripeImputationSummary?.donationCount ?? 0) > 0;
   const canManageReturn =
     tx.amount < 0 &&
     !tx.isRemittance &&
@@ -200,6 +202,10 @@ export const TransactionRowMobile = React.memo(function TransactionRowMobile({
     [tx]
   );
   const isFiscalDonation = tx.transactionType === 'donation' && !isReturnedDonation;
+  const showFiscalDonationBadge = shouldShowFiscalDonationBadge(tx, { hasStripeFiscalImputation });
+  const fiscalDonationTooltip = hasStripeFiscalImputation && !isFiscalDonation
+    ? `${t.fiscalDonation}. ${t.stripeImputed || 'Stripe imputat'}`
+    : t.fiscalDonation;
   const donation182Message = isFiscalDonation
     ? `${t.fiscalDonation}. ${t.removeFrom182}`
     : `${t.readyToCountIn182}. ${t.markAsDonation182}`;
@@ -462,10 +468,10 @@ export const TransactionRowMobile = React.memo(function TransactionRowMobile({
             {isDonationPending ? <Loader2 className="h-3 w-3 animate-spin" /> : '182'}
           </Button>
         ) : null}
-        {!showDonationToggle && isFiscalDonation ? (
+        {!showDonationToggle && showFiscalDonationBadge ? (
           <Badge
             variant="outline"
-            title={t.fiscalDonation}
+            title={fiscalDonationTooltip}
             className="w-10 justify-center rounded-full border-emerald-300 bg-emerald-200 px-0 py-0.5 text-center text-[10px] font-semibold text-emerald-900"
           >
             182
