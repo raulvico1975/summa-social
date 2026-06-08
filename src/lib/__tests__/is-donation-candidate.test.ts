@@ -2,7 +2,11 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import type { Transaction } from '@/lib/data';
-import { canToggleDonation182, isDonationCandidate } from '@/lib/transactions/is-donation-candidate';
+import {
+  canToggleDonation182,
+  isDonationCandidate,
+  shouldShowFiscalDonationBadge,
+} from '@/lib/transactions/is-donation-candidate';
 
 function buildTransaction(overrides: Partial<Transaction> = {}): Transaction {
   return {
@@ -83,6 +87,34 @@ test('canToggleDonation182 returns false for returned donations', () => {
         transactionType: 'donation',
         donationStatus: 'returned',
       })
+    ),
+    false
+  );
+});
+
+test('shouldShowFiscalDonationBadge returns true for Stripe fiscal imputations', () => {
+  assert.equal(
+    shouldShowFiscalDonationBadge(buildTransaction(), { hasStripeFiscalImputation: true }),
+    true
+  );
+});
+
+test('shouldShowFiscalDonationBadge returns false for normal non-fiscal movements', () => {
+  assert.equal(shouldShowFiscalDonationBadge(buildTransaction()), false);
+});
+
+test('shouldShowFiscalDonationBadge returns true for donation movements', () => {
+  assert.equal(
+    shouldShowFiscalDonationBadge(buildTransaction({ transactionType: 'donation' })),
+    true
+  );
+});
+
+test('shouldShowFiscalDonationBadge returns false for returned donations even with Stripe imputation', () => {
+  assert.equal(
+    shouldShowFiscalDonationBadge(
+      buildTransaction({ transactionType: 'donation', donationStatus: 'returned' }),
+      { hasStripeFiscalImputation: true }
     ),
     false
   );

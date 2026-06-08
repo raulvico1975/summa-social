@@ -64,6 +64,7 @@ import {
   canSplitStripeRemittance as canSplitStripeRemittanceCandidate,
   isStripeLikeTransaction,
 } from '@/lib/transactions/stripe-detection';
+import { shouldShowFiscalDonationBadge } from '@/lib/transactions/is-donation-candidate';
 import {
   type StripeImputationSummary,
 } from '@/lib/stripe/activeStripeImputation';
@@ -313,6 +314,7 @@ export const TransactionRow = React.memo(function TransactionRow({
   const stripeDonorEntries = stripeImputationSummary?.donorEntries ?? [];
   const hasSingleStripeDonor = stripeImputationSummary?.donorCount === 1;
   const hasMultipleStripeDonors = (stripeImputationSummary?.donorCount ?? 0) > 1;
+  const hasStripeFiscalImputation = (stripeImputationSummary?.donationCount ?? 0) > 0;
   const canSplitAmount =
     tx.amount > 0 &&
     !tx.isRemittance &&
@@ -324,6 +326,10 @@ export const TransactionRow = React.memo(function TransactionRow({
     tx.transactionType !== 'donation' &&
     tx.transactionType !== 'fee';
   const isFiscalDonation = tx.transactionType === 'donation' && !isReturnedDonation;
+  const showFiscalDonationBadge = shouldShowFiscalDonationBadge(tx, { hasStripeFiscalImputation });
+  const fiscalDonationTooltip = hasStripeFiscalImputation && !isFiscalDonation
+    ? `${t.fiscalDonation}. ${t.stripeImputed || 'Stripe imputat'}`
+    : t.fiscalDonation;
   const donation182Message = isFiscalDonation
     ? `${t.fiscalDonation}. ${t.removeFrom182}`
     : `${t.readyToCountIn182}. ${t.markAsDonation182}`;
@@ -971,7 +977,7 @@ export const TransactionRow = React.memo(function TransactionRow({
             </Tooltip>
           ) : null}
 
-          {!showDonationToggle && isFiscalDonation ? (
+          {!showDonationToggle && showFiscalDonationBadge ? (
             <Tooltip>
               <TooltipTrigger asChild>
                 <Badge
@@ -982,7 +988,7 @@ export const TransactionRow = React.memo(function TransactionRow({
                 </Badge>
               </TooltipTrigger>
               <TooltipContent>
-                {t.fiscalDonation}
+                {fiscalDonationTooltip}
               </TooltipContent>
             </Tooltip>
           ) : null}

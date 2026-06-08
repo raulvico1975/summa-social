@@ -30,3 +30,14 @@ export function canToggleDonation182(tx: Transaction): boolean {
     !tx.parentTransactionId
   );
 }
+
+export function shouldShowFiscalDonationBadge(
+  tx: Pick<Transaction, 'transactionType' | 'donationStatus'>,
+  options: { hasStripeFiscalImputation?: boolean } = {}
+): boolean {
+  if (tx.donationStatus === 'returned') {
+    return false;
+  }
+
+  return tx.transactionType === 'donation' || options.hasStripeFiscalImputation === true;
+}
