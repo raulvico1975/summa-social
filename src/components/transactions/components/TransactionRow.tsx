@@ -69,7 +69,7 @@ import {
   type StripeImputationSummary,
 } from '@/lib/stripe/activeStripeImputation';
 import { isDemoEnv } from '@/lib/demo/isDemoOrg';
-import { openDocumentUrl } from '@/lib/open-document-url';
+import { TransactionDocumentsButton } from '@/components/transactions/TransactionDocumentsButton';
 
 // =============================================================================
 // HELPERS
@@ -271,7 +271,6 @@ export const TransactionRow = React.memo(function TransactionRow({
   const [isActionsMenuOpen, setIsActionsMenuOpen] = React.useState(false);
 
   const isExpense = tx.amount < 0;
-  const hasDocument = !!tx.document;
   const hasBalanceAfter = typeof tx.balanceAfter === 'number' && Number.isFinite(tx.balanceAfter);
   const balanceText = hasBalanceAfter ? formatCurrencyEU(Math.abs(tx.balanceAfter!)) : '—';
   const isReturn = tx.transactionType === 'return';
@@ -1027,41 +1026,10 @@ export const TransactionRow = React.memo(function TransactionRow({
         </TableCell>
       )}
 
-      {/* Document column - always visible */}
+      {/* Documents column - always visible */}
       <TableCell className="w-10 shrink-0 py-2 text-center align-top">
         <div className="flex items-center justify-center">
-          {isDocumentLoading ? (
-            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-          ) : hasDocument ? (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button
-                  type="button"
-                  onClick={() => openDocumentUrl(tx.document!)}
-                  className="inline-flex h-8 w-8 items-center justify-center rounded-md transition-colors hover:bg-muted/40"
-                  aria-label={t.viewDocument}
-                >
-                  <FileText className="h-[18px] w-[18px] fill-current text-foreground/80" />
-                </button>
-              </TooltipTrigger>
-              <TooltipContent>{t.viewDocument}</TooltipContent>
-            </Tooltip>
-          ) : (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button
-                  onClick={handleAttachDocument}
-                  className="inline-flex h-8 w-8 items-center justify-center rounded-md transition-colors hover:bg-muted/35"
-                  aria-label={isExpense ? t.attachProof : t.attachDocument}
-                >
-                  <FileText className="h-[18px] w-[18px] text-foreground/65" />
-                </button>
-              </TooltipTrigger>
-              <TooltipContent>
-                {isExpense ? t.attachProof : t.attachDocument}
-              </TooltipContent>
-            </Tooltip>
-          )}
+          <TransactionDocumentsButton transaction={tx} loading={isDocumentLoading} />
         </div>
       </TableCell>
 
@@ -1111,17 +1079,10 @@ export const TransactionRow = React.memo(function TransactionRow({
               <MessageSquare className="mr-2 h-4 w-4" />
               {tx.note ? (t.editNote || 'Editar nota') : (t.addNote || 'Afegir nota')}
             </DropdownMenuItem>
-            {!hasDocument ? (
-              <DropdownMenuItem onClick={handleAttachDocument}>
-                <FileUp className="mr-2 h-4 w-4" />
-                {t.attachDocument}
-              </DropdownMenuItem>
-            ) : (
-              <DropdownMenuItem onClick={handleDeleteDocument} className="text-destructive">
-                <Trash2 className="mr-2 h-4 w-4" />
-                {t.deleteDocument}
-              </DropdownMenuItem>
-            )}
+            <DropdownMenuItem onClick={handleAttachDocument}>
+              <FileUp className="mr-2 h-4 w-4" />
+              {t.attachDocument}
+            </DropdownMenuItem>
             {hasStripeImputation && onOpenStripeImputationDetail && (
               <DropdownMenuItem onClick={handleOpenStripeDetail}>
                 <Eye className="mr-2 h-4 w-4 text-blue-600" />

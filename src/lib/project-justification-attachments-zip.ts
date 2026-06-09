@@ -3,7 +3,7 @@
 
 import JSZip from 'jszip';
 import type { UnifiedExpense, ExpenseLink, BudgetLine } from '@/lib/project-module-types';
-import { buildJustificationRows, type JustificationRow } from '@/lib/project-justification-rows';
+import { buildJustificationRows } from '@/lib/project-justification-rows';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // TIPUS
@@ -170,7 +170,7 @@ export async function exportProjectJustificationZip(
     }
 
     // Crear manifest entry base
-    const manifestEntry: ManifestEntry = {
+    const baseManifestEntry: Omit<ManifestEntry, 'docStatus' | 'docPathPerPartida' | 'docPathCronologic' | 'documentUrl'> = {
       order: row.order,
       date: row.dateExpense,
       source: row.source,
@@ -183,58 +183,68 @@ export async function exportProjectJustificationZip(
       counterparty: row.counterpartyName,
       description: row.concept,
       txId: row.txId,
-      docStatus: 'OK',
-      docPathPerPartida: row.zipPathPerPartida,
-      docPathCronologic: row.zipPathCronologic,
-      documentUrl: row.documentUrl ?? '',
     };
 
     // Verificar si té document
-    if (!row.documentUrl) {
-      manifestEntry.docStatus = row.source === 'offBank' ? 'MISSING_OFFBANK' : 'MISSING';
-      manifestEntry.docPathPerPartida = '';
-      manifestEntry.docPathCronologic = '';
+    if (row.documents.length === 0) {
+      const manifestEntry: ManifestEntry = {
+        ...baseManifestEntry,
+        docStatus: row.source === 'offBank' ? 'MISSING_OFFBANK' : 'MISSING',
+        docPathPerPartida: '',
+        docPathCronologic: '',
+        documentUrl: '',
+      };
       missingCount++;
       manifestEntries.push(manifestEntry);
       continue;
     }
 
-    // Intentar descarregar el document
-    try {
-      const response = await fetch(row.documentUrl);
-      if (!response.ok) {
+    for (const document of row.documents) {
+      const manifestEntry: ManifestEntry = {
+        ...baseManifestEntry,
+        docStatus: 'OK',
+        docPathPerPartida: document.zipPathPerPartida,
+        docPathCronologic: document.zipPathCronologic,
+        documentUrl: document.documentUrl,
+      };
+
+      // Intentar descarregar el document
+      try {
+        const response = await fetch(document.documentUrl);
+        if (!response.ok) {
+          manifestEntry.docStatus = 'FETCH_ERROR';
+          manifestEntry.docPathPerPartida = '';
+          manifestEntry.docPathCronologic = '';
+          fetchErrorCount++;
+          manifestEntries.push(manifestEntry);
+          continue;
+        }
+
+        const blob = await response.blob();
+        const arrayBuffer = await blob.arrayBuffer();
+
+        // Extreure path relatiu dins de cada carpeta
+        // document.zipPathPerPartida = "01_per_partida/A1_Personal/filename.pdf"
+        // document.zipPathCronologic = "02_cronologic/filename.pdf"
+        const partidaPath = document.zipPathPerPartida.replace('01_per_partida/', '');
+        const cronologicPath = document.zipPathCronologic.replace('02_cronologic/', '');
+
+        // Afegir al ZIP
+        perPartidaFolder.file(partidaPath, arrayBuffer);
+        cronologicFolder.file(cronologicPath, arrayBuffer);
+
+        okCount++;
+
+      } catch (err) {
+        console.error('Error fetching document:', err);
         manifestEntry.docStatus = 'FETCH_ERROR';
         manifestEntry.docPathPerPartida = '';
         manifestEntry.docPathCronologic = '';
         fetchErrorCount++;
-        manifestEntries.push(manifestEntry);
-        continue;
       }
 
-      const blob = await response.blob();
-      const arrayBuffer = await blob.arrayBuffer();
-
-      // Extreure path relatiu dins de cada carpeta
-      // row.zipPathPerPartida = "01_per_partida/A1_Personal/filename.pdf"
-      // row.zipPathCronologic = "02_cronologic/filename.pdf"
-      const partidaPath = row.zipPathPerPartida.replace('01_per_partida/', '');
-      const cronologicPath = row.zipPathCronologic.replace('02_cronologic/', '');
-
-      // Afegir al ZIP
-      perPartidaFolder.file(partidaPath, arrayBuffer);
-      cronologicFolder.file(cronologicPath, arrayBuffer);
-
-      okCount++;
-
-    } catch (err) {
-      console.error('Error fetching document:', err);
-      manifestEntry.docStatus = 'FETCH_ERROR';
-      manifestEntry.docPathPerPartida = '';
-      manifestEntry.docPathCronologic = '';
-      fetchErrorCount++;
+      manifestEntries.push(manifestEntry);
     }
-
-    manifestEntries.push(manifestEntry);
   }
 
   // 4. Generar manifest.csv
@@ -260,7 +270,7 @@ export async function exportProjectJustificationZip(
   URL.revokeObjectURL(url);
 
   return {
-    entriesCount: justificationRows.length,
+    entriesCount: manifestEntries.length,
     okCount,
     missingCount,
     fetchErrorCount,

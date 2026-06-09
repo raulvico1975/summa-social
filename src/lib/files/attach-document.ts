@@ -1,6 +1,7 @@
 import { ref, uploadBytes, getDownloadURL, FirebaseStorage } from 'firebase/storage';
-import { doc, updateDoc, Firestore, DocumentReference, collection } from 'firebase/firestore';
+import { doc, updateDoc, Firestore, collection } from 'firebase/firestore';
 import { buildDocumentFilename } from '@/lib/build-document-filename';
+import { addTransactionDocument } from '@/lib/files/transaction-documents';
 
 // =============================================================================
 // TYPES
@@ -12,6 +13,7 @@ export interface AttachDocumentToTransactionParams {
   organizationId: string;
   transactionId: string;
   file: File;
+  currentDocument?: string | null;
   /** Data del moviment en format ISO (YYYY-MM-DD). Usada per construir el nom del fitxer. */
   transactionDate?: string;
   /** Concepte del moviment. Usat per construir el nom del fitxer. */
@@ -82,36 +84,24 @@ export async function attachDocumentToTransaction({
   transactionDate,
   transactionConcept,
   overrideFilename,
+  currentDocument = null,
 }: AttachDocumentToTransactionParams): Promise<AttachDocumentResult> {
   try {
-    // Construir nom de fitxer estandarditzat
-    const dateISO = transactionDate ?? new Date().toISOString().split('T')[0];
-    const concept = transactionConcept?.trim() || 'moviment';
-    const finalName = overrideFilename ?? buildDocumentFilename({ dateISO, concept, originalName: file.name });
-
-    // Path a Storage: organizations/{orgId}/documents/{transactionId}/{filename}
-    const storagePath = `organizations/${organizationId}/documents/${transactionId}/${finalName}`;
-    const storageRef = ref(storage, storagePath);
-
-    // Pujar fitxer
-    const uploadResult = await uploadBytes(storageRef, file, {
-      contentType: getContentType(file),
-      customMetadata: {
-        originalFileName: file.name,
+    const result = await addTransactionDocument({
+      firestore,
+      storage,
+      organizationId,
+      transaction: {
+        id: transactionId,
+        date: transactionDate,
+        description: transactionConcept,
+        document: currentDocument,
       },
+      file,
+      overrideFilename,
     });
 
-    // Obtenir URL de descàrrega
-    const downloadURL = await getDownloadURL(uploadResult.ref);
-
-    // Actualitzar Firestore
-    const transactionRef = doc(
-      collection(firestore, `organizations/${organizationId}/transactions`),
-      transactionId
-    );
-    await updateDoc(transactionRef, { document: downloadURL });
-
-    return { success: true, downloadURL };
+    return { success: true, downloadURL: result.downloadURL };
   } catch (error) {
     console.error('[attachDocumentToTransaction] Error:', error);
     const errorMessage = error instanceof Error ? error.message : 'Error desconegut';
