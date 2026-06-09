@@ -57,11 +57,21 @@ export interface JustificationRow {
   /** URL del document original (per download) */
   documentUrl: string | null;
 
+  /** Documents descarregables associats a aquesta fila econòmica */
+  documents: JustificationDocument[];
+
   /** Font de la despesa */
   source: 'bank' | 'offBank';
 
   /** Categoria de la despesa */
   categoryName: string | null;
+}
+
+export interface JustificationDocument {
+  documentName: string;
+  documentUrl: string;
+  zipPathCronologic: string;
+  zipPathPerPartida: string;
 }
 
 export interface BuildJustificationRowsParams {
@@ -163,7 +173,9 @@ function padOrderNumber(order: number): string {
 function generateDocumentNameWithOrder(
   order: number,
   expense: UnifiedExpense,
-  assignmentAmount: number
+  assignmentAmount: number,
+  attachmentIndex = 0,
+  attachmentName?: string | null
 ): string {
   const orderPart = padOrderNumber(order);
   const datePart = formatDateForFilename(expense.date);
@@ -171,17 +183,35 @@ function generateDocumentNameWithOrder(
   const amount = formatAmountForFilename(assignmentAmount);
   const concept = sanitizeForFilename(truncate(expense.description ?? '', 30));
 
-  // Si tenim attachments amb nom, usar l'extensió del primer attachment
-  const attachment = expense.attachments?.[0];
   let ext = '.pdf'; // default
-  if (attachment?.name) {
-    const lastDot = attachment.name.lastIndexOf('.');
+  if (attachmentName) {
+    const lastDot = attachmentName.lastIndexOf('.');
     if (lastDot > 0) {
-      ext = attachment.name.slice(lastDot);
+      ext = attachmentName.slice(lastDot);
     }
   }
 
-  return `${orderPart}_${datePart}_${counterparty}_${amount}EUR_${concept}${ext}`;
+  const baseName = `${orderPart}_${datePart}_${counterparty}_${amount}EUR_${concept}`;
+  return `${baseName}${attachmentIndex > 0 ? `_doc${String(attachmentIndex + 1).padStart(2, '0')}` : ''}${ext}`;
+}
+
+function resolveExpenseDocuments(expense: UnifiedExpense): Array<{ url: string; name: string | null }> {
+  const attachments = (expense.attachments ?? [])
+    .filter((attachment) => typeof attachment.url === 'string' && attachment.url.trim())
+    .map((attachment) => ({ url: attachment.url.trim(), name: attachment.name ?? null }));
+
+  const candidates = attachments.length > 0
+    ? attachments
+    : expense.documentUrl
+      ? [{ url: expense.documentUrl, name: null }]
+      : [];
+
+  const seenUrls = new Set<string>();
+  return candidates.filter((candidate) => {
+    if (seenUrls.has(candidate.url)) return false;
+    seenUrls.add(candidate.url);
+    return true;
+  });
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -275,13 +305,30 @@ export function buildJustificationRows(params: BuildJustificationRowsParams): Ju
     const order = index + 1;
     const { expense, budgetLineCode, budgetLineName, budgetLineId, amountAssignedEUR, txId } = preRow;
 
-    // Generar nom del document AMB prefix d'ordre
-    const documentName = generateDocumentNameWithOrder(order, expense, amountAssignedEUR ?? 0);
-
     // Generar nom de carpeta de partida
     const budgetFolderName = generateBudgetFolderName(
       budgetLineId ? budgetLineMap.get(budgetLineId) ?? null : null
     );
+
+    const documents = resolveExpenseDocuments(expense).map((document, documentIndex) => {
+      const documentName = generateDocumentNameWithOrder(
+        order,
+        expense,
+        amountAssignedEUR ?? 0,
+        documentIndex,
+        document.name
+      );
+
+      return {
+        documentName,
+        documentUrl: document.url,
+        zipPathPerPartida: `01_per_partida/${budgetFolderName}/${documentName}`,
+        zipPathCronologic: `02_cronologic/${documentName}`,
+      };
+    });
+    const primaryDocument = documents[0] ?? null;
+    const documentName = primaryDocument?.documentName
+      ?? generateDocumentNameWithOrder(order, expense, amountAssignedEUR ?? 0);
 
     // amountTotalEUR: preferir suma d'assignacions EUR (per FX), fallback a expense.amountEUR
     const sumFromAssignments = totalEurByTxId.get(txId);
@@ -306,12 +353,13 @@ export function buildJustificationRows(params: BuildJustificationRowsParams): Ju
       amountTotalEUR,
       amountAssignedEUR,
       documentName,
-      documentUrl: expense.documentUrl ?? expense.attachments?.[0]?.url ?? null,
+      documentUrl: primaryDocument?.documentUrl ?? null,
+      documents,
       source: expense.source,
       categoryName: expense.categoryName,
       // Paths dins del ZIP
-      zipPathPerPartida: `01_per_partida/${budgetFolderName}/${documentName}`,
-      zipPathCronologic: `02_cronologic/${documentName}`,
+      zipPathPerPartida: primaryDocument?.zipPathPerPartida ?? `01_per_partida/${budgetFolderName}/${documentName}`,
+      zipPathCronologic: primaryDocument?.zipPathCronologic ?? `02_cronologic/${documentName}`,
     };
   });
 

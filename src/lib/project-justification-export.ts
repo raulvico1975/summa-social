@@ -5,7 +5,7 @@ import * as XLSX from 'xlsx';
 import type { BudgetLine, ExpenseLink, Project, ProjectExpenseExport, OffBankExpense, UnifiedExpense } from '@/lib/project-module-types';
 import type { Firestore } from 'firebase/firestore';
 import { collection, getDocs, doc, getDoc, query, where } from 'firebase/firestore';
-import { buildJustificationRows, type JustificationRow } from '@/lib/project-justification-rows';
+import { buildJustificationRows } from '@/lib/project-justification-rows';
 
 // Tipus unificat per despeses (bank o off-bank)
 interface UnifiedExpenseData {
@@ -90,6 +90,14 @@ function formatPercent(value: number): string {
     minimumFractionDigits: 1,
     maximumFractionDigits: 1,
   }).format(value) + '%';
+}
+
+function formatProjectExpenseDocumentNames(documents: ProjectExpenseExport['documents'] | undefined): string | null {
+  if (!documents || documents.length === 0) return null;
+  const names = documents
+    .map((document, index) => document.name?.trim() || `document-${index + 1}`)
+    .filter(Boolean);
+  return names.length > 0 ? names.join(' | ') : null;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -232,7 +240,7 @@ async function fetchJustificationData(
           counterpartyName: data.counterpartyName,
           categoryName: data.categoryName,
           amountEUR: data.amountEUR,
-          documentName: data.documents?.[0]?.name ?? null,
+          documentName: formatProjectExpenseDocumentNames(data.documents),
           // FX (bank sempre és EUR)
           currency: 'EUR',
           amountOriginal: null,

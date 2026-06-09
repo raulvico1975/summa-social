@@ -224,6 +224,8 @@ function createFirestoreLinkStore(): PendingDocumentLinkStore {
       const batch = db.batch();
       const pendingRef = db.doc(`organizations/${orgId}/pendingDocuments/${pendingDocumentId}`);
       const transactionRef = db.doc(`organizations/${orgId}/transactions/${transactionId}`);
+      const transactionDocumentRef = transactionRef.collection('documents').doc();
+      const nowIso = new Date().toISOString();
 
       batch.update(pendingRef, {
         status: 'matched',
@@ -246,6 +248,17 @@ function createFirestoreLinkStore(): PendingDocumentLinkStore {
       batch.update(transactionRef, {
         document: documentUrl,
         updatedAt: FieldValue.serverTimestamp(),
+      });
+      batch.set(transactionDocumentRef, {
+        url: documentUrl,
+        storagePath: finalStoragePath,
+        filename: finalStoragePath.split('/').filter(Boolean).pop() ?? 'document',
+        contentType: null,
+        size: null,
+        isPrimary: true,
+        createdAt: nowIso,
+        createdByUid: null,
+        source: 'transaction-upload',
       });
 
       await batch.commit();

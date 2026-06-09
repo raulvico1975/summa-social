@@ -305,6 +305,19 @@ service cloud.firestore {
           );
 
         allow delete: if isSuperAdmin() || (isMemberOf(orgId) && getMemberRole(orgId) in ['admin', 'user']);
+
+        match /documents/{documentId} {
+          allow read: if isSuperAdmin() || hasCapability(orgId, 'moviments.read');
+          allow create, update: if isSuperAdmin()
+            || (hasCapability(orgId, 'moviments.editar')
+              && request.resource.data.keys().hasAll(['url', 'filename', 'isPrimary', 'createdAt', 'source'])
+              && request.resource.data.url is string
+              && request.resource.data.filename is string
+              && request.resource.data.isPrimary is bool
+              && request.resource.data.createdAt is string
+              && request.resource.data.source in ['transaction-upload', 'legacy-document']);
+          allow delete: if isSuperAdmin() || hasCapability(orgId, 'moviments.editar');
+        }
       }
 
       // ─────────────────────────────────────────────────────────────────────

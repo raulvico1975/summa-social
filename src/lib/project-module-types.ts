@@ -37,6 +37,10 @@ export interface ProjectExpenseExport {
     storagePath: string | null;
     fileUrl: string | null;
     name: string | null;
+    contentType?: string | null;
+    size?: number | null;
+    createdAt?: string | null;
+    isPrimary?: boolean | null;
   }>;
 
   isEligibleForProjects: boolean;

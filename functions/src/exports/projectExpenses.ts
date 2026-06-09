@@ -76,6 +76,10 @@ interface ProjectExpenseExportWrite {
     storagePath: string | null;
     fileUrl: string | null;
     name: string | null;
+    contentType?: string | null;
+    size?: number | null;
+    createdAt?: string | null;
+    isPrimary?: boolean | null;
   }>;
 
   isEligibleForProjects: boolean;
@@ -126,7 +130,7 @@ export const exportProjectExpenses = functions
     }
 
     const isEligibleForProjects = calculateEligibility(tx);
-    const documents = buildDocuments(tx.document ?? null);
+    const documents = await buildDocuments(orgId, transactionId, tx.document ?? null);
 
     // El camp tx.category ja conté el nom/codi de la categoria, no l'ID
     // Per tant, categoryName = tx.category directament
@@ -203,20 +207,61 @@ function calculateEligibility(tx: Transaction): boolean {
   return true;
 }
 
-function buildDocuments(
+async function buildDocuments(
+  orgId: string,
+  transactionId: string,
   document: Transaction["document"]
-): ProjectExpenseExportWrite["documents"] {
-  const { fileUrl, storagePath, name } = resolveDocumentReference(document);
-  if (!fileUrl && !storagePath) return [];
+): Promise<ProjectExpenseExportWrite["documents"]> {
+  const documentsSnap = await db
+    .collection(`organizations/${orgId}/transactions/${transactionId}/documents`)
+    .orderBy("createdAt", "asc")
+    .get();
 
-  return [
-    {
+  const persistedDocuments = documentsSnap.docs
+    .map((docSnap) => normalizePersistedDocument(docSnap.id, docSnap.data()))
+    .filter((doc): doc is NonNullable<ReturnType<typeof normalizePersistedDocument>> => doc !== null);
+
+  const { fileUrl, storagePath, name } = resolveDocumentReference(document);
+  const hasLegacy = !!(fileUrl || storagePath);
+  const legacyAlreadyPersisted = hasLegacy && persistedDocuments.some((doc) => {
+    return (fileUrl && doc.fileUrl === fileUrl) || (storagePath && doc.storagePath === storagePath);
+  });
+
+  const documents = [...persistedDocuments];
+  if (hasLegacy && !legacyAlreadyPersisted) {
+    documents.unshift({
       source: "summa",
       storagePath,
       fileUrl,
       name,
-    },
-  ];
+      contentType: null,
+      size: null,
+      createdAt: null,
+      isPrimary: persistedDocuments.length === 0,
+    });
+  }
+
+  return documents;
+}
+
+function normalizePersistedDocument(
+  id: string,
+  raw: FirebaseFirestore.DocumentData
+): ProjectExpenseExportWrite["documents"][number] | null {
+  const fileUrl = firstString(raw.url, raw.fileUrl, raw.downloadURL);
+  const storagePath = firstString(raw.storagePath) ?? (fileUrl ? extractStoragePathFromFirebaseStorageUrl(fileUrl) : null);
+  if (!fileUrl && !storagePath) return null;
+
+  return {
+    source: "summa",
+    storagePath,
+    fileUrl,
+    name: firstString(raw.filename, raw.name) ?? id,
+    contentType: firstString(raw.contentType),
+    size: typeof raw.size === "number" && Number.isFinite(raw.size) ? raw.size : null,
+    createdAt: firstString(raw.createdAt),
+    isPrimary: raw.isPrimary === true,
+  };
 }
 
 function resolveDocumentReference(document: Transaction["document"]): {

@@ -72,28 +72,61 @@ function chunkArray<T>(arr: T[], size: number): T[][] {
 function resolveDocumentUrl(
   documents: ProjectExpenseExport['documents'] | undefined
 ): string | null {
-  if (!documents || documents.length === 0) return null;
+  return resolveDocumentAttachments(documents)[0]?.url ?? null;
+}
 
-  const firstDoc = documents[0];
+function resolveDocumentAttachments(
+  documents: ProjectExpenseExport['documents'] | undefined
+): OffBankAttachment[] {
+  if (!documents || documents.length === 0) return [];
 
-  // 1. Si tenim fileUrl, usar-la directament
-  if (firstDoc.fileUrl) {
-    return firstDoc.fileUrl;
+  const ordered = [...documents].sort((a, b) => Number(b.isPrimary === true) - Number(a.isPrimary === true));
+  const attachments: OffBankAttachment[] = [];
+
+  ordered.forEach((document, index) => {
+    if (document.fileUrl) {
+      attachments.push({
+        url: document.fileUrl,
+        name: document.name ?? `document-${index + 1}`,
+        contentType: document.contentType ?? 'application/octet-stream',
+        size: typeof document.size === 'number' ? document.size : 0,
+        uploadedAt: document.createdAt ?? '',
+      });
+      return;
+    }
+
+    if (document.storagePath) {
+      console.warn(`[resolveDocumentAttachments] storagePath exists but no fileUrl: ${document.storagePath}`);
+    }
+  });
+
+  const seenUrls = new Set<string>();
+  return attachments.filter((attachment) => {
+    if (seenUrls.has(attachment.url)) return false;
+    seenUrls.add(attachment.url);
+    return true;
+  });
+}
+
+function resolveOffBankAttachments(data: OffBankExpense): OffBankAttachment[] {
+  const attachments = data.attachments ?? [];
+  if (attachments.length > 0) return attachments;
+  if (!data.documentUrl) return [];
+  return [{
+    url: data.documentUrl,
+    name: 'document',
+    contentType: 'application/octet-stream',
+    size: 0,
+    uploadedAt: '',
+  }];
+}
+
+function resolveOffBankDocumentUrl(data: OffBankExpense): string | null {
+  const attachments = resolveOffBankAttachments(data);
+  if (attachments.length > 0) {
+    return attachments[0].url;
   }
-
-  // 2. Si tenim storagePath però no fileUrl, intentar construir URL pública
-  // Format storagePath: "organizations/{orgId}/documents/{docId}"
-  // Format URL: https://firebasestorage.googleapis.com/v0/b/{bucket}/o/{encodedPath}?alt=media
-  if (firstDoc.storagePath) {
-    // El bucket hauria de ser summa-social.appspot.com (o similar)
-    // Com que no tenim accés directe al bucket aquí, retornem null i deixem
-    // que l'usuari regeneri el document. En futures versions es pot millorar.
-    // Per ara, loguem un warning per debug.
-    console.warn(`[resolveDocumentUrl] storagePath exists but no fileUrl: ${firstDoc.storagePath}`);
-    return null;
-  }
-
-  return null;
+  return data.documentUrl ?? null;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -486,7 +519,8 @@ export function useUnifiedExpenseFeed(options?: UseUnifiedExpenseFeedOptions): U
             amountEUR: amountEURValue,
             categoryName: data.categoryName,
             counterpartyName: data.counterpartyName,
-            documentUrl: data.documentUrl ?? data.attachments?.[0]?.url ?? null,
+            documentUrl: resolveOffBankDocumentUrl(data),
+            attachments: resolveOffBankAttachments(data),
             // Camps FX (nou model)
             originalCurrency: data.originalCurrency ?? data.currency ?? null,
             originalAmount: data.originalAmount ?? data.amountOriginal ?? null,
@@ -513,6 +547,7 @@ export function useUnifiedExpenseFeed(options?: UseUnifiedExpenseFeedOptions): U
             categoryName: data.categoryName,
             counterpartyName: data.counterpartyName,
             documentUrl: resolveDocumentUrl(data.documents),
+            attachments: resolveDocumentAttachments(data.documents),
           });
         }
       }
@@ -660,6 +695,7 @@ export function useUnifiedExpenseFeed(options?: UseUnifiedExpenseFeedOptions): U
           categoryName: data.categoryName,
           counterpartyName: data.counterpartyName,
           documentUrl: resolveDocumentUrl(data.documents),
+          attachments: resolveDocumentAttachments(data.documents),
         };
       });
 
@@ -675,7 +711,8 @@ export function useUnifiedExpenseFeed(options?: UseUnifiedExpenseFeedOptions): U
           amountEUR: amountEURValue,
           categoryName: data.categoryName,
           counterpartyName: data.counterpartyName,
-          documentUrl: data.documentUrl ?? data.attachments?.[0]?.url ?? null,
+          documentUrl: resolveOffBankDocumentUrl(data),
+          attachments: resolveOffBankAttachments(data),
           // Camps FX (nou model)
           originalCurrency: data.originalCurrency ?? data.currency ?? null,
           originalAmount: data.originalAmount ?? data.amountOriginal ?? null,

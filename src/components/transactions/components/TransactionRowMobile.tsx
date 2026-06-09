@@ -46,7 +46,7 @@ import { shouldShowFiscalDonationBadge } from '@/lib/transactions/is-donation-ca
 import {
   type StripeImputationSummary,
 } from '@/lib/stripe/activeStripeImputation';
-import { openDocumentUrl } from '@/lib/open-document-url';
+import { TransactionDocumentsButton } from '@/components/transactions/TransactionDocumentsButton';
 
 /**
  * Helper: middle ellipsis per a noms llargs
@@ -154,7 +154,6 @@ export const TransactionRowMobile = React.memo(function TransactionRowMobile({
   const isReturnFee = tx.transactionType === 'return_fee';
   const isReturnedDonation = tx.donationStatus === 'returned';
   const canGenerateReturnEmail = isReturn && !!tx.contactId && tx.isRemittance !== true;
-  const hasDocument = !!tx.document;
   const hasBalanceAfter = typeof tx.balanceAfter === 'number' && Number.isFinite(tx.balanceAfter);
   const balanceText = hasBalanceAfter ? formatCurrencyEU(Math.abs(tx.balanceAfter!)) : '—';
   const isFromStripe = tx.source === 'stripe';
@@ -532,17 +531,7 @@ export const TransactionRowMobile = React.memo(function TransactionRowMobile({
 
       {/* Actions rail */}
       <div className="mt-2 flex justify-end gap-1 shrink-0">
-        {hasDocument && tx.document && (
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8 shrink-0"
-            onClick={() => openDocumentUrl(tx.document!)}
-            aria-label={t.viewDocument}
-          >
-            <FileText className="h-4 w-4 fill-current text-muted-foreground" />
-          </Button>
-        )}
+        <TransactionDocumentsButton transaction={tx} />
         <DropdownMenu open={isMenuOpen} onOpenChange={setIsMenuOpen}>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon" className="h-8 w-8">
@@ -558,7 +547,7 @@ export const TransactionRowMobile = React.memo(function TransactionRowMobile({
               <MessageSquare className="h-4 w-4 mr-2" />
               {tx.note ? (t.editNote || 'Editar nota') : (t.addNote || 'Afegir nota')}
             </DropdownMenuItem>
-            {!hasDocument && onAttachDocument && (
+            {onAttachDocument && (
               <DropdownMenuItem onClick={handleAttachDoc}>
                 <FileText className="h-4 w-4 mr-2 text-muted-foreground/40" />
                 {t.attachProof}

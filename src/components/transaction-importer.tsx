@@ -54,6 +54,7 @@ import {
   getBankMappingColumnCount,
   type BankMappingFieldId,
 } from '@/lib/importers/bank/mapping-ui';
+import { resolveBankStatementImportFileType } from '@/lib/importers/bank/import-file-type';
 import { normalizeImportTransactionTypeForPersist } from '@/lib/importers/bank/normalize-import-transaction-type';
 import {
   canAutoApplyAiCategoryDecision,
@@ -305,9 +306,10 @@ export function TransactionImporter({ availableCategories }: TransactionImporter
     setPreviewRows([]);
     setPreviewHasMappedBalance(false);
     setIsImporting(true);
-    if (file.name.endsWith('.csv')) {
+    const fileType = resolveBankStatementImportFileType(file.name);
+    if (fileType === 'csv') {
       parseCsv(file, bankAccountId);
-    } else if (file.name.endsWith('.xlsx')) {
+    } else if (fileType === 'excel') {
       parseXlsx(file, bankAccountId);
     } else {
       toast({
@@ -986,7 +988,7 @@ export function TransactionImporter({ availableCategories }: TransactionImporter
         type="file"
         ref={fileInputRef}
         onChange={handleFileChange}
-        accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel"
+        accept=".csv,.xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
         className="hidden"
         disabled={isImporting}
       />
