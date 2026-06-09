@@ -37,6 +37,16 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { useIsMobile } from '@/hooks/use-is-mobile';
 import { MOBILE_CTA_PRIMARY } from '@/lib/ui/mobile-actions';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -65,7 +75,7 @@ import {
   archivePendingDocument,
   restorePendingDocument,
   deletePendingDocument,
-  deleteMatchedPendingDocument,
+  unmatchPendingDocument,
   isDocumentReadyToConfirm,
   type PendingDocument,
   type PendingDocumentStatus,
@@ -116,7 +126,8 @@ export default function PendingDocsPage() {
   const [archivingDocId, setArchivingDocId] = React.useState<string | null>(null);
   const [deletingDocId, setDeletingDocId] = React.useState<string | null>(null);
   const [relinkingDocId, setRelinkingDocId] = React.useState<string | null>(null);
-  const [deletingMatchedDocId, setDeletingMatchedDocId] = React.useState<string | null>(null);
+  const [unmatchingDocId, setUnmatchingDocId] = React.useState<string | null>(null);
+  const [docToUnmatch, setDocToUnmatch] = React.useState<PendingDocument | null>(null);
 
   // Filtres client-side
   const [filters, setFilters] = React.useState<PendingDocumentsFilters>(EMPTY_FILTERS);
@@ -397,9 +408,8 @@ export default function PendingDocsPage() {
     }
   }, [canOperate, firestore, storage, organizationId, toast, expandedDocId]);
 
-  // Handler per eliminar un document matched (desfer conciliació)
-  const handleDeleteMatched = React.useCallback(async (doc: PendingDocument) => {
-    if (!canOperate || !firestore || !storage || !organizationId) return;
+  const handleRequestUnmatch = React.useCallback((doc: PendingDocument) => {
+    if (!canOperate) return;
 
     if (doc.status !== 'matched') {
       toast({
@@ -410,30 +420,38 @@ export default function PendingDocsPage() {
       return;
     }
 
-    setDeletingMatchedDocId(doc.id);
+    setDocToUnmatch(doc);
+  }, [canOperate, toast, t, tr]);
+
+  // Handler per desfer una conciliació sense eliminar documents ni fitxers
+  const handleConfirmUnmatch = React.useCallback(async () => {
+    if (!canOperate || !firestore || !organizationId || !docToUnmatch) return;
+
+    setUnmatchingDocId(docToUnmatch.id);
     try {
-      await deleteMatchedPendingDocument(firestore, storage, organizationId, doc.id);
+      await unmatchPendingDocument(firestore, organizationId, docToUnmatch.id);
 
       // Tancar expansió si estava obert
-      if (expandedDocId === doc.id) {
+      if (expandedDocId === docToUnmatch.id) {
         setExpandedDocId(null);
       }
 
       toast({
-        title: t.pendingDocs.toasts.matchedDeleted || 'Conciliació desfeta',
-        description: t.pendingDocs.toasts.matchedDeletedDesc || 'El moviment bancari torna a estar lliure per conciliar.',
+        title: t.pendingDocs.toasts.unmatched,
+        description: t.pendingDocs.toasts.unmatchedDesc,
       });
     } catch (error) {
-      console.error('Error deleting matched document:', error);
+      console.error('Error unmatching document:', error);
       toast({
         variant: 'destructive',
         title: t.pendingDocs.toasts.error,
-        description: error instanceof Error ? error.message : t.pendingDocs.toasts.errorDelete,
+        description: error instanceof Error ? error.message : t.pendingDocs.toasts.errorUnmatch,
       });
     } finally {
-      setDeletingMatchedDocId(null);
+      setUnmatchingDocId(null);
+      setDocToUnmatch(null);
     }
-  }, [canOperate, firestore, storage, organizationId, toast, expandedDocId, t]);
+  }, [canOperate, firestore, organizationId, docToUnmatch, toast, expandedDocId, t]);
 
   // Handler per re-vincular document a transacció
   const handleRelinkDocument = React.useCallback(async (doc: PendingDocument) => {
@@ -1033,11 +1051,11 @@ export default function PendingDocsPage() {
                           onRestore={handleRestore}
                           onReconcile={handleReconcile}
                           onRelinkDocument={handleRelinkDocument}
-                          onDeleteMatched={handleDeleteMatched}
+                          onDeleteMatched={handleRequestUnmatch}
                           isConfirming={confirmingDocId === doc.id}
                           isArchiving={archivingDocId === doc.id}
                           isRelinking={relinkingDocId === doc.id}
-                          isDeletingMatched={deletingMatchedDocId === doc.id}
+                          isDeletingMatched={unmatchingDocId === doc.id}
                           movimentsPath={movimentsPath}
                           isSelectable={canOperate && doc.status === 'confirmed'}
                           isSelected={selectedDocIds.has(doc.id)}
@@ -1118,6 +1136,14 @@ export default function PendingDocsPage() {
                                   </Link>
                                 </DropdownMenuItem>
                               )}
+                              {doc.status === 'matched' && (
+                                <DropdownMenuItem
+                                  onClick={() => handleRequestUnmatch(doc)}
+                                  disabled={unmatchingDocId === doc.id}
+                                >
+                                  {t.pendingDocs.actions.unmatch}
+                                </DropdownMenuItem>
+                              )}
                               {/* Arxivar (no arxivats) */}
                               {doc.status !== 'archived' && doc.status !== 'matched' && (
                                 <DropdownMenuItem
@@ -1167,6 +1193,35 @@ export default function PendingDocsPage() {
           contacts={contacts || []}
           initialFiles={initialUploadFiles}
         />
+
+        <AlertDialog
+          open={!!docToUnmatch}
+          onOpenChange={(open) => {
+            if (!open && !unmatchingDocId) {
+              setDocToUnmatch(null);
+            }
+          }}
+        >
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>{t.pendingDocs.unmatchDialog.title}</AlertDialogTitle>
+              <AlertDialogDescription>
+                {t.pendingDocs.unmatchDialog.description}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={!!unmatchingDocId}>
+                {t.pendingDocs.actions.cancel}
+              </AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleConfirmUnmatch}
+                disabled={!!unmatchingDocId}
+              >
+                {t.pendingDocs.actions.unmatch}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
 
         {/* Modal SEPA */}
         <SepaGenerationModal

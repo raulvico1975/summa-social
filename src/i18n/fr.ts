@@ -3238,10 +3238,15 @@ export const fr = {
       search: "Rechercher...",
       createSupplier: "Nouveau fournisseur...",
       deleteMatched: "Supprimer en attente",
+      unmatch: "Annuler le rapprochement",
     },
     deleteDialog: {
       title: "Supprimer le document ?",
       description: "Le document et le fichier téléchargé seront supprimés. Cette action ne peut pas être annulée.",
+    },
+    unmatchDialog: {
+      title: "Annuler le rapprochement ?",
+      description: "Le document reviendra dans les éléments en attente de banque pour pouvoir être corrigé et le mouvement ne sera plus lié à ce justificatif. Aucun fichier ne sera supprimé.",
     },
     upload: {
       title: "Téléverser des factures ou bulletins de paie",
@@ -3301,6 +3306,9 @@ export const fr = {
       relinked: "Document re-lié",
       matchedDeleted: "Rapprochement annulé",
       matchedDeletedDesc: "Le mouvement bancaire est à nouveau disponible pour le rapprochement.",
+      unmatched: "Rapprochement annulé",
+      unmatchedDesc: "Le document revient en attente de banque et le mouvement n'est plus lié à ce justificatif.",
+      errorUnmatch: "Impossible d'annuler le rapprochement.",
     },
     modals: {
       deleteTitle: "Supprimer le document ?",
