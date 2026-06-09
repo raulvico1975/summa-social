@@ -1,6 +1,5 @@
 import {
   collection,
-  deleteDoc,
   doc,
   getDocs,
   orderBy,
@@ -122,6 +121,7 @@ export async function addTransactionDocument({
   };
 
   const batch = writeBatch(firestore);
+  const parentUpdate: { document?: string; updatedAt: string } = { updatedAt: now };
   if (shouldBePrimary) {
     materializeLegacyIfNeeded(batch, firestore, organizationId, transaction, existing);
     for (const document of existing.documents) {
@@ -131,12 +131,10 @@ export async function addTransactionDocument({
         });
       }
     }
-    batch.update(transactionRef(firestore, organizationId, transaction.id), {
-      document: downloadURL,
-      updatedAt: now,
-    });
+    parentUpdate.document = downloadURL;
   }
   batch.set(documentRef, record);
+  batch.update(transactionRef(firestore, organizationId, transaction.id), parentUpdate);
   await batch.commit();
 
   return {
@@ -176,6 +174,7 @@ export async function linkExistingTransactionDocument({
   const documentRef = doc(transactionDocumentsCollection(firestore, organizationId, transaction.id));
   const now = new Date().toISOString();
   const batch = writeBatch(firestore);
+  const parentUpdate: { document?: string; updatedAt: string } = { updatedAt: now };
   if (shouldBePrimary) {
     materializeLegacyIfNeeded(batch, firestore, organizationId, transaction, existing);
     for (const document of existing.documents) {
@@ -185,10 +184,7 @@ export async function linkExistingTransactionDocument({
         });
       }
     }
-    batch.update(transactionRef(firestore, organizationId, transaction.id), {
-      document: trimmedUrl,
-      updatedAt: now,
-    });
+    parentUpdate.document = trimmedUrl;
   }
   batch.set(documentRef, {
     url: trimmedUrl,
@@ -201,6 +197,7 @@ export async function linkExistingTransactionDocument({
     createdByUid: createdByUid ?? null,
     source,
   } satisfies TransactionDocumentRecord);
+  batch.update(transactionRef(firestore, organizationId, transaction.id), parentUpdate);
   await batch.commit();
   return documentRef.id;
 }
@@ -231,22 +228,18 @@ export async function deleteTransactionDocument(
     : null;
   const now = new Date().toISOString();
   const batch = writeBatch(firestore);
+  const parentUpdate: { document?: string | null; updatedAt: string } = { updatedAt: now };
 
   batch.delete(doc(docsRef, documentId));
   if (target?.isPrimary) {
     if (nextPrimary?.id) {
       batch.update(doc(docsRef, nextPrimary.id), { isPrimary: true });
-      batch.update(transactionRef(firestore, organizationId, transaction.id), {
-        document: nextPrimary.url,
-        updatedAt: now,
-      });
+      parentUpdate.document = nextPrimary.url;
     } else {
-      batch.update(transactionRef(firestore, organizationId, transaction.id), {
-        document: transaction.document ?? null,
-        updatedAt: now,
-      });
+      parentUpdate.document = transaction.document ?? null;
     }
   }
+  batch.update(transactionRef(firestore, organizationId, transaction.id), parentUpdate);
 
   await batch.commit();
 }
