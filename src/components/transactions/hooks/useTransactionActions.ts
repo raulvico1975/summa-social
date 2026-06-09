@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import { doc, CollectionReference, type Firestore, writeBatch, deleteField, query, where, getDocs, limit, updateDoc } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL, deleteObject, FirebaseStorage } from 'firebase/storage';
+import { FirebaseStorage } from 'firebase/storage';
 import { pendingDocumentsCollection } from '@/lib/pending-documents/refs';
 import { getMatchedPendingDocumentId } from '@/lib/pending-documents';
 import { updateDocumentNonBlocking, deleteDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase';
@@ -12,6 +12,7 @@ import { useTranslations } from '@/i18n';
 import type { Transaction, AnyContact, ContactType, Category } from '@/lib/data';
 import { buildDocumentFilename } from '@/lib/build-document-filename';
 import { attachDocumentToTransaction } from '@/lib/files/attach-document';
+import { addTransactionDocument, clearTransactionDocumentLink } from '@/lib/files/transaction-documents';
 import { handleTransactionDelete, isFiscallyRelevantTransaction } from '@/lib/fiscal/softDeleteTransaction';
 import { isCategoryIdCompatibleStrict } from '@/lib/constants';
 import { confirmClassificationMemory } from '@/lib/transaction-classification/client-memory';
@@ -366,13 +367,22 @@ export function useTransactionActions({
           return;
         }
 
-        const storageRef = ref(storage, storagePath);
-
         try {
-          const uploadResult = await uploadBytes(storageRef, file);
-
-          const downloadURL = await getDownloadURL(uploadResult.ref);
-          updateDocumentNonBlocking(doc(transactionsCollection, transactionId), { document: downloadURL });
+          await addTransactionDocument({
+            firestore: transactionsCollection.firestore,
+            storage,
+            organizationId,
+            transaction: {
+              id: transactionId,
+              date: tx?.date,
+              description: tx?.description,
+              note: tx?.note,
+              document: tx?.document ?? null,
+            },
+            file,
+            overrideFilename: finalName,
+            createdByUid: userId ?? null,
+          });
 
           toast({ title: t.movements.table.uploadSuccess, description: t.movements.table.documentUploadedSuccessfully });
         } catch (error: unknown) {
@@ -433,6 +443,7 @@ export function useTransactionActions({
         transactionDate: tx?.date,
         transactionConcept: tx?.note || tx?.description,
         overrideFilename,
+        currentDocument: tx?.document ?? null,
       });
 
       if (result.success) {
@@ -519,23 +530,7 @@ export function useTransactionActions({
         return;
       }
 
-      // Intentar eliminar el fitxer de Storage si tenim la URL
-      if (documentUrl) {
-        try {
-          // Extreure el path del Storage des de la URL de download
-          const storageRef = ref(storage, documentUrl);
-          await deleteObject(storageRef);
-        } catch (storageError: unknown) {
-          // Si el fitxer no existeix o hi ha error, continuem igualment
-          const firebaseError = storageError as { code?: string };
-          if (firebaseError.code !== 'storage/object-not-found') {
-            console.warn('Error eliminant fitxer de Storage:', storageError);
-          }
-        }
-      }
-
-      // Actualitzar Firestore per treure la referència al document
-      updateDocumentNonBlocking(doc(transactionsCollection, transactionId), { document: null });
+      await clearTransactionDocumentLink(firestore, organizationId, transactionId, documentUrl ?? null);
 
       toast({ title: t.movements.table.documentDeleted });
     } catch (error: unknown) {

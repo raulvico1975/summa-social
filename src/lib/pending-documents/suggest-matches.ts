@@ -17,6 +17,7 @@ import type { PendingDocument } from './types';
 import type { PrebankRemittance } from './sepa-remittance';
 import { pendingDocumentsCollection, pendingDocumentDoc } from './refs';
 import { prebankRemittancesCollection, prebankRemittanceDoc } from './sepa-remittance';
+import { linkExistingTransactionDocument } from '@/lib/files/transaction-documents';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // TYPES
@@ -429,6 +430,27 @@ export async function linkDocumentToTransaction(
   }
 
   await batch.commit();
+
+  if (documentUrl) {
+    await linkExistingTransactionDocument({
+      firestore,
+      organizationId: orgId,
+      transaction: {
+        id: transactionId,
+        date: txData?.date,
+        description: txData?.description,
+        note: txData?.note,
+        document: txData?.document ?? txUpdates.document ?? null,
+      },
+      url: documentUrl,
+      storagePath: pendingDoc.file?.finalStoragePath ?? pendingDoc.file?.storagePath ?? null,
+      filename: pendingDoc.file?.filename ?? null,
+      contentType: pendingDoc.file?.contentType ?? null,
+      size: pendingDoc.file?.sizeBytes ?? null,
+      source: 'transaction-upload',
+      makePrimary: !txData?.document,
+    });
+  }
 }
 
 /**
