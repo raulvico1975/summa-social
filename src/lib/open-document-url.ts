@@ -1,4 +1,4 @@
 export function openDocumentUrl(url: string): void {
   if (!url) return;
-  window.location.assign(url);
+  window.open(url, '_blank', 'noopener,noreferrer');
 }
