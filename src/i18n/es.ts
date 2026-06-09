@@ -3230,10 +3230,15 @@ export const es = {
       search: "Buscar...",
       createSupplier: "Nuevo proveedor...",
       deleteMatched: "Eliminar pendiente",
+      unmatch: "Deshacer conciliación",
     },
     deleteDialog: {
       title: "¿Eliminar documento?",
       description: "Se eliminará el documento y el archivo subido. Esta acción no se puede deshacer.",
+    },
+    unmatchDialog: {
+      title: "¿Deshacer conciliación?",
+      description: "El documento volverá a pendientes de banco para poder corregirlo y el movimiento dejará de estar vinculado a este comprobante. No se eliminará ningún archivo.",
     },
     upload: {
       title: "Subir facturas o nóminas",
@@ -3287,6 +3292,9 @@ export const es = {
       relinked: "Documento re-vinculado",
       matchedDeleted: "Conciliación deshecha",
       matchedDeletedDesc: "El movimiento bancario vuelve a estar libre para conciliar.",
+      unmatched: "Conciliación deshecha",
+      unmatchedDesc: "El documento vuelve a estar pendiente de banco y el movimiento queda sin este comprobante vinculado.",
+      errorUnmatch: "No se ha podido deshacer la conciliación.",
       autoUnmatchTitle: "Conciliación deshecha",
       autoUnmatchDesc: "Se ha deshecho la conciliación del documento pendiente vinculado antes de eliminar el movimiento.",
       autoUnmatchErrorTitle: "No se ha podido deshacer la conciliación",

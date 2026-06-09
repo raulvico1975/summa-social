@@ -22,6 +22,7 @@ import { ref, deleteObject, type FirebaseStorage } from 'firebase/storage';
 import { pendingDocumentsCollection, pendingDocumentDoc } from './refs';
 import type {
   PendingDocument,
+  PendingDocumentFile,
   PendingDocumentStatus,
   CreatePendingDocumentInput,
   UpdatePendingDocumentInput,
@@ -516,6 +517,100 @@ export function getEditableFields(status: PendingDocumentStatus): {
         editableFields: [],
       };
   }
+}
+
+function storagePathCandidates(path: string | null | undefined): string[] {
+  if (!path) return [];
+
+  return [
+    path,
+    encodeURIComponent(path),
+  ];
+}
+
+export function transactionDocumentBelongsToPendingFile(
+  transactionDocument: string | null | undefined,
+  file: Pick<PendingDocumentFile, 'storagePath' | 'finalStoragePath'>
+): boolean {
+  if (!transactionDocument) return false;
+
+  const candidates = [
+    ...storagePathCandidates(file.storagePath),
+    ...storagePathCandidates(file.finalStoragePath),
+  ];
+
+  return candidates.some(candidate => candidate.length > 0 && transactionDocument.includes(candidate));
+}
+
+export interface UnmatchPendingDocumentResult {
+  transactionDocumentCleared: boolean;
+  transactionFound: boolean;
+}
+
+/**
+ * Desfà una conciliació sense eliminar ni el pending document ni cap fitxer.
+ *
+ * Efectes:
+ * - pendingDocument.status = 'confirmed'
+ * - pendingDocument.matchedTransactionId = null
+ * - transaction.document = null només si podem demostrar que apunta al fitxer del pending document
+ */
+export async function unmatchPendingDocument(
+  firestore: Firestore,
+  orgId: string,
+  pendingDocId: string
+): Promise<UnmatchPendingDocumentResult> {
+  const pendingRef = pendingDocumentDoc(firestore, orgId, pendingDocId);
+  const pendingSnap = await getDoc(pendingRef);
+
+  if (!pendingSnap.exists()) {
+    throw new Error('El document pendent no existeix');
+  }
+
+  const pendingData = pendingSnap.data() as PendingDocument;
+
+  if (pendingData.status === 'confirmed' && !pendingData.matchedTransactionId) {
+    return { transactionDocumentCleared: false, transactionFound: false };
+  }
+
+  if (pendingData.status !== 'matched') {
+    throw new Error('El document no està conciliat');
+  }
+
+  const matchedTxId = pendingData.matchedTransactionId;
+  if (!matchedTxId) {
+    throw new Error('El document indica status matched però no té matchedTransactionId');
+  }
+
+  const txRef = firestoreDoc(firestore, `organizations/${orgId}/transactions/${matchedTxId}`);
+  const txSnap = await getDoc(txRef);
+  const txExists = txSnap.exists();
+  const txData = txExists ? (txSnap.data() as { document?: string | null }) : null;
+  const shouldClearTransactionDocument = txData
+    ? transactionDocumentBelongsToPendingFile(txData.document, pendingData.file)
+    : false;
+
+  const batch = writeBatch(firestore);
+
+  batch.update(pendingRef, {
+    status: 'confirmed',
+    matchedTransactionId: null,
+    updatedAt: serverTimestamp(),
+  });
+
+  if (txExists && shouldClearTransactionDocument) {
+    batch.update(txRef, {
+      document: null,
+      updatedAt: serverTimestamp(),
+    });
+  }
+
+  await batch.commit();
+
+  return {
+    transactionDocumentCleared: shouldClearTransactionDocument,
+    transactionFound: txExists,
+  };
 }
 
 // ═══════════════════════════════════════════════════════════════════════════

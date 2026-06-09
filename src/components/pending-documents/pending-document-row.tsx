@@ -47,7 +47,6 @@ import {
   ArrowUpRight,
   Link2,
   RefreshCw,
-  Trash2,
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -679,21 +678,20 @@ export function PendingDocumentRow({
               )}
               */}
 
-              {/* Delete matched (undo reconciliation) */}
+              {/* Undo reconciliation without deleting files */}
               {canOperate && doc.status === 'matched' && onDeleteMatched && (
                 <>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
                     onClick={() => onDeleteMatched(doc)}
                     disabled={isDeletingMatched}
-                    className="text-destructive"
                   >
                     {isDeletingMatched ? (
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     ) : (
-                      <Trash2 className="mr-2 h-4 w-4" />
+                      <RotateCcw className="mr-2 h-4 w-4" />
                     )}
-                    {t.pendingDocs.actions.deleteMatched || 'Eliminar pendent'}
+                    {t.pendingDocs.actions.unmatch}
                   </DropdownMenuItem>
                 </>
               )}

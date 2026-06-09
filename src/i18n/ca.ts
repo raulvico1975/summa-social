@@ -3235,10 +3235,15 @@ export const ca = {
       search: "Cercar...",
       createSupplier: "Nou proveïdor...",
       deleteMatched: "Eliminar pendent",
+      unmatch: "Desfer conciliació",
     },
     deleteDialog: {
       title: "Eliminar document?",
       description: "S'eliminarà el document i el fitxer pujat. Aquesta acció no es pot desfer.",
+    },
+    unmatchDialog: {
+      title: "Desfer conciliació?",
+      description: "El document tornarà a pendents de banc per poder corregir-lo i el moviment deixarà d'estar vinculat a aquest comprovant. No s'eliminarà cap fitxer.",
     },
     upload: {
       title: "Pujar factures o nòmines",
@@ -3292,6 +3297,9 @@ export const ca = {
       relinked: "Document re-vinculat",
       matchedDeleted: "Conciliació desfeta",
       matchedDeletedDesc: "El moviment bancari torna a estar lliure per conciliar.",
+      unmatched: "Conciliació desfeta",
+      unmatchedDesc: "El document torna a estar pendent de banc i el moviment queda sense aquest comprovant vinculat.",
+      errorUnmatch: "No s'ha pogut desfer la conciliació.",
       autoUnmatchTitle: "Conciliació desfeta",
       autoUnmatchDesc: "S'ha desfet la conciliació del document pendent vinculat abans d'eliminar el moviment.",
       autoUnmatchErrorTitle: "No s'ha pogut desfer la conciliació",
