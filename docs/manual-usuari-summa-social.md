@@ -737,6 +737,8 @@ La bona notícia és que Summa Social fa gran part de la feina automàticament. 
 - CSV (.csv, .txt)
 - Excel (.xlsx, .xls)
 
+> 💡 Si el teu banc encara exporta en format Excel antic (`.xls`), el pots pujar tal qual. No cal convertir-lo abans.
+
 ### Pas a pas
 
 1. Descarrega l'extracte del teu banc (des de la banca online)
@@ -899,6 +901,15 @@ Pots arrossegar fitxers (factures, tiquets) directament sobre una fila de la tau
 
 **Tipus acceptats:** PDF, JPG, PNG, GIF, WEBP, XML
 **Mida màxima:** 15 MB
+
+### Si un moviment té més d'un document
+
+- Pots afegir més d'un comprovant al mateix moviment
+- Des de la icona de document obres el llistat complet
+- Pots marcar quin és el **principal**
+- Quan obres un comprovant, s'obre en una **pestanya nova** i Summa Social queda oberta a la pantalla on estaves
+
+> 💡 Fes servir com a document principal el comprovant que millor representa la despesa (per exemple, la factura final en lloc d'un annex secundari).
 
 ---
 
@@ -2226,6 +2237,8 @@ Cada fila és una despesa assignada al projecte. Les columnes són:
 Les capçaleres de l'Excel surten traduïdes a l'idioma que tinguis configurat.
 
 Al final del document hi ha una fila de **totals**.
+
+Si una mateixa despesa té més d'un comprovant, l'Excel continua mostrant una sola fila econòmica, però el ZIP de comprovants els inclou tots amb el mateix número d'ordre perquè puguis relacionar-los fàcilment.
 
 ---
 

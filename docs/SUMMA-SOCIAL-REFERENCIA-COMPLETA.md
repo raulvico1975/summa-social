@@ -63,7 +63,7 @@ Les entitats espanyoles gestionen les seves finances amb fulls de càlcul, cosa 
 ## 1.3 Solució
 
 Eina centralitzada amb:
-- Importació automàtica d'extractes bancaris (CSV/XLSX)
+- Importació automàtica d'extractes bancaris (CSV/XLSX/XLS)
 - Categorització intel·ligent amb IA (Gemini)
 - Auto-assignació de contactes als moviments
 - Generació automàtica d'informes fiscals (Excel per gestoria)
@@ -74,7 +74,7 @@ Eina centralitzada amb:
 - Multi-organització amb sistema de rols
 - Divisor de remeses amb matching intel·ligent
 - Documents pendents amb pujada, revisió i relació amb moviments
-- Adjunció de factures i comprovants amb drag & drop
+- Adjunció de factures i comprovants amb drag & drop, multiadjunt i document principal
 - Liquidacions de despeses de viatge amb tiquets, quilometratge i PDF
 - Mòdul de projectes amb pressupost, partides i assignació de despeses
 - Captura i gestió de despeses de terreny, també en moneda local
@@ -4141,6 +4141,7 @@ Genera un full amb les despeses justificades, preparat per revisar o enviar.
 - Inclou els documents associats a les despeses justificades
 - Crea `01_per_partida` amb els documents agrupats per partida
 - Crea `02_cronologic` amb els documents en ordre cronològic
+- Si una despesa té més d'un comprovant, els conserva tots mantenint el mateix número d'ordre de la fila econòmica
 - Afegeix `manifest.csv` amb la traçabilitat de cada document, incloent si falta o si hi ha hagut error de descàrrega
 - Serveix per entregar al finançador un paquet complet sense haver de reordenar fitxers manualment
 
