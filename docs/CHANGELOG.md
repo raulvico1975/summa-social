@@ -10,6 +10,13 @@ Aquest fitxer ja no pretén duplicar el document mestre.
 
 ## Resum dels canvis recents
 
+### 2026-06-09
+
+- documentació per usuari: els moviments accepten també extractes bancaris en `.xls`, a més de `.xlsx` i `.csv`, sense canviar el flux d'importació.
+- documentació per usuari: els documents d'un moviment passen a gestionar-se com a llista de comprovants, amb document principal i obertura en pestanya nova per no sortir de Summa Social.
+- codi intern: l'export de justificació de projectes comparteix una sola base d'ordenació entre Excel, ZIP i `manifest.csv`, i tracta múltiples comprovants per despesa amb més robustesa.
+- operativa: afegida evidència QA de documents Baruma a `docs/QA/2026-06-09-baruma-documents-moviments-smoke.md`.
+
 ### 2026-06-03
 
 - Moviments: el llistat actualitza automàticament els canvis dins la finestra activa de consulta, com documents adjunts, devolucions assignades o remeses processades/desfetes, sense alterar fiscalitat ni model de dades.
