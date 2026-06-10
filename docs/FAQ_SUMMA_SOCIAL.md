@@ -793,7 +793,9 @@ Moltes transaccions del banc tenen descripcions similars. Aprofita-ho:
 **Formats acceptats:** PDF, JPG, PNG, GIF, WEBP, XML
 **Mida màxima:** 15 MB per fitxer
 
-**Per què és útil:** Quan l'auditor et demani una factura concreta, no hauràs de buscar entre carpetes. La trobaràs al costat del moviment, a un clic.
+**Si tens més d'un comprovant:** pots afegir-ne diversos al mateix moviment, marcar quin és el principal i obrir-los després des del llistat de documents del moviment.
+
+**Per què és útil:** Quan l'auditor et demani una factura concreta, no hauràs de buscar entre carpetes. La trobaràs al costat del moviment, a un clic, i s'obrirà en una pestanya nova sense fer-te sortir de Summa.
 
 ---
 
@@ -971,7 +973,7 @@ Aquestes notes són internes — no apareixen als informes ni a cap lloc visible
 - Si **ja té** document, veuràs un indicador diferent que et permet veure'l
 
 **Per veure o descarregar el document:**
-Clica sobre la icona de document i s'obrirà o es descarregarà directament.
+Clica sobre la icona de document, obre el llistat i selecciona el comprovant que vols consultar. S'obrirà en una pestanya nova.
 
 ---
 
