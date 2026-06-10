@@ -388,6 +388,7 @@ Registre cronologic de desplegaments a produccio.
 | 2026-06-03 14:49 | 6428dfd5f | MITJA | No | 7 | OK |
 | 2026-06-09 08:13 | e5839b2ad | MITJA | Si | 11 | OK |
 | 2026-06-09 17:26 | cb0348e51 | ALT | Si | 34 | OK_AMB_AVIS |
+| 2026-06-10 08:48 | 45eda2d19 | ALT | No | 26 | OK_AMB_AVIS |
 ## Decisions humanes (negoci)
 
 | Data | SHA | human_question_reason | business_impact | decision_taken |
@@ -524,3 +525,5 @@ Registre cronologic de desplegaments a produccio.
 | 2026-06-09 17:26 | cb0348e51 | Risc ALT residual detectat (avís guiat, no bloquejant). | podria afectar l'accés a dades sensibles, i l'entitat podria veure restriccions incorrectes o exposició de dades. | AUTO_CONTINUE_GUIDED_WARNING |
 | 2026-06-09 17:26 | cb0348e51 | ALT | podria afectar l'accés a dades sensibles, i l'entitat podria veure restriccions incorrectes o exposició de dades. | Recomanacio: publicar amb monitoratge curt post-deploy. |
 | 2026-06-09 17:26 | cb0348e51 | SKIPPED_NO_BUCKET | - |
+| 2026-06-10 08:48 | 45eda2d19 | Risc ALT residual detectat (avís guiat, no bloquejant). | podria afectar càlculs econòmics de projectes, i l'entitat podria veure imports o desviacions incorrectes. | AUTO_CONTINUE_GUIDED_WARNING |
+| 2026-06-10 08:48 | 45eda2d19 | ALT | podria afectar càlculs econòmics de projectes, i l'entitat podria veure imports o desviacions incorrectes. | Recomanacio: publicar amb monitoratge curt post-deploy. |
