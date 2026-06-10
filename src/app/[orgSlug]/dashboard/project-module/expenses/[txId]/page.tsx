@@ -7,7 +7,8 @@ import * as React from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useExpenseDetail, useProjects, useSaveExpenseLink } from '@/hooks/use-project-module';
-import { useOrgUrl } from '@/hooks/organization-provider';
+import { useCurrentOrganization, useOrgUrl } from '@/hooks/organization-provider';
+import { useFirebase } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -42,6 +43,7 @@ import { formatDateDMY } from '@/lib/normalize';
 import { useTranslations } from '@/i18n';
 import type { ExpenseAssignment, ExpenseJustification } from '@/lib/project-module-types';
 import { shouldAutoOpenProjectAssignmentEditor } from '@/lib/project-module/expense-assignment-policy';
+import { openDocumentUrl, openOrganizationDocument } from '@/lib/open-document-url';
 
 function formatAmount(amount: number): string {
   return new Intl.NumberFormat('ca-ES', {
@@ -55,6 +57,8 @@ export default function ExpenseDetailPage() {
   const router = useRouter();
   const txId = params.txId as string;
   const { buildUrl } = useOrgUrl();
+  const { organizationId } = useCurrentOrganization();
+  const { user } = useFirebase();
   const { toast } = useToast();
 
   const { tr } = useTranslations();
@@ -126,6 +130,21 @@ export default function ExpenseDetailPage() {
       });
     }
   };
+
+  const handleOpenDocument = React.useCallback((doc: { fileUrl?: string | null; storagePath?: string | null }) => {
+    const fallbackUrl = doc.fileUrl ?? '';
+    if (!organizationId || !user) {
+      openDocumentUrl(fallbackUrl);
+      return;
+    }
+
+    void openOrganizationDocument({
+      organizationId,
+      storagePath: doc.storagePath ?? null,
+      fallbackUrl,
+      getIdToken: () => user.getIdToken(),
+    });
+  }, [organizationId, user]);
 
   const handleSaveJustification = async () => {
     if (!link) return;
@@ -303,16 +322,15 @@ export default function ExpenseDetailPage() {
               <div className="space-y-2">
                 <span className="text-muted-foreground text-sm">{tr('projectModule.expenseDetail.documentsLabel')}</span>
                 {expense.documents.map((doc, i) => (
-                  <a
+                  <button
                     key={i}
-                    href={doc.fileUrl ?? '#'}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                    type="button"
+                    onClick={() => handleOpenDocument(doc)}
                     className="flex items-center gap-2 text-sm text-primary hover:underline"
                   >
                     <ExternalLink className="h-4 w-4" />
                     {doc.name || 'Document'}
-                  </a>
+                  </button>
                 ))}
               </div>
             )}

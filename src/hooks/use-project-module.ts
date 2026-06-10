@@ -87,6 +87,7 @@ function resolveDocumentAttachments(
     if (document.fileUrl) {
       attachments.push({
         url: document.fileUrl,
+        storagePath: document.storagePath ?? null,
         name: document.name ?? `document-${index + 1}`,
         contentType: document.contentType ?? 'application/octet-stream',
         size: typeof document.size === 'number' ? document.size : 0,
@@ -114,6 +115,7 @@ function resolveOffBankAttachments(data: OffBankExpense): OffBankAttachment[] {
   if (!data.documentUrl) return [];
   return [{
     url: data.documentUrl,
+    storagePath: null,
     name: 'document',
     contentType: 'application/octet-stream',
     size: 0,

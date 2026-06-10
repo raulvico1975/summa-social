@@ -40,13 +40,13 @@ export function resolveTransactionDocuments({
   const normalizedNewDocuments = normalizeNewDocuments(documents ?? []);
   const legacy = normalizeLegacyDocument(transactionId, legacyDocument);
   const legacyUrlKey = legacy ? normalizeUrlKey(legacy.url) : null;
-  const withoutLegacyDuplicates = legacyUrlKey
-    ? normalizedNewDocuments.filter((doc) => normalizeUrlKey(doc.url) !== legacyUrlKey)
-    : normalizedNewDocuments;
+  const hasNewDuplicateForLegacy = legacyUrlKey
+    ? normalizedNewDocuments.some((doc) => normalizeUrlKey(doc.url) === legacyUrlKey)
+    : false;
 
-  const resolved = legacy
-    ? [legacy, ...withoutLegacyDuplicates]
-    : withoutLegacyDuplicates;
+  const resolved = legacy && !hasNewDuplicateForLegacy
+    ? [legacy, ...normalizedNewDocuments]
+    : normalizedNewDocuments;
   const primaryDocument = pickPrimaryDocument(resolved);
   const documentsWithPrimary = resolved.map((doc) => ({
     ...doc,

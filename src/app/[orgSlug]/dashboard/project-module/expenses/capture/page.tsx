@@ -33,6 +33,7 @@ import { useIsMobile } from '@/hooks/use-is-mobile';
 import { MobileListItem } from '@/components/mobile/mobile-list-item';
 
 import { OffBankExpenseModal } from '@/components/project-module/add-off-bank-expense-modal';
+import { openDocumentUrl, openOrganizationDocument } from '@/lib/open-document-url';
 
 const PAGE_SIZE = 50;
 
@@ -78,6 +79,22 @@ export default function CaptureExpensesPage() {
 
   // UID de l'usuari actual (per filtrar si és editor)
   const currentUid = firebaseUser?.uid ?? user?.uid ?? null;
+
+  const handleOpenExpenseDocument = React.useCallback((expense: OffBankExpense) => {
+    const attachment = expense.attachments?.find((item) => item.url || item.storagePath) ?? null;
+    const fallbackUrl = attachment?.url ?? expense.documentUrl ?? '';
+    if (!organizationId || !user) {
+      openDocumentUrl(fallbackUrl);
+      return;
+    }
+
+    void openOrganizationDocument({
+      organizationId,
+      storagePath: attachment?.storagePath ?? null,
+      fallbackUrl,
+      getIdToken: () => user.getIdToken(),
+    });
+  }, [organizationId, user]);
 
   // Deep-link: obrir modal si ?new=1
   useEffect(() => {
@@ -413,7 +430,7 @@ export default function CaptureExpensesPage() {
                               type="button"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                window.open(documentUrl, '_blank', 'noopener,noreferrer');
+                                handleOpenExpenseDocument(expense);
                               }}
                               className="p-2"
                               title={c?.docOpen}
@@ -498,7 +515,7 @@ export default function CaptureExpensesPage() {
                             {hasDocument && documentUrl ? (
                               <button
                                 type="button"
-                                onClick={() => window.open(documentUrl, '_blank', 'noopener,noreferrer')}
+                                onClick={() => handleOpenExpenseDocument(expense)}
                                 className="cursor-pointer hover:scale-110 transition-transform"
                                 title={c?.docOpen}
                                 aria-label={c?.docOpen}

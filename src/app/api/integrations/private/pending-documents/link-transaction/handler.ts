@@ -13,6 +13,7 @@ import {
 
 const ROUTE_PATH = '/api/integrations/private/pending-documents/link-transaction';
 const AMOUNT_TOLERANCE = 0.01;
+export const LINKED_TRANSACTION_DOCUMENT_SIGNED_URL_EXPIRES = '03-01-2500';
 
 type RequestLike = Pick<NextRequest, 'headers' | 'json' | 'nextUrl'>;
 
@@ -300,7 +301,7 @@ function createFirebaseLinkStorage(): PendingDocumentLinkStorage {
 
       const [documentUrl] = await destination.getSignedUrl({
         action: 'read',
-        expires: Date.now() + 1000 * 60 * 60 * 24 * 7,
+        expires: LINKED_TRANSACTION_DOCUMENT_SIGNED_URL_EXPIRES,
       });
 
       return { documentUrl, finalStoragePath, copied };
