@@ -102,7 +102,8 @@ import {
   shouldShowProjectExpenseLoadMore,
   type ProjectExpenseTableFilter,
 } from '@/lib/project-module/expense-assignment-policy';
-import { openDocumentUrl } from '@/lib/open-document-url';
+import { addTransactionDocument } from '@/lib/files/transaction-documents';
+import { openDocumentUrl, openOrganizationDocument } from '@/lib/open-document-url';
 
 function formatAmount(amount: number): string {
   return new Intl.NumberFormat('ca-ES', {
@@ -770,7 +771,7 @@ export default function ExpensesInboxPage() {
   const { save, remove, isSaving } = useSaveExpenseLink();
   const { update: updateOffBankExpense } = useUpdateOffBankExpense();
   const { hardDelete: hardDeleteOffBank, isDeleting: isDeletingOffBank } = useHardDeleteOffBankExpense();
-  const { firestore } = useFirebase();
+  const { firestore, user } = useFirebase();
 
   // Callback: projecte sense TC per despesa FX
   const handleTcMissing = React.useCallback((project: Project) => {
@@ -1222,6 +1223,7 @@ export default function ExpensesInboxPage() {
 
         const newAttachment: OffBankAttachment = {
           url: downloadURL,
+          storagePath,
           name: fileName,
           contentType: file.type,
           size: file.size,
@@ -1234,14 +1236,20 @@ export default function ExpensesInboxPage() {
           attachments: [...existingAttachments, newAttachment],
         });
       } else {
-        // Bank: actualitzar document (objecte amb url, name, storagePath)
-        const storagePath = `organizations/${organizationId}/transactions/${txId}/${fileName}`;
-        const storageRef = ref(storage, storagePath);
-        const uploadResult = await uploadBytes(storageRef, file);
-        const downloadURL = await getDownloadURL(uploadResult.ref);
-
-        const txRef = doc(firestore, 'organizations', organizationId, 'transactions', txId);
-        await updateDoc(txRef, { document: downloadURL });
+        await addTransactionDocument({
+          firestore,
+          storage,
+          organizationId,
+          transaction: {
+            id: txId,
+            date: expense.expense.date,
+            description: expense.expense.description,
+            document: expense.expense.documentUrl,
+          },
+          file,
+          overrideFilename: fileName,
+          createdByUid: user?.uid ?? null,
+        });
       }
 
       await refresh();
@@ -1259,7 +1267,23 @@ export default function ExpensesInboxPage() {
     } finally {
       setUploadingDocTxId(null);
     }
-  }, [organizationId, storage, firestore, updateOffBankExpense, refresh, toast, t, ep]);
+  }, [organizationId, storage, firestore, updateOffBankExpense, refresh, toast, t, ep, user?.uid]);
+
+  const handleOpenExpenseDocument = React.useCallback((expense: UnifiedExpenseWithLink['expense']) => {
+    const attachment = expense.attachments?.find((item) => item.url || item.storagePath) ?? null;
+    const fallbackUrl = attachment?.url ?? expense.documentUrl ?? '';
+    if (!organizationId || !user) {
+      openDocumentUrl(fallbackUrl);
+      return;
+    }
+
+    void openOrganizationDocument({
+      organizationId,
+      storagePath: attachment?.storagePath ?? null,
+      fallbackUrl,
+      getIdToken: () => user.getIdToken(),
+    });
+  }, [organizationId, user]);
 
   // Handler per des-assignar completament (amb confirmació)
   const handleUnassign = async (txId: string) => {
@@ -1671,7 +1695,7 @@ export default function ExpensesInboxPage() {
                               className="h-8 w-8 shrink-0"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                openDocumentUrl(expense.documentUrl!);
+                                handleOpenExpenseDocument(expense);
                               }}
                               aria-label={ep.tooltipOpenDocument}
                             >
@@ -1840,7 +1864,7 @@ export default function ExpensesInboxPage() {
                             <TooltipTrigger asChild>
                               <button
                                 type="button"
-                                onClick={() => openDocumentUrl(expense.documentUrl!)}
+                                onClick={() => handleOpenExpenseDocument(expense)}
                                 className="inline-flex h-8 w-8 items-center justify-center rounded-md transition-colors hover:bg-muted/40"
                               >
                                 <FileText className="h-[18px] w-[18px] fill-current text-foreground/80" />

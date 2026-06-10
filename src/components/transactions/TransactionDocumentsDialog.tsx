@@ -18,7 +18,7 @@ import {
   deleteTransactionDocument,
   setPrimaryTransactionDocument,
 } from '@/lib/files/transaction-documents';
-import { openDocumentUrl } from '@/lib/open-document-url';
+import { openDocumentUrl, openTransactionDocument } from '@/lib/open-document-url';
 import type { ResolvedTransactionDocument } from '@/lib/transactions/transaction-documents';
 
 interface TransactionDocumentsDialogProps {
@@ -91,6 +91,26 @@ export function TransactionDocumentsDialog({
     }
   }, [firestore, organizationId, transaction]);
 
+  const handleOpen = React.useCallback(async (document: ResolvedTransactionDocument) => {
+    if (!organizationId || !user) {
+      openDocumentUrl(document.url);
+      return;
+    }
+
+    setPendingAction(`open:${document.id}`);
+    try {
+      await openTransactionDocument({
+        organizationId,
+        transactionId: transaction.id,
+        documentId: document.id,
+        fallbackUrl: document.url,
+        getIdToken: () => user.getIdToken(),
+      });
+    } finally {
+      setPendingAction(null);
+    }
+  }, [organizationId, transaction.id, user]);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[560px]">
@@ -159,10 +179,15 @@ export function TransactionDocumentsDialog({
                     variant="ghost"
                     size="icon"
                     className="h-8 w-8"
-                    onClick={() => openDocumentUrl(document.url)}
+                    onClick={() => void handleOpen(document)}
+                    disabled={pendingAction !== null}
                     aria-label={tr('movements.documents.open', 'Obrir')}
                   >
-                    <ExternalLink className="h-4 w-4" />
+                    {pendingAction === `open:${document.id}` ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <ExternalLink className="h-4 w-4" />
+                    )}
                   </Button>
                   {canWrite && !document.isPrimary && (
                     <Button

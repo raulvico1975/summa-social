@@ -20,6 +20,7 @@ interface ExportParams {
   budgetLines: BudgetLine[];
   expenses: UnifiedExpense[];
   expenseLinks: ExpenseLink[];
+  getIdToken?: () => Promise<string>;
 }
 
 type DocStatus = 'OK' | 'MISSING' | 'MISSING_OFFBANK' | 'NO_EXPENSE_IN_FEED' | 'FETCH_ERROR';
@@ -41,6 +42,7 @@ interface ManifestEntry {
   docPathPerPartida: string;
   docPathCronologic: string;
   documentUrl: string;
+  storagePath: string;
 }
 
 interface ProgressCallback {
@@ -82,6 +84,7 @@ function generateManifestCsv(entries: ManifestEntry[]): string {
     'docPathPerPartida',
     'docPathCronologic',
     'documentUrl',
+    'storagePath',
   ];
 
   const escapeField = (field: string | number): string => {
@@ -109,9 +112,44 @@ function generateManifestCsv(entries: ManifestEntry[]): string {
     e.docPathPerPartida,
     e.docPathCronologic,
     e.documentUrl,
+    e.storagePath,
   ].map(escapeField).join(','));
 
   return [headers.join(','), ...rows].join('\n');
+}
+
+async function resolveFreshDocumentUrl(params: {
+  organizationId: string;
+  documentUrl: string;
+  storagePath: string | null;
+  getIdToken?: () => Promise<string>;
+}): Promise<string> {
+  if (!params.getIdToken || (!params.storagePath && !params.documentUrl)) {
+    return params.documentUrl;
+  }
+
+  try {
+    const token = await params.getIdToken();
+    const search = new URLSearchParams({ orgId: params.organizationId });
+    if (params.storagePath) {
+      search.set('storagePath', params.storagePath);
+    } else {
+      search.set('url', params.documentUrl);
+    }
+    const response = await fetch(`/api/org-documents/open?${search.toString()}`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    const body = await response.json() as { success?: boolean; url?: string };
+    if (response.ok && body.success && body.url) {
+      return body.url;
+    }
+  } catch {
+    // Fallback al documentUrl original per compatibilitat amb exports antics.
+  }
+
+  return params.documentUrl;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -170,7 +208,7 @@ export async function exportProjectJustificationZip(
     }
 
     // Crear manifest entry base
-    const baseManifestEntry: Omit<ManifestEntry, 'docStatus' | 'docPathPerPartida' | 'docPathCronologic' | 'documentUrl'> = {
+    const baseManifestEntry: Omit<ManifestEntry, 'docStatus' | 'docPathPerPartida' | 'docPathCronologic' | 'documentUrl' | 'storagePath'> = {
       order: row.order,
       date: row.dateExpense,
       source: row.source,
@@ -193,6 +231,7 @@ export async function exportProjectJustificationZip(
         docPathPerPartida: '',
         docPathCronologic: '',
         documentUrl: '',
+        storagePath: '',
       };
       missingCount++;
       manifestEntries.push(manifestEntry);
@@ -206,11 +245,18 @@ export async function exportProjectJustificationZip(
         docPathPerPartida: document.zipPathPerPartida,
         docPathCronologic: document.zipPathCronologic,
         documentUrl: document.documentUrl,
+        storagePath: document.storagePath ?? '',
       };
 
       // Intentar descarregar el document
       try {
-        const response = await fetch(document.documentUrl);
+        const downloadUrl = await resolveFreshDocumentUrl({
+          organizationId: params.organizationId,
+          documentUrl: document.documentUrl,
+          storagePath: document.storagePath,
+          getIdToken: params.getIdToken,
+        });
+        const response = await fetch(downloadUrl);
         if (!response.ok) {
           manifestEntry.docStatus = 'FETCH_ERROR';
           manifestEntry.docPathPerPartida = '';

@@ -2,12 +2,13 @@
 
 import * as React from 'react';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
-import { useStorage } from '@/firebase/provider';
+import { useFirebase, useStorage } from '@/firebase/provider';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useTranslations } from '@/i18n';
 import { Upload, X, FileText, Image as ImageIcon, Loader2, Pencil, Check, XCircle } from 'lucide-react';
 import type { OffBankAttachment } from '@/lib/project-module-types';
+import { openDocumentUrl, openOrganizationDocument } from '@/lib/open-document-url';
 
 // =============================================================================
 // TYPES
@@ -83,6 +84,7 @@ export function ExpenseAttachmentsDropzone({
   buildFileName,
 }: ExpenseAttachmentsDropzoneProps) {
   const storage = useStorage();
+  const { user } = useFirebase();
   const { t, tr } = useTranslations();
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
@@ -185,6 +187,7 @@ export function ExpenseAttachmentsDropzone({
 
       const newAttachment: OffBankAttachment = {
         url: downloadURL,
+        storagePath,
         name: finalFileName,
         contentType: file.type,
         size: file.size,
@@ -271,6 +274,20 @@ export function ExpenseAttachmentsDropzone({
     setEditingUrl(null);
     setEditingName('');
   }, [attachments, editingName, onAttachmentsChange]);
+
+  const handleOpenAttachment = React.useCallback((attachment: OffBankAttachment) => {
+    if (!user) {
+      openDocumentUrl(attachment.url);
+      return;
+    }
+
+    void openOrganizationDocument({
+      organizationId,
+      storagePath: attachment.storagePath ?? null,
+      fallbackUrl: attachment.url,
+      getIdToken: () => user.getIdToken(),
+    });
+  }, [organizationId, user]);
 
   // ---------------------------------------------------------------------------
   // RENDER
@@ -412,15 +429,16 @@ export function ExpenseAttachmentsDropzone({
                 ) : (
                   // Mode visualització
                   <>
-                    <a
-                      href={attachment.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
+                    <button
+                      type="button"
                       className="flex-1 truncate text-primary hover:underline"
-                      onClick={(e) => e.stopPropagation()}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleOpenAttachment(attachment);
+                      }}
                     >
                       {attachment.name}
-                    </a>
+                    </button>
                     <span className="text-xs text-muted-foreground">
                       {formatFileSize(attachment.size)}
                     </span>

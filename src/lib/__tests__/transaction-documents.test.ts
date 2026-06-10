@@ -59,7 +59,7 @@ test('resolveTransactionDocuments: documents nous retornen N documents', () => {
   assert.deepEqual(result.documents.map((doc) => doc.id), ['doc-a', 'doc-b']);
 });
 
-test('resolveTransactionDocuments: legacy duplicat per URL no es duplica', () => {
+test('resolveTransactionDocuments: legacy duplicat per URL conserva el registre amb storagePath', () => {
   const result = resolveTransactionDocuments({
     transactionId: 'tx-1',
     legacyDocument: 'https://storage.local/doc-a.pdf',
@@ -71,9 +71,11 @@ test('resolveTransactionDocuments: legacy duplicat per URL no es duplica', () =>
 
   assert.equal(result.count, 2);
   assert.deepEqual(result.documents.map((doc) => doc.id), [
-    LEGACY_TRANSACTION_DOCUMENT_ID,
+    'doc-a',
     'doc-b',
   ]);
+  assert.equal(result.documents[0]?.storagePath, 'organizations/org-1/documents/tx-1/doc-a.pdf');
+  assert.equal(result.documents[0]?.isLegacy, false);
 });
 
 test('resolveTransactionDocuments: document nou marcat primary guanya el legacy', () => {

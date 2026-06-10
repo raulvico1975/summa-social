@@ -185,6 +185,7 @@ export interface ExpenseLink {
 /** Attachment dins d'una despesa off-bank */
 export interface OffBankAttachment {
   url: string;
+  storagePath?: string | null;
   name: string;
   contentType: string;
   size: number;
