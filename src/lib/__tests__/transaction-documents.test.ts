@@ -3,6 +3,7 @@ import test from 'node:test';
 import {
   LEGACY_TRANSACTION_DOCUMENT_ID,
   pickNextPrimaryDocument,
+  resolveParentDocumentAfterDocumentDelete,
   resolveTransactionDocuments,
   type TransactionDocumentRecord,
 } from '@/lib/transactions/transaction-documents';
@@ -114,4 +115,32 @@ test('pickNextPrimaryDocument: selecciona el document més antic restant', () =>
   ], 'doc-a');
 
   assert.equal(next?.id, 'doc-b');
+});
+
+test('resolveParentDocumentAfterDocumentDelete: no ressuscita el document esborrat com a legacy', () => {
+  const next = resolveParentDocumentAfterDocumentDelete({
+    currentParentDocumentUrl: 'https://storage.local/doc-a.pdf',
+    deletedDocumentUrl: 'https://storage.local/doc-a.pdf',
+  });
+
+  assert.equal(next, null);
+});
+
+test('resolveParentDocumentAfterDocumentDelete: conserva una URL legacy diferent', () => {
+  const next = resolveParentDocumentAfterDocumentDelete({
+    currentParentDocumentUrl: 'https://storage.local/legacy.pdf',
+    deletedDocumentUrl: 'https://storage.local/doc-a.pdf',
+  });
+
+  assert.equal(next, 'https://storage.local/legacy.pdf');
+});
+
+test('resolveParentDocumentAfterDocumentDelete: prioritza el nou document principal', () => {
+  const next = resolveParentDocumentAfterDocumentDelete({
+    currentParentDocumentUrl: 'https://storage.local/doc-a.pdf',
+    deletedDocumentUrl: 'https://storage.local/doc-a.pdf',
+    nextPrimaryDocumentUrl: 'https://storage.local/doc-b.pdf',
+  });
+
+  assert.equal(next, 'https://storage.local/doc-b.pdf');
 });
