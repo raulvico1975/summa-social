@@ -93,6 +93,7 @@ function buildAttachmentsFromUploads(entries: PendingUpload[]): OffBankAttachmen
     .filter((entry) => entry.url && !entry.error)
     .map((entry) => ({
       url: entry.url!,
+      storagePath: entry.storagePath ?? null,
       name: entry.file.name,
       contentType: entry.file.type,
       size: entry.file.size,

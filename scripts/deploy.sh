@@ -42,6 +42,7 @@ POSTDEPLOY_SERVER_CANARY_STATUS="NO CAL"
 POSTDEPLOY_3MIN_STATUS="NO CAL"
 POSTDEPLOY_ORACLE_STATUS="NO CAL"
 POSTDEPLOY_URLS_READY=false
+FIREBASE_RULES_DEPLOY_STATUS="NO CAL"
 RESOLVED_DEPLOY_BASE_URL=""
 RESOLVED_SMOKE_PUBLIC_URL=""
 RESOLVED_SMOKE_DASHBOARD_URL=""
@@ -491,7 +492,7 @@ materialize_apphosting_rollout() {
   fi
 
   CURRENT_PHASE="Materialitzar rollout d'App Hosting"
-  echo "[7a/9] Materialitzant backend App Hosting..."
+  echo "[7b/9] Materialitzant backend App Hosting..."
   echo ""
 
   if [ -z "$APPHOSTING_REVISION_BEFORE" ]; then
@@ -539,6 +540,61 @@ materialize_apphosting_rollout() {
   if [ -n "$APPHOSTING_UPDATE_TIME_AFTER" ]; then
     echo "  UpdateTime backend despres: $APPHOSTING_UPDATE_TIME_AFTER"
   fi
+  echo ""
+}
+
+deploy_firebase_rules() {
+  CURRENT_PHASE="Publicar Firebase Rules"
+  echo "[7a/9] Publicant Firebase Rules..."
+  echo ""
+
+  if [ ! -f "$PROJECT_DIR/firebase.json" ]; then
+    FIREBASE_RULES_DEPLOY_STATUS="NO CAL"
+    echo "  Firebase Rules: NO CAL (firebase.json no trobat)."
+    echo ""
+    return 0
+  fi
+
+  local targets=()
+  if [ -f "$PROJECT_DIR/firestore.rules" ]; then
+    targets+=("firestore:rules")
+  fi
+  if [ -f "$PROJECT_DIR/storage.rules" ]; then
+    targets+=("storage")
+  fi
+
+  if [ "${#targets[@]}" -eq 0 ]; then
+    FIREBASE_RULES_DEPLOY_STATUS="NO CAL"
+    echo "  Firebase Rules: NO CAL (no hi ha firestore.rules ni storage.rules)."
+    echo ""
+    return 0
+  fi
+
+  local project_id
+  project_id="${FIREBASE_RULES_PROJECT_ID:-$(read_default_firebase_project_id)}"
+  if [ -z "$project_id" ]; then
+    FIREBASE_RULES_DEPLOY_STATUS="BLOCKED"
+    DEPLOY_RESULT="BLOCKED_SAFE"
+    DEPLOY_BLOCK_REASON="No s'ha pogut determinar el projecte Firebase per publicar les rules."
+    echo "ERROR: $DEPLOY_BLOCK_REASON"
+    exit 1
+  fi
+
+  local only_arg
+  only_arg="$(IFS=,; echo "${targets[*]}")"
+  echo "  Projecte Firebase: $project_id"
+  echo "  Targets: $only_arg"
+
+  if ! firebase_cli_latest deploy --only "$only_arg" --project "$project_id" --non-interactive; then
+    FIREBASE_RULES_DEPLOY_STATUS="BLOCKED"
+    DEPLOY_RESULT="BLOCKED_SAFE"
+    DEPLOY_BLOCK_REASON="Firebase CLI no ha pogut publicar Firestore/Storage Rules."
+    echo "ERROR: $DEPLOY_BLOCK_REASON"
+    exit 1
+  fi
+
+  FIREBASE_RULES_DEPLOY_STATUS="OK"
+  echo "  Firebase Rules publicades."
   echo ""
 }
 
@@ -1403,6 +1459,11 @@ post_deploy_check() {
     echo ""
   fi
 
+  if [ "$FIREBASE_RULES_DEPLOY_STATUS" != "NO CAL" ]; then
+    echo "  Firebase Rules: $FIREBASE_RULES_DEPLOY_STATUS"
+    echo ""
+  fi
+
   resolve_postdeploy_urls
   run_server_route_canary_check
   echo ""
@@ -1602,6 +1663,14 @@ reconcile_postdeploy_result() {
 
   case "$APPHOSTING_ROLLOUT_STATUS" in
     "OK"|"OK_AUTO"|"NO CAL")
+      ;;
+    *)
+      runtime_checks_ok=false
+      ;;
+  esac
+
+  case "$FIREBASE_RULES_DEPLOY_STATUS" in
+    "OK"|"NO CAL")
       ;;
     *)
       runtime_checks_ok=false
@@ -1843,6 +1912,7 @@ main() {
   DEPLOY_CONTENT_SHA=$(git rev-parse --short "$DEPLOY_TARGET_BRANCH")
   capture_apphosting_revision_before_deploy
   execute_merge_ritual       # Pas 7
+  deploy_firebase_rules
   materialize_apphosting_rollout
   post_deploy_check          # Pas 8
   post_production_3min_check

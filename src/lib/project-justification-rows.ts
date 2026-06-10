@@ -70,6 +70,7 @@ export interface JustificationRow {
 export interface JustificationDocument {
   documentName: string;
   documentUrl: string;
+  storagePath: string | null;
   zipPathCronologic: string;
   zipPathPerPartida: string;
 }
@@ -195,15 +196,19 @@ function generateDocumentNameWithOrder(
   return `${baseName}${attachmentIndex > 0 ? `_doc${String(attachmentIndex + 1).padStart(2, '0')}` : ''}${ext}`;
 }
 
-function resolveExpenseDocuments(expense: UnifiedExpense): Array<{ url: string; name: string | null }> {
+function resolveExpenseDocuments(expense: UnifiedExpense): Array<{ url: string; storagePath: string | null; name: string | null }> {
   const attachments = (expense.attachments ?? [])
     .filter((attachment) => typeof attachment.url === 'string' && attachment.url.trim())
-    .map((attachment) => ({ url: attachment.url.trim(), name: attachment.name ?? null }));
+    .map((attachment) => ({
+      url: attachment.url.trim(),
+      storagePath: attachment.storagePath ?? null,
+      name: attachment.name ?? null,
+    }));
 
   const candidates = attachments.length > 0
     ? attachments
     : expense.documentUrl
-      ? [{ url: expense.documentUrl, name: null }]
+      ? [{ url: expense.documentUrl, storagePath: null, name: null }]
       : [];
 
   const seenUrls = new Set<string>();
@@ -322,6 +327,7 @@ export function buildJustificationRows(params: BuildJustificationRowsParams): Ju
       return {
         documentName,
         documentUrl: document.url,
+        storagePath: document.storagePath,
         zipPathPerPartida: `01_per_partida/${budgetFolderName}/${documentName}`,
         zipPathCronologic: `02_cronologic/${documentName}`,
       };

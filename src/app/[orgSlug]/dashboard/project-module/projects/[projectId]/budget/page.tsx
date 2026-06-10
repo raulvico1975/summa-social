@@ -478,7 +478,7 @@ export default function ProjectBudgetPage() {
   const { buildUrl } = useOrgUrl();
   const { toast } = useToast();
   const { t, tr } = useTranslations();
-  const { firestore } = useFirebase();
+  const { firestore, user } = useFirebase();
   const { organizationId } = useCurrentOrganization();
   const isMobile = useIsMobile();
 
@@ -869,6 +869,7 @@ export default function ProjectBudgetPage() {
           budgetLines,
           expenses,
           expenseLinks,
+          getIdToken: user ? () => user.getIdToken() : undefined,
         },
         (current, total) => {
           setZipProgress({ current, total });

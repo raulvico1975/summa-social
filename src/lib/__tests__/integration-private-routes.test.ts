@@ -16,6 +16,7 @@ import {
 } from '@/app/api/integrations/private/pending-documents/upload/handler';
 import {
   handlePrivatePendingDocumentLinkTransaction,
+  LINKED_TRANSACTION_DOCUMENT_SIGNED_URL_EXPIRES,
   type PendingDocumentLinkRecord,
   type PendingDocumentLinkStorage,
   type PendingDocumentLinkStore,
@@ -632,6 +633,7 @@ test('pending document link validates one reviewed match and updates transaction
   assert.equal(body.newState.transactionHasDocument, true);
   assert.equal(store.pendingDocuments.get('org-a/intpd_la_teva_barra')?.matchedTransactionId, 'tx_la_teva_barra');
   assert.match(store.transactions.get('org-a/tx_la_teva_barra')?.document ?? '', /^https:\/\/storage\.local\//);
+  assert.equal(LINKED_TRANSACTION_DOCUMENT_SIGNED_URL_EXPIRES, '03-01-2500');
   assert.equal(authRepository.auditLog.at(-1)?.code, 'LINKED');
 });
 
