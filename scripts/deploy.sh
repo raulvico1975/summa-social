@@ -75,6 +75,10 @@ SERVER_ROUTE_CANARY_PATH="${DEPLOY_SERVER_ROUTE_CANARY_PATH:-/api/contact}"
 SERVER_ROUTE_CANARY_EXPECTED_STATUS="${DEPLOY_SERVER_ROUTE_CANARY_EXPECTED_STATUS:-400}"
 SERVER_ROUTE_CANARY_EXPECTED_MARKER="${DEPLOY_SERVER_ROUTE_CANARY_EXPECTED_MARKER:-INVALID_PAYLOAD}"
 
+filter_deploy_bookkeeping_files() {
+  grep -Ev "^(${DEPLOY_LOG//\//\\/}|${ROLLBACK_PLAN_FILE//\//\\/})$" || true
+}
+
 append_incident_log() {
   if [ "$INCIDENT_RECORDED" = true ]; then
     return
@@ -780,10 +784,13 @@ detect_changed_files() {
   CURRENT_PHASE="Detectar canvis"
   echo "[2/9] Detectant fitxers canviats ($DEPLOY_TARGET_BRANCH vs prod)..."
 
-  CHANGED_FILES=$(git diff --name-only "prod..$DEPLOY_TARGET_BRANCH" --diff-filter=ACMRT)
+  CHANGED_FILES=$(
+    git diff --name-only "prod..$DEPLOY_TARGET_BRANCH" --diff-filter=ACMRT \
+      | filter_deploy_bookkeeping_files
+  )
 
   if [ -z "$CHANGED_FILES" ]; then
-    echo "  Res a desplegar ($DEPLOY_TARGET_BRANCH == prod)."
+    echo "  Res a desplegar (cap canvi funcional pendent; s'ignoren logs de deploy generats)."
     exit 0
   fi
 

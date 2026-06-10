@@ -15,6 +15,7 @@ fi
 
 CONTROL_REPO_DIR="${WORKFLOW_CONTROL_REPO_DIR:-$(cd "$GIT_COMMON_DIR/.." && pwd)}"
 PUBLICA_TARGET_BRANCH="${DEPLOY_TARGET_BRANCH:-main}"
+DEPLOY_BOOKKEEPING_FILES_RE='^(docs/DEPLOY-LOG\.md|docs/DEPLOY-ROLLBACK-LATEST\.md)$'
 
 say() {
   printf '%s\n' "$1"
@@ -66,6 +67,20 @@ $items
 EOF
 }
 
+filter_deploy_bookkeeping_files() {
+  grep -Ev "$DEPLOY_BOOKKEEPING_FILES_RE" || true
+}
+
+collect_publish_files() {
+  if git -C "$CONTROL_REPO_DIR" rev-parse prod >/dev/null 2>&1 \
+    && git -C "$CONTROL_REPO_DIR" rev-parse "$PUBLICA_TARGET_BRANCH" >/dev/null 2>&1; then
+    git -C "$CONTROL_REPO_DIR" diff --name-only "prod..$PUBLICA_TARGET_BRANCH" --diff-filter=ACMRT \
+      | awk 'NF' \
+      | filter_deploy_bookkeeping_files \
+      | sort -u
+  fi
+}
+
 collect_scope_files() {
   local files=""
   local branch=""
@@ -86,7 +101,7 @@ collect_scope_files() {
 
   branch="$(git rev-parse --abbrev-ref HEAD 2>/dev/null || printf '%s' "")"
   if [ "$branch" = "main" ] && git rev-parse prod >/dev/null 2>&1; then
-    git diff --name-only "prod..$branch" --diff-filter=ACMRT | awk 'NF' | sort -u
+    collect_publish_files
     return
   fi
 
@@ -140,10 +155,15 @@ target_aligned_label() {
 }
 
 prod_aligned_with_main_label() {
-  local local_main remote_prod
+  local local_main remote_prod publish_files
   local_main="$(git -C "$CONTROL_REPO_DIR" rev-parse refs/heads/main 2>/dev/null || true)"
   remote_prod="$(git -C "$CONTROL_REPO_DIR" rev-parse refs/remotes/origin/prod 2>/dev/null || true)"
   if [ -n "$local_main" ] && [ -n "$remote_prod" ] && [ "$local_main" = "$remote_prod" ]; then
+    printf '%s' "SI"
+    return
+  fi
+  publish_files="$(collect_publish_files)"
+  if [ -z "$publish_files" ]; then
     printf '%s' "SI"
     return
   fi
@@ -244,6 +264,7 @@ collect_publica_reasons() {
   local target_aligned="$3"
   local prod_ahead="$4"
   local reasons=""
+  local publish_files=""
 
   if [ "$control_branch" != "$PUBLICA_TARGET_BRANCH" ]; then
     reasons="$(append_reason "$reasons" "el repositori de control no està a $PUBLICA_TARGET_BRANCH")"
@@ -256,6 +277,10 @@ collect_publica_reasons() {
   fi
   if [ "$prod_ahead" = "SI" ]; then
     reasons="$(append_reason "$reasons" "prod no surt de main")"
+  fi
+  publish_files="$(collect_publish_files)"
+  if [ -z "$publish_files" ]; then
+    reasons="$(append_reason "$reasons" "no hi ha canvis funcionals pendents de publicar")"
   fi
   if [ "${WORKTREE_RESIDUE_COUNT:-0}" -gt 0 ] 2>/dev/null; then
     reasons="$(append_reason "$reasons" "hi ha worktrees residuals o ambigus")"
@@ -277,7 +302,7 @@ print_status() {
   local branch task_state main_state publish_state ceo_decision global_status
   local control_branch control_clean main_aligned target_aligned prod_aligned prod_ahead
   local task_clean integra_reasons publish_reasons visible_publish_reasons
-  local scope_files scope scope_risk deploy_mode scope_eval
+  local scope_files scope scope_risk deploy_mode scope_eval publish_files
 
   git -C "$CONTROL_REPO_DIR" fetch origin --prune --quiet >/dev/null 2>&1 || true
   load_worktree_report
@@ -300,6 +325,7 @@ print_status() {
   target_aligned="$(target_aligned_label "$PUBLICA_TARGET_BRANCH")"
   prod_aligned="$(prod_aligned_with_main_label)"
   prod_ahead="$(prod_ahead_of_main_label)"
+  publish_files="$(collect_publish_files)"
   branch="$(git rev-parse --abbrev-ref HEAD 2>/dev/null || printf '%s' '-')"
   task_clean="$(current_repo_task_clean_label)"
   integra_reasons="$(collect_integra_reasons "$control_branch" "$control_clean" "$main_aligned")"
@@ -318,15 +344,18 @@ print_status() {
     main_state="NO LLESTA"
   fi
 
-  if [ -z "$publish_reasons" ]; then
+  if [ -z "$publish_reasons" ] && [ -n "$publish_files" ]; then
     publish_state="LLESTA PER PUBLICAR"
     ceo_decision='POTS DIR "AUTORITZO DEPLOY"'
+  elif [ -z "$publish_files" ] && [ "$control_clean" = "SI" ] && [ "$target_aligned" = "SI" ] && [ "$prod_ahead" != "SI" ]; then
+    publish_state="A PRODUCCIÓ"
+    ceo_decision="NO CAL DEPLOY"
   else
     publish_state="NO LLESTA"
     ceo_decision='NO POTS DIR "AUTORITZO DEPLOY"'
   fi
 
-  if [ -z "$publish_reasons" ]; then
+  if { [ -z "$publish_reasons" ] && [ -n "$publish_files" ]; } || [ "$publish_state" = "A PRODUCCIÓ" ]; then
     global_status="OK"
   else
     global_status="BLOQUEJAT"
