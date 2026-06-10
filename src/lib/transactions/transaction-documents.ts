@@ -88,6 +88,25 @@ export function pickNextPrimaryDocument(
   return candidates[0] ?? null;
 }
 
+export function resolveParentDocumentAfterDocumentDelete({
+  currentParentDocumentUrl,
+  deletedDocumentUrl,
+  nextPrimaryDocumentUrl,
+}: {
+  currentParentDocumentUrl?: string | null;
+  deletedDocumentUrl?: string | null;
+  nextPrimaryDocumentUrl?: string | null;
+}): string | null {
+  const nextPrimaryUrl = nextPrimaryDocumentUrl?.trim();
+  if (nextPrimaryUrl) return nextPrimaryUrl;
+
+  const parentUrl = currentParentDocumentUrl?.trim();
+  if (!parentUrl) return null;
+
+  const deletedUrl = deletedDocumentUrl?.trim();
+  return deletedUrl && parentUrl === deletedUrl ? null : parentUrl;
+}
+
 export function buildLegacyTransactionDocument(
   transactionId: string,
   url: string

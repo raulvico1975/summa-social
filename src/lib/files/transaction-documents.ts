@@ -13,6 +13,7 @@ import { buildDocumentFilename } from '@/lib/build-document-filename';
 import {
   LEGACY_TRANSACTION_DOCUMENT_ID,
   pickNextPrimaryDocument,
+  resolveParentDocumentAfterDocumentDelete,
   resolveTransactionDocuments,
   type ResolvedTransactionDocuments,
   type TransactionDocumentRecord,
@@ -236,7 +237,10 @@ export async function deleteTransactionDocument(
       batch.update(doc(docsRef, nextPrimary.id), { isPrimary: true });
       parentUpdate.document = nextPrimary.url;
     } else {
-      parentUpdate.document = transaction.document ?? null;
+      parentUpdate.document = resolveParentDocumentAfterDocumentDelete({
+        currentParentDocumentUrl: transaction.document ?? null,
+        deletedDocumentUrl: target.url,
+      });
     }
   }
   batch.update(transactionRef(firestore, organizationId, transaction.id), parentUpdate);
