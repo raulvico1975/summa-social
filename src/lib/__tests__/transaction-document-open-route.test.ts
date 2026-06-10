@@ -48,13 +48,12 @@ class FakeBucket {
   readonly signedUrlCalls: Array<{ path: string; expires: number }> = [];
 
   file(path: string) {
-    const bucket = this;
     return {
-      async exists() {
+      exists: async () => {
         return [path === STORAGE_PATH] as [boolean];
       },
-      async getSignedUrl(options: { action: 'read'; expires: number }) {
-        bucket.signedUrlCalls.push({ path, expires: options.expires });
+      getSignedUrl: async (options: { action: 'read'; expires: number }) => {
+        this.signedUrlCalls.push({ path, expires: options.expires });
         return [`https://signed.local/${encodeURIComponent(path)}`] as [string];
       },
     };
