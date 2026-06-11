@@ -10,6 +10,11 @@ Aquest fitxer ja no pretén duplicar el document mestre.
 
 ## Resum dels canvis recents
 
+### 2026-06-10
+
+- API/integracions: l'obertura de documents d'organització i de moviments passa per rutes server-side que reemeten una URL signada nova quan hi ha `storagePath`, evitant dependre d'enllaços caducats en justificants i adjunts antics.
+- codi intern: en desvincular el document principal d'un moviment, el camp legacy ja no ressuscita la mateixa URL esborrada; si queden més comprovants, el següent passa a ser el principal.
+
 ### 2026-06-09
 
 - documentació per usuari: els moviments accepten també extractes bancaris en `.xls`, a més de `.xlsx` i `.csv`, sense canviar el flux d'importació.

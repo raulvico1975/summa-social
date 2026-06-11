@@ -155,11 +155,11 @@ export function TransactionDocumentsDialog({
             {documents.map((document) => (
               <div
                 key={document.id}
-                className="flex items-center justify-between gap-3 rounded-md border px-3 py-2"
+                className="flex min-w-0 items-center justify-between gap-3 rounded-md border px-3 py-2"
               >
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2">
-                    <p className="truncate text-sm font-medium">{document.filename}</p>
+                <div className="min-w-0 flex-1 overflow-hidden">
+                  <div className="flex min-w-0 items-center gap-2">
+                    <p className="min-w-0 flex-1 truncate text-sm font-medium">{document.filename}</p>
                     {document.isPrimary && (
                       <Badge variant="outline" className="shrink-0 text-[10px]">
                         {tr('movements.documents.primary', 'Principal')}

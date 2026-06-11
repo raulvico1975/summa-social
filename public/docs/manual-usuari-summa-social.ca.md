@@ -1,7 +1,7 @@
 # SUMMA SOCIAL - Manual d'Usuari Complet
 
-**Versió**: 1.46
-**Última actualització**: 12 Març 2026
+**Versió**: 1.47
+**Última actualització**: 11 Juny 2026
 
 ---
 
@@ -737,6 +737,8 @@ La bona notícia és que Summa Social fa gran part de la feina automàticament. 
 - CSV (.csv, .txt)
 - Excel (.xlsx, .xls)
 
+> 💡 Si el teu banc encara exporta en format Excel antic (`.xls`), el pots pujar tal qual. No cal convertir-lo abans.
+
 ### Pas a pas
 
 1. Descarrega l'extracte del teu banc (des de la banca online)
@@ -821,6 +823,8 @@ Els filtres aplicats apareixen com a "pills" sota el header. Pots eliminar-los c
 
 Si veus un missatge com **"Carregant més moviments"**, espera uns segons. Si apareix **"No s'ha pogut completar la cerca"**, fes clic a **"Reintenta"** o neteja filtres per tornar a un estat estable.
 
+Mentre tens oberta una consulta recent, la llista també pot refrescar-se automàticament quan hi ha canvis relacionats amb els moviments que estàs veient: documents adjunts, devolucions assignades o remeses processades/desfetes. Això no recarrega tot l'històric; manté al dia la finestra activa perquè puguis continuar treballant sense sortir de la pantalla.
+
 ### El menú d'opcions (⋮)
 
 | Opció | Descripció |
@@ -899,6 +903,16 @@ Pots arrossegar fitxers (factures, tiquets) directament sobre una fila de la tau
 
 **Tipus acceptats:** PDF, JPG, PNG, GIF, WEBP, XML
 **Mida màxima:** 15 MB
+
+### Si un moviment té més d'un document
+
+- Pots afegir més d'un comprovant al mateix moviment
+- Des de la icona de document obres el llistat complet
+- Pots marcar quin és el **principal**
+- Quan obres un comprovant, s'obre en una **pestanya nova** i Summa Social queda oberta a la pantalla on estaves
+- Si elimines el **principal** i n'hi ha més, el següent passa a ser el principal; si era l'últim, el moviment queda sense comprovant
+
+> 💡 Fes servir com a document principal el comprovant que millor representa la despesa (per exemple, la factura final en lloc d'un annex secundari).
 
 ---
 
@@ -1816,6 +1830,8 @@ També els pots enviar directament des de la mateixa pantalla de **📄 Informes
 **Abans d'enviar, revisa això:**
 - El donant ha de tenir email informat
 - El teu usuari ha de tenir permís per generar certificats fiscals
+- Aquest permís pot permetre generar certificats sense donar accés a la secció **Moviments** ni a l'històric econòmic general
+- Si el teu perfil només té accés a **Donants**, genera el certificat des de la fitxa de cada donant o soci. No cal accés a **Informes** per fer aquest flux individual/anual.
 - Si s'arriba al límit diari d'enviaments, el sistema t'avisa i pots continuar l'endemà
 
 > 💡 Si el total d'un donant és ≤ 0 (per devolucions), no es genera certificat.
@@ -2224,6 +2240,8 @@ Cada fila és una despesa assignada al projecte. Les columnes són:
 Les capçaleres de l'Excel surten traduïdes a l'idioma que tinguis configurat.
 
 Al final del document hi ha una fila de **totals**.
+
+Si una mateixa despesa té més d'un comprovant, l'Excel continua mostrant una sola fila econòmica, però el ZIP de comprovants els inclou tots amb el mateix número d'ordre perquè puguis relacionar-los fàcilment.
 
 ---
 

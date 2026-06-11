@@ -1,7 +1,7 @@
 # SUMMA SOCIAL - Manuel d'utilisateur
 
-**Version**: 1.46
-**Dernière mise à jour**: 16 mars 2026
+**Version**: 1.47
+**Dernière mise à jour**: 11 juin 2026
 
 ---
 
@@ -90,13 +90,13 @@ C'est le flux pour charger de nouveaux mouvements bancaires dans Summa sans cré
 
 #### Quand l'utiliser
 
-- quand vous téléchargez un CSV ou un Excel de la banque
+- quand vous téléchargez un CSV ou un Excel (`.xlsx` ou `.xls`) de la banque
 - quand vous devez charger une nouvelle période dans **Mouvements**
 - quand vous voulez vérifier si un fichier a déjà été importé
 
 #### Pas à pas
 
-1. Téléchargez l'extrait bancaire en **CSV** ou **Excel**.
+1. Téléchargez l'extrait bancaire en **CSV** ou **Excel** (`.xlsx` ou `.xls`).
 2. Allez dans **Mouvements** puis cliquez sur **"Importar"**.
 3. Sélectionnez le bon compte bancaire avant d'envoyer le fichier.
 4. Vérifiez l'aperçu et le bloc de **duplicats segurs** avant de confirmer.
@@ -106,6 +106,8 @@ C'est le flux pour charger de nouveaux mouvements bancaires dans Summa sans cré
 
 - confirmer l'import sans vérifier le compte, l'aperçu ou les doublons
 - ouvrir puis enregistrer le CSV avec Excel si cela change séparateurs ou décimales
+
+Si votre banque fournit encore un ancien fichier Excel (`.xls`), vous pouvez l'envoyer directement sans le convertir.
 
 #### Où le trouver dans Summa
 

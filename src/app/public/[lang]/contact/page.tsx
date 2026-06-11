@@ -6,7 +6,7 @@ import { PublicContactForm } from '@/components/public/PublicContactForm';
 import { PublicDirectContact } from '@/components/public/PublicDirectContact';
 import { PUBLIC_SHELL_X } from '@/components/public/public-shell';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Mail } from 'lucide-react';
+import { ArrowLeft, BookOpen, Mail } from 'lucide-react';
 import { SUPPORT_EMAIL } from '@/lib/constants';
 import {
   PUBLIC_LOCALES,
@@ -20,6 +20,19 @@ interface PageProps {
   params: Promise<{ lang: string }>;
   searchParams?: Promise<{ plan?: string }>;
 }
+
+const CONTACT_MANUAL_COPY = {
+  ca: {
+    title: 'Consulta el manual',
+    description: "Abans d'escriure'ns, pots consultar el manual d'usuari.",
+    cta: 'Obrir el manual',
+  },
+  es: {
+    title: 'Consulta el manual',
+    description: 'Antes de escribirnos, puedes consultar el manual de usuario.',
+    cta: 'Abrir el manual',
+  },
+} as const;
 
 export function generateStaticParams() {
   return PUBLIC_LOCALES.map((lang) => ({ lang }));
@@ -52,6 +65,7 @@ export default async function ContactPage({ params, searchParams }: PageProps) {
   const planMessage = resolvedSearchParams.plan
     ? t.contact.form.planMessages[resolvedSearchParams.plan]
     : undefined;
+  const manualCopy = locale === 'ca' || locale === 'es' ? CONTACT_MANUAL_COPY[locale] : null;
 
   return (
     <main className="flex min-h-screen flex-col">
@@ -102,6 +116,20 @@ export default async function ContactPage({ params, searchParams }: PageProps) {
                 </div>
               </div>
               <p className="text-sm text-muted-foreground">{t.contact.responseTime}</p>
+              {manualCopy && (
+                <div className="rounded-lg border border-border/60 bg-muted/40 p-4">
+                  <div className="flex items-start gap-3">
+                    <BookOpen className="mt-0.5 h-5 w-5 text-primary" />
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium">{manualCopy.title}</p>
+                      <p className="text-sm leading-6 text-muted-foreground">{manualCopy.description}</p>
+                      <Link href={`/${locale}/manual`} className="text-sm font-medium text-primary hover:underline">
+                        {manualCopy.cta}
+                      </Link>
+                    </div>
+                  </div>
+                </div>
+              )}
               <div className="border-t border-border/60 pt-4">
                 <div className="flex justify-center text-left">
                   <PublicDirectContact locale={locale} />

@@ -1,6 +1,6 @@
 # ═══════════════════════════════════════════════════════════════════════════════
 # SUMMA SOCIAL - REFERÈNCIA COMPLETA DEL PROJECTE
-# Última actualització: 10 Abril 2026
+# Última actualització: 11 Juny 2026
 # ═══════════════════════════════════════════════════════════════════════════════
 
 
@@ -84,6 +84,10 @@ Eina centralitzada amb:
 - Imputació Stripe sobre abonaments bancaris, amb càrrega CSV opcional, assignació manual i persistència fiscal a `donations`
 - Multicomptes bancaris amb filtre i traçabilitat
 - Web pública multiidioma amb landing, contacte, privacitat, pàgina "Qui som", preus i blog editorial
+- Panell SuperAdmin amb control tower, contingut editorial, entitats, manteniment i CRM intern de leads
+- Ajuda contextual dins l'app, manual llarg, guies operatives i bot de suport basat en KB publicada
+- Integracions privades v1, acotades i auditades, per consulta controlada i preparació documental
+- Adaptador MCP privat de Summa Agent sobre les APIs d'integració, sense exposar un API públic general
 
 ## 1.3.1 Model comercial públic
 
@@ -374,12 +378,20 @@ El sistema de categorització IA genera logs estructurats per facilitar el diagn
       /[slug]/page.tsx          → Detall del post
     /api/blog                   → API de publicació externa del blog
       /publish/route.ts         → Alta de posts via secret Bearer
+      /unpublish/route.ts       → Despublicació controlada de posts
       /upload-cover/route.ts    → Upload de cobertes del blog
+    /api/contact                → Formulari de contacte públic via Resend
+    /api/integrations/private   → Integracions privades v1
+      /contacts/search          → Cerca acotada de contactes
+      /transactions/search      → Cerca acotada de moviments
+      /pending-documents/upload → Pujada de document pendent
+      /pending-documents/link-transaction → Vincle document pendent ↔ moviment
     /public/[lang]               → Rutes públiques multiidioma (segment real `public`)
       /page.tsx                  → HOME multiidioma
       /funcionalitats/page.tsx   → Funcionalitats (CA)
       /funcionalidades/page.tsx  → Funcionalitats (ES)
       /fonctionnalites/page.tsx  → Funcionalitats (FR)
+      /preus/page.tsx            → Plans públics i implantació
       /blog/page.tsx             → Llistat públic del blog
       /blog/[slug]/page.tsx      → Detall públic del blog
       /qui-som/page.tsx          → Pàgina corporativa "Qui som" (canònica a tots els idiomes)
@@ -419,6 +431,13 @@ El sistema de categorització IA genera logs estructurats per facilitar el diagn
         /quick-expense           → Captura ràpida de despesa
       /login                     → Login per organització
     /admin                       → Panel SuperAdmin global
+      /page.tsx                  → Vista general / control tower
+      /contingut                 → Hub de Blog i Novetats
+        /blog                    → Gestió de blog natiu
+        /novetats                → Product updates
+      /entitats                  → Gestió d'organitzacions
+      /manteniment               → Incidències, suport i eines tècniques
+      /growth/leads              → CRM intern de leads
     /login                       → Redirect stub → /{lang}/login (via middleware)
     /privacy                     → Redirect stub → /{lang}/privacy
     /contacte                    → Redirect stub → /{lang}/contact
@@ -442,6 +461,9 @@ El sistema de categorització IA genera logs estructurats per facilitar el diagn
       OnboardingWizard.tsx       → Wizard de configuració inicial
     /admin                       → Components del panell admin
       create-organization-dialog.tsx → Modal crear organització
+      admin-content-hub.tsx      → Entrada a Blog i Novetats
+      admin-blog-page.tsx        → Gestió del blog natiu
+      /growth                    → CRM intern de leads
     donor-manager.tsx            → Gestió de donants
     donor-importer.tsx           → Importador massiu de donants
     supplier-manager.tsx         → Gestió de proveïdors
@@ -461,12 +483,14 @@ El sistema de categorització IA genera logs estructurats per facilitar el diagn
     /contacts                    → Helpers de contactes (filterActiveContacts)
     /sepa                        → Generadors SEPA (pain.001, pain.008)
     /files                       → Gestió de fitxers (attach-document, sha256)
+    /transactions                → Helpers de moviments i documents adjunts
     /blog                        → Contracte, lectura i publicació del blog
       /firestore.ts              → Lectura llistat/detall + resolució d'org
       /validateBlogPost.ts       → Validació server-side del payload
       /publish-local-store.ts    → Store local segur fora de producció
       /__tests__                 → Tests de publish i upload de portada
     /notifications.ts            → Inbox de novetats del producte
+    /summa-agent-mcp             → Adaptador MCP privat sobre integracions v1
     /__tests__                   → Tests unitaris Node de domini i integració
   /scripts                       → Scripts d'utilitat i demo
   /help                          → Contingut d'ajuda per idioma (ca/, es/, fr/)
@@ -534,7 +558,7 @@ organizations/
       │       ├── amount: number                  # Import (+ ingrés, - despesa)
       │       ├── note: string | null             # Nota editable de l'usuari
       │       ├── category: string | null         # ID de categoria
-      │       ├── document: string | null         # URL document adjunt
+      │       ├── document: string | null         # URL del document principal o compatibilitat legacy
       │       ├── contactId: string | null        # ID contacte canònic
       │       ├── contactType: string | null      # 'donor' | 'supplier' | 'employee'
       │       ├── projectId: string | null        # ID del projecte
@@ -589,7 +613,20 @@ organizations/
       │       ├── archivedFromAction: 'user_delete' | 'superadmin_cleanup' | null
       │       │
       │       ├── createdAt: timestamp
-      │       └── updatedAt: timestamp
+      │       ├── updatedAt: timestamp
+      │       │
+      │       └── documents/
+      │           └── {documentId}/
+      │               ├── url: string
+      │               ├── storagePath: string | null
+      │               ├── filename: string | null
+      │               ├── contentType: string | null
+      │               ├── size: number | null
+      │               ├── isPrimary: boolean
+      │               ├── source: 'upload' | 'pendingDocument' | 'legacy' | 'integration'
+      │               ├── pendingDocumentId: string | null
+      │               ├── createdAt: string
+      │               └── updatedAt: string
       │
       ├── donations/
       │   └── {donationId}/
@@ -712,7 +749,23 @@ organizations/
 
 - Model canònic `Transaction`: `note`, `document`, `contactId`, `contactType`, `projectId`.
 - Camps com `documentUrl`, `notes`, `emisorName`, `categoryName`, `contactName`, `projectName` són **legacy/desnormalitzats** (compatibilitat/export) i no formen part del contracte canònic principal.
+- Per als adjunts de moviments, la font completa és `transactions/{transactionId}/documents/{documentId}`. El camp pare `document` es manté com a URL del document principal i fallback legacy.
 - En el flux Stripe vigent, la font fiscal principal és `donations`; els camps Stripe a `transactions` existeixen sobretot per compatibilitat, lectura legacy i traçabilitat del moviment pare.
+
+### Col·leccions globals rellevants
+
+| Col·lecció / document | Ús |
+|-----------------------|-----|
+| `systemSuperAdmins/{uid}` | Autorització global SuperAdmin |
+| `system/supportKb` | KB publicada del bot de suport i paràmetres de timeout |
+| `systemIncidents/{incidentId}` | Incidències tècniques deduplicades i auditables |
+| `productUpdates/{updateId}` | Novetats publicades visibles a app i web |
+| `productUpdateDrafts/{draftId}` | Esborranys de novetats abans de publicar |
+| `ops_editorial_blog_posts/{postId}` | Blog natiu gestionat des del SuperAdmin |
+| `ops_leads/{leadId}` | CRM intern de leads |
+| `ops_jobs/{jobId}` | Tasques de prospecció de leads |
+| `integrationTokens/{tokenId}` | Tokens privats d'integració, guardats només com a hash |
+| `integrationAuditLogs/{logId}` | Auditoria d'ús de les integracions privades |
 
 ## 2.3 Sistema d'Autenticació i Rols
 
@@ -1036,16 +1089,17 @@ Nova estructura visual en 3 franges horitzontals:
 - El botó "Filtres" obre un Sheet lateral des de la dreta
 - Els filtres aplicats apareixen com a "pills" sota el header
 
-### 3.2.8 Drag & Drop de Documents
+### 3.2.8 Documents de Moviments: multiadjunt, principal i obertura segura
 
-Permet adjuntar documents arrossegant fitxers directament sobre una fila de moviment, o clicant la icona de document.
+Permet adjuntar documents a un moviment des de la fila, la icona de document o el diàleg de documents del moviment. El model actual ja no és "un sol document per moviment": el moviment pot tenir diversos adjunts i un d'ells queda marcat com a principal.
 
-**Funcionament:**
-- Arrossegar un fitxer sobre qualsevol fila activa el mode "drop"
-- La fila mostra un overlay amb "Deixa anar per adjuntar"
-- En deixar anar (o clicar la icona), es mostra un **AlertDialog amb suggeriment de renom**
-- L'usuari pot acceptar el nom suggerit o mantenir l'original
-- El fitxer es puja a Storage i s'assigna al moviment
+**Funcionament actual:**
+- Arrossegar un fitxer sobre una fila activa el mode "drop" i mostra l'overlay "Deixa anar per adjuntar"
+- En deixar anar o clicar la icona, el sistema proposa un nom normalitzat abans de pujar el fitxer
+- El fitxer es desa a Storage i es registra a `organizations/{orgId}/transactions/{transactionId}/documents/{documentId}`
+- El primer document o el document marcat explícitament com a principal actualitza també `transactions/{transactionId}.document`
+- Si s'elimina el document principal, es tria un altre adjunt actiu com a principal; si no en queda cap, `document` passa a `null`
+- Si el moviment només tenia un document legacy al camp pare, es mostra com a adjunt legacy però no es "ressuscita" després d'haver-lo eliminat
 
 **Renom suggerit en adjuntar:**
 
@@ -1058,16 +1112,24 @@ Prioritat per construir el nom:
 4. Fallback: "moviment"
 
 **Tipus acceptats:**
-- PDF, imatges (JPG, PNG, GIF, WEBP), XML
-- Màxim 15MB per fitxer
+- Des de la fila: PDF, imatges (JPG, PNG, GIF, WEBP), XML; màxim 15MB per fitxer
+- Des del diàleg multiadjunt: PDF, imatges i documents Office habituals (`doc`, `docx`, `xls`, `xlsx`)
 
-**Components:**
+**Obertura de documents:**
+- El botó "Obrir" no exposa directament un path intern de Storage quan hi ha `storagePath`
+- La UI crida `POST /api/transaction-documents/open`
+- L'API valida autenticació, organització, permisos i pertinença abans de retornar una URL signada temporal
+- En documents legacy amb URL pública existent, es manté el fallback de compatibilitat
 
-| Component | Fitxer | Descripció |
-|-----------|--------|------------|
+**Components i helpers:**
+
+| Component / helper | Fitxer | Descripció |
+|--------------------|--------|------------|
 | `RowDropTarget` | `src/components/files/row-drop-target.tsx` | Wrapper que afegeix drag & drop a files de taula |
-| `attachDocumentToTransaction` | `src/lib/files/attach-document.ts` | Helper per pujar fitxer a Storage i actualitzar Firestore |
-| `transactions-table.tsx` | `src/components/transactions-table.tsx` | AlertDialog de renom |
+| `attachDocumentToTransaction` | `src/lib/files/attach-document.ts` | Helper legacy de pujada i actualització del camp pare |
+| `TransactionDocumentsDialog` | `src/components/transactions/TransactionDocumentsDialog.tsx` | Diàleg multiadjunt: llistar, pujar, obrir, marcar principal i eliminar |
+| `transaction-documents` | `src/lib/files/transaction-documents.ts` i `src/lib/transactions/transaction-documents.ts` | Helpers de subcol·lecció, legacy fallback, principal i eliminació segura |
+| `openDocumentUrl` | `src/lib/open-document-url.ts` | Obertura client-side via API segura |
 
 **Traduccions:** `movements.table.dropToAttach`, `movements.table.renameBeforeAttach.*` (CA/ES/FR)
 
@@ -1152,6 +1214,20 @@ Les remeses de donacions processades es mostren amb un estil visual distintiu pe
 - Colors: `border-emerald-300 text-emerald-700 bg-emerald-50`
 
 **Traduccions:** `movements.table.remittanceProcessedLabel`, `remittanceNotApplicable` (CA/ES/FR)
+
+### 3.2.10 Realtime acotat de la finestra activa
+
+La taula de Moviments manté un listener en temps real sobre la finestra activa de consulta, no sobre tot l'històric.
+
+**Contracte:**
+- La UI refresca automàticament els moviments recents o filtrats que entren dins la finestra visible de treball
+- El listener respecta els filtres de lectura, visibilitat de ledger i exclusions de remeses filles
+- La finestra usa límits conservadors (`pageSize` 50 i escaneig màxim 250) per evitar lectures massives
+- No canvia el model fiscal, no crea moviments i no reprocessa remeses; només actualitza la lectura activa
+
+**Fitxers:**
+- `src/components/transactions/hooks/useTransactionsRealtime.ts`
+- `src/lib/transactions/realtime-window.ts`
 
 
 ## 3.3 DIVISOR DE REMESES (INGRESSOS)
@@ -1641,6 +1717,7 @@ Cada execució del wizard crea un document amb:
 - L'API restaura la memòria SEPA dels socis inclosos:
   - si hi ha snapshot, restaura `previousSepaPain008LastRunAt|Id`
   - si és legacy i el contacte apunta al mateix run o al mateix mes, restaura l'execució activa anterior o `null`
+  - si és legacy de `sepaPain008Runs` i `collectionRunId` apunta al run anul·lat, restaura amb criteri `belongs-to-voided-run`
   - si detecta una execució posterior activa, no toca el soci
 - Les escriptures es fan en batches de màxim 50 operacions
 - Després d'anul·lar, la UI canvia a **Nova remesa** i preomple només `bankAccountId` i `collectionDate` si existeixen al run
@@ -3156,11 +3233,27 @@ On `{detectat}` és l'idioma detectat via Accept-Language (default: `ca`).
 
 #### Blog públic
 
-- El blog viu fora del segment `public`, a `/blog` i `/blog/[slug]`
-- El llistat i el detall tenen `revalidate = 60`
-- Si `BLOG_ORG_ID` no està configurat, el llistat mostra estat no configurat i les metadades del blog queden amb `robots: noindex, nofollow`
+- La ruta canònica actual és multiidioma: `/{lang}/blog` i `/{lang}/blog/{slug}`
+- La ruta legacy `/blog` i `/blog/{slug}` continua existint com a compatibilitat catalana
+- El llistat i el detall tenen `revalidate = 60` a les superfícies de blog
+- Si `BLOG_ORG_ID` no està configurat quan cal resoldre posts legacy, el llistat mostra estat no configurat i les metadades del blog queden amb `robots: noindex, nofollow`
 - El detall del post renderitza portada opcional, data publicada, categoria i `contentHtml`
 - A la fitxa del post, la imatge de portada s'ajusta amb `object-contain` per evitar retalls agressius en peces editorials
+
+#### Pàgina de preus
+
+- Ruta pública: `/{lang}/preus`
+- Comunica els plans públics 49/79/119 €/mes i implantació inicial a partir de 300 €
+- És una superfície comercial informativa: no fa checkout, no activa Stripe Billing i no limita funcionalitats dins l'app
+- Les crides a acció porten a contacte o registre segons context
+
+#### Contacte i descoberta pública
+
+- Formulari públic: `/{lang}/contact` o alias idiomàtics (`/contacto`, etc.)
+- API: `POST /api/contact`
+- Validació: nom, email i missatge; camp honeypot `website` per tallar bots
+- Enviament: Resend amb `RESEND_API_KEY` i `CONTACT_FORM_TO_EMAIL`; si falten, l'API respon error controlat
+- Descobriment: `sitemap.ts`, `robots.ts` i `llms.txt` exposen les rutes públiques rellevants per SEO i agents
 
 #### Publicació externa del blog
 
@@ -3170,7 +3263,7 @@ On `{detectat}` és l'idioma detectat via Accept-Language (default: `ca`).
 - `slug` ha de ser URL-safe (`^[a-z0-9]+(?:-[a-z0-9]+)*$`)
 - `coverImageUrl` és opcional, però `coverImageAlt` només és vàlid si hi ha URL
 - Si el `slug` ja existeix, la resposta és `409 duplicate_slug`
-- Després d'escriure el post es revalida `/blog` i `/blog/{slug}`
+- Després d'escriure el post es revaliden les superfícies públiques afectades
 
 #### Upload de cobertes
 
@@ -3188,6 +3281,13 @@ On `{detectat}` és l'idioma detectat via Accept-Language (default: `ca`).
 - La resolució d'org del blog és resilient: si només hi ha una org amb posts, es fa servir aquesta encara que `BLOG_ORG_ID` hagi quedat desalineat
 - Existeix smoke test local de cap a cap: `npm run test:blog-publish-local`
 - Contracte extern complet de la integració: `docs/contracts/blog-publish-cover-image.md`
+
+#### Blog natiu gestionat des de SuperAdmin
+
+- A més de la integració externa, el SuperAdmin disposa d'un gestor natiu de blog a `/admin/contingut/blog`
+- La persistència nativa és `ops_editorial_blog_posts`
+- Flux intern: idea → generar esborrany → revisar → aprovar → publicar/despublicar
+- Pot generar o conservar coberta, metadades SEO, traducció castellana i estat de revisió
 
 
 ## 3.10 IMPUTACIÓ STRIPE SOBRE ABONAMENT BANCARI
@@ -4392,20 +4492,29 @@ Panell de control exclusiu per al SuperAdmin del sistema, accessible des de `/ad
 
 ### 3.13.2 Funcionalitats
 
-**Estructura simplificada actual:**
+**Navegació actual:**
 
-| Àrea | Descripció |
-|------|------------|
-| **Vista general** | Resum executiu del dia: entitats actives, contingut pendent, última novetat i avisos tècnics |
-| **Contingut visible** | Novetats ja visibles i gestor de traduccions |
-| **Entitats** | Entrar a una org, suspendre/reactivar, copiar URL pública, obrir Moviments/Configuració i descarregar backup local |
-| **Incidències i manteniment** | Avisos tècnics, bot/KB, reset de contrasenya, demo, migracions i logs d'auditoria |
+| Ruta | Àrea | Descripció |
+|------|------|------------|
+| `/admin` | **Vista general** | Control tower del dia: entitats actives, incidències, suport, contingut, blog i leads |
+| `/admin/contingut` | **Contingut** | Hub editorial cap a Blog i Novetats |
+| `/admin/contingut/blog` | **Blog** | Crear, generar, revisar, aprovar, publicar, despublicar o descartar posts natius |
+| `/admin/contingut/novetats` | **Novetats** | Esborranys, publicades, creació amb IA i export legacy |
+| `/admin/entitats` | **Entitats** | Entrar a una org, suspendre/reactivar, copiar URL pública, obrir Moviments/Configuració i descarregar backup local |
+| `/admin/manteniment` | **Manteniment** | Incidències, bot/KB, reset de contrasenya, demo, migracions i logs d'auditoria |
+| `/admin/growth/leads` | **CRM / Leads** | Cues internes de prospecció, leads manuals i esborranys d'outreach |
 
-**Navegació:** tabs sticky `overview`, `content`, `entities`, `technical`.
+**Estructura visual:** sidebar lateral amb seccions, no tabs sticky globals.
 
 **Submòduls visibles a Contingut:**
-- `updates` → lectura operativa de novetats publicades
-- `translations` → gestor de traduccions
+- **Blog** → posts natius a `ops_editorial_blog_posts`
+- **Novetats** → `productUpdateDrafts` i `productUpdates`
+
+**CRM / Leads:**
+- Col·leccions: `ops_leads` i `ops_jobs`
+- Cues visibles: pending, ready, errors, replies, contacted i discarded
+- Permet crear leads manuals i encolar una cerca IA
+- El flux prepara i classifica leads/esborranys; qualsevol enviament extern queda fora d'aquest contracte de referència si no hi ha una autorització explícita i una ruta validada
 
 **Origen del resum executiu:** endpoint `GET /api/admin/control-tower/summary`.
 
@@ -5034,11 +5143,11 @@ Segons implementació actual a `functions/src/backups/exportFirestoreOrg.ts`:
 - URLs signades
 - Subcol·leccions no llistades (integrations, backupOAuthRequests, etc.)
 
-El dataset és equivalent al backup local (secció 3.13.7).
+Mentre el mòdul estigui desactivat, aquest dataset no s'ha de tractar com a garantia operativa equivalent al backup local. La referència contractual vigent continua sent el backup local de la secció 3.13.7.
 
 #### On es configura (UX)
 
-Ruta: `/{orgSlug}/dashboard/configuracion` → secció **Còpies de seguretat**
+Ruta prevista si es reactiva: `/{orgSlug}/dashboard/configuracion` → secció **Còpies de seguretat**
 
 Flux:
 1. Seleccionar proveïdor (Dropbox o Google Drive)
@@ -5159,6 +5268,114 @@ El backup manual des de la UI crida la mateixa lògica via `/api/integrations/ba
 | `functions/src/backups/providers/googleDriveProvider.ts` | Provider Google Drive (Cloud Functions) |
 
 
+## 3.14 INTEGRACIONS PRIVADES I MCP SUMMA AGENT
+
+### 3.14.1 Visió i abast
+
+Les integracions privades v1 existeixen per connectar eines controlades de l'ecosistema Summa amb una organització concreta. No són una API pública general ni un mecanisme per saltar-se permisos d'usuari.
+
+**Contracte v1:**
+- Accés server-to-server amb token privat, no amb `idToken` d'usuari final
+- Token sempre lligat a una sola organització
+- Scopes explícits i granulars
+- Auditoria de cada crida a `integrationAuditLogs`
+- Escriptures limitades a preparació documental i vinculació comprovada
+- Cap write directe sobre imports, dates, fiscalitat, remeses, donants o categories
+
+**Fora d'abast v1:**
+- API pública per tercers no controlats
+- Lectura general de `pendingDocuments`
+- Escriptures directes a ledger fiscal
+- Migracions de dades reals
+- Enviaments externs
+- Cap operació que requereixi permisos d'administració humana dins l'app
+
+### 3.14.2 Autenticació, tokens i scopes
+
+| Element | Contracte |
+|---------|-----------|
+| Col·lecció tokens | `integrationTokens/{tokenId}` |
+| Secret guardat | Només hash; mai el token en clar |
+| Estat | `active` o `revoked` |
+| Organització | `orgId` obligatori i immutable per token |
+| Auditoria | `integrationAuditLogs/{logId}` |
+
+**Scopes disponibles:**
+
+| Scope | Permet |
+|-------|--------|
+| `contacts.read` | Cercar contactes dins l'organització |
+| `transactions.read` | Cercar moviments dins l'organització |
+| `pending_documents.write` | Pujar un document pendent en mode controlat |
+| `pending_documents.link` | Vincular un document pendent existent a un moviment compatible |
+
+### 3.14.3 Endpoints privats v1
+
+| Endpoint | Mètode | Scope | Funció |
+|----------|--------|-------|--------|
+| `/api/integrations/private/contacts/search` | GET | `contacts.read` | Cerca contactes per text, NIF/CIF o email |
+| `/api/integrations/private/transactions/search` | GET | `transactions.read` | Cerca moviments acotats per text, data, import i estat documental |
+| `/api/integrations/private/pending-documents/upload` | POST | `pending_documents.write` | Pujar un fitxer a la safata de documents pendents |
+| `/api/integrations/private/pending-documents/link-transaction` | POST | `pending_documents.link` | Vincular un document pendent a un moviment |
+
+### 3.14.4 Pujada de documents pendents per integració
+
+**Contracte:**
+- Requereix header `Idempotency-Key`
+- Límit de fitxer: 20MB
+- Estat per defecte: `draft`
+- `confirmed` només és vàlid si els camps forts requerits passen validació
+- El document queda marcat amb `integrationMeta`
+- No crea moviments i no modifica contactes
+
+### 3.14.5 Vinculació document pendent ↔ moviment
+
+La vinculació és deliberadament conservadora. Només uneix un document pendent existent amb un moviment existent quan les comprovacions són granularment satisfactòries.
+
+**Comprovacions principals:**
+- Mateixa organització
+- Document pendent existent i no vinculat
+- Moviment existent i sense document principal
+- Hash del fitxer coherent quan aplica
+- Import i data compatibles dins tolerància documentada
+
+**Escriptures permeses:**
+- Actualitzar l'estat del `pendingDocument`
+- Escriure `transactions/{transactionId}.document` com a document principal
+- Crear l'entrada corresponent a `transactions/{transactionId}/documents/{documentId}`
+
+**Escriptures prohibides en aquest flux:**
+- Canviar import, data, descripció, categoria o contacte del moviment
+- Crear o eliminar moviments
+- Escriure fiscalitat, remeses o donacions
+
+### 3.14.6 MCP Summa Agent
+
+El MCP Summa Agent és un adaptador privat local sobre les integracions v1. Serveix perquè un agent autoritzat pugui preparar feina operativa sense obtenir accés ampli a Firestore ni a l'app privada.
+
+**Eines exposades:**
+- `search_contacts`
+- `search_transactions`
+- `upload_pending_document`
+- `link_pending_document_to_transaction`
+- `get_entity_operational_summary`
+
+**Límits explícits:**
+- No exposa lectura general de documents pendents; el resum retorna `pendingDocuments.readable=false`
+- No amplia scopes: només pot fer el que permeti el token d'integració configurat
+- No substitueix les pantalles d'aprovació humana de Summa Social
+
+**Fitxers principals:**
+- `docs/contracts/private-admin-integrations-v1.md`
+- `src/lib/api/integration-auth.ts`
+- `src/app/api/integrations/private/contacts/search/handler.ts`
+- `src/app/api/integrations/private/transactions/search/handler.ts`
+- `src/app/api/integrations/private/pending-documents/upload/handler.ts`
+- `src/app/api/integrations/private/pending-documents/link-transaction/handler.ts`
+- `src/lib/summa-agent-mcp/client.ts`
+- `src/lib/summa-agent-mcp/server.ts`
+
+
 # ═══════════════════════════════════════════════════════════════════════════════
 # 4. FORMATS D'IMPORTACIÓ I EXPORTACIÓ
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -5237,6 +5454,7 @@ El backup manual des de la UI crida la mateixa lògica via `/api/integrations/ba
 | Model 347 (resum) | CSV | `informe_model347_{any}.csv` |
 | Model 347 AEAT | TXT (ISO-8859-1) | `modelo347_{any}.txt` |
 | Certificats | PDF / ZIP | `certificat_{donant}_{any}.pdf` |
+| Justificació per finançador | Excel + ZIP | `justificacio_{projecte}_{YYYY-MM-DD}.xlsx` + carpeta ZIP de comprovants |
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -5851,6 +6069,10 @@ Les fites històriques i els desplegaments anteriors es documenten a `docs/CHANG
 
 | Versió | Data | Canvis principals |
 |--------|------|-------------------|
+| **1.55** | **11 Jun 2026** | **Referència completa actualitzada contra el codi actual: documents multiadjunt de moviments, realtime acotat, integracions privades v1, MCP Summa Agent, web/blog/preus/contacte, SuperAdmin actual, CRM de leads i rollback legacy pain.008.** |
+| **1.54** | **10 Jun 2026** | **Documents de moviments i justificació: subcol·lecció multiadjunt, eliminació segura del principal sense ressuscitar legacy, obertura amb URL signada i exports de justificació amb documents múltiples.** |
+| **1.53** | **3 Jun 2026** | **Moviments: refresc en temps real de la finestra activa amb límits de lectura, respectant filtres, ledger visibility i exclusions de remeses filles.** |
+| **1.52** | **Maig-Jun 2026** | **Integracions privades v1 i MCP Summa Agent: cerca controlada de contactes/moviments, pujada de documents pendents, vinculació segura amb moviments i auditoria per token.** |
 | 1.0 | Nov 2024 | Versió inicial, single-user |
 | 1.5 | Nov 2024 | Multi-organització, sistema de rols |
 | 1.6 | Des 2024 | DonorDetailDrawer, certificats amb firma, Zona Perill, divisor remeses |
@@ -6758,9 +6980,11 @@ Les següents regles han de ser certes en tot moment. Si es trenca alguna, cal c
 4. **Rutes públiques sota `/public/[lang]/`** — El segment `public` és real (no virtual). El middleware reescriu `/{lang}/...` → `/public/{lang}/...`.
 5. **Portuguès (pt) és JSON-only** — No existeix `src/i18n/pt.ts`. Les traduccions pt viuen exclusivament a `src/i18n/locales/pt.json`.
 6. **Remittances és subcol·lecció** — `organizations/{orgId}/remittances/{remittanceId}` existeix amb subcol·lecció `pending/`.
+7. **Documents de moviments és multiadjunt** — La llista completa viu a `transactions/{transactionId}/documents/{documentId}`; `transactions.document` és només principal/compatibilitat.
+8. **Integracions privades no són API pública** — Han d'estar lligades a token, org, scopes i auditoria; no poden escriure fiscalitat ni ledger fora dels fluxos documentats.
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # FI DEL DOCUMENT
-# Última actualització: 23 Març 2026
+# Última actualització: 11 Juny 2026
 # ═══════════════════════════════════════════════════════════════════════════════
