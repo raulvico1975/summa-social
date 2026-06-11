@@ -18,6 +18,28 @@ Aquest checklist assegura que els fluxos fiscals crítics no tenen regressions a
 
 ## 2. Checklist de verificació (PASS/FAIL)
 
+### Registre manual 2026-06-11 — Modal de documents del moviment
+
+**Context:**
+Retoc visual a `TransactionDocumentsDialog` perquè noms de fitxer llargs no empenyin els botons d'acció fora del modal. El canvi només ajusta layout (`min-w-0`, `flex-1`, `overflow-hidden`, `truncate`) dins del llistat de documents d'un moviment. No modifica imports, dates, categories, contactes, fiscalitat, persistència, regles Firestore ni el contracte de pujada/eliminació de documents.
+
+**Fitxers afectats:**
+- `src/components/transactions/TransactionDocumentsDialog.tsx`
+- `docs/QA-FISCAL.md`
+
+**Comprovacions aplicades:**
+1. Revisió de la captura de Baruma on el control d'acció quedava tallat al lateral dret del modal.
+2. Revisió del diff per confirmar que el canvi és UI-only i no altera callbacks d'obrir, marcar principal, pujar o desvincular documents.
+3. `npm run typecheck` OK.
+4. `git diff --check` OK.
+5. Pre-commit OK amb `npm test` complet: 1155 pass, 0 fail; `docs:check`, `i18n:validate-guides`, `i18n:validate-help`, `i18n:check` i `i18n:check-tr-keys` OK.
+6. Build de producció del ritual `npm run publica` OK abans del bloqueig de guardrail fiscal per falta d'aquesta evidència.
+
+**Resultat:**
+- [x] El canvi és visual i no altera fiscalitat, imports, dades ni permisos.
+- [x] El modal reserva espai per al nom truncat i manté els botons dins del contenidor.
+- [x] La guardrail fiscal queda coberta amb aquesta evidència i les validacions executades.
+
 ### Registre manual 2026-06-03 — Modal ampla per gestionar devolucions
 
 **Context:**
@@ -650,6 +672,7 @@ Canvi funcional en `Remeses SEPA pain.008`: possibilitat d'anul·lar una execuci
 | 2026-03-27 | Codex | - | - | - | - | - | - | - | - | - | - | - | - | - | - | - | - | - | Ajust tecnic d'exportacio a `donations-report-generator` per normalitzar el buffer binari que es passa a `Blob`, sense tocar calcul fiscal ni criteri de dades. Evidencia automatica executada al branch net `codex/blog-bilingual-locale`: `npm run typecheck`, tests de blog bilingue i `scripts/verify-local.sh` OK. No s'han marcat PASS manuals del checklist fiscal perque no hi ha canvi funcional de flux fiscal. |
 | 2026-03-29 | Codex | - | - | - | - | - | - | - | - | - | - | - | - | - | - | - | - | - | Retoc visual del modal d'exclosos del Model 182 i blindatge del `Dialog`/`AlertDialog` per evitar overflow horitzontal i CTA fora de vista. Evidencia manual: captura i comprovacio real del modal a 860, 720, 640 i 390 px sense scroll horitzontal (`bodyScrollWidth == viewportWidth`), amb CTA visibles i text embolcallat correctament. Evidencia automatica: `npm run typecheck` i `npm run build` OK al worktree net de publicacio. |
 | 2026-06-02 | Codex | - | - | - | - | - | - | - | - | - | - | - | - | - | - | - | - | - | Hotfix SEPA pain.008 per rollback legacy quan `sepaPain008LastRunId` apunta a `sepaPain008Runs` i no directament a `sepaCollectionRuns`. Evidencia automatica executada: `npm run typecheck`, `npm test`, `npm run i18n:check`, `npm run i18n:check-tr-keys`, `scripts/verify-local.sh` i `scripts/verify-ci.sh` OK. Dry-run reparacio real: 209 inclosos, 209 restaurables, 205 cap a run anterior, 4 a null, 0 aplicats. Reparacio real no executada. |
+| 2026-06-11 | Codex | - | - | - | - | - | - | - | - | - | - | - | - | - | - | - | - | - | Retoc visual del modal de documents del moviment per evitar controls tallats amb noms de fitxer llargs. Evidencia: captura revisada, diff UI-only, `npm run typecheck`, `git diff --check`, pre-commit amb `npm test` complet 1155 pass i checks docs/i18n OK; build de produccio OK dins el ritual de deploy abans del guardrail. |
 | YYYY-MM-DD | Nom | - | - | - | - | - | - | - | - | - | - | - | - | - | - | - | - | - | |
 
 ---
@@ -663,4 +686,4 @@ Canvi funcional en `Remeses SEPA pain.008`: possibilitat d'anul·lar una execuci
 
 ---
 
-*Última actualització: 2026-03-29*
+*Última actualització: 2026-06-11*
