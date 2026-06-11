@@ -1,6 +1,6 @@
 # Audit capa Help
 
-- Data: 2026-04-19T13:18:36.214Z
+- Data: 2026-06-11T08:11:31.717Z
 - Anchors auditats (rutes): 14
 - Anchors auditats (hints bot/manual): 14
 - Cards amb referències legacy a guides/hub: 0
@@ -9,9 +9,9 @@
 
 | Idioma | Entrades TOC | Mida (bytes) | Observació |
 |---|---:|---:|---|
-| ca | 273 | 87516 | Base principal |
-| es | 268 | 37121 | Manual amb estructura suficient |
-| fr | 26 | 11512 | Manual amb estructura suficient |
+| ca | 274 | 88989 | Base principal |
+| es | 268 | 37789 | Manual amb estructura suficient |
+| fr | 26 | 11671 | Manual amb estructura suficient |
 
 ## Rutes HelpSheet -> Manual
 

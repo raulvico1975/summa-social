@@ -287,6 +287,7 @@ const FOOTER_COPY: Record<
   {
     sitemap: string;
     pricing: string;
+    manual: string;
     socials: string;
     socialsNote: string;
     institutional: string;
@@ -295,6 +296,7 @@ const FOOTER_COPY: Record<
   ca: {
     sitemap: 'Mapa del web',
     pricing: 'Preus',
+    manual: 'Manual',
     socials: 'Xarxes',
     socialsNote: 'LinkedIn i Instagram aviat.',
     institutional: 'Desenvolupada dins l’ecosistema de Semilla de Software Libre.',
@@ -302,6 +304,7 @@ const FOOTER_COPY: Record<
   es: {
     sitemap: 'Mapa del sitio',
     pricing: 'Precios',
+    manual: 'Manual',
     socials: 'Redes',
     socialsNote: 'LinkedIn e Instagram pronto.',
     institutional: 'Desarrollada dentro del ecosistema de Semilla de Software Libre.',
@@ -309,6 +312,7 @@ const FOOTER_COPY: Record<
   fr: {
     sitemap: 'Plan du site',
     pricing: 'Tarifs',
+    manual: 'Manuel',
     socials: 'Réseaux',
     socialsNote: 'LinkedIn et Instagram bientôt.',
     institutional: 'Développée au sein de l’écosystème de Semilla de Software Libre.',
@@ -316,6 +320,7 @@ const FOOTER_COPY: Record<
   pt: {
     sitemap: 'Mapa do site',
     pricing: 'Preços',
+    manual: 'Manual',
     socials: 'Redes',
     socialsNote: 'LinkedIn e Instagram em breve.',
     institutional: 'Desenvolvida dentro do ecossistema da Semilla de Software Libre.',
@@ -1564,6 +1569,7 @@ export default async function HomePage({ params }: PageProps) {
   const contactHref = `/${locale}/contact`;
   const howWeWorkHref = `/${locale}#how-we-work`;
   const updatesHref = `/${locale}/novetats`;
+  const hasPublicManual = locale === 'ca' || locale === 'es';
   const headlineParts = splitTextAroundPhrase(t.home.heroTagline, HERO_ROTATING_SEGMENTS[locale]);
   const headlinePrefix = headlineParts.before.trim();
   const headlineSuffix = headlineParts.after.trim();
@@ -2207,6 +2213,11 @@ export default async function HomePage({ params }: PageProps) {
               <Link href={`/${locale}/blog`} className="hover:text-foreground hover:underline">
                 {t.common.blog}
               </Link>
+              {hasPublicManual && (
+                <Link href={`/${locale}/manual`} className="hover:text-foreground hover:underline">
+                  {FOOTER_COPY[locale].manual}
+                </Link>
+              )}
               <Link href={`/${locale}/privacy`} className="hover:text-foreground hover:underline">
                 {t.common.privacy}
               </Link>

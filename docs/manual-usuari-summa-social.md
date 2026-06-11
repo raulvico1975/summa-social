@@ -1,7 +1,7 @@
 # SUMMA SOCIAL - Manual d'Usuari Complet
 
-**Versió**: 1.46
-**Última actualització**: 12 Març 2026
+**Versió**: 1.47
+**Última actualització**: 11 Juny 2026
 
 ---
 
@@ -823,6 +823,8 @@ Els filtres aplicats apareixen com a "pills" sota el header. Pots eliminar-los c
 
 Si veus un missatge com **"Carregant més moviments"**, espera uns segons. Si apareix **"No s'ha pogut completar la cerca"**, fes clic a **"Reintenta"** o neteja filtres per tornar a un estat estable.
 
+Mentre tens oberta una consulta recent, la llista també pot refrescar-se automàticament quan hi ha canvis relacionats amb els moviments que estàs veient: documents adjunts, devolucions assignades o remeses processades/desfetes. Això no recarrega tot l'històric; manté al dia la finestra activa perquè puguis continuar treballant sense sortir de la pantalla.
+
 ### El menú d'opcions (⋮)
 
 | Opció | Descripció |
@@ -908,6 +910,7 @@ Pots arrossegar fitxers (factures, tiquets) directament sobre una fila de la tau
 - Des de la icona de document obres el llistat complet
 - Pots marcar quin és el **principal**
 - Quan obres un comprovant, s'obre en una **pestanya nova** i Summa Social queda oberta a la pantalla on estaves
+- Si elimines el **principal** i n'hi ha més, el següent passa a ser el principal; si era l'últim, el moviment queda sense comprovant
 
 > 💡 Fes servir com a document principal el comprovant que millor representa la despesa (per exemple, la factura final en lloc d'un annex secundari).
 

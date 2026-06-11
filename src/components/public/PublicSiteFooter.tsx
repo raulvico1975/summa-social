@@ -9,27 +9,32 @@ const FOOTER_COPY: Record<
   PublicLocale,
   {
     sitemap: string
+    manual: string
     socials: string
     socialsNote: string
   }
 > = {
   ca: {
     sitemap: 'Mapa del web',
+    manual: 'Manual',
     socials: 'Xarxes',
     socialsNote: 'LinkedIn i Instagram ben aviat.',
   },
   es: {
     sitemap: 'Mapa del sitio',
+    manual: 'Manual',
     socials: 'Redes',
     socialsNote: 'LinkedIn e Instagram, muy pronto.',
   },
   fr: {
     sitemap: 'Plan du site',
+    manual: 'Manuel',
     socials: 'Réseaux',
     socialsNote: 'LinkedIn et Instagram arrivent bientôt.',
   },
   pt: {
     sitemap: 'Mapa do site',
+    manual: 'Manual',
     socials: 'Redes',
     socialsNote: 'LinkedIn e Instagram em breve.',
   },
@@ -45,6 +50,7 @@ export function PublicSiteFooter({ locale }: PublicSiteFooterProps) {
   const howWeWorkHref = `/${locale}#how-we-work`
   const updatesHref = `/${locale}/novetats`
   const blogHref = `/${locale}/blog`
+  const hasPublicManual = locale === 'ca' || locale === 'es'
 
   return (
     <footer className="border-t bg-muted/20 py-12">
@@ -76,6 +82,11 @@ export function PublicSiteFooter({ locale }: PublicSiteFooterProps) {
             <Link href={blogHref} className="hover:text-foreground hover:underline">
               {t.common.blog}
             </Link>
+            {hasPublicManual && (
+              <Link href={`/${locale}/manual`} className="hover:text-foreground hover:underline">
+                {FOOTER_COPY[locale].manual}
+              </Link>
+            )}
             <Link href={`/${locale}/privacy`} className="hover:text-foreground hover:underline">
               {t.common.privacy}
             </Link>

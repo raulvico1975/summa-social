@@ -1,7 +1,7 @@
 # SUMMA SOCIAL - Manual de Usuario Completo
 
-**Versión**: 1.46
-**Última actualización**: 19 abril 2026
+**Versión**: 1.47
+**Última actualización**: 11 junio 2026
 
 ---
 
@@ -463,7 +463,11 @@ Esto ayuda a ordenar:
 
 ### Formatos soportados
 
-Summa admite importación bancaria en formatos habituales como CSV y Excel, según el banco.
+Summa admite importación bancaria en formatos habituales como CSV y Excel, según el banco:
+- CSV (`.csv`, `.txt`)
+- Excel (`.xlsx`, `.xls`)
+
+Si tu banco todavía exporta en Excel antiguo (`.xls`), puedes subirlo tal cual. No hace falta convertirlo antes.
 
 ### Paso a paso
 
@@ -1296,6 +1300,8 @@ Si trabajas con gastos de terreno o captura rápida, puedes crear registros espe
 
 Puedes adjuntar justificantes en el propio circuito del gasto para no irte a herramientas externas.
 
+Si un movimiento tiene más de un justificante, puedes abrir el listado completo desde el icono de documento, marcar cuál es el **documento principal** y abrir cualquier comprobante en una **pestaña nueva** sin salir de la pantalla de trabajo.
+
 ### Detalle de un gasto bancario
 
 Desde el detalle puedes revisar:
@@ -1396,6 +1402,8 @@ Normalmente incluye:
 - partidas
 - importes
 - datos de apoyo para revisión
+
+Si un mismo gasto tiene más de un justificante, el Excel mantiene una sola fila económica y el ZIP de comprobantes conserva todos los archivos relacionados con el mismo orden. El `manifest.csv` ayuda a seguir la correspondencia entre filas y documentos.
 
 ## 10.7 Drag & drop de documentos
 
