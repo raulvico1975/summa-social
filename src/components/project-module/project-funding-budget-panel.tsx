@@ -1,14 +1,18 @@
 'use client';
 
 import * as React from 'react';
-import { AlertTriangle, CheckCircle } from 'lucide-react';
+import { AlertTriangle, CheckCircle, Plus } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useTranslations } from '@/i18n';
 import {
+  formatEuropeanAmountInput,
+  formatEuropeanCurrency,
   getFundingBudgetStatus,
+  parseEuropeanAmountInput,
   sumFundingBudgetAllocations,
 } from '@/lib/project-module-funding';
 import type {
@@ -18,7 +22,7 @@ import type {
 } from '@/lib/project-module-types';
 
 function formatAmount(amount: number): string {
-  return new Intl.NumberFormat('ca-ES', { style: 'currency', currency: 'EUR' }).format(amount);
+  return formatEuropeanCurrency(amount);
 }
 
 export function ProjectFundingBudgetPanel({
@@ -26,16 +30,20 @@ export function ProjectFundingBudgetPanel({
   fundingSources,
   budgetAllocations,
   canEdit,
+  onAddBudgetLine,
   onSaveAllocation,
 }: {
   budgetLines: BudgetLine[];
   fundingSources: ProjectFundingSource[];
   budgetAllocations: ProjectFundingBudgetAllocation[];
   canEdit: boolean;
+  onAddBudgetLine?: () => void;
   onSaveAllocation: (budgetLineId: string, fundingSourceId: string, amountEUR: string) => Promise<void>;
 }) {
   const { tr } = useTranslations();
-  const activeSources = fundingSources.filter((source) => source.archivedAt === null);
+  const activeSources = fundingSources
+    .filter((source) => source.archivedAt === null)
+    .sort((a, b) => a.order - b.order || a.name.localeCompare(b.name));
 
   if (activeSources.length === 0 || budgetLines.length === 0) {
     return null;
@@ -43,9 +51,17 @@ export function ProjectFundingBudgetPanel({
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle className="text-base">{tr('projectModule.multiFunding.budgetTitle')}</CardTitle>
-        <CardDescription>{tr('projectModule.multiFunding.budgetDescription')}</CardDescription>
+      <CardHeader className="flex flex-row items-start justify-between gap-3 space-y-0">
+        <div>
+          <CardTitle className="text-base">{tr('projectModule.multiFunding.budgetTitle')}</CardTitle>
+          <CardDescription>{tr('projectModule.multiFunding.budgetDescription')}</CardDescription>
+        </div>
+        {canEdit && onAddBudgetLine && (
+          <Button variant="outline" size="sm" onClick={onAddBudgetLine}>
+            <Plus className="mr-2 h-4 w-4" />
+            {tr('projectModule.addBudgetLine')}
+          </Button>
+        )}
       </CardHeader>
       <CardContent className="overflow-x-auto">
         <Table>
@@ -81,9 +97,17 @@ export function ProjectFundingBudgetPanel({
                           className="h-8 text-right font-mono"
                           inputMode="decimal"
                           disabled={!canEdit}
-                          defaultValue={value ? String(value) : ''}
+                          defaultValue={value ? formatEuropeanAmountInput(value) : ''}
                           onBlur={(event) => {
-                            if (canEdit) void onSaveAllocation(line.id, source.id, event.target.value);
+                            if (!canEdit) return;
+                            const rawValue = event.currentTarget.value;
+                            try {
+                              const parsed = parseEuropeanAmountInput(rawValue, { required: true });
+                              event.currentTarget.value = formatEuropeanAmountInput(parsed);
+                            } catch {
+                              // El hook de guardat manté el missatge d'error de domini.
+                            }
+                            void onSaveAllocation(line.id, source.id, event.target.value);
                           }}
                         />
                       </TableCell>

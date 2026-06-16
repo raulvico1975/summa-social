@@ -24,28 +24,9 @@ import type {
   ProjectFundingSource,
   ProjectFundingSourceFormData,
 } from '@/lib/project-module-types';
+import { parseEuropeanAmountInput } from '@/lib/project-module-funding';
 
 const MAX_FUNDING_BATCH_WRITES = 50;
-
-function parseNullableAmount(value: string): number | null {
-  const trimmed = value.trim();
-  if (!trimmed) return null;
-  const parsed = Number.parseFloat(trimmed.replace(',', '.'));
-  if (!Number.isFinite(parsed) || parsed < 0) {
-    throw new Error('L\'import ha de ser buit o superior o igual a 0');
-  }
-  return parsed;
-}
-
-function parseRequiredAmount(value: string): number {
-  const trimmed = value.trim();
-  if (!trimmed) return 0;
-  const parsed = Number.parseFloat(trimmed.replace(',', '.'));
-  if (!Number.isFinite(parsed) || parsed < 0) {
-    throw new Error('L\'import ha de ser superior o igual a 0');
-  }
-  return parsed;
-}
 
 function projectPath(organizationId: string, projectId: string): string {
   return `organizations/${organizationId}/projectModule/_/projects/${projectId}`;
@@ -192,26 +173,34 @@ export function useSaveProjectFunding() {
     const name = data.name.trim();
     if (!name) throw new Error('El nom de la font és obligatori');
 
-    const approvedAmountEUR = parseNullableAmount(data.approvedAmountEUR);
-    const receivedAmountEUR = parseNullableAmount(data.receivedAmountEUR);
-    const order = data.order.trim() ? Number.parseInt(data.order.trim(), 10) : 0;
-    if (!Number.isFinite(order) || order < 0) throw new Error('L\'ordre ha de ser 0 o superior');
+    const approvedAmountEUR = parseEuropeanAmountInput(data.approvedAmountEUR);
+    const receivedAmountEUR = parseEuropeanAmountInput(data.receivedAmountEUR);
 
     setIsSaving(true);
     setError(null);
     try {
+      const sourcesRef = collection(firestore, projectPath(organizationId, projectId), 'fundingSources');
       const ref = sourceId
         ? doc(firestore, projectPath(organizationId, projectId), 'fundingSources', sourceId)
-        : doc(collection(firestore, projectPath(organizationId, projectId), 'fundingSources'));
+        : doc(sourcesRef);
+      let orderPatch: { order?: number } = {};
+      if (!sourceId) {
+        const existingSnap = await getDocs(sourcesRef);
+        const maxOrder = existingSnap.docs.reduce((max, item) => {
+          const value = item.data().order;
+          return typeof value === 'number' && Number.isFinite(value) ? Math.max(max, value) : max;
+        }, -1);
+        orderPatch = { order: maxOrder + 1 };
+      }
       const payload = {
         name,
         type: data.type,
         approvedAmountEUR,
         receivedAmountEUR,
         notes: data.notes.trim() || null,
-        order,
         archivedAt: null,
         updatedAt: serverTimestamp(),
+        ...orderPatch,
         ...(sourceId ? {} : { createdAt: serverTimestamp() }),
       };
       await setDoc(ref, payload, { merge: true });
@@ -251,7 +240,7 @@ export function useSaveProjectFunding() {
     amountValue: string
   ) => {
     if (!organizationId || !user) throw new Error('No autenticat');
-    const amountEUR = parseRequiredAmount(amountValue);
+    const amountEUR = parseEuropeanAmountInput(amountValue, { required: true });
     const allocationId = `${budgetLineId}__${fundingSourceId}`;
 
     setIsSaving(true);
@@ -286,7 +275,7 @@ export function useSaveProjectFunding() {
       .map((line) => ({
         id: line.id,
         fundingSourceId: line.fundingSourceId,
-        amountEUR: parseRequiredAmount(line.amountEUR),
+        amountEUR: parseEuropeanAmountInput(line.amountEUR, { required: true }),
         kind: line.kind,
         budgetLineId: line.budgetLineId.trim() || null,
         notes: line.notes.trim() || null,

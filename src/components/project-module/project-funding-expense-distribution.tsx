@@ -8,6 +8,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useTranslations } from '@/i18n';
 import {
+  formatEuropeanCurrency,
+  getProjectBudgetLineForExpense,
+  getProjectImputedAmountForExpense,
   getFundingExpenseStatus,
   sumFundingExpenseAllocations,
 } from '@/lib/project-module-funding';
@@ -21,7 +24,7 @@ import type {
 import { ProjectFundingExpenseDialog } from './project-funding-expense-dialog';
 
 function formatAmount(amount: number): string {
-  return new Intl.NumberFormat('ca-ES', { style: 'currency', currency: 'EUR' }).format(amount);
+  return formatEuropeanCurrency(amount);
 }
 
 function formatDate(date: string): string {
@@ -29,18 +32,19 @@ function formatDate(date: string): string {
   return year && month && day ? `${day}/${month}/${year}` : date;
 }
 
-function imputedAmount(expense: UnifiedExpenseWithLink): number {
-  return expense.link?.assignments.reduce((sum, assignment) => sum + (assignment.amountEUR != null ? Math.abs(assignment.amountEUR) : 0), 0) ?? 0;
+function imputedAmount(expense: UnifiedExpenseWithLink, projectId: string): number {
+  return expense.link ? getProjectImputedAmountForExpense(expense.link, projectId) : 0;
 }
 
-function budgetLineLabel(expense: UnifiedExpenseWithLink, budgetLines: BudgetLine[]): string {
-  const id = expense.link?.assignments.find((assignment) => assignment.budgetLineId)?.budgetLineId ?? null;
+function budgetLineLabel(expense: UnifiedExpenseWithLink, budgetLines: BudgetLine[], projectId: string): string {
+  const id = expense.link ? getProjectBudgetLineForExpense(expense.link, projectId) : null;
   const line = budgetLines.find((item) => item.id === id);
   if (!line) return '-';
   return line.code ? `${line.code} - ${line.name}` : line.name;
 }
 
 export function ProjectFundingExpenseDistribution({
+  projectId,
   expenses,
   fundingSources,
   budgetLines,
@@ -48,6 +52,7 @@ export function ProjectFundingExpenseDistribution({
   isSaving,
   onSaveExpenseAllocations,
 }: {
+  projectId: string;
   expenses: UnifiedExpenseWithLink[];
   fundingSources: ProjectFundingSource[];
   budgetLines: BudgetLine[];
@@ -57,7 +62,9 @@ export function ProjectFundingExpenseDistribution({
 }) {
   const { tr } = useTranslations();
   const [dialogExpense, setDialogExpense] = React.useState<UnifiedExpenseWithLink | null>(null);
-  const activeSources = fundingSources.filter((source) => source.archivedAt === null);
+  const activeSources = fundingSources
+    .filter((source) => source.archivedAt === null)
+    .sort((a, b) => a.order - b.order || a.name.localeCompare(b.name));
 
   return (
     <Card>
@@ -86,7 +93,7 @@ export function ProjectFundingExpenseDistribution({
             </TableHeader>
             <TableBody>
               {expenses.map((expense) => {
-                const imputed = imputedAmount(expense);
+                const imputed = imputedAmount(expense, projectId);
                 const distributed = sumFundingExpenseAllocations(expenseAllocations, { expenseLinkId: expense.expense.txId });
                 const status = getFundingExpenseStatus({ imputedAmountEUR: imputed, distributedAmountEUR: distributed });
 
@@ -95,7 +102,7 @@ export function ProjectFundingExpenseDistribution({
                     <TableCell>{formatDate(expense.expense.date)}</TableCell>
                     <TableCell className="max-w-[260px] truncate">{expense.expense.description ?? '-'}</TableCell>
                     <TableCell>{expense.expense.counterpartyName ?? '-'}</TableCell>
-                    <TableCell>{budgetLineLabel(expense, budgetLines)}</TableCell>
+                    <TableCell>{budgetLineLabel(expense, budgetLines, projectId)}</TableCell>
                     <TableCell className="text-right font-mono">{formatAmount(imputed)}</TableCell>
                     <TableCell className="text-right font-mono">{formatAmount(distributed)}</TableCell>
                     <TableCell><StatusBadge status={status} label={tr(`projectModule.multiFunding.status.${status}`)} /></TableCell>
@@ -118,6 +125,7 @@ export function ProjectFundingExpenseDistribution({
           if (!open) setDialogExpense(null);
         }}
         expense={dialogExpense}
+        projectId={projectId}
         fundingSources={activeSources}
         budgetLines={budgetLines}
         allocations={expenseAllocations}

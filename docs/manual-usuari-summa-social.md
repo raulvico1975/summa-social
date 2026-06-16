@@ -2151,9 +2151,15 @@ Com treballar-hi:
 1. Entra a **Projectes > (projecte) > Gestió Econòmica**.
 2. Si ets administrador, activa **Diversos finançadors**.
 3. Afegeix les fonts: administració pública, fons propis, privat, contrapart local o altres.
-4. Reparteix el pressupost de cada partida entre les fonts actives.
-5. Reparteix cada despesa imputada al projecte entre les fonts que corresponguin.
-6. Revisa els avisos de parcial, sobreassignat o pendent abans d'exportar.
+4. Revisa el total d'imports aprovats, rebuts i pendents de rebre per comprovar que quadren amb el pressupost presentat.
+5. Reparteix el pressupost de cada partida entre les fonts actives.
+6. Reparteix cada despesa imputada al projecte entre les fonts que corresponguin.
+7. Revisa els avisos de parcial, sobreassignat o pendent abans d'exportar.
+
+Notes d'ús:
+- Les fonts s'ordenen automàticament segons l'ordre d'alta; no cal indicar un ordre manual.
+- Els imports s'introdueixen i es mostren en format europeu, amb coma decimal i punt de milers.
+- En distribuir una despesa, marca **Valoritzat** només si aquella línia no és una aportació dinerària.
 
 Important:
 - Aquesta capa no canvia els moviments bancaris ni la imputació original de la despesa al projecte.

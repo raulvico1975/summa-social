@@ -122,6 +122,10 @@ import { BudgetImportWizard } from '@/components/project-module/budget-import-wi
 import { ProjectFundingBudgetPanel } from '@/components/project-module/project-funding-budget-panel';
 import { ProjectFundingExpenseDistribution } from '@/components/project-module/project-funding-expense-distribution';
 import { ProjectFundingSourcesPanel } from '@/components/project-module/project-funding-sources-panel';
+import {
+  formatEuropeanAmountInput,
+  parseEuropeanAmountInput,
+} from '@/lib/project-module-funding';
 
 function formatAmount(amount: number): string {
   return new Intl.NumberFormat('ca-ES', {
@@ -370,7 +374,7 @@ function BudgetLineForm({
       if (initialData) {
         setName(initialData.name);
         setCode(initialData.code ?? '');
-        setBudgetedAmountEUR(initialData.budgetedAmountEUR.toString());
+        setBudgetedAmountEUR(formatEuropeanAmountInput(initialData.budgetedAmountEUR));
         setOrder(initialData.order?.toString() ?? '');
       } else {
         setName('');
@@ -389,7 +393,12 @@ function BudgetLineForm({
       newErrors.name = tr('projectModule.nameRequired');
     }
 
-    const amount = parseFloat(budgetedAmountEUR.replace(',', '.'));
+    let amount = 0;
+    try {
+      amount = parseEuropeanAmountInput(budgetedAmountEUR, { required: true });
+    } catch {
+      amount = Number.NaN;
+    }
     if (isNaN(amount) || amount <= 0) {
       newErrors.budgetedAmountEUR = tr('projectModule.amountPositive');
     }
@@ -405,7 +414,7 @@ function BudgetLineForm({
     await onSave({
       name: name.trim(),
       code: code.trim(),
-      budgetedAmountEUR: budgetedAmountEUR.replace(',', '.'),
+      budgetedAmountEUR,
       order,
     });
   };
@@ -453,6 +462,11 @@ function BudgetLineForm({
               inputMode="decimal"
               value={budgetedAmountEUR}
               onChange={(e) => setBudgetedAmountEUR(e.target.value)}
+              onBlur={() => {
+                try {
+                  setBudgetedAmountEUR(formatEuropeanAmountInput(parseEuropeanAmountInput(budgetedAmountEUR, { required: true })));
+                } catch {}
+              }}
               placeholder="0,00"
               className={errors.budgetedAmountEUR ? 'border-destructive' : ''}
             />
@@ -670,7 +684,7 @@ export default function ProjectBudgetPage() {
 
     for (const link of expenseLinks) {
       for (const assignment of link.assignments) {
-        if (assignment.budgetLineId) {
+        if (assignment.projectId === projectId && assignment.budgetLineId) {
           const current = map.get(assignment.budgetLineId) ?? 0;
           map.set(assignment.budgetLineId, current + (assignment.amountEUR != null ? Math.abs(assignment.amountEUR) : 0));
         }
@@ -678,7 +692,7 @@ export default function ProjectBudgetPage() {
     }
 
     return map;
-  }, [expenseLinks]);
+  }, [expenseLinks, projectId]);
 
   // Calcular totals
   const totals = React.useMemo(() => {
@@ -1572,6 +1586,7 @@ export default function ProjectBudgetPage() {
           <CardContent className="space-y-4">
             <ProjectFundingSourcesPanel
               fundingSources={fundingSources}
+              projectBudgetEUR={project.budgetEUR ?? null}
               isSaving={isSavingFunding}
               canEdit={canConfigureMultiFunding}
               onSave={async (data, sourceId) => {
@@ -1588,6 +1603,7 @@ export default function ProjectBudgetPage() {
               fundingSources={fundingSources}
               budgetAllocations={budgetAllocations}
               canEdit={canConfigureMultiFunding}
+              onAddBudgetLine={openNew}
               onSaveAllocation={async (budgetLineId, fundingSourceId, amountEUR) => {
                 await saveFundingBudgetAllocation(projectId, budgetLineId, fundingSourceId, amountEUR);
                 await refreshBudgetAllocations();
@@ -1595,6 +1611,7 @@ export default function ProjectBudgetPage() {
             />
             {canDistributeMultiFunding && (
               <ProjectFundingExpenseDistribution
+                projectId={projectId}
                 expenses={allExpenses}
                 fundingSources={fundingSources}
                 budgetLines={budgetLines}

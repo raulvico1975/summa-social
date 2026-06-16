@@ -4302,7 +4302,9 @@ Subcol·leccions:
 | `approvedAmountEUR` | number \| null | Import aprovat, si es coneix |
 | `receivedAmountEUR` | number \| null | Import rebut, si es coneix |
 | `notes` | string \| null | Observacions internes |
-| `order` | number | Ordre de visualització |
+| `order` | number | Ordre intern de visualització, assignat automàticament segons l'alta de la font |
+
+La pantalla no demana l'ordre manualment en crear una font: el sistema situa cada font nova darrere de les existents. La taula mostra el total aprovat, el total rebut i el pendent de rebre, i tots els imports visibles i editables es mostren en format europeu (`1.234,56`).
 | `archivedAt` | string \| null | Arxiu lògic; no s'elimina físicament |
 
 **`fundingBudgetAllocations`:**

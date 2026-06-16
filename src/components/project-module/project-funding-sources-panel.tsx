@@ -23,6 +23,11 @@ import {
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Textarea } from '@/components/ui/textarea';
 import { useTranslations } from '@/i18n';
+import {
+  formatEuropeanAmountInput,
+  formatEuropeanCurrency,
+  parseEuropeanAmountInput,
+} from '@/lib/project-module-funding';
 import type {
   ProjectFundingSource,
   ProjectFundingSourceFormData,
@@ -31,19 +36,16 @@ import type {
 
 const sourceTypes: ProjectFundingSourceType[] = ['public', 'private', 'own_funds', 'local_partner', 'other'];
 
-function formatAmount(value: number | null): string {
-  if (value === null) return '-';
-  return new Intl.NumberFormat('ca-ES', { style: 'currency', currency: 'EUR' }).format(value);
-}
-
 export function ProjectFundingSourcesPanel({
   fundingSources,
+  projectBudgetEUR,
   isSaving,
   canEdit,
   onSave,
   onArchive,
 }: {
   fundingSources: ProjectFundingSource[];
+  projectBudgetEUR: number | null;
   isSaving: boolean;
   canEdit: boolean;
   onSave: (data: ProjectFundingSourceFormData, sourceId?: string) => Promise<void>;
@@ -53,7 +55,19 @@ export function ProjectFundingSourcesPanel({
   const [open, setOpen] = React.useState(false);
   const [editing, setEditing] = React.useState<ProjectFundingSource | null>(null);
 
-  const activeSources = fundingSources.filter((source) => source.archivedAt === null);
+  const activeSources = fundingSources
+    .filter((source) => source.archivedAt === null)
+    .sort((a, b) => a.order - b.order || a.name.localeCompare(b.name));
+  const totals = activeSources.reduce(
+    (acc, source) => {
+      acc.approved += source.approvedAmountEUR ?? 0;
+      acc.received += source.receivedAmountEUR ?? 0;
+      return acc;
+    },
+    { approved: 0, received: 0 }
+  );
+  const pending = totals.approved - totals.received;
+  const budgetDifference = projectBudgetEUR !== null ? projectBudgetEUR - totals.approved : null;
 
   return (
     <Card>
@@ -80,6 +94,7 @@ export function ProjectFundingSourcesPanel({
                 <TableHead>{tr('projectModule.multiFunding.sourceType')}</TableHead>
                 <TableHead className="text-right">{tr('projectModule.multiFunding.approvedAmount')}</TableHead>
                 <TableHead className="text-right">{tr('projectModule.multiFunding.receivedAmount')}</TableHead>
+                <TableHead className="text-right">{tr('projectModule.multiFunding.pendingToReceive')}</TableHead>
                 <TableHead className="w-[90px]" />
               </TableRow>
             </TableHeader>
@@ -88,8 +103,13 @@ export function ProjectFundingSourcesPanel({
                 <TableRow key={source.id}>
                   <TableCell className="font-medium">{source.name}</TableCell>
                   <TableCell>{tr(`projectModule.multiFunding.sourceTypes.${source.type}`)}</TableCell>
-                  <TableCell className="text-right font-mono">{formatAmount(source.approvedAmountEUR)}</TableCell>
-                  <TableCell className="text-right font-mono">{formatAmount(source.receivedAmountEUR)}</TableCell>
+                  <TableCell className="text-right font-mono">{formatEuropeanCurrency(source.approvedAmountEUR)}</TableCell>
+                  <TableCell className="text-right font-mono">{formatEuropeanCurrency(source.receivedAmountEUR)}</TableCell>
+                  <TableCell className="text-right font-mono">
+                    {source.approvedAmountEUR === null
+                      ? '-'
+                      : formatEuropeanCurrency(source.approvedAmountEUR - (source.receivedAmountEUR ?? 0))}
+                  </TableCell>
                   <TableCell>
                     {canEdit && (
                       <div className="flex justify-end gap-1">
@@ -104,8 +124,32 @@ export function ProjectFundingSourcesPanel({
                   </TableCell>
                 </TableRow>
               ))}
+              <TableRow className="bg-muted/30 font-medium">
+                <TableCell>{tr('projectModule.multiFunding.sourcesTotal')}</TableCell>
+                <TableCell />
+                <TableCell className="text-right font-mono">{formatEuropeanCurrency(totals.approved)}</TableCell>
+                <TableCell className="text-right font-mono">{formatEuropeanCurrency(totals.received)}</TableCell>
+                <TableCell className="text-right font-mono">{formatEuropeanCurrency(pending)}</TableCell>
+                <TableCell />
+              </TableRow>
             </TableBody>
           </Table>
+        )}
+        {activeSources.length > 0 && projectBudgetEUR !== null && (
+          <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2 rounded-md border bg-muted/20 px-3 py-2 text-sm">
+            <span>
+              <span className="text-muted-foreground">{tr('projectModule.multiFunding.projectBudget')}:</span>{' '}
+              <span className="font-mono font-medium">{formatEuropeanCurrency(projectBudgetEUR)}</span>
+            </span>
+            <span>
+              <span className="text-muted-foreground">{tr('projectModule.multiFunding.approvedTotal')}:</span>{' '}
+              <span className="font-mono font-medium">{formatEuropeanCurrency(totals.approved)}</span>
+            </span>
+            <span>
+              <span className="text-muted-foreground">{tr('projectModule.multiFunding.difference')}:</span>{' '}
+              <span className="font-mono font-medium">{formatEuropeanCurrency(budgetDifference)}</span>
+            </span>
+          </div>
         )}
       </CardContent>
       <FundingSourceDialog
@@ -143,7 +187,6 @@ function FundingSourceDialog({
     approvedAmountEUR: '',
     receivedAmountEUR: '',
     notes: '',
-    order: '0',
   });
 
   React.useEffect(() => {
@@ -151,10 +194,9 @@ function FundingSourceDialog({
     setForm({
       name: source?.name ?? '',
       type: source?.type ?? 'public',
-      approvedAmountEUR: source?.approvedAmountEUR?.toString() ?? '',
-      receivedAmountEUR: source?.receivedAmountEUR?.toString() ?? '',
+      approvedAmountEUR: formatEuropeanAmountInput(source?.approvedAmountEUR),
+      receivedAmountEUR: formatEuropeanAmountInput(source?.receivedAmountEUR),
       notes: source?.notes ?? '',
-      order: source?.order?.toString() ?? '0',
     });
   }, [open, source]);
 
@@ -185,16 +227,32 @@ function FundingSourceDialog({
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
               <Label>{tr('projectModule.multiFunding.approvedAmount')}</Label>
-              <Input inputMode="decimal" value={form.approvedAmountEUR} onChange={(event) => setForm((prev) => ({ ...prev, approvedAmountEUR: event.target.value }))} />
+              <Input
+                inputMode="decimal"
+                value={form.approvedAmountEUR}
+                onChange={(event) => setForm((prev) => ({ ...prev, approvedAmountEUR: event.target.value }))}
+                onBlur={() => {
+                  try {
+                    const parsed = parseEuropeanAmountInput(form.approvedAmountEUR);
+                    setForm((prev) => ({ ...prev, approvedAmountEUR: formatEuropeanAmountInput(parsed) }));
+                  } catch {}
+                }}
+              />
             </div>
             <div className="space-y-2">
               <Label>{tr('projectModule.multiFunding.receivedAmount')}</Label>
-              <Input inputMode="decimal" value={form.receivedAmountEUR} onChange={(event) => setForm((prev) => ({ ...prev, receivedAmountEUR: event.target.value }))} />
+              <Input
+                inputMode="decimal"
+                value={form.receivedAmountEUR}
+                onChange={(event) => setForm((prev) => ({ ...prev, receivedAmountEUR: event.target.value }))}
+                onBlur={() => {
+                  try {
+                    const parsed = parseEuropeanAmountInput(form.receivedAmountEUR);
+                    setForm((prev) => ({ ...prev, receivedAmountEUR: formatEuropeanAmountInput(parsed) }));
+                  } catch {}
+                }}
+              />
             </div>
-          </div>
-          <div className="space-y-2">
-            <Label>{tr('projectModule.multiFunding.order')}</Label>
-            <Input type="number" min="0" value={form.order} onChange={(event) => setForm((prev) => ({ ...prev, order: event.target.value }))} />
           </div>
           <div className="space-y-2">
             <Label>{tr('projectModule.multiFunding.notes')}</Label>

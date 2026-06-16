@@ -149,7 +149,6 @@ export interface ProjectFundingSourceFormData {
   approvedAmountEUR: string;
   receivedAmountEUR: string;
   notes: string;
-  order: string;
 }
 
 export interface ProjectFundingBudgetAllocation {

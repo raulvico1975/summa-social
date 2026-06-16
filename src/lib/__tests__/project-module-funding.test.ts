@@ -3,8 +3,11 @@ import assert from 'node:assert/strict';
 import {
   buildMultiFunderExpenseExportRows,
   buildMultiFunderSummaryRows,
+  formatEuropeanAmountInput,
   getFundingBudgetStatus,
   getFundingExpenseStatus,
+  getProjectImputedAmountForExpense,
+  parseEuropeanAmountInput,
   sumFundingBudgetAllocations,
   sumFundingExpenseAllocations,
 } from '@/lib/project-module-funding';
@@ -129,6 +132,46 @@ test('sums budget allocations by source and budget line', () => {
   assert.equal(sumFundingBudgetAllocations(allocations, { budgetLineId: 'line-personal' }), 1000);
   assert.equal(sumFundingBudgetAllocations(allocations, { fundingSourceId: 'src-a' }), 850);
   assert.equal(getFundingBudgetStatus(1000, 1000), 'balanced');
+});
+
+test('parses and formats European amount inputs safely', () => {
+  assert.equal(parseEuropeanAmountInput('2.600,86'), 2600.86);
+  assert.equal(parseEuropeanAmountInput('2600,86'), 2600.86);
+  assert.equal(parseEuropeanAmountInput('2600.86'), 2600.86);
+  assert.equal(parseEuropeanAmountInput('2.600'), 2600);
+  assert.equal(parseEuropeanAmountInput('0'), 0);
+  assert.equal(parseEuropeanAmountInput(''), null);
+  assert.equal(parseEuropeanAmountInput('', { required: true }), 0);
+  assert.equal(formatEuropeanAmountInput(2600.86), '2.600,86');
+  assert.throws(() => parseEuropeanAmountInput('12abc'));
+  assert.throws(() => parseEuropeanAmountInput('-12'));
+});
+
+test('gets only the imputed amount for the current project', () => {
+  const sharedLink: ExpenseLink = {
+    ...expenseLinks[0],
+    assignments: [
+      {
+        projectId: 'project-1',
+        projectName: 'Projecte 1',
+        amountEUR: -15,
+        budgetLineId: 'line-personal',
+        budgetLineName: 'Personal',
+      },
+      {
+        projectId: 'project-2',
+        projectName: 'Projecte 2',
+        amountEUR: -100,
+        budgetLineId: 'line-formacio',
+        budgetLineName: 'Formacio',
+      },
+    ],
+    projectIds: ['project-1', 'project-2'],
+    budgetLineIds: ['line-personal', 'line-formacio'],
+  };
+
+  assert.equal(getProjectImputedAmountForExpense(sharedLink, 'project-1'), 15);
+  assert.equal(getProjectImputedAmountForExpense(sharedLink, 'project-2'), 100);
 });
 
 test('classifies expense distribution states', () => {

@@ -10,6 +10,49 @@ import type {
 
 export const PROJECT_FUNDING_TOLERANCE_EUR = 0.02;
 
+export function parseEuropeanAmountInput(value: string, options: { required: true }): number;
+export function parseEuropeanAmountInput(value: string, options?: { required?: false }): number | null;
+export function parseEuropeanAmountInput(value: string, options: { required?: boolean } = {}): number | null {
+  const trimmed = value.trim();
+  if (!trimmed) return options.required ? 0 : null;
+
+  const withoutCurrency = trimmed.replace(/\s/g, '').replace(/€/g, '');
+  const hasComma = withoutCurrency.includes(',');
+  const hasDot = withoutCurrency.includes('.');
+  let normalized = withoutCurrency;
+
+  if (hasComma && hasDot) {
+    normalized = withoutCurrency.replace(/\./g, '').replace(',', '.');
+  } else if (hasComma) {
+    normalized = withoutCurrency.replace(',', '.');
+  } else if (hasDot && /^\d{1,3}(\.\d{3})+$/.test(withoutCurrency)) {
+    normalized = withoutCurrency.replace(/\./g, '');
+  }
+
+  if (!/^\d+(\.\d+)?$/.test(normalized)) {
+    throw new Error('L\'import ha de ser buit o superior o igual a 0');
+  }
+
+  const parsed = Number.parseFloat(normalized);
+  if (!Number.isFinite(parsed) || parsed < 0) {
+    throw new Error('L\'import ha de ser buit o superior o igual a 0');
+  }
+  return Math.round((parsed + Number.EPSILON) * 100) / 100;
+}
+
+export function formatEuropeanAmountInput(value: number | null | undefined): string {
+  if (value === null || value === undefined) return '';
+  return new Intl.NumberFormat('ca-ES', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(value);
+}
+
+export function formatEuropeanCurrency(value: number | null | undefined, emptyValue = '-'): string {
+  if (value === null || value === undefined) return emptyValue;
+  return new Intl.NumberFormat('ca-ES', { style: 'currency', currency: 'EUR' }).format(value);
+}
+
 export interface FundingAmountFilter {
   budgetLineId?: string | null;
   fundingSourceId?: string | null;
