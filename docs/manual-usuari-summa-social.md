@@ -2137,35 +2137,6 @@ Quan el fas servir:
 
 És la manera més ràpida de passar del resum a la revisió detallada.
 
-### Projectes amb diversos finançadors
-
-Si un projecte necessita justificar la mateixa execució davant de diverses fonts de finançament, pots activar una capa opcional dins de **Gestió Econòmica**.
-
-Serveix per:
-- definir les fonts de finançament del projecte
-- repartir el pressupost de cada partida entre aquestes fonts
-- repartir l'import imputat de cada despesa entre fonts
-- exportar un Excel amb detall per despesa i resum per partida/finançador
-
-Com treballar-hi:
-1. Entra a **Projectes > (projecte) > Gestió Econòmica**.
-2. Si ets administrador, activa **Diversos finançadors**.
-3. Afegeix les fonts: administració pública, fons propis, privat, contrapart local o altres.
-4. Revisa el total d'imports aprovats, rebuts i pendents de rebre per comprovar que quadren amb el pressupost presentat.
-5. Reparteix el pressupost de cada partida entre les fonts actives.
-6. Reparteix cada despesa imputada al projecte entre les fonts que corresponguin.
-7. Revisa els avisos de parcial, sobreassignat o pendent abans d'exportar.
-
-Notes d'ús:
-- Les fonts s'ordenen automàticament segons l'ordre d'alta; no cal indicar un ordre manual.
-- Els imports s'introdueixen i es mostren en format europeu, amb coma decimal i punt de milers.
-- En distribuir una despesa, marca **Valoritzat** només si aquella línia no és una aportació dinerària.
-
-Important:
-- Aquesta capa no canvia els moviments bancaris ni la imputació original de la despesa al projecte.
-- Les fonts arxivades es conserven per traçabilitat, però deixen d'aparèixer com a columnes actives.
-- L'export multi-finançador és un Excel de revisió i justificació; no substitueix els formularis oficials que pugui demanar cada convocatòria.
-
 ---
 
 ## 10.4 Mode "Quadrar justificació"

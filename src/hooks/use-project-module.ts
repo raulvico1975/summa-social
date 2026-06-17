@@ -5,7 +5,6 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { computeFxAmountEUR } from '@/lib/project-module/fx';
-import { parseEuropeanAmountInput } from '@/lib/project-module-funding';
 import { validateAssignments } from '@/lib/project-module/normalize-assignments';
 import type { ProjectDeletePolicy, ProjectDeleteUsage } from '@/lib/project-module/project-lifecycle-policy';
 import {
@@ -2340,17 +2339,11 @@ export function useProjectBudgetLines(projectId: string): UseProjectBudgetLinesR
         ...d.data(),
       } as BudgetLine));
 
-      // Ordenar al client: order continua sent l'ordre estable; el codi només desempata o fa fallback.
+      // Ordenar al client: primer per order (nulls al final), després per name
       lines.sort((a, b) => {
-        if (a.order != null && b.order != null) return a.order - b.order;
-        if (a.order != null) return -1;
-        if (b.order != null) return 1;
-        if (a.code && b.code) {
-          const codeCompare = a.code.localeCompare(b.code, 'ca', { numeric: true, sensitivity: 'base' });
-          if (codeCompare !== 0) return codeCompare;
-        }
-        if (a.code) return -1;
-        if (b.code) return 1;
+        if (a.order !== null && b.order !== null) return a.order - b.order;
+        if (a.order !== null) return -1;
+        if (b.order !== null) return 1;
         return a.name.localeCompare(b.name);
       });
 
@@ -2408,7 +2401,7 @@ export function useSaveBudgetLine(): UseSaveBudgetLineResult {
       throw new Error('El nom de la partida és obligatori');
     }
 
-    const amount = parseEuropeanAmountInput(data.budgetedAmountEUR, { required: true });
+    const amount = parseFloat(data.budgetedAmountEUR);
     if (isNaN(amount) || amount <= 0) {
       throw new Error('L\'import pressupostat ha de ser positiu');
     }
