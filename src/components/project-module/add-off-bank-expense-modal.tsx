@@ -22,7 +22,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { computeFxAmountEUR } from '@/lib/project-module/fx';
+import { computeFxAmountEUR, normalizeFxRateToEurPerLocal } from '@/lib/project-module/fx';
 import { normalizeAssignments } from '@/lib/project-module/normalize-assignments';
 import { useSaveOffBankExpense, useUpdateOffBankExpense, useSaveExpenseLink } from '@/hooks/use-project-module';
 import type { ExpenseAssignment, OffBankAttachment } from '@/lib/project-module-types';
@@ -336,7 +336,15 @@ export function OffBankExpenseModal({
                 // TC forçat a la despesa > TC del projecte > null
                 const expenseTcStr = initialValues?.fxRateOverride;
                 const expenseTc = expenseTcStr ? parseFloat(expenseTcStr) : NaN;
-                const tc = (!isNaN(expenseTc) && expenseTc > 0) ? expenseTc : projectFxRate;
+                const previousAmountEUR = initialValues?.amountEUR
+                  ? parseFloat(initialValues.amountEUR.replace(',', '.'))
+                  : null;
+                const tc = (!isNaN(expenseTc) && expenseTc > 0)
+                  ? normalizeFxRateToEurPerLocal(expenseTc, {
+                    originalAmount: newOriginalAmount,
+                    amountEUR: previousAmountEUR,
+                  })
+                  : projectFxRate;
 
                 const newAmountEUR = computeFxAmountEUR(
                   newOriginalAmount,
@@ -344,13 +352,10 @@ export function OffBankExpenseModal({
                   tc ?? null
                 );
 
-                if (newAmountEUR !== null) {
-                  await saveExpenseLink(`off_${expenseId}`, [{
-                    ...assignment,
-                    amountEUR: newAmountEUR,
-                  }], null);
-                }
-                // Si tc null → no tocar amountEUR
+                await saveExpenseLink(`off_${expenseId}`, [{
+                  ...assignment,
+                  amountEUR: newAmountEUR,
+                }], null);
               }
             }
             // Si amountOriginal invàlid → no tocar res
@@ -390,17 +395,20 @@ export function OffBankExpenseModal({
             // 2) Resoldre TC (forçat > projecte)
             const expenseTcStr = initialValues?.fxRateOverride;
             const expenseTc = expenseTcStr ? parseFloat(expenseTcStr) : NaN;
-            const tc = (!isNaN(expenseTc) && expenseTc > 0) ? expenseTc : projectFxRate;
+            const previousAmountEUR = initialValues?.amountEUR
+              ? parseFloat(initialValues.amountEUR.replace(',', '.'))
+              : null;
+            const tc = (!isNaN(expenseTc) && expenseTc > 0)
+              ? normalizeFxRateToEurPerLocal(expenseTc, {
+                originalAmount: newOriginalAmount,
+                amountEUR: previousAmountEUR,
+              })
+              : (projectFxRate ?? null);
 
-            // Guardrail: si no hi ha TC resolt, no tocar res
-            if (!tc || tc <= 0) return;
-
-            // 3) Recalcular només assignacions amb amountEUR !== null
+            // 3) Recalcular assignacions; sense TC resoluble queden pendents.
             const updated = existingAssignments.map(a => {
-              if (a.amountEUR === null) return a; // preservar pendents
               const pct = a.localPct ?? 0;
               const eur = computeFxAmountEUR(newOriginalAmount, pct, tc);
-              // eur no pot ser NaN; si fos null, ja hauríem retornat abans
               return { ...a, amountEUR: eur };
             });
 

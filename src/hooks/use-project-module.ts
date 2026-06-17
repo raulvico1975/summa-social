@@ -4,7 +4,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { computeFxAmountEUR } from '@/lib/project-module/fx';
+import { computeFxAmountEUR, resolveManualExpenseFxRate } from '@/lib/project-module/fx';
 import { validateAssignments } from '@/lib/project-module/normalize-assignments';
 import type { ProjectDeletePolicy, ProjectDeleteUsage } from '@/lib/project-module/project-lifecycle-policy';
 import {
@@ -1935,7 +1935,8 @@ export function resolveExpenseTC(
   fxTransfers: FxTransfer[],
   project: Project
 ): number | null {
-  if (expense.fxRate != null && expense.fxRate > 0) return expense.fxRate;
+  const manualTC = resolveManualExpenseFxRate(expense);
+  if (manualTC !== null) return manualTC;
   return getEffectiveProjectTC(fxTransfers, project);
 }
 
@@ -2230,20 +2231,23 @@ export function useReapplyProjectFx(): UseReapplyProjectFxResult {
           const offBank = await getOffBankDoc(expenseId);
           if (!offBank) continue;
 
-          // Si la despesa té TC manual (fxRate o fxRateUsed) → skip
-          const expenseFxRate = offBank.fxRate ?? offBank.fxRateUsed ?? null;
-          if (expenseFxRate != null && expenseFxRate > 0) {
-            skippedManualTC++;
-            continue;
-          }
-
           // Si no té originalAmount → skip
           const originalAmount = offBank.originalAmount ?? offBank.amountOriginal ?? null;
           if (originalAmount == null) continue;
 
           // Calcular nou amountEUR
           const pct = assignment.localPct ?? 100;
-          const newAmountEUR = computeFxAmountEUR(originalAmount, pct, newTC);
+          const manualTC = resolveManualExpenseFxRate({
+            source: 'offBank',
+            amountEUR: offBank.amountEUR != null ? -Math.abs(offBank.amountEUR) : null,
+            originalCurrency: offBank.originalCurrency ?? offBank.currency ?? null,
+            originalAmount,
+            fxRate: offBank.fxRate ?? null,
+            fxRateUsed: offBank.fxRateUsed ?? null,
+            pendingConversion: offBank.amountEUR == null,
+          });
+          if (manualTC !== null) skippedManualTC++;
+          const newAmountEUR = computeFxAmountEUR(originalAmount, pct, manualTC ?? newTC);
 
           // Comparar amb l'actual (tolerància 0.01 EUR)
           const oldAmountEUR = assignment.amountEUR;

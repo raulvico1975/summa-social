@@ -189,7 +189,7 @@ interface DemoOffBankExpense {
   // Camps moneda estrangera
   originalCurrency?: string; // XOF, HNL, DOP, etc.
   originalAmount?: number;   // Import en moneda local
-  fxRate?: number;           // Tipus de canvi usat (1 EUR = X local)
+  fxRate?: number;           // Tipus de canvi usat (1 moneda local = X EUR)
   counterpartyName: string | null;
   categoryName: string | null;
   attachments: Array<{
@@ -838,7 +838,7 @@ export function generateProjectExpensesFeed(
  * Tipus de canvi fixos per demo (aproximats a valors reals)
  * 1 EUR = X unitats de moneda local
  */
-const FX_RATES: Record<string, number> = {
+const LOCAL_UNITS_PER_EUR: Record<string, number> = {
   XOF: 655.957, // Franco CFA (Senegal, Mali, etc.) - fix al EUR
   HNL: 27.5,    // Lempira hondurenya
   DOP: 65.0,    // Peso dominicà
@@ -934,7 +934,8 @@ export function generateOffBankExpenses(
     counterparties: string[],
     offset: number
   ) => {
-    const fxRate = FX_RATES[currency];
+    const localPerEurRate = LOCAL_UNITS_PER_EUR[currency];
+    const fxRate = 1 / localPerEurRate;
     for (let i = 0; i < 10; i++) {
       // Dates: distribuïdes en últims 60 dies
       const date = new Date(today);
@@ -951,7 +952,7 @@ export function generateOffBankExpenses(
       }
 
       // Convertir a EUR
-      const amountEUR = Math.round((originalAmount / fxRate) * 100) / 100;
+      const amountEUR = Math.round((originalAmount / localPerEurRate) * 100) / 100;
 
       // 30% amb needsReview (cada 3)
       const needsReview = i % 3 === 0;

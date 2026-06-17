@@ -6,7 +6,7 @@
 import * as React from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { computeFxAmountEUR } from '@/lib/project-module/fx';
+import { computeSafeFxAssignmentAmountEUR } from '@/lib/project-module/fx';
 import {
   useProjectDetail,
   useProjectBudgetLines,
@@ -533,11 +533,10 @@ export default function ProjectBudgetPage() {
     }
   }, [project]);
 
-  // Detectar si hi ha assignacions FX que realment necessiten recàlcul
-  // Compara l'amountEUR actual de cada assignment amb el que donaria el TC vigent
+  // Detectar si hi ha assignacions FX que realment necessiten recàlcul.
+  // També detecta imports EUR antics quan ara no hi ha TC resoluble.
   const hasFxAssignmentsNeedingRecalc = React.useMemo(() => {
     if (!project) return false;
-    if (fxTransfers.length === 0 && !(project.fxRate && project.fxRate > 0)) return false;
 
     const currentTC = getEffectiveProjectTC(fxTransfers, project);
 
@@ -549,18 +548,14 @@ export default function ProjectBudgetPage() {
       const expense = expenseMap.get(link.id);
       if (!expense) continue;
 
-      // Si la despesa té TC manual → no es recalcularà, skip
-      if (expense.fxRate != null && expense.fxRate > 0) continue;
-
-      // Si no té originalAmount → skip
-      const originalAmount = expense.originalAmount;
-      if (originalAmount == null) continue;
-
       for (const a of link.assignments) {
         if (a.projectId !== projectId) continue;
 
-        const pct = a.localPct ?? 100;
-        const expectedEUR = computeFxAmountEUR(originalAmount, pct, currentTC);
+        const expectedEUR = computeSafeFxAssignmentAmountEUR({
+          expense,
+          assignment: a,
+          projectTC: currentTC,
+        });
 
         // Comparar amb l'actual
         if (expectedEUR === null && a.amountEUR === null) continue;
@@ -600,14 +595,22 @@ export default function ProjectBudgetPage() {
 
   // Comptador d'imputacions amb amountEUR === null (pendents de conversió)
   const pendingFxCount = React.useMemo(() => {
+    if (!project) return 0;
+    const currentTC = getEffectiveProjectTC(fxTransfers, project);
+    const expenseMap = new Map(allExpenses.map(e => [e.expense.txId, e.expense]));
     let count = 0;
     for (const link of expenseLinks) {
       for (const a of link.assignments) {
-        if (a.projectId === projectId && a.amountEUR === null) count++;
+        if (a.projectId !== projectId) continue;
+        const expense = expenseMap.get(link.id);
+        const safeAmount = expense
+          ? computeSafeFxAssignmentAmountEUR({ expense, assignment: a, projectTC: currentTC })
+          : a.amountEUR;
+        if (safeAmount === null) count++;
       }
     }
     return count;
-  }, [expenseLinks, projectId]);
+  }, [allExpenses, expenseLinks, fxTransfers, project, projectId]);
 
   // Handler per re-aplicar TC
   const handleReapplyFx = React.useCallback(async () => {
@@ -639,18 +642,23 @@ export default function ProjectBudgetPage() {
   // Calcular execució per partida
   const executionByLine = React.useMemo(() => {
     const map = new Map<string, number>();
+    const currentTC = project ? getEffectiveProjectTC(fxTransfers, project) : null;
+    const expenseMap = new Map(allExpenses.map(e => [e.expense.txId, e.expense]));
 
     for (const link of expenseLinks) {
       for (const assignment of link.assignments) {
-        if (assignment.budgetLineId) {
-          const current = map.get(assignment.budgetLineId) ?? 0;
-          map.set(assignment.budgetLineId, current + (assignment.amountEUR != null ? Math.abs(assignment.amountEUR) : 0));
-        }
+        if (assignment.projectId !== projectId || !assignment.budgetLineId) continue;
+        const expense = expenseMap.get(link.id);
+        const safeAmount = expense
+          ? computeSafeFxAssignmentAmountEUR({ expense, assignment, projectTC: currentTC })
+          : assignment.amountEUR;
+        const current = map.get(assignment.budgetLineId) ?? 0;
+        map.set(assignment.budgetLineId, current + (safeAmount != null ? Math.abs(safeAmount) : 0));
       }
     }
 
     return map;
-  }, [expenseLinks]);
+  }, [allExpenses, expenseLinks, fxTransfers, project, projectId]);
 
   // Calcular totals
   const totals = React.useMemo(() => {
@@ -665,10 +673,16 @@ export default function ProjectBudgetPage() {
 
     // Execució total del projecte (per Estat A i resum B)
     let totalProjectExecution = 0;
+    const currentTC = project ? getEffectiveProjectTC(fxTransfers, project) : null;
+    const expenseMap = new Map(allExpenses.map(e => [e.expense.txId, e.expense]));
     for (const link of expenseLinks) {
       for (const assignment of link.assignments) {
         if (assignment.projectId === projectId) {
-          totalProjectExecution += assignment.amountEUR != null ? Math.abs(assignment.amountEUR) : 0;
+          const expense = expenseMap.get(link.id);
+          const safeAmount = expense
+            ? computeSafeFxAssignmentAmountEUR({ expense, assignment, projectTC: currentTC })
+            : assignment.amountEUR;
+          totalProjectExecution += safeAmount != null ? Math.abs(safeAmount) : 0;
         }
       }
     }
@@ -679,7 +693,7 @@ export default function ProjectBudgetPage() {
       totalProjectExecution,
       globalBudget: project?.budgetEUR ?? null,
     };
-  }, [budgetLines, executionByLine, expenseLinks, projectId, project?.budgetEUR]);
+  }, [allExpenses, budgetLines, executionByLine, expenseLinks, fxTransfers, project, projectId]);
 
   // Detecció d'estat
   const hasBudgetLines = budgetLines.length > 0;

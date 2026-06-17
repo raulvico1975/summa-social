@@ -4,7 +4,7 @@
 'use client';
 
 import * as React from 'react';
-import { computeFxAmountEUR } from '@/lib/project-module/fx';
+import { computeFxAmountEUR, normalizeFxRateToEurPerLocal } from '@/lib/project-module/fx';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -252,7 +252,10 @@ export function AssignmentEditor({
         // TC: prioritat manual per despesa, després projecte
         let tc: number | null = null;
         if (expenseFxRate != null && expenseFxRate > 0) {
-          tc = expenseFxRate;
+          tc = normalizeFxRateToEurPerLocal(expenseFxRate, {
+            originalAmount,
+            amountEUR: totalAmount > 0 ? totalAmount : null,
+          });
         } else if (resolveProjectTC) {
           tc = await resolveProjectTC(row.projectId);
         }
