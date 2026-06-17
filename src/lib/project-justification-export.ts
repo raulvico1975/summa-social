@@ -2,10 +2,24 @@
 // Exportació Excel de justificació de projecte (ACCD / Fons Català)
 
 import * as XLSX from 'xlsx';
-import type { BudgetLine, ExpenseLink, Project, ProjectExpenseExport, OffBankExpense, UnifiedExpense } from '@/lib/project-module-types';
+import type {
+  BudgetLine,
+  ExpenseLink,
+  Project,
+  ProjectExpenseExport,
+  OffBankExpense,
+  ProjectFundingBudgetAllocation,
+  ProjectFundingExpenseAllocation,
+  ProjectFundingSource,
+  UnifiedExpense,
+} from '@/lib/project-module-types';
 import type { Firestore } from 'firebase/firestore';
 import { collection, getDocs, doc, getDoc, query, where } from 'firebase/firestore';
 import { buildJustificationRows } from '@/lib/project-justification-rows';
+import {
+  buildMultiFunderExpenseExportRows,
+  buildMultiFunderSummaryRows,
+} from '@/lib/project-module-funding';
 
 // Tipus unificat per despeses (bank o off-bank)
 interface UnifiedExpenseData {
@@ -46,28 +60,6 @@ interface JustificationData {
   expenses: Map<string, UnifiedExpenseData>;
 }
 
-interface BudgetLineSummary {
-  code: string;
-  name: string;
-  budgeted: number;
-  executed: number;
-  difference: number;
-  deviationPct: number;
-  status: 'OK' | 'ALERT';
-}
-
-interface ExpenseRow {
-  date: string;
-  counterpartyName: string;
-  concept: string;
-  categoryName: string;
-  projectName: string;
-  budgetLineCode: string;
-  budgetLineName: string;
-  amountAssigned: number;
-  documentRef: string;
-}
-
 // ═══════════════════════════════════════════════════════════════════════════
 // HELPERS
 // ═══════════════════════════════════════════════════════════════════════════
@@ -76,20 +68,6 @@ function formatDateDMY(dateStr: string | null): string {
   if (!dateStr) return '';
   const [year, month, day] = dateStr.split('-');
   return `${day}/${month}/${year}`;
-}
-
-function formatAmount(amount: number): string {
-  return new Intl.NumberFormat('ca-ES', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(amount);
-}
-
-function formatPercent(value: number): string {
-  return new Intl.NumberFormat('ca-ES', {
-    minimumFractionDigits: 1,
-    maximumFractionDigits: 1,
-  }).format(value) + '%';
 }
 
 function formatProjectExpenseDocumentNames(documents: ProjectExpenseExport['documents'] | undefined): string | null {
@@ -840,4 +818,150 @@ export function buildProjectJustificationFundingXlsx(
   const filename = `${safeFilenamePrefix}_${safeProjectCode}_${dateStr}.xlsx`;
 
   return { blob, filename };
+}
+
+export interface MultiFunderExportParams {
+  projectId: string;
+  projectCode: string | null;
+  projectName: string;
+  budgetLines: BudgetLine[];
+  expenseLinks: ExpenseLink[];
+  expenses: Map<string, UnifiedExpense>;
+  fundingSources: ProjectFundingSource[];
+  budgetAllocations: ProjectFundingBudgetAllocation[];
+  expenseAllocations: ProjectFundingExpenseAllocation[];
+}
+
+export function buildProjectMultiFunderJustificationXlsx(params: MultiFunderExportParams): ExportResult {
+  const activeSources = params.fundingSources
+    .filter((source) => source.archivedAt === null)
+    .sort((a, b) => a.order - b.order || a.name.localeCompare(b.name));
+
+  const expenseRows = buildMultiFunderExpenseExportRows({
+    projectId: params.projectId,
+    fundingSources: activeSources,
+    budgetLines: params.budgetLines,
+    expenseLinks: params.expenseLinks,
+    expenses: params.expenses,
+    expenseAllocations: params.expenseAllocations,
+  });
+  const summaryRows = buildMultiFunderSummaryRows({
+    fundingSources: activeSources,
+    budgetLines: params.budgetLines,
+    budgetAllocations: params.budgetAllocations,
+    expenseRows,
+  });
+
+  const expenseSheetRows: (string | number | null)[][] = [
+    [
+      'Núm.',
+      'Data despesa',
+      'Data factura',
+      'Data pagament',
+      'Concepte',
+      'Proveïdor / contrapart',
+      'NIF/CIF',
+      'Núm. factura',
+      'Núm. justificant',
+      'Partida principal',
+      'Moneda',
+      'Import total moneda original',
+      'Tipus de canvi',
+      'Import total EUR',
+      'Import imputat EUR',
+      ...activeSources.map((source) => source.name),
+      'Total distribuït',
+      'Diferència',
+      'Estat',
+      'Notes',
+    ],
+    ...expenseRows.map((row) => [
+      row.order,
+      row.dateExpense,
+      row.invoiceDate,
+      row.paymentDate,
+      row.concept,
+      row.counterpartyName,
+      row.issuerTaxId,
+      row.invoiceNumber,
+      row.supportDocNumber,
+      row.budgetLine,
+      row.currency,
+      row.totalOriginalAmount,
+      row.fxRate,
+      row.totalAmountEUR,
+      row.imputedAmountEUR,
+      ...activeSources.map((source) => row.byFundingSource[source.id] ?? 0),
+      row.distributedAmountEUR,
+      row.differenceEUR,
+      row.status,
+      row.notes,
+    ]),
+  ];
+
+  const summarySheetRows: (string | number)[][] = [
+    [
+      'Partida',
+      'Pressupost total',
+      'Executat total',
+      'Diferència total',
+      ...activeSources.flatMap((source) => [
+        `${source.name} pressupost`,
+        `${source.name} executat`,
+        `${source.name} diferència`,
+      ]),
+    ],
+    ...summaryRows.map((row) => [
+      row.budgetLine,
+      row.budgetedAmountEUR,
+      row.executedAmountEUR,
+      row.differenceEUR,
+      ...activeSources.flatMap((source) => {
+        const values = row.byFundingSource[source.id];
+        return [
+          values?.budgetedAmountEUR ?? 0,
+          values?.executedAmountEUR ?? 0,
+          values?.differenceEUR ?? 0,
+        ];
+      }),
+    ]),
+  ];
+
+  const wb = XLSX.utils.book_new();
+  const expenseSheet = XLSX.utils.aoa_to_sheet(expenseSheetRows);
+  expenseSheet['!cols'] = [
+    { wch: 8 },
+    { wch: 14 },
+    { wch: 14 },
+    { wch: 14 },
+    { wch: 34 },
+    { wch: 24 },
+    { wch: 14 },
+    { wch: 16 },
+    { wch: 18 },
+    { wch: 24 },
+    { wch: 10 },
+    { wch: 22 },
+    { wch: 14 },
+    { wch: 16 },
+    { wch: 18 },
+    ...activeSources.map(() => ({ wch: 18 })),
+    { wch: 18 },
+    { wch: 14 },
+    { wch: 16 },
+    { wch: 24 },
+  ];
+  XLSX.utils.book_append_sheet(wb, expenseSheet, 'Despeses');
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(summarySheetRows), 'Resum per partida i finançador');
+
+  const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+  const blob = new Blob([wbout], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  const dateStr = new Date().toISOString().slice(0, 10);
+  const projectPart = (params.projectCode || params.projectName || params.projectId)
+    .replace(/[^a-zA-Z0-9_-]/g, '_')
+    .slice(0, 60);
+  return {
+    blob,
+    filename: `justificacio_projecte_diversos_financadors_${projectPart}_${dateStr}.xlsx`,
+  };
 }

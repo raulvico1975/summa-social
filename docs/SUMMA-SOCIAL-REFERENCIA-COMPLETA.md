@@ -4267,6 +4267,105 @@ interface FundingColumnLabels {
 }
 ```
 
+### 3.11.17 Projectes amb diversos finançadors
+
+Capa opcional dins la pantalla de Gestió Econòmica del projecte per repartir pressupost i despeses imputades entre diverses fonts de finançament sense canviar la lògica base d'assignació de despeses.
+
+**Activació:**
+- Camp `multiFunderEnabled: true` al document del projecte.
+- Només `admin` pot activar el mode, crear fonts, editar la distribució pressupostària i arxivar fonts.
+- `admin` i `user` poden distribuir despeses imputades entre fonts.
+- `viewer` manté visibilitat de la informació, sense permisos d'edició.
+
+**Model de dades Firestore:**
+
+Ruta real del mòdul:
+
+```text
+organizations/{orgId}/projectModule/_/projects/{projectId}
+```
+
+Subcol·leccions:
+
+| Subcol·lecció | Funció |
+|---------------|--------|
+| `fundingSources` | Fonts de finançament del projecte |
+| `fundingBudgetAllocations` | Distribució del pressupost per partida i font |
+| `fundingExpenseAllocations` | Distribució de cada despesa imputada entre fonts |
+
+**`fundingSources`:**
+
+| Camp | Tipus | Descripció |
+|------|-------|------------|
+| `name` | string | Nom visible de la font |
+| `type` | enum | `public`, `private`, `own_funds`, `local_partner`, `other` |
+| `approvedAmountEUR` | number \| null | Import aprovat, si es coneix |
+| `receivedAmountEUR` | number \| null | Import rebut, si es coneix |
+| `notes` | string \| null | Observacions internes |
+| `order` | number | Ordre intern de visualització, assignat automàticament segons l'alta de la font |
+
+La pantalla no demana l'ordre manualment en crear una font: el sistema situa cada font nova darrere de les existents. La taula mostra el total aprovat, el total rebut i el pendent de rebre, i tots els imports visibles i editables es mostren en format europeu (`1.234,56`).
+| `archivedAt` | string \| null | Arxiu lògic; no s'elimina físicament |
+
+**`fundingBudgetAllocations`:**
+
+Document id recomanat: `{budgetLineId}__{fundingSourceId}`.
+
+| Camp | Tipus | Descripció |
+|------|-------|------------|
+| `budgetLineId` | string | Partida pressupostària del projecte |
+| `fundingSourceId` | string | Font de finançament |
+| `amountEUR` | number | Import pressupostat per aquella font i partida |
+
+**`fundingExpenseAllocations`:**
+
+| Camp | Tipus | Descripció |
+|------|-------|------------|
+| `expenseLinkId` | string | ID de l'enllaç d'imputació existent (`expenseLinks`) |
+| `expenseId` | string | ID de la despesa original |
+| `expenseSource` | enum | `bank` o `offBank` |
+| `fundingSourceId` | string | Font de finançament |
+| `amountEUR` | number | Import justificat per aquella font |
+| `kind` | enum | `cash` o `in_kind` |
+| `budgetLineId` | string \| null | Partida específica si difereix de la imputació principal |
+| `notes` | string \| null | Observacions internes |
+
+**Coherència i avisos:**
+- La base de càlcul de cada despesa és l'import ja imputat al projecte a `expenseLinks.assignments[].amountEUR`.
+- Les distribucions per font no modifiquen l'assignació original de la despesa ni el seu import bancari.
+- El sistema mostra avisos si una partida o despesa queda parcial, sobreassignada o amb diferència superior a la tolerància de `0,02 EUR`.
+- Els avisos no bloquegen l'export; serveixen per revisar abans d'entregar.
+
+**Export específic multi-finançador:**
+
+Botó addicional a Gestió Econòmica quan `multiFunderEnabled` és actiu.
+
+Genera un Excel amb:
+- Full `Despeses`: detall de despeses imputades, import imputat i columnes per font activa.
+- Full `Resum per partida i finançador`: totals agregats per partida pressupostària i font.
+
+Les fonts arxivades no apareixen com a columnes actives a l'export.
+
+**Fora d'abast explícit:**
+- Projectes que financen altres projectes.
+- Pressupostos paral·lels complets per finançador.
+- Regles d'elegibilitat o normatives per convocatòria.
+- Formularis oficials específics de cada finançador.
+- Workflows d'aprovació.
+- Canvis en moviments bancaris, remeses, fiscalitat, certificats o models 182/347.
+
+**Fitxers principals:**
+
+| Fitxer | Funció |
+|--------|--------|
+| `src/lib/project-module-types.ts` | Tipus del model multi-finançador |
+| `src/lib/project-module-funding.ts` | Càlculs, estats de coherència i files d'export |
+| `src/hooks/use-project-funding.ts` | Lectura i escriptura de fonts i distribucions |
+| `src/components/project-module/project-funding-sources-panel.tsx` | UI de fonts |
+| `src/components/project-module/project-funding-budget-panel.tsx` | UI de distribució pressupostària |
+| `src/components/project-module/project-funding-expense-distribution.tsx` | UI de distribució de despeses |
+| `src/lib/project-justification-export.ts` | Export Excel multi-finançador |
+
 ## 3.12 LIQUIDACIONS DE DESPESES
 
 Sistema per gestionar liquidacions de despeses de viatge i desplaçaments amb tiquets, quilometratge i generació de PDF.

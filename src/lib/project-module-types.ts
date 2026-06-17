@@ -74,6 +74,9 @@ export interface Project {
   fxRate?: number | null;
   fxCurrency?: string | null; // ex: "XOF", "VES", "DOP"
 
+  // Capa opcional de justificacio per fonts de financament.
+  multiFunderEnabled?: boolean;
+
   createdBy: string;
   createdAt: Timestamp;
   updatedAt: Timestamp;
@@ -111,6 +114,83 @@ export interface BudgetLineFormData {
   budgetedAmountEUR: string;
   order: string;
 }
+
+// ═══════════════════════════════════════════════════════════════════════════
+// PROJECTES AMB DIVERSOS FINANÇADORS
+// Paths:
+// /organizations/{orgId}/projectModule/_/projects/{projectId}/fundingSources/{id}
+// /organizations/{orgId}/projectModule/_/projects/{projectId}/fundingBudgetAllocations/{id}
+// /organizations/{orgId}/projectModule/_/projects/{projectId}/fundingExpenseAllocations/{id}
+// ═══════════════════════════════════════════════════════════════════════════
+
+export type ProjectFundingSourceType =
+  | 'public'
+  | 'private'
+  | 'own_funds'
+  | 'local_partner'
+  | 'other';
+
+export interface ProjectFundingSource {
+  id: string;
+  name: string;
+  type: ProjectFundingSourceType;
+  approvedAmountEUR: number | null;
+  receivedAmountEUR: number | null;
+  notes: string | null;
+  order: number;
+  archivedAt: string | null;
+  createdAt: Timestamp | string;
+  updatedAt: Timestamp | string;
+}
+
+export interface ProjectFundingSourceFormData {
+  name: string;
+  type: ProjectFundingSourceType;
+  approvedAmountEUR: string;
+  receivedAmountEUR: string;
+  notes: string;
+}
+
+export interface ProjectFundingBudgetAllocation {
+  id: string;
+  budgetLineId: string;
+  fundingSourceId: string;
+  amountEUR: number;
+  createdAt: Timestamp | string;
+  updatedAt: Timestamp | string;
+}
+
+export type ProjectFundingAllocationKind = 'cash' | 'in_kind';
+
+export interface ProjectFundingExpenseAllocation {
+  id: string;
+  expenseLinkId: string;
+  expenseId: string;
+  expenseSource: ExpenseSource;
+  fundingSourceId: string;
+  amountEUR: number;
+  kind: ProjectFundingAllocationKind;
+  budgetLineId: string | null;
+  notes: string | null;
+  createdAt: Timestamp | string;
+  updatedAt: Timestamp | string;
+}
+
+export interface ProjectFundingExpenseAllocationFormLine {
+  id?: string;
+  fundingSourceId: string;
+  amountEUR: string;
+  kind: ProjectFundingAllocationKind;
+  budgetLineId: string;
+  notes: string;
+}
+
+export type ProjectFundingDistributionStatus =
+  | 'undistributed'
+  | 'partial'
+  | 'balanced'
+  | 'review'
+  | 'overassigned';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // TRANSFERÈNCIES DE CANVI DE MONEDA (FX)
