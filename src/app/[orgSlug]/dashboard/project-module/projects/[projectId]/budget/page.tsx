@@ -21,6 +21,12 @@ import {
   computeWeightedFxRate,
   computeFxCurrency,
 } from '@/hooks/use-project-module';
+import {
+  useFundingBudgetAllocations,
+  useFundingExpenseAllocations,
+  useProjectFundingSources,
+  useSaveProjectFunding,
+} from '@/hooks/use-project-funding';
 import { useOrgUrl } from '@/hooks/organization-provider';
 import { useToast } from '@/hooks/use-toast';
 import { useTranslations } from '@/i18n';
@@ -82,7 +88,6 @@ import {
   Info,
   FileArchive,
   Compass,
-  DollarSign,
   Upload,
   MoreVertical,
   Hash,
@@ -100,8 +105,14 @@ import {
 import { useFirebase } from '@/firebase';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
 import { doc, getDoc } from 'firebase/firestore';
-import { buildProjectJustificationFundingXlsx, type FundingOrderMode, type FundingColumnLabels } from '@/lib/project-justification-export';
+import {
+  buildProjectJustificationFundingXlsx,
+  buildProjectMultiFunderJustificationXlsx,
+  type FundingOrderMode,
+  type FundingColumnLabels,
+} from '@/lib/project-justification-export';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { exportProjectJustificationZip } from '@/lib/project-justification-attachments-zip';
 import { trackUX } from '@/lib/ux/trackUX';
 import { useRouter } from 'next/navigation';
@@ -109,6 +120,15 @@ import type { BudgetLine, BudgetLineFormData, FxTransfer, FxTransferFormData } f
 import { Textarea } from '@/components/ui/textarea';
 import { BalanceProjectModal } from '@/components/project-module/balance-project-modal';
 import { BudgetImportWizard } from '@/components/project-module/budget-import-wizard';
+import { ProjectFundingBudgetPanel } from '@/components/project-module/project-funding-budget-panel';
+import { ProjectFundingExpenseDistribution } from '@/components/project-module/project-funding-expense-distribution';
+import { ProjectFundingOverviewPanel } from '@/components/project-module/project-funding-overview-panel';
+import { ProjectFundingSourcesPanel } from '@/components/project-module/project-funding-sources-panel';
+import {
+  formatEuropeanAmountInput,
+  parseEuropeanAmountInput,
+  type ProjectFundingImputedAmountResolver,
+} from '@/lib/project-module-funding';
 
 function formatAmount(amount: number): string {
   return new Intl.NumberFormat('ca-ES', {
@@ -357,7 +377,7 @@ function BudgetLineForm({
       if (initialData) {
         setName(initialData.name);
         setCode(initialData.code ?? '');
-        setBudgetedAmountEUR(initialData.budgetedAmountEUR.toString());
+        setBudgetedAmountEUR(formatEuropeanAmountInput(initialData.budgetedAmountEUR));
         setOrder(initialData.order?.toString() ?? '');
       } else {
         setName('');
@@ -376,7 +396,12 @@ function BudgetLineForm({
       newErrors.name = tr('projectModule.nameRequired');
     }
 
-    const amount = parseFloat(budgetedAmountEUR.replace(',', '.'));
+    let amount = 0;
+    try {
+      amount = parseEuropeanAmountInput(budgetedAmountEUR, { required: true });
+    } catch {
+      amount = Number.NaN;
+    }
     if (isNaN(amount) || amount <= 0) {
       newErrors.budgetedAmountEUR = tr('projectModule.amountPositive');
     }
@@ -392,7 +417,7 @@ function BudgetLineForm({
     await onSave({
       name: name.trim(),
       code: code.trim(),
-      budgetedAmountEUR: budgetedAmountEUR.replace(',', '.'),
+      budgetedAmountEUR,
       order,
     });
   };
@@ -440,6 +465,11 @@ function BudgetLineForm({
               inputMode="decimal"
               value={budgetedAmountEUR}
               onChange={(e) => setBudgetedAmountEUR(e.target.value)}
+              onBlur={() => {
+                try {
+                  setBudgetedAmountEUR(formatEuropeanAmountInput(parseEuropeanAmountInput(budgetedAmountEUR, { required: true })));
+                } catch {}
+              }}
               placeholder="0,00"
               className={errors.budgetedAmountEUR ? 'border-destructive' : ''}
             />
@@ -479,7 +509,7 @@ export default function ProjectBudgetPage() {
   const { toast } = useToast();
   const { t, tr } = useTranslations();
   const { firestore, user } = useFirebase();
-  const { organizationId } = useCurrentOrganization();
+  const { organizationId, userRole } = useCurrentOrganization();
   const isMobile = useIsMobile();
 
   // Track page open
@@ -492,12 +522,23 @@ export default function ProjectBudgetPage() {
   const { expenseLinks, isLoading: linksLoading, refresh: refreshExpenseLinks } = useProjectExpenseLinks(projectId);
   const { expenses: allExpenses, isLoading: expensesLoading } = useUnifiedExpenseFeed({ projectId });
   // Pool complet per al modal de justificació (inclou TOTES les despeses, no només les linkades al projecte)
-  const { expenses: allExpensesForModal, isLoading: allExpensesLoading } = useUnifiedExpenseFeed();
+  const { expenses: allExpensesForModal } = useUnifiedExpenseFeed();
   const { save, remove, isSaving } = useSaveBudgetLine();
   const { saveFx, isSaving: isSavingFx } = useSaveProjectFx();
   const { fxTransfers, isLoading: fxTransfersLoading, refresh: refreshFxTransfers } = useProjectFxTransfers(projectId);
   const { save: saveFxTransfer, remove: removeFxTransfer, isSaving: isSavingFxTransfer } = useSaveFxTransfer();
   const { reapply: reapplyFx, isRunning: isReapplying } = useReapplyProjectFx();
+  const { fundingSources, isLoading: fundingSourcesLoading, refresh: refreshFundingSources } = useProjectFundingSources(projectId);
+  const { budgetAllocations, refresh: refreshBudgetAllocations } = useFundingBudgetAllocations(projectId);
+  const { expenseAllocations, refresh: refreshExpenseAllocations } = useFundingExpenseAllocations(projectId);
+  const {
+    enableMultiFunder,
+    saveFundingSource,
+    archiveFundingSource,
+    saveFundingBudgetAllocation,
+    saveFundingExpenseAllocationsForExpense,
+    isSaving: isSavingFunding,
+  } = useSaveProjectFunding();
 
   // Derivats FX
   const weightedFxRate = React.useMemo(() => computeWeightedFxRate(fxTransfers), [fxTransfers]);
@@ -508,10 +549,11 @@ export default function ProjectBudgetPage() {
   const [deleteConfirm, setDeleteConfirm] = React.useState<BudgetLine | null>(null);
   const [importWizardOpen, setImportWizardOpen] = React.useState(false);
   const [isExportingFunding, setIsExportingFunding] = React.useState(false);
+  const [isExportingMultiFunding, setIsExportingMultiFunding] = React.useState(false);
   const [exportDialogOpen, setExportDialogOpen] = React.useState(false);
   const [exportOrderMode, setExportOrderMode] = React.useState<FundingOrderMode>('budgetLineThenChronological');
   const [isExportingZip, setIsExportingZip] = React.useState(false);
-  const [zipProgress, setZipProgress] = React.useState<{ current: number; total: number } | null>(null);
+  const [, setZipProgress] = React.useState<{ current: number; total: number } | null>(null);
   const [justificationModalOpen, setJustificationModalOpen] = React.useState(false);
 
   // Estat per fxTransfers
@@ -524,6 +566,10 @@ export default function ProjectBudgetPage() {
   const [fxEditMode, setFxEditMode] = React.useState(false);
   const [fxRateInput, setFxRateInput] = React.useState('');
   const [fxCurrencyInput, setFxCurrencyInput] = React.useState('');
+
+  const canConfigureMultiFunding = userRole === 'admin';
+  const canDistributeMultiFunding = userRole === 'admin' || userRole === 'user';
+  const [multiFundingTab, setMultiFundingTab] = React.useState<'tracking' | 'expenses' | 'budget'>('tracking');
 
   // Inicialitzar inputs FX quan es carrega el projecte
   React.useEffect(() => {
@@ -589,6 +635,12 @@ export default function ProjectBudgetPage() {
     () => project ? getEffectiveProjectTC(fxTransfers, project) : null,
     [fxTransfers, project]
   );
+  const resolveFundingAssignmentAmountEUR = React.useCallback<ProjectFundingImputedAmountResolver>(
+    ({ expense, assignment }) => expense
+      ? computeSafeFxAssignmentAmountEUR({ expense, assignment, projectTC: effectiveTC })
+      : assignment.amountEUR,
+    [effectiveTC]
+  );
 
   // Banner "sense TC": projecte FX sense TC definit
   const showNoTcBanner = projectHasFxContext && effectiveTC === null;
@@ -637,7 +689,7 @@ export default function ProjectBudgetPage() {
         description: err instanceof Error ? err.message : tr('projectModule.budget.errorRecalculating'),
       });
     }
-  }, [project, projectId, fxTransfers, reapplyFx, toast, t, refreshExpenseLinks]);
+  }, [project, projectId, fxTransfers, reapplyFx, toast, tr, refreshExpenseLinks]);
 
   // Calcular execució per partida
   const executionByLine = React.useMemo(() => {
@@ -697,6 +749,19 @@ export default function ProjectBudgetPage() {
 
   // Detecció d'estat
   const hasBudgetLines = budgetLines.length > 0;
+  const activeFundingSources = React.useMemo(
+    () => fundingSources
+      .filter((source) => source.archivedAt === null)
+      .sort((a, b) => a.order - b.order || a.name.localeCompare(b.name)),
+    [fundingSources]
+  );
+  const multiFundingSetupReady = hasBudgetLines && activeFundingSources.length > 0;
+
+  React.useEffect(() => {
+    if (project?.multiFunderEnabled === true && !multiFundingSetupReady && !linesLoading && !fundingSourcesLoading) {
+      setMultiFundingTab('budget');
+    }
+  }, [fundingSourcesLoading, linesLoading, multiFundingSetupReady, project?.multiFunderEnabled]);
 
   const handleSave = async (data: BudgetLineFormData) => {
     try {
@@ -841,6 +906,64 @@ export default function ProjectBudgetPage() {
       });
     } finally {
       setIsExportingFunding(false);
+    }
+  };
+
+  const handleEnableMultiFunding = async () => {
+    if (!project) return;
+    try {
+      await enableMultiFunder(projectId);
+      await refreshProject();
+      toast({
+        title: tr('projectModule.multiFunding.enabledTitle'),
+        description: tr('projectModule.multiFunding.enabledDescription'),
+      });
+    } catch (err) {
+      toast({
+        variant: 'destructive',
+        title: tr('projectModule.budget.error'),
+        description: err instanceof Error ? err.message : tr('projectModule.multiFunding.errorSaving'),
+      });
+    }
+  };
+
+  const handleExportMultiFunding = async () => {
+    if (!project) return;
+    setIsExportingMultiFunding(true);
+    try {
+      const expenseMap = new Map(allExpenses.map((item) => [item.expense.txId, item.expense]));
+      const { blob, filename } = buildProjectMultiFunderJustificationXlsx({
+        projectId,
+        projectCode: project.code,
+        projectName: project.name,
+        budgetLines,
+        expenseLinks,
+        expenses: expenseMap,
+        fundingSources,
+        budgetAllocations,
+        expenseAllocations,
+        resolveAssignmentAmountEUR: resolveFundingAssignmentAmountEUR,
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      toast({
+        title: tr('projectModule.budget.excelGenerated'),
+        description: tr('projectModule.budget.excelDownloadedNamed').replace('{filename}', filename),
+      });
+    } catch (err) {
+      toast({
+        variant: 'destructive',
+        title: tr('projectModule.budget.error'),
+        description: err instanceof Error ? err.message : tr('projectModule.budget.errorGeneratingExcel'),
+      });
+    } finally {
+      setIsExportingMultiFunding(false);
     }
   };
 
@@ -1086,7 +1209,7 @@ export default function ProjectBudgetPage() {
       )}
 
       {/* Resum — Estat A (sense partides) o Estat B (amb partides) */}
-      {!hasBudgetLines ? (
+      {project.multiFunderEnabled !== true && (!hasBudgetLines ? (
         /* Estat A: Seguiment global */
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <Card>
@@ -1182,7 +1305,7 @@ export default function ProjectBudgetPage() {
             </CardContent>
           </Card>
         </div>
-      )}
+      ))}
 
       {/* Secció FX: Col·lapsable */}
       <details className="group rounded-lg border bg-background">
@@ -1464,8 +1587,205 @@ export default function ProjectBudgetPage() {
         </div>{/* /space-y-4 */}
       </details>
 
+      {/* Projectes amb diversos finançadors */}
+      <section className="space-y-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <h2 className="text-2xl font-bold tracking-tight">{tr('projectModule.multiFunding.title')}</h2>
+            <p className="text-muted-foreground">{tr('projectModule.multiFunding.description')}</p>
+          </div>
+          {project.multiFunderEnabled === true && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleExportMultiFunding}
+              disabled={isExportingMultiFunding || fundingSources.filter((source) => source.archivedAt === null).length === 0}
+            >
+              {isExportingMultiFunding ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Download className="mr-2 h-4 w-4" />
+              )}
+              {tr('projectModule.multiFunding.export')}
+            </Button>
+          )}
+        </div>
+        {project.multiFunderEnabled !== true ? (
+          <div className="flex flex-col gap-3 rounded-lg border bg-muted/20 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-sm text-muted-foreground">{tr('projectModule.multiFunding.inactiveText')}</p>
+            {canConfigureMultiFunding && (
+              <Button variant="outline" onClick={handleEnableMultiFunding} disabled={isSavingFunding}>
+                {isSavingFunding ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-4 w-4" />}
+                {tr('projectModule.multiFunding.enable')}
+              </Button>
+            )}
+          </div>
+        ) : (
+          <Tabs value={multiFundingTab} onValueChange={(value) => setMultiFundingTab(value as typeof multiFundingTab)} className="space-y-4">
+            <TabsList className="grid h-auto w-full grid-cols-3 sm:inline-grid sm:w-auto">
+              <TabsTrigger value="tracking">{tr('projectModule.multiFunding.tabs.tracking')}</TabsTrigger>
+              <TabsTrigger value="expenses">{tr('projectModule.multiFunding.tabs.expenses')}</TabsTrigger>
+              <TabsTrigger value="budget">{tr('projectModule.multiFunding.tabs.budget')}</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="tracking" className="space-y-4">
+              <ProjectFundingOverviewPanel
+                projectBudgetEUR={project.budgetEUR ?? null}
+                budgetLines={budgetLines}
+                fundingSources={fundingSources}
+                budgetAllocations={budgetAllocations}
+                expenseAllocations={expenseAllocations}
+                executionByLine={executionByLine}
+                totalProjectExecution={totals.totalProjectExecution}
+                pendingFxCount={pendingFxCount}
+              />
+            </TabsContent>
+
+            <TabsContent value="expenses" className="space-y-4">
+              <div className="flex justify-end">
+                <Button variant="outline" size="sm" onClick={handleViewExpenses}>
+                  <Eye className="mr-2 h-4 w-4" />
+                  {tr('projectModule.budget.viewExpensesAction')}
+                </Button>
+              </div>
+              {canDistributeMultiFunding && (
+                <ProjectFundingExpenseDistribution
+                  projectId={projectId}
+                  expenses={allExpenses}
+                  fundingSources={fundingSources}
+                  budgetLines={budgetLines}
+                  expenseAllocations={expenseAllocations}
+                  isSaving={isSavingFunding}
+                  resolveAssignmentAmountEUR={resolveFundingAssignmentAmountEUR}
+                  onSaveExpenseAllocations={async (expense, lines) => {
+                    await saveFundingExpenseAllocationsForExpense({
+                      projectId,
+                      expenseLinkId: expense.expense.txId,
+                      expenseId: expense.expense.txId.startsWith('off_') ? expense.expense.txId.slice(4) : expense.expense.txId,
+                      expenseSource: expense.expense.source,
+                      lines,
+                    });
+                    await refreshExpenseAllocations();
+                  }}
+                />
+              )}
+            </TabsContent>
+
+            <TabsContent value="budget" className="space-y-4">
+              <ProjectFundingSourcesPanel
+                fundingSources={fundingSources}
+                projectBudgetEUR={project.budgetEUR ?? null}
+                isSaving={isSavingFunding}
+                canEdit={canConfigureMultiFunding}
+                onSave={async (data, sourceId) => {
+                  await saveFundingSource(projectId, data, sourceId);
+                  await refreshFundingSources();
+                }}
+                onArchive={async (sourceId) => {
+                  await archiveFundingSource(projectId, sourceId);
+                  await refreshFundingSources();
+                }}
+              />
+
+              <Card>
+                <CardHeader className="flex flex-row items-start justify-between gap-3 space-y-0">
+                  <div>
+                    <CardTitle className="text-base">{tr('projectModule.multiFunding.budgetLinesTitle')}</CardTitle>
+                    <CardDescription>{tr('projectModule.multiFunding.budgetLinesDescription')}</CardDescription>
+                  </div>
+                  {canConfigureMultiFunding && (
+                    <Button variant="outline" size="sm" onClick={openNew}>
+                      <Plus className="mr-2 h-4 w-4" />
+                      {tr('projectModule.addBudgetLine')}
+                    </Button>
+                  )}
+                </CardHeader>
+                <CardContent>
+                  {!hasBudgetLines && !linesLoading ? (
+                    <div className="flex flex-col gap-3 rounded-lg border bg-muted/20 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
+                      <p className="text-sm text-muted-foreground">{tr('projectModule.budget.noBudgetLinesHint')}</p>
+                      <div className="flex flex-col gap-2 sm:flex-row">
+                        <Button onClick={openNew} variant="outline">
+                          <Plus className="mr-2 h-4 w-4" />
+                          {tr('projectModule.budget.createLineManually')}
+                        </Button>
+                        <Button onClick={() => setImportWizardOpen(true)} variant="outline">
+                          <Upload className="mr-2 h-4 w-4" />
+                          {tr('projectModule.budget.importLinesExcel')}
+                        </Button>
+                      </div>
+                    </div>
+                  ) : linesLoading ? (
+                    <div className="space-y-2">
+                      {Array.from({ length: 3 }).map((_, index) => (
+                        <Skeleton key={index} className="h-12 w-full" />
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead className="w-[90px]">{tr('projectModule.lineCode')}</TableHead>
+                            <TableHead>{tr('projectModule.lineName')}</TableHead>
+                            <TableHead className="text-right">{tr('projectModule.budgeted')}</TableHead>
+                            <TableHead className="w-[100px]" />
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {budgetLines.map((line) => (
+                            <TableRow key={line.id}>
+                              <TableCell className="font-mono text-sm text-muted-foreground">{line.code ?? '-'}</TableCell>
+                              <TableCell className="font-medium">{line.name}</TableCell>
+                              <TableCell className="text-right font-mono">{formatAmount(line.budgetedAmountEUR)}</TableCell>
+                              <TableCell>
+                                <div className="flex justify-end gap-1">
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-7 w-7"
+                                    onClick={(event) => openEdit(line, event)}
+                                    title={tr('projectModule.editBudgetLine')}
+                                  >
+                                    <Pencil className="h-3.5 w-3.5" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-7 w-7 text-destructive hover:text-destructive"
+                                    onClick={() => setDeleteConfirm(line)}
+                                    title={tr('projectModule.deleteBudgetLine')}
+                                  >
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                  </Button>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              <ProjectFundingBudgetPanel
+                budgetLines={budgetLines}
+                fundingSources={fundingSources}
+                budgetAllocations={budgetAllocations}
+                canEdit={canConfigureMultiFunding}
+                onSaveAllocation={async (budgetLineId, fundingSourceId, amountEUR) => {
+                  await saveFundingBudgetAllocation(projectId, budgetLineId, fundingSourceId, amountEUR);
+                  await refreshBudgetAllocations();
+                }}
+              />
+            </TabsContent>
+          </Tabs>
+        )}
+      </section>
+
       {/* Estat A: CTA per desglossar en partides */}
-      {!hasBudgetLines && !linesLoading && (
+      {project.multiFunderEnabled !== true && !hasBudgetLines && !linesLoading && (
         <Card>
           <CardContent className="pt-6">
             <div className="text-center space-y-4">
@@ -1488,7 +1808,7 @@ export default function ProjectBudgetPage() {
       )}
 
       {/* Estat B: Taula de partides */}
-      {hasBudgetLines && (
+      {project.multiFunderEnabled !== true && hasBudgetLines && (
         <>
           {/* Resum superior: referència al pressupost global */}
           {totals.globalBudget !== null && (
