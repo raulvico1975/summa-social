@@ -1,6 +1,6 @@
 # ═══════════════════════════════════════════════════════════════════════════════
 # SUMMA SOCIAL - REFERÈNCIA COMPLETA DEL PROJECTE
-# Última actualització: 11 Juny 2026
+# Última actualització: 17 Juny 2026
 # ═══════════════════════════════════════════════════════════════════════════════
 
 
@@ -3588,9 +3588,37 @@ Quan "Extreure codi del text" està activat:
 | **Sense partides** | Resum global del projecte amb totals agregats |
 | **Amb partides** | Taula detallada amb resum superior + desviacions per partida |
 
+#### Capa multi-finançador
+
+Quan un projecte necessita més d'un finançador o contrapartida, la mateixa pantalla de pressupost pot activar una capa addicional de control.
+
+**Objectiu:**
+- Repartir el pressupost aprovat entre diverses fonts
+- Repartir cada despesa imputada entre finançadors
+- Veure seguiment agregat per partida, per finançador i per imports rebuts
+- Preparar una justificació econòmica específica per a projectes amb diversos finançadors
+
+**Activació:**
+- És opcional i s'activa per projecte (`multiFunderEnabled`)
+- Si no hi ha partides o no hi ha fonts actives, la capa queda inactiva
+- No substitueix el flux base del projecte; l'amplia
+
+**Pestanyes disponibles:**
+
+| Pestanya | Funció |
+|----------|--------|
+| Seguiment | Resumeix pressupost aprovat, executat, pendent i import rebut; mostra lectura per partida i per finançador |
+| Despeses i imputacions | Reparteix l'import imputat de cada despesa entre fonts, amb filtres per partida i finançador |
+| Pressupost | Defineix fonts de finançament i distribueix el pressupost de cada partida entre elles |
+
+**Entitats operatives noves:**
+- `fundingSources`: fonts de finançament del projecte (públiques, privades, fons propis, contraparts locals o altres)
+- `fundingBudgetAllocations`: repartiment del pressupost de cada partida entre fonts
+- `fundingExpenseAllocations`: repartiment de cada despesa imputada entre fonts, amb tipus dinerari o valoritzat i notes
+
 **Important:**
-- Només importa la columna del finançador principal (p.ex. ACCD)
-- No suport multi-finançador ni contrapartida
+- L'importador de pressupost continua important una sola columna base (habitualment la del finançador principal)
+- El repartiment multi-finançador es configura després, dins la capa específica del projecte
 - No suport PDF (només Excel)
 
 **Fitxers:**
@@ -4199,6 +4227,7 @@ La pantalla de pressupost del projecte permet baixar la justificació econòmica
 **Sortides disponibles:**
 - Excel amb totes les despeses assignades al projecte
 - ZIP amb factures i comprovants de les despeses justificades
+- Excel específic multi-finançador quan el projecte té activa aquesta capa
 
 **Punts d'entrada:** Pantalla de pressupost del projecte → botó de descàrrega o menú ⋮
 
@@ -4236,6 +4265,21 @@ Genera un full amb les despeses justificades, preparat per revisar o enviar.
 
 **Capçaleres traduïdes:** Les etiquetes de columna es passen via `FundingColumnLabels` i es resolen amb `tr()` → surten en l'idioma de l'usuari (ca/es/fr/pt).
 
+**Variant multi-finançador:**
+
+Quan el projecte treballa amb diversos finançadors, l'export específic genera un Excel diferent:
+
+- Full `Despeses` amb una columna per cada font activa
+- Full `Resum per partida i financador` amb pressupost, executat i diferència per partida i per font
+- Estat de distribució per despesa (`balanced`, `partial`, `overassigned`, `review`, `undistributed`)
+- Nom de fitxer específic: `justificacio_projecte_diversos_financadors_{projecte}_{YYYY-MM-DD}.xlsx`
+
+**Columnes addicionals a la variant multi-finançador:**
+- Dates de despesa, factura i pagament
+- Moneda original, tipus de canvi i import total/imputat en EUR
+- Una columna per cada finançador actiu
+- Total distribuït, diferència, estat i notes
+
 **ZIP de factures i comprovants:**
 
 - Inclou els documents associats a les despeses justificades
@@ -4250,6 +4294,7 @@ Genera un full amb les despeses justificades, preparat per revisar o enviar.
 | Fitxer | Funció |
 |--------|--------|
 | `src/lib/project-justification-export.ts` | `buildProjectJustificationFundingXlsx()` — generació de l'Excel |
+| `src/lib/project-justification-export.ts` | `buildProjectMultiFunderJustificationXlsx()` — variant Excel per a projectes multi-finançador |
 | `src/lib/project-justification-rows.ts` | `buildJustificationRows()` — base de files compartida per Excel i ZIP |
 | `src/lib/project-justification-attachments-zip.ts` | `exportProjectJustificationZip()` — generació del ZIP de comprovants |
 | `src/app/[orgSlug]/dashboard/project-module/projects/[projectId]/budget/page.tsx` | UI del diàleg + invocació |
