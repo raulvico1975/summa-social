@@ -30,6 +30,13 @@ function parseLimit(value: string | null): number {
   return Math.min(Math.floor(n), MAX_LIMIT);
 }
 
+function matchesResolvedPeriod(tx: Transaction, start: string | null, end: string | null): boolean {
+  const txDate = typeof tx.date === 'string' ? tx.date.slice(0, 10) : '';
+  if (start && txDate < start) return false;
+  if (end && txDate > end) return false;
+  return true;
+}
+
 async function loadTransactionSearchContext(
   db: FirebaseFirestore.Firestore,
   orgId: string
@@ -204,6 +211,32 @@ export async function GET(request: NextRequest) {
   const searchContext = pageFilters.search
     ? await loadTransactionSearchContext(db, orgId)
     : undefined;
+
+  if (pageFilters.transactionId) {
+    const txDoc = await db.doc(`organizations/${orgId}/transactions/${pageFilters.transactionId}`).get();
+    const transactions: PublicTransactionDto[] = [];
+
+    if (txDoc.exists) {
+      const rawData = txDoc.data() as Record<string, unknown>;
+      const tx = { id: txDoc.id, ...rawData } as Transaction;
+      if (
+        matchesResolvedPeriod(tx, start, end) &&
+        isVisibleInMovementsLedger(tx, { showArchived }) &&
+        matchesTransactionPageFilters(tx, pageFilters, searchContext)
+      ) {
+        transactions.push(serializePublicTransaction(txDoc.id, rawData));
+      }
+    }
+
+    return NextResponse.json({
+      success: true,
+      transactions,
+      nextCursor: null,
+      total: transactions.length,
+      limit,
+    });
+  }
+
   const hasServerFilters = hasServerSideTransactionFilters(pageFilters);
   const scanLimit = Math.min(
     limit * (hasServerFilters ? FILTERED_SCAN_MULTIPLIER : SCAN_MULTIPLIER),

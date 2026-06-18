@@ -108,6 +108,74 @@ test('falls back to the legacy single document URL when there are no attachments
   assert.equal(rows[0].documentUrl, 'https://storage.local/legacy.pdf');
 });
 
+test('keeps internal storagePath documents visible even without a public URL', () => {
+  const storagePath = 'organizations/org-1/offBankExpenses/e1/factura.pdf';
+  const expense = buildExpense({
+    attachments: [
+      {
+        url: storagePath,
+        storagePath,
+        name: 'factura.pdf',
+        contentType: 'application/pdf',
+        size: 100,
+        uploadedAt: '2026-06-08',
+      },
+    ],
+  });
+
+  const rows = buildJustificationRows({
+    projectId: 'project-1',
+    projectCode: 'P1',
+    budgetLines,
+    expenseLinks: [buildExpenseLink()],
+    expenses: new Map([[expense.txId, expense]]),
+  });
+
+  assert.equal(rows.length, 1);
+  assert.equal(rows[0].documents.length, 1);
+  assert.equal(rows[0].documentUrl, storagePath);
+  assert.equal(rows[0].documents[0].documentUrl, storagePath);
+  assert.equal(rows[0].documents[0].storagePath, storagePath);
+});
+
+test('carries persisted AI document review from attachments into justification documents', () => {
+  const storagePath = 'organizations/org-1/offBankExpenses/e1/factura.pdf';
+  const expense = buildExpense({
+    attachments: [
+      {
+        url: storagePath,
+        storagePath,
+        name: 'factura.pdf',
+        contentType: 'application/pdf',
+        size: 100,
+        uploadedAt: '2026-06-08',
+        aiDocumentReview: {
+          docType: 'invoice',
+          confidence: 0.91,
+          fields: {
+            amount: { value: 50, confidence: 0.9, evidence: 'TOTAL 50,00' },
+          },
+          provider: 'openai',
+          model: 'gpt-5-mini',
+          processedAt: '2026-06-18T10:00:00.000Z',
+          errors: [],
+        },
+      },
+    ],
+  });
+
+  const rows = buildJustificationRows({
+    projectId: 'project-1',
+    projectCode: 'P1',
+    budgetLines,
+    expenseLinks: [buildExpenseLink()],
+    expenses: new Map([[expense.txId, expense]]),
+  });
+
+  assert.equal(rows[0].documents[0].aiDocumentReview?.docType, 'invoice');
+  assert.equal(rows[0].documents[0].aiDocumentReview?.fields?.amount?.value, 50);
+});
+
 test('deduplicates repeated document URLs before building ZIP paths', () => {
   const expense = buildExpense({
     attachments: [

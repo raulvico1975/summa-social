@@ -10,6 +10,13 @@ Aquest fitxer ja no pretén duplicar el document mestre.
 
 ## Resum dels canvis recents
 
+### 2026-06-17
+
+- documentació per usuari: el mòdul de projectes passa a permetre diversos finançadors dins del mateix projecte, amb capa opcional de fonts de finançament, distribució de pressupost i repartiment de despeses imputades.
+- documentació per usuari: la pantalla de pressupost del projecte incorpora pestanyes de seguiment, despeses/imputacions i pressupost per visualitzar desviacions, imports rebuts i repartiments per finançador.
+- documentació per usuari: la justificació econòmica del projecte afegeix export específic multi-finançador amb resum per partida i finançador, més detall de distribució per despesa.
+- codi intern: el càlcul FX de despeses off-bank respecta millor els tipus de canvi manuals, inclosos valors legacy invertits quan hi ha evidència suficient, i evita recalcular imports ja fixats manualment.
+
 ### 2026-06-10
 
 - API/integracions: l'obertura de documents d'organització i de moviments passa per rutes server-side que reemeten una URL signada nova quan hi ha `storagePath`, evitant dependre d'enllaços caducats en justificants i adjunts antics.

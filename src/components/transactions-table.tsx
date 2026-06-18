@@ -145,6 +145,7 @@ interface TransactionsTableProps {
   initialDateFilter?: DateFilterValue | null;
   initialFiscalFilter?: 'pending' | null;
   initialDemoAction?: { type: 'split' | 'detail'; txId: string } | null;
+  initialTransactionId?: string | null;
   canEditMovements?: boolean;
 }
 
@@ -170,6 +171,7 @@ export function TransactionsTable({
   initialDateFilter = null,
   initialFiscalFilter = null,
   initialDemoAction = null,
+  initialTransactionId = null,
   canEditMovements = true
 }: TransactionsTableProps = {}) {
   const { firestore, user, storage } = useFirebase();
@@ -217,12 +219,14 @@ export function TransactionsTable({
 
   // Filtre per contactId (des d'enllaç de donant)
   const [contactIdFilter, setContactIdFilter] = React.useState<string | null>(null);
+  const [transactionIdFilter, setTransactionIdFilter] = React.useState<string | null>(initialTransactionId?.trim() || null);
 
   React.useEffect(() => {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
       const filter = params.get('filter');
       const contactId = params.get('contactId');
+      const transactionId = params.get('transactionId');
       const fiscal = params.get('fiscal');
 
       if (fiscal === 'pending') {
@@ -233,6 +237,9 @@ export function TransactionsTable({
 
       if (contactId) {
         setContactIdFilter(contactId);
+      }
+      if (transactionId?.trim()) {
+        setTransactionIdFilter(transactionId.trim());
       }
     }
   }, []);
@@ -443,6 +450,9 @@ export function TransactionsTable({
         if (contactIdFilter) {
           params.set('contactId', contactIdFilter);
         }
+        if (transactionIdFilter) {
+          params.set('transactionId', transactionIdFilter);
+        }
         if (sourceFilter !== 'all') {
           params.set('source', sourceFilter);
         }
@@ -532,6 +542,7 @@ export function TransactionsTable({
       t.common.error,
       toast,
       trimmedDeferredSearchQuery,
+      transactionIdFilter,
       user,
     ]
   );
@@ -1317,12 +1328,15 @@ export function TransactionsTable({
     isServerHandledTableFilter ||
     trimmedDeferredSearchQuery !== '' ||
     contactIdFilter !== null ||
+    transactionIdFilter !== null ||
     sourceFilter !== 'all' ||
     bankAccountFilter !== '__all__' ||
     dateFilter.type !== 'all'
   );
 
   const matchesTransactionFilters = React.useCallback((tx: Transaction) => {
+    if (transactionIdFilter && tx.id !== transactionIdFilter) return false;
+
     switch (tableFilter) {
       case 'missing':
         if (!(tx.amount < 0 && !tx.document)) return false;
@@ -1418,6 +1432,7 @@ export function TransactionsTable({
     pendingReturnsIds,
     projectMap,
     trimmedDeferredSearchQuery,
+    transactionIdFilter,
     showArchivedInLedger,
     sourceFilter,
     tableFilter,
@@ -1446,7 +1461,7 @@ export function TransactionsTable({
 
   React.useEffect(() => {
     setAutoLoadBlockedByError(false);
-  }, [organizationId, periodQuery, showArchivedInLedger, tableFilter, trimmedDeferredSearchQuery, contactIdFilter, sourceFilter, bankAccountFilter]);
+  }, [organizationId, periodQuery, showArchivedInLedger, tableFilter, trimmedDeferredSearchQuery, contactIdFilter, transactionIdFilter, sourceFilter, bankAccountFilter]);
 
   React.useEffect(() => {
     if (!hasLocalOnlyFilter) return;
@@ -1493,12 +1508,14 @@ export function TransactionsTable({
     setSearchQuery('');
     setDateFilter({ type: 'all' });
     setContactIdFilter(null);
+    setTransactionIdFilter(null);
     setSourceFilter('all');
     setBankAccountFilter('__all__');
     if (typeof window !== 'undefined') {
       const url = new URL(window.location.href);
       url.searchParams.delete('filter');
       url.searchParams.delete('contactId');
+      url.searchParams.delete('transactionId');
       url.searchParams.delete('fiscal');
       window.history.replaceState({}, '', url.toString());
     }

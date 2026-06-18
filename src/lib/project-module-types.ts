@@ -2,6 +2,7 @@
 // Tipus per al mòdul de Projectes (B1)
 
 import type { Timestamp } from 'firebase/firestore';
+import type { DocumentReviewDetection } from '@/lib/document-review/types';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // FEED D'EXPORTS (read-only des del mòdul)
@@ -41,6 +42,7 @@ export interface ProjectExpenseExport {
     size?: number | null;
     createdAt?: string | null;
     isPrimary?: boolean | null;
+    aiDocumentReview?: DocumentReviewDetection | null;
   }>;
 
   isEligibleForProjects: boolean;
@@ -270,6 +272,7 @@ export interface OffBankAttachment {
   contentType: string;
   size: number;
   uploadedAt: string; // YYYY-MM-DD
+  aiDocumentReview?: DocumentReviewDetection | null;
 }
 
 export interface OffBankExpense {

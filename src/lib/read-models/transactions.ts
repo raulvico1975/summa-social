@@ -26,6 +26,7 @@ export interface TransactionPageCursor {
 export type TransactionMovementType = 'income' | 'expense';
 
 export interface TransactionPageFilters {
+  transactionId?: string | null;
   search: string;
   movementType: TransactionMovementType | null;
   contactId: string | null;
@@ -143,6 +144,7 @@ export function resolvePeriodRange(params: SearchParamsLike): PeriodRange {
 
 export function parseTransactionPageFilters(params: SearchParamsLike): TransactionPageFilters {
   return {
+    transactionId: parseTrimmedParam(params.get('transactionId')),
     search: parseTrimmedParam(params.get('search')) ?? '',
     movementType: parseMovementType(params.get('movementType')),
     contactId: parseTrimmedParam(params.get('contactId')),
@@ -154,6 +156,7 @@ export function parseTransactionPageFilters(params: SearchParamsLike): Transacti
 
 export function hasServerSideTransactionFilters(filters: TransactionPageFilters): boolean {
   return Boolean(
+    filters.transactionId ||
     filters.search ||
     filters.movementType ||
     filters.contactId ||
@@ -172,6 +175,7 @@ export function matchesTransactionPageFilters(
   filters: TransactionPageFilters,
   context: TransactionSearchContext = {}
 ): boolean {
+  if (filters.transactionId && tx.id !== filters.transactionId) return false;
   if (filters.movementType === 'income' && tx.amount <= 0) return false;
   if (filters.movementType === 'expense' && tx.amount >= 0) return false;
   if (filters.contactId && tx.contactId !== filters.contactId) return false;
