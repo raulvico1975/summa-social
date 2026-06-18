@@ -104,6 +104,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useFirebase } from '@/firebase';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
+import { usePermissions } from '@/hooks/use-permissions';
 import { doc, getDoc } from 'firebase/firestore';
 import {
   buildProjectJustificationFundingXlsx,
@@ -111,12 +112,22 @@ import {
   type FundingOrderMode,
   type FundingColumnLabels,
 } from '@/lib/project-justification-export';
+import { buildJustificationRows } from '@/lib/project-justification-rows';
+import {
+  buildReviewDocumentKey,
+  isAllowedDocumentReviewStoragePath,
+  isSupportedDocumentReviewContentType,
+  normalizeDocumentReviewRows,
+  type DocumentReviewDetection,
+  type DocumentReviewDocument,
+  type DocumentReviewRow,
+} from '@/lib/document-review';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { exportProjectJustificationZip } from '@/lib/project-justification-attachments-zip';
 import { trackUX } from '@/lib/ux/trackUX';
 import { useRouter } from 'next/navigation';
-import type { BudgetLine, BudgetLineFormData, FxTransfer, FxTransferFormData } from '@/lib/project-module-types';
+import type { BudgetLine, BudgetLineFormData, FxTransfer, FxTransferFormData, OffBankAttachment } from '@/lib/project-module-types';
 import { Textarea } from '@/components/ui/textarea';
 import { BalanceProjectModal } from '@/components/project-module/balance-project-modal';
 import { BudgetImportWizard } from '@/components/project-module/budget-import-wizard';
@@ -124,11 +135,25 @@ import { ProjectFundingBudgetPanel } from '@/components/project-module/project-f
 import { ProjectFundingExpenseDistribution } from '@/components/project-module/project-funding-expense-distribution';
 import { ProjectFundingOverviewPanel } from '@/components/project-module/project-funding-overview-panel';
 import { ProjectFundingSourcesPanel } from '@/components/project-module/project-funding-sources-panel';
+import { DocumentReviewPanel } from '@/components/project-module/document-review-panel';
 import {
   formatEuropeanAmountInput,
   parseEuropeanAmountInput,
   type ProjectFundingImputedAmountResolver,
 } from '@/lib/project-module-funding';
+
+type DocumentReviewAnalyzeResponse =
+  | {
+    ok: true;
+    documentKey: string;
+    persisted: boolean;
+    detection: DocumentReviewDetection;
+  }
+  | {
+    ok: false;
+    code: string;
+    message: string;
+  };
 
 function formatAmount(amount: number): string {
   return new Intl.NumberFormat('ca-ES', {
@@ -143,6 +168,14 @@ function formatPercent(value: number): string {
     minimumFractionDigits: 0,
     maximumFractionDigits: 1,
   }).format(value / 100);
+}
+
+function isSupportedDocumentReviewAiFile(document: DocumentReviewDocument): boolean {
+  const contentType = document.contentType?.split(';')[0]?.trim().toLowerCase();
+  if (contentType) return isSupportedDocumentReviewContentType(contentType);
+
+  const extension = document.documentName.toLowerCase().split('.').pop();
+  return extension != null && ['pdf', 'jpg', 'jpeg', 'png', 'webp'].includes(extension);
 }
 
 // Component per al formulari de transferència FX
@@ -510,6 +543,7 @@ export default function ProjectBudgetPage() {
   const { t, tr } = useTranslations();
   const { firestore, user } = useFirebase();
   const { organizationId, userRole } = useCurrentOrganization();
+  const { canUseProjectModule, canAccessMovimentsRoute } = usePermissions();
   const isMobile = useIsMobile();
 
   // Track page open
@@ -520,7 +554,7 @@ export default function ProjectBudgetPage() {
   const { project, isLoading: projectLoading, error: projectError, refresh: refreshProject } = useProjectDetail(projectId);
   const { budgetLines, isLoading: linesLoading, error: linesError, refresh: refreshLines } = useProjectBudgetLines(projectId);
   const { expenseLinks, isLoading: linksLoading, refresh: refreshExpenseLinks } = useProjectExpenseLinks(projectId);
-  const { expenses: allExpenses, isLoading: expensesLoading } = useUnifiedExpenseFeed({ projectId });
+  const { expenses: allExpenses, isLoading: expensesLoading, refresh: refreshExpenses } = useUnifiedExpenseFeed({ projectId });
   // Pool complet per al modal de justificació (inclou TOTES les despeses, no només les linkades al projecte)
   const { expenses: allExpensesForModal } = useUnifiedExpenseFeed();
   const { save, remove, isSaving } = useSaveBudgetLine();
@@ -555,6 +589,9 @@ export default function ProjectBudgetPage() {
   const [isExportingZip, setIsExportingZip] = React.useState(false);
   const [, setZipProgress] = React.useState<{ current: number; total: number } | null>(null);
   const [justificationModalOpen, setJustificationModalOpen] = React.useState(false);
+  const [documentReviewDetectionsByKey, setDocumentReviewDetectionsByKey] = React.useState<Record<string, DocumentReviewDetection>>({});
+  const [documentReviewAnalyzingKeys, setDocumentReviewAnalyzingKeys] = React.useState<Set<string>>(() => new Set());
+  const [documentReviewAiUnavailable, setDocumentReviewAiUnavailable] = React.useState(false);
 
   // Estat per fxTransfers
   const [fxTransferFormOpen, setFxTransferFormOpen] = React.useState(false);
@@ -569,7 +606,7 @@ export default function ProjectBudgetPage() {
 
   const canConfigureMultiFunding = userRole === 'admin';
   const canDistributeMultiFunding = userRole === 'admin' || userRole === 'user';
-  const [multiFundingTab, setMultiFundingTab] = React.useState<'tracking' | 'expenses' | 'budget'>('tracking');
+  const [multiFundingTab, setMultiFundingTab] = React.useState<'budget' | 'expenses' | 'tracking' | 'documentReview'>('budget');
 
   // Inicialitzar inputs FX quan es carrega el projecte
   React.useEffect(() => {
@@ -756,6 +793,150 @@ export default function ProjectBudgetPage() {
     [fundingSources]
   );
   const multiFundingSetupReady = hasBudgetLines && activeFundingSources.length > 0;
+  const documentReviewRows = React.useMemo(() => {
+    if (!project) return [];
+    const expenseMap = new Map(allExpenses.map((item) => [item.expense.txId, item.expense]));
+    const justificationRows = buildJustificationRows({
+      projectId,
+      projectCode: project.code ?? '',
+      budgetLines,
+      expenseLinks,
+      expenses: expenseMap,
+    });
+
+    return normalizeDocumentReviewRows({
+      rows: justificationRows,
+      detectionsByDocumentKey: documentReviewDetectionsByKey,
+    });
+  }, [allExpenses, budgetLines, documentReviewDetectionsByKey, expenseLinks, project, projectId]);
+  const analyzedDocumentKeys = React.useMemo(
+    () => {
+      const keys = new Set(Object.keys(documentReviewDetectionsByKey));
+      for (const row of documentReviewRows) {
+        for (const document of row.documents) {
+          if (document.provider || document.model || document.processedAt) {
+            keys.add(buildReviewDocumentKey(document));
+          }
+        }
+      }
+      return keys;
+    },
+    [documentReviewDetectionsByKey, documentReviewRows]
+  );
+  const offBankAttachmentsByTxId = React.useMemo(() => {
+    const map = new Map<string, OffBankAttachment[]>();
+    for (const item of allExpenses) {
+      if (item.expense.source !== 'offBank') continue;
+      map.set(item.expense.txId, item.expense.attachments ?? []);
+    }
+    return map;
+  }, [allExpenses]);
+  const buildDocumentReviewMovementHref = React.useCallback(
+    (row: DocumentReviewRow) => buildUrl(`/dashboard/movimientos?transactionId=${encodeURIComponent(row.txId)}`),
+    [buildUrl]
+  );
+  const handleDocumentReviewDocumentsChanged = React.useCallback(async () => {
+    await Promise.all([
+      refreshExpenses(),
+      refreshExpenseLinks(),
+    ]);
+  }, [refreshExpenseLinks, refreshExpenses]);
+  const handleAnalyzeDocumentReviewDocument = React.useCallback(async (
+    row: DocumentReviewRow,
+    document: DocumentReviewDocument
+  ) => {
+    if (!organizationId || !user) {
+      toast({
+        variant: 'destructive',
+        title: tr('projectModule.documentReview.ai.errorTitle'),
+        description: tr('projectModule.documentReview.ai.authRequired'),
+      });
+      return;
+    }
+
+    if (!document.storagePath || !isAllowedDocumentReviewStoragePath(document.storagePath, organizationId)) {
+      toast({
+        variant: 'destructive',
+        title: tr('projectModule.documentReview.ai.errorTitle'),
+        description: tr('projectModule.documentReview.ai.noStoragePath'),
+      });
+      return;
+    }
+
+    if (!isSupportedDocumentReviewAiFile(document)) {
+      toast({
+        variant: 'destructive',
+        title: tr('projectModule.documentReview.ai.errorTitle'),
+        description: tr('projectModule.documentReview.ai.unsupportedFormat'),
+      });
+      return;
+    }
+
+    const documentKey = buildReviewDocumentKey(document);
+    setDocumentReviewAnalyzingKeys((current) => {
+      const next = new Set(current);
+      next.add(documentKey);
+      return next;
+    });
+
+    try {
+      const idToken = await user.getIdToken();
+      const response = await fetch('/api/project-module/document-review/analyze-document', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${idToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          orgId: organizationId,
+          txId: row.txId,
+          documentKey,
+          documentName: document.documentName,
+          storagePath: document.storagePath,
+          rowContext: {
+            source: row.source,
+            dateExpense: row.dateExpense,
+            paymentDate: row.paymentDate,
+            counterpartyName: row.counterpartyName,
+            concept: row.concept,
+            amountAssignedEUR: row.amountAssignedEUR,
+            amountTotalEUR: row.amountTotalEUR,
+            budgetLineCode: row.budgetLineCode,
+            budgetLineName: row.budgetLineName,
+          },
+        }),
+      });
+      const result = await response.json() as DocumentReviewAnalyzeResponse;
+
+      if (!response.ok || !result.ok) {
+        if (!result.ok && result.code === 'AI_UNAVAILABLE') {
+          setDocumentReviewAiUnavailable(true);
+        }
+        throw new Error(!result.ok ? result.message : tr('projectModule.documentReview.ai.errorDesc'));
+      }
+
+      setDocumentReviewDetectionsByKey((current) => ({
+        ...current,
+        [result.documentKey]: result.detection,
+      }));
+      toast({
+        title: tr('projectModule.documentReview.ai.savedTitle'),
+        description: tr('projectModule.documentReview.ai.savedDesc'),
+      });
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: tr('projectModule.documentReview.ai.errorTitle'),
+        description: error instanceof Error ? error.message : tr('projectModule.documentReview.ai.errorDesc'),
+      });
+    } finally {
+      setDocumentReviewAnalyzingKeys((current) => {
+        const next = new Set(current);
+        next.delete(documentKey);
+        return next;
+      });
+    }
+  }, [organizationId, toast, tr, user]);
 
   React.useEffect(() => {
     if (project?.multiFunderEnabled === true && !multiFundingSetupReady && !linesLoading && !fundingSourcesLoading) {
@@ -1208,6 +1389,25 @@ export default function ProjectBudgetPage() {
         </Alert>
       )}
 
+      {project.multiFunderEnabled !== true && (
+        <DocumentReviewPanel
+          rows={documentReviewRows}
+          isLoading={projectLoading || linesLoading || linksLoading || expensesLoading}
+          projectCode={project.code ?? projectId}
+          organizationId={organizationId}
+          offBankAttachmentsByTxId={offBankAttachmentsByTxId}
+          canCompleteOffBankDocuments={canUseProjectModule}
+          canOpenBankMovements={canAccessMovimentsRoute}
+          buildBankMovementHref={buildDocumentReviewMovementHref}
+          onDocumentsChanged={handleDocumentReviewDocumentsChanged}
+          canAnalyzeDocuments={canUseProjectModule}
+          analyzingDocumentKeys={documentReviewAnalyzingKeys}
+          analyzedDocumentKeys={analyzedDocumentKeys}
+          aiUnavailable={documentReviewAiUnavailable}
+          onAnalyzeDocument={handleAnalyzeDocumentReviewDocument}
+        />
+      )}
+
       {/* Resum — Estat A (sense partides) o Estat B (amb partides) */}
       {project.multiFunderEnabled !== true && (!hasBudgetLines ? (
         /* Estat A: Seguiment global */
@@ -1622,54 +1822,12 @@ export default function ProjectBudgetPage() {
           </div>
         ) : (
           <Tabs value={multiFundingTab} onValueChange={(value) => setMultiFundingTab(value as typeof multiFundingTab)} className="space-y-4">
-            <TabsList className="grid h-auto w-full grid-cols-3 sm:inline-grid sm:w-auto">
-              <TabsTrigger value="tracking">{tr('projectModule.multiFunding.tabs.tracking')}</TabsTrigger>
-              <TabsTrigger value="expenses">{tr('projectModule.multiFunding.tabs.expenses')}</TabsTrigger>
+            <TabsList className="grid h-auto w-full grid-cols-2 sm:inline-grid sm:w-auto sm:grid-cols-4">
               <TabsTrigger value="budget">{tr('projectModule.multiFunding.tabs.budget')}</TabsTrigger>
+              <TabsTrigger value="expenses">{tr('projectModule.multiFunding.tabs.expenses')}</TabsTrigger>
+              <TabsTrigger value="tracking">{tr('projectModule.multiFunding.tabs.tracking')}</TabsTrigger>
+              <TabsTrigger value="documentReview">{tr('projectModule.documentReview.title')}</TabsTrigger>
             </TabsList>
-
-            <TabsContent value="tracking" className="space-y-4">
-              <ProjectFundingOverviewPanel
-                projectBudgetEUR={project.budgetEUR ?? null}
-                budgetLines={budgetLines}
-                fundingSources={fundingSources}
-                budgetAllocations={budgetAllocations}
-                expenseAllocations={expenseAllocations}
-                executionByLine={executionByLine}
-                totalProjectExecution={totals.totalProjectExecution}
-                pendingFxCount={pendingFxCount}
-              />
-            </TabsContent>
-
-            <TabsContent value="expenses" className="space-y-4">
-              <div className="flex justify-end">
-                <Button variant="outline" size="sm" onClick={handleViewExpenses}>
-                  <Eye className="mr-2 h-4 w-4" />
-                  {tr('projectModule.budget.viewExpensesAction')}
-                </Button>
-              </div>
-              {canDistributeMultiFunding && (
-                <ProjectFundingExpenseDistribution
-                  projectId={projectId}
-                  expenses={allExpenses}
-                  fundingSources={fundingSources}
-                  budgetLines={budgetLines}
-                  expenseAllocations={expenseAllocations}
-                  isSaving={isSavingFunding}
-                  resolveAssignmentAmountEUR={resolveFundingAssignmentAmountEUR}
-                  onSaveExpenseAllocations={async (expense, lines) => {
-                    await saveFundingExpenseAllocationsForExpense({
-                      projectId,
-                      expenseLinkId: expense.expense.txId,
-                      expenseId: expense.expense.txId.startsWith('off_') ? expense.expense.txId.slice(4) : expense.expense.txId,
-                      expenseSource: expense.expense.source,
-                      lines,
-                    });
-                    await refreshExpenseAllocations();
-                  }}
-                />
-              )}
-            </TabsContent>
 
             <TabsContent value="budget" className="space-y-4">
               <ProjectFundingSourcesPanel
@@ -1778,6 +1936,68 @@ export default function ProjectBudgetPage() {
                   await saveFundingBudgetAllocation(projectId, budgetLineId, fundingSourceId, amountEUR);
                   await refreshBudgetAllocations();
                 }}
+              />
+            </TabsContent>
+
+            <TabsContent value="expenses" className="space-y-4">
+              <div className="flex justify-end">
+                <Button variant="outline" size="sm" onClick={handleViewExpenses}>
+                  <Eye className="mr-2 h-4 w-4" />
+                  {tr('projectModule.budget.viewExpensesAction')}
+                </Button>
+              </div>
+              {canDistributeMultiFunding && (
+                <ProjectFundingExpenseDistribution
+                  projectId={projectId}
+                  expenses={allExpenses}
+                  fundingSources={fundingSources}
+                  budgetLines={budgetLines}
+                  expenseAllocations={expenseAllocations}
+                  isSaving={isSavingFunding}
+                  resolveAssignmentAmountEUR={resolveFundingAssignmentAmountEUR}
+                  onSaveExpenseAllocations={async (expense, lines) => {
+                    await saveFundingExpenseAllocationsForExpense({
+                      projectId,
+                      expenseLinkId: expense.expense.txId,
+                      expenseId: expense.expense.txId.startsWith('off_') ? expense.expense.txId.slice(4) : expense.expense.txId,
+                      expenseSource: expense.expense.source,
+                      lines,
+                    });
+                    await refreshExpenseAllocations();
+                  }}
+                />
+              )}
+            </TabsContent>
+
+            <TabsContent value="tracking" className="space-y-4">
+              <ProjectFundingOverviewPanel
+                projectBudgetEUR={project.budgetEUR ?? null}
+                budgetLines={budgetLines}
+                fundingSources={fundingSources}
+                budgetAllocations={budgetAllocations}
+                expenseAllocations={expenseAllocations}
+                executionByLine={executionByLine}
+                totalProjectExecution={totals.totalProjectExecution}
+                pendingFxCount={pendingFxCount}
+              />
+            </TabsContent>
+
+            <TabsContent value="documentReview" className="space-y-4">
+              <DocumentReviewPanel
+                rows={documentReviewRows}
+                isLoading={projectLoading || linesLoading || linksLoading || expensesLoading}
+                projectCode={project.code ?? projectId}
+                organizationId={organizationId}
+                offBankAttachmentsByTxId={offBankAttachmentsByTxId}
+                canCompleteOffBankDocuments={canUseProjectModule}
+                canOpenBankMovements={canAccessMovimentsRoute}
+                buildBankMovementHref={buildDocumentReviewMovementHref}
+                onDocumentsChanged={handleDocumentReviewDocumentsChanged}
+                canAnalyzeDocuments={canUseProjectModule}
+                analyzingDocumentKeys={documentReviewAnalyzingKeys}
+                analyzedDocumentKeys={analyzedDocumentKeys}
+                aiUnavailable={documentReviewAiUnavailable}
+                onAnalyzeDocument={handleAnalyzeDocumentReviewDocument}
               />
             </TabsContent>
           </Tabs>

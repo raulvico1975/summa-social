@@ -1,6 +1,7 @@
 // src/lib/project-justification-rows.ts
 // Unifica l'ordenació i estructura de files de justificació per Excel, ZIP i manifest.csv
 
+import type { DocumentReviewDetection } from '@/lib/document-review/types';
 import type { BudgetLine, ExpenseLink, UnifiedExpense } from '@/lib/project-module-types';
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -71,6 +72,8 @@ export interface JustificationDocument {
   documentName: string;
   documentUrl: string;
   storagePath: string | null;
+  contentType?: string | null;
+  aiDocumentReview?: DocumentReviewDetection | null;
   zipPathCronologic: string;
   zipPathPerPartida: string;
 }
@@ -196,19 +199,27 @@ function generateDocumentNameWithOrder(
   return `${baseName}${attachmentIndex > 0 ? `_doc${String(attachmentIndex + 1).padStart(2, '0')}` : ''}${ext}`;
 }
 
-function resolveExpenseDocuments(expense: UnifiedExpense): Array<{ url: string; storagePath: string | null; name: string | null }> {
+function resolveExpenseDocuments(expense: UnifiedExpense): Array<{
+  url: string;
+  storagePath: string | null;
+  contentType: string | null;
+  name: string | null;
+  aiDocumentReview: DocumentReviewDetection | null;
+}> {
   const attachments = (expense.attachments ?? [])
     .filter((attachment) => typeof attachment.url === 'string' && attachment.url.trim())
     .map((attachment) => ({
       url: attachment.url.trim(),
       storagePath: attachment.storagePath ?? null,
+      contentType: attachment.contentType ?? null,
       name: attachment.name ?? null,
+      aiDocumentReview: attachment.aiDocumentReview ?? null,
     }));
 
   const candidates = attachments.length > 0
     ? attachments
     : expense.documentUrl
-      ? [{ url: expense.documentUrl, storagePath: null, name: null }]
+      ? [{ url: expense.documentUrl, storagePath: null, contentType: null, name: null, aiDocumentReview: null }]
       : [];
 
   const seenUrls = new Set<string>();
@@ -328,6 +339,8 @@ export function buildJustificationRows(params: BuildJustificationRowsParams): Ju
         documentName,
         documentUrl: document.url,
         storagePath: document.storagePath,
+        contentType: document.contentType,
+        aiDocumentReview: document.aiDocumentReview,
         zipPathPerPartida: `01_per_partida/${budgetFolderName}/${documentName}`,
         zipPathCronologic: `02_cronologic/${documentName}`,
       };

@@ -85,21 +85,26 @@ function resolveDocumentAttachments(
   const attachments: OffBankAttachment[] = [];
 
   ordered.forEach((document, index) => {
-    if (document.fileUrl) {
+    const fileUrl = document.fileUrl?.trim() || null;
+    const rawStoragePath = document.storagePath?.trim() || null;
+    const isUrlLikeStoragePath = rawStoragePath ? /^(https?:|gs:)\/\//i.test(rawStoragePath) : false;
+    const storagePath = rawStoragePath && !isUrlLikeStoragePath ? rawStoragePath : null;
+    const fallbackUrl = fileUrl ?? (isUrlLikeStoragePath ? rawStoragePath : storagePath);
+
+    if (fallbackUrl || storagePath) {
       attachments.push({
-        url: document.fileUrl,
-        storagePath: document.storagePath ?? null,
+        url: fallbackUrl ?? storagePath ?? '',
+        storagePath,
         name: document.name ?? `document-${index + 1}`,
         contentType: document.contentType ?? 'application/octet-stream',
         size: typeof document.size === 'number' ? document.size : 0,
         uploadedAt: document.createdAt ?? '',
+        aiDocumentReview: document.aiDocumentReview ?? null,
       });
       return;
     }
 
-    if (document.storagePath) {
-      console.warn(`[resolveDocumentAttachments] storagePath exists but no fileUrl: ${document.storagePath}`);
-    }
+    console.warn(`[resolveDocumentAttachments] document without fileUrl or storagePath: ${document.name ?? index}`);
   });
 
   const seenUrls = new Set<string>();
