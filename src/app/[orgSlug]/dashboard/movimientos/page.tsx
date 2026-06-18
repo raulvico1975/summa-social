@@ -50,6 +50,10 @@ export default function MovimientosPage() {
     () => (searchParams.get('fiscal') === 'pending' ? 'pending' : null),
     [searchParams]
   );
+  const initialTransactionId = React.useMemo(
+    () => searchParams.get('transactionId')?.trim() || null,
+    [searchParams]
+  );
   const initialDemoAction = React.useMemo(() => {
     const type = searchParams.get('demoAction');
     const txId = searchParams.get('demoTx')?.trim();
@@ -142,6 +146,7 @@ export default function MovimientosPage() {
           initialDateFilter={initialPeriodFilter ?? undefined}
           initialFiscalFilter={initialFiscalFilter}
           initialDemoAction={initialDemoAction}
+          initialTransactionId={initialTransactionId}
           canEditMovements={canEditMovements}
         />
       </div>
