@@ -1437,7 +1437,7 @@ export const fr = {
     addressPlaceholder: "Rue, numéro, étage...",
     paymentTermsPlaceholder: "Ex : 30 jours, virement",
     notesPlaceholder: "Notes internes sur le fournisseur...",
-    errorRequiredFields: "Le nom et le SIRET sont obligatoires.",
+    errorRequiredFields: "Le nom est obligatoire.",
     importer: {
       title: "Importer fournisseurs",
       description: "Importez des fournisseurs depuis un fichier Excel ou CSV.",
@@ -2710,9 +2710,9 @@ export const fr = {
   },
   contacts: {
     defaultCategory: "Categoria per defecte",
-    defaultCategoryHint: "S'assignarà automàticament",
+    defaultCategoryHint: "Si no en tries cap, la categoria es decidirà en cada moviment",
     selectDefaultCategory: "Selecciona categoria",
-    noDefaultCategory: "Cap (assignar manualment)",
+    noDefaultCategory: "Sense categoria per defecte",
     // v1.36 → v1.40: Guardrails de suppression
     cannotArchive: "Impossible de supprimer",
     hasTransactionsError: (count: number) => `Impossible de supprimer car il a ${count} mouvements associés.`,

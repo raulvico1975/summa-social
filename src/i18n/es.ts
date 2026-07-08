@@ -1469,7 +1469,7 @@ export const es = {
     addressPlaceholder: "Calle, número, piso...",
     paymentTermsPlaceholder: "Ej: 30 días, transferencia",
     notesPlaceholder: "Notas internas sobre el proveedor...",
-    errorRequiredFields: "El nombre y el CIF/NIF son obligatorios.",
+    errorRequiredFields: "El nombre es obligatorio.",
     importer: {
       title: "Importar Proveedores",
       description: "Importa proveedores desde un archivo Excel o CSV.",
@@ -2735,9 +2735,9 @@ export const es = {
   },
   contacts: {
     defaultCategory: "Categoría por defecto",
-    defaultCategoryHint: "Se asignará automáticamente",
+    defaultCategoryHint: "Si no eliges ninguna, la categoría se decidirá en cada movimiento",
     selectDefaultCategory: "Seleccionar categoría",
-    noDefaultCategory: "Ninguna (asignar manualmente)",
+    noDefaultCategory: "Sin categoría por defecto",
     // v1.36 → v1.40: Guardrails d'eliminació
     cannotArchive: "No se puede eliminar",
     hasTransactionsError: (count: number) => `No se puede eliminar porque tiene ${count} movimientos asociados.`,

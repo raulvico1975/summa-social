@@ -19,6 +19,7 @@ import {
   BATCH_SIZE,
 } from '@/lib/api/admin-sdk';
 import { requireOperationalAccess } from '@/lib/api/require-operational-access';
+import { sanitizeContactImportData } from '@/lib/api/contacts-import-payload';
 
 // =============================================================================
 // CONSTANTS
@@ -51,18 +52,6 @@ interface ImportContactsResponse {
 interface PreparedWrite {
   ref: DocumentReference;
   dataToWrite: Record<string, unknown>;
-}
-
-// =============================================================================
-// HELPERS
-// =============================================================================
-
-function stripArchiveFields(data: Record<string, unknown>): Record<string, unknown> {
-  const sanitized = { ...data };
-  delete sanitized.archivedAt;
-  delete sanitized.archivedByUid;
-  delete sanitized.archivedFromAction;
-  return sanitized;
 }
 
 // =============================================================================
@@ -141,7 +130,15 @@ export async function POST(
       );
     }
 
-    const data = stripArchiveFields(item.data);
+    let data: Record<string, unknown>;
+    try {
+      data = sanitizeContactImportData(item.data);
+    } catch {
+      return NextResponse.json(
+        { success: false, error: 'Dades de contacte invàlides', code: 'INVALID_UPDATE_DATA' },
+        { status: 400 }
+      );
+    }
 
     // Preservar camps d'arxivat existents
     const existing = (snap.data() || {}) as Record<string, unknown>;
@@ -168,7 +165,19 @@ export async function POST(
       batch.set(item.ref, item.dataToWrite, { merge: true });
     }
 
-    await batch.commit();
+    try {
+      await batch.commit();
+    } catch (error) {
+      console.error('[contacts/import] Error writing contacts batch:', error);
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'No s’han pogut guardar els canvis del contacte. Torna-ho a provar i, si es repeteix, avisa suport.',
+          code: 'WRITE_FAILED',
+        },
+        { status: 500 }
+      );
+    }
     updatedCount += chunk.length;
   }
 
