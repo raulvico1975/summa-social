@@ -1437,7 +1437,7 @@ export const ca = {
     addressPlaceholder: "Carrer, número, pis...",
     paymentTermsPlaceholder: "Ex: 30 dies, transferència",
     notesPlaceholder: "Notes internes sobre el proveïdor...",
-    errorRequiredFields: "El nom i el CIF/NIF són obligatoris.",
+    errorRequiredFields: "El nom és obligatori.",
     importer: {
       title: "Importar Proveïdors",
       description: "Importa proveïdors des d'un arxiu Excel o CSV.",
@@ -2708,9 +2708,9 @@ export const ca = {
   },
   contacts: {
     defaultCategory: "Categoria per defecte",
-    defaultCategoryHint: "S'assignarà automàticament",
+    defaultCategoryHint: "Si no en tries cap, la categoria es decidirà en cada moviment",
     selectDefaultCategory: "Selecciona categoria",
-    noDefaultCategory: "Cap (assignar manualment)",
+    noDefaultCategory: "Sense categoria per defecte",
     // v1.36 → v1.40: Guardrails d'eliminació
     cannotArchive: "No es pot eliminar",
     cannotArchiveTitle: "No es pot eliminar el contacte",
