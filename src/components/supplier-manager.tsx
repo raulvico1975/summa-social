@@ -310,7 +310,7 @@ export function SupplierManager() {
   };
 
   const handleSave = async () => {
-    if (!formData.name || !formData.taxId) {
+    if (!formData.name.trim()) {
       toast({
         variant: 'destructive',
         title: t.common.error,
@@ -641,7 +641,7 @@ export function SupplierManager() {
                   </div>
 
                   <div className="space-y-1.5">
-                    <Label htmlFor="taxId">{t.suppliers.taxId}<span className="ml-1 text-muted-foreground">*</span></Label>
+                    <Label htmlFor="taxId">{t.suppliers.taxId}</Label>
                     <Input
                       id="taxId"
                       value={formData.taxId}
