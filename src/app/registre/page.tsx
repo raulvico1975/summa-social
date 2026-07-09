@@ -17,11 +17,12 @@ import type { Invitation } from '@/lib/data';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useTranslations } from '@/i18n';
 import { registerWithInvitationFlow } from '@/lib/invitations/register-flow';
+import { resolveInvitationWithRetry } from '@/lib/invitations/client';
 
 // 👇 AFEGIR AIXÒ per evitar el prerendering estàtic
 export const dynamic = 'force-dynamic';
 
-type PageState = 'loading' | 'invalid' | 'expired' | 'used' | 'ready' | 'registering' | 'success';
+type PageState = 'loading' | 'invalid' | 'expired' | 'used' | 'unavailable' | 'ready' | 'registering' | 'success';
 
 function RegistreContent() {
   const router = useRouter();
@@ -50,6 +51,7 @@ function RegistreContent() {
   const [password, setPassword] = React.useState('');
   const [confirmPassword, setConfirmPassword] = React.useState('');
   const [error, setError] = React.useState('');
+  const [validationAttempt, setValidationAttempt] = React.useState(0);
 
   // Validar la invitació via API server-side (no requereix autenticació)
   React.useEffect(() => {
@@ -60,26 +62,13 @@ function RegistreContent() {
       }
 
       try {
-        const res = await fetch(`/api/invitations/resolve?token=${encodeURIComponent(token)}`);
-
-        if (res.status === 410) {
-          const body = await res.json();
-          if (body.error === 'already_used') {
-            setPageState('used');
-          } else if (body.error === 'expired') {
-            setPageState('expired');
-          } else {
-            setPageState('invalid');
-          }
+        const resolution = await resolveInvitationWithRetry(token);
+        if (resolution.status !== 'ready') {
+          setPageState(resolution.status);
           return;
         }
 
-        if (!res.ok) {
-          setPageState('invalid');
-          return;
-        }
-
-        const resolved = await res.json();
+        const resolved = resolution.invitation;
 
         // Construir objecte invitation compatible amb la resta del flux
         const invitationData = {
@@ -120,7 +109,7 @@ function RegistreContent() {
     };
 
     validateInvitation();
-  }, [token, firestore]);
+  }, [token, firestore, validationAttempt]);
 
   const handleRegister = async () => {
     // Validacions
@@ -337,6 +326,34 @@ function RegistreContent() {
           <CardContent className="text-center">
             <Button onClick={() => router.push('/')}>
               {txt('register.buttons.goHome', "Anar a l'inici")}
+            </Button>
+          </CardContent>
+        </Card>
+      </main>
+    );
+  }
+
+  if (pageState === 'unavailable') {
+    return (
+      <main className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
+        <Card className="w-full max-w-md">
+          <CardHeader className="text-center">
+            <AlertCircle className="mx-auto h-12 w-12 text-orange-500" />
+            <CardTitle className="mt-4">
+              {txt('register.unavailable.title', 'No hem pogut validar la invitació')}
+            </CardTitle>
+            <CardDescription>
+              {txt('register.unavailable.description', 'La invitació pot ser correcta, però ara mateix no podem comprovar-la. Torna-ho a provar.')}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="text-center">
+            <Button
+              onClick={() => {
+                setPageState('loading');
+                setValidationAttempt((attempt) => attempt + 1);
+              }}
+            >
+              {txt('register.unavailable.retry', 'Reintentar')}
             </Button>
           </CardContent>
         </Card>
