@@ -10,6 +10,12 @@ Aquest fitxer ja no pretén duplicar el document mestre.
 
 ## Resum dels canvis recents
 
+### 2026-07-08
+
+- documentació per usuari: els proveïdors es poden guardar sense NIF/CIF quan encara no es disposa de la dada fiscal; el nom continua sent obligatori.
+- API/integracions: `POST /api/contacts/import` saneja payloads de contactes abans d'escriure, elimina `undefined` niats, preserva camps d'arxivat i retorna error controlat si falla el batch.
+- codi intern: `supplier-manager.tsx` queda alineat amb el flux d'update via API i el sanejament queda cobert per `src/lib/__tests__/contacts-import-payload.test.ts`.
+
 ### 2026-06-17
 
 - documentació per usuari: el mòdul de projectes passa a permetre diversos finançadors dins del mateix projecte, amb capa opcional de fonts de finançament, distribució de pressupost i repartiment de despeses imputades.

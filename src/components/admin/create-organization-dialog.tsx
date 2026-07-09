@@ -16,6 +16,7 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { useFirebase } from '@/firebase';
 import { collection, doc, setDoc } from 'firebase/firestore';
+import { buildInvitationUrl } from '@/lib/invitations/client';
 import { generateSlug, isSlugAvailable, reserveSlug, isValidSlug } from '@/lib/slugs';
 import { logAdminAction } from '@/lib/admin-audit';
 import { Loader2, Building2, Mail, User, Copy, Check } from 'lucide-react';
@@ -157,8 +158,11 @@ export function CreateOrganizationDialog({ open, onOpenChange }: CreateOrganizat
       await setDoc(invitationRef, { ...invitationData, id: invitationRef.id });
 
       // 5. Generar URL d'invitació
-      const baseUrl = window.location.origin;
-      const inviteUrl = `${baseUrl}/registre?token=${token}`;
+      const inviteUrl = buildInvitationUrl(
+        token,
+        window.location.origin,
+        process.env.NODE_ENV === 'production'
+      );
       setCreatedInviteUrl(inviteUrl);
 
       // 6. Audit log (best-effort)

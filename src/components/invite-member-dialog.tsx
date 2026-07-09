@@ -37,6 +37,7 @@ import {
   type PermissionKey,
 } from '@/lib/permissions';
 import { validateAndCanonicalizeUserPermissionWrite } from '@/lib/permissions-write';
+import { buildInvitationUrl } from '@/lib/invitations/client';
 
 interface InviteMemberDialogProps {
   open: boolean;
@@ -272,8 +273,11 @@ export function InviteMemberDialog({ open, onOpenChange, onInviteCreated }: Invi
       }
 
       // Generar URL d'invitació
-      const baseUrl = window.location.origin;
-      const inviteUrl = `${baseUrl}/registre?token=${createdToken}`;
+      const inviteUrl = buildInvitationUrl(
+        createdToken,
+        window.location.origin,
+        process.env.NODE_ENV === 'production'
+      );
       setCreatedInviteUrl(inviteUrl);
 
       toast({

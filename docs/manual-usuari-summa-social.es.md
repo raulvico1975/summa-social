@@ -426,12 +426,14 @@ Especialmente cuando:
 
 1. Ve a **Proveedores**.
 2. Crea un proveedor nuevo o impórtalo.
-3. Completa datos básicos y, si aplica, el IBAN.
+3. Completa como mínimo el nombre. El NIF/CIF, el IBAN y la categoría por defecto se pueden añadir después si todavía no los tienes.
 4. Guarda.
 
 ### Importar proveedores desde Excel
 
 Si ya los tienes en hoja de cálculo, la importación ahorra mucho tiempo.
+
+El NIF/CIF no bloquea el alta de un proveedor, pero conviene informarlo antes de preparar el Modelo 347 o revisar datos fiscales.
 
 ### Categoría por defecto
 

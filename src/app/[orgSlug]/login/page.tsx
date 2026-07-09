@@ -15,6 +15,7 @@ import { doc, getDoc } from 'firebase/firestore';
 import { Loader2, Building2, AlertCircle, Clock } from 'lucide-react';
 import { isDemoEnv } from '@/lib/demo/isDemoOrg';
 import { processLoginInviteFlow } from '@/lib/invitations/login-invite-flow';
+import { resolveInvitationWithRetry } from '@/lib/invitations/client';
 
 interface OrgInfo {
   id: string;
@@ -132,12 +133,14 @@ function OrgLoginContent() {
           const inviteResult = await processLoginInviteFlow(
             {
               resolveInvitation: async () => {
-                const resolveRes = await fetch(`/api/invitations/resolve?token=${encodeURIComponent(inviteToken)}`);
-                const resolveBody = await resolveRes.json().catch(() => ({} as { error?: string }));
-                if (!resolveRes.ok) {
-                  return { ok: false as const, error: resolveBody.error || 'resolve_failed' };
+                const resolution = await resolveInvitationWithRetry(inviteToken);
+                if (resolution.status !== 'ready') {
+                  return {
+                    ok: false as const,
+                    error: resolution.status === 'unavailable' ? 'resolve_failed' : resolution.status,
+                  };
                 }
-                return { ok: true as const, invitation: resolveBody as ResolvedInvitation };
+                return { ok: true as const, invitation: resolution.invitation as ResolvedInvitation };
               },
               getIdToken: async () => loggedInUser.getIdToken(),
               acceptInvitation: async (idToken, invitationData) => {
