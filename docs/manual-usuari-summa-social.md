@@ -682,7 +682,7 @@ Si pagues **més de 3.005,06€ anuals** a un proveïdor, ha d'aparèixer al **M
 
 1. Ves a 🏢 **Proveïdors**
 2. Clica **"+ Nou proveïdor"**
-3. Omple: Nom, NIF/CIF, Categoria per defecte
+3. Omple com a mínim el Nom. El NIF/CIF, l'IBAN i la categoria per defecte es poden afegir després si encara no els tens.
 4. Clica **"Guardar"**
 
 ### Importar proveïdors des d'Excel (v1.28)
@@ -694,6 +694,8 @@ Si pagues **més de 3.005,06€ anuals** a un proveïdor, ha d'aparèixer al **M
 5. Arrossega el fitxer omplert
 6. Revisa les dades (🟢 OK · 🟡 Avís · 🔴 Error)
 7. Clica **"Importar"**
+
+El NIF/CIF no bloqueja l'alta d'un proveïdor, però convé informar-lo abans de preparar el Model 347 o revisar dades fiscals.
 
 ### Categoria per defecte
 

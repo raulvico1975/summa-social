@@ -2459,7 +2459,7 @@ La pantalla de donants diferencia tres segments visibles:
 | Camp | Obligatori | Model 347 |
 |------|------------|-----------|
 | Nom | ✅ | ✅ |
-| NIF/CIF | ⚠️ | ✅ Obligatori |
+| NIF/CIF | ❌ | ✅ Necessari |
 | Categoria per defecte | ❌ | ❌ |
 | Adreça | ❌ | ❌ |
 | IBAN | ❌ | ❌ |
@@ -4803,11 +4803,13 @@ Les Firestore Rules exigeixen immutabilitat de `archivedAt`/`archivedByUid`/`arc
 
 Solució: tots els updates de contactes passen per `POST /api/contacts/import` (Admin SDK), que:
 1. Valida auth + membership (role `admin|user`)
-2. Descarta `archived*` del payload client
-3. Preserva `archived*` del document existent
-4. Escriu amb Admin SDK (bypassa rules)
+2. Saneja el payload client i elimina valors `undefined` niats
+3. Descarta `archived*` del payload client
+4. Preserva `archived*` del document existent
+5. Escriu amb Admin SDK (bypassa rules), amb error controlat si falla el batch
 
 Flux d'edició de donant: UI → `updateContactViaApi()` (`src/services/contacts.ts`) → `/api/contacts/import` → Admin SDK.
+Flux d'edició de proveïdor: UI → `updateContactViaApi()` (`src/services/contacts.ts`) → `/api/contacts/import` → Admin SDK. El NIF/CIF ja no és obligatori per guardar un proveïdor; el nom continua sent el mínim requerit.
 
 **Creates** (nous contactes) continuen client-side (`addDocumentNonBlocking`).
 
@@ -4816,9 +4818,9 @@ Flux d'edició de donant: UI → `updateContactViaApi()` (`src/services/contacts
 - La UI de Donants fa servir `blockIfAnyTransaction: true` quan l'usuari prem "Eliminar"
 - Per tant, a Donants l'eliminació queda bloquejada si existeix qualsevol historial vinculat, encara que ja estigui arxivat
 
-Fitxers: `src/app/api/contacts/import/route.ts`, `src/services/contacts.ts`.
+Fitxers: `src/app/api/contacts/import/route.ts`, `src/lib/api/contacts-import-payload.ts`, `src/services/contacts.ts`.
 
-Migrat: `donor-manager.tsx` (commits `d9c7ae0`, `9c3be85`). Pendent: `supplier-manager.tsx`, `employee-manager.tsx`.
+Migrat: `donor-manager.tsx` (commits `d9c7ae0`, `9c3be85`) i `supplier-manager.tsx`. Pendent: `employee-manager.tsx`.
 
 **Fix Firestore Rules `.get()` per camps archived:**
 
