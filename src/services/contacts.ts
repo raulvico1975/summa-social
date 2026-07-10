@@ -1,5 +1,40 @@
 import type { Auth } from 'firebase/auth';
 
+export class ContactApiError extends Error {
+  constructor(
+    message: string,
+    public readonly status: number,
+    public readonly code: string | null,
+    public readonly requestId: string | null
+  ) {
+    super(message);
+    this.name = 'ContactApiError';
+  }
+}
+
+function contactErrorMessage(
+  status: number,
+  code: string | null,
+  serverMessage: string | null,
+  requestId: string | null
+): string {
+  let message = serverMessage;
+
+  if (!message || message === code) {
+    if (code === 'READ_ONLY_ROLE') {
+      message = 'El teu compte té accés de només lectura i no pot desar canvis. Tanca la sessió i torna a entrar.';
+    } else if (code === 'NOT_MEMBER') {
+      message = 'Aquest compte no està vinculat a aquesta entitat. Tanca la sessió i torna a entrar.';
+    } else if (status === 401) {
+      message = 'La sessió ha caducat. Torna a iniciar sessió.';
+    } else {
+      message = 'No s’han pogut desar els canvis. Torna-ho a provar i, si es repeteix, avisa suport.';
+    }
+  }
+
+  return requestId ? `${message} Referència: ${requestId.slice(0, 8)}.` : message;
+}
+
 export interface ArchiveContactResult {
   success: boolean;
   idempotent?: boolean;
@@ -32,9 +67,11 @@ export async function updateContactViaApi(params: {
 
   const res = await fetch('/api/contacts/import', {
     method: 'POST',
+    cache: 'no-store',
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${idToken}`,
+      'X-Summa-Client-Build': process.env.BUILD_ID || 'unknown',
     },
     body: JSON.stringify({
       orgId: params.orgId,
@@ -43,12 +80,20 @@ export async function updateContactViaApi(params: {
   });
 
   if (!res.ok) {
-    let msg = `Error ${res.status}`;
+    let serverMessage: string | null = null;
+    let code: string | null = null;
     try {
-      const payload = await res.json();
-      if (payload?.error) msg = payload.error;
+      const payload = await res.json() as { error?: unknown; code?: unknown };
+      if (typeof payload.error === 'string') serverMessage = payload.error;
+      if (typeof payload.code === 'string') code = payload.code;
     } catch {}
-    throw new Error(msg);
+    const requestId = res.headers.get('X-Summa-Request-Id');
+    throw new ContactApiError(
+      contactErrorMessage(res.status, code, serverMessage, requestId),
+      res.status,
+      code,
+      requestId
+    );
   }
 }
 

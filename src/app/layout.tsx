@@ -16,6 +16,7 @@ import { FirebaseClientProvider } from '@/firebase';
 import { TranslationsProvider } from '@/i18n/provider';
 import { IdleLogoutProvider } from '@/components/IdleLogoutProvider';
 import { ErrorBoundaryGlobal } from '@/components/ErrorBoundaryGlobal';
+import { AppVersionGuard } from '@/components/app-version-guard';
 
 // Font principal - Inter (Apple-like, molt llegible)
 const inter = Inter({ 
@@ -61,6 +62,7 @@ export default function RootLayout({
   return (
     <html lang="ca" className={`${inter.variable} min-h-full overflow-x-hidden`} suppressHydrationWarning>
       <body className="min-h-full overflow-x-hidden font-sans antialiased" suppressHydrationWarning>
+        <AppVersionGuard />
         {isStagingEnv ? (
           <div className="w-full bg-amber-400 px-3 py-1 text-center text-xs font-semibold text-black">
             STAGING · Entorn de proves aillat · No produccio

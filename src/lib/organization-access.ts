@@ -18,12 +18,12 @@ export function resolveOrganizationAccessRole({
   isSuperAdmin,
   isDemoMode,
 }: ResolveOrganizationAccessRoleInput): OrganizationRole {
-  if (memberRole) {
-    return memberRole;
-  }
-
   if (isDemoMode || isSuperAdmin) {
     return 'admin';
+  }
+
+  if (memberRole) {
+    return memberRole;
   }
 
   throw new OrganizationAccessDeniedError();

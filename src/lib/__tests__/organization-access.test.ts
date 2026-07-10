@@ -24,6 +24,16 @@ test('organization access allows superadmin without membership', () => {
   assert.equal(role, 'admin');
 });
 
+test('organization access lets SuperAdmin override a local viewer role', () => {
+  const role = resolveOrganizationAccessRole({
+    memberRole: 'viewer',
+    isSuperAdmin: true,
+    isDemoMode: false,
+  });
+
+  assert.equal(role, 'admin');
+});
+
 test('organization access preserves real member role', () => {
   const role = resolveOrganizationAccessRole({
     memberRole: 'user',
