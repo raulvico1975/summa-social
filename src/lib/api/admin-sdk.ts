@@ -119,13 +119,18 @@ export interface MembershipValidation {
   userGrants: string[] | null;
 }
 
+function normalizeMembershipRole(role: unknown): 'admin' | 'user' | 'viewer' {
+  return role === 'admin' || role === 'user' || role === 'viewer' ? role : 'viewer';
+}
+
 /**
  * Valida que un usuari és membre d'una organització o és SuperAdmin.
  *
  * Ordre de verificació:
- * 1. Comprova si és membre de l'organització → retorna rol real
- * 2. Comprova si és SuperAdmin (systemSuperAdmins/{uid}) → retorna 'admin'
- * 3. Si cap dels dos → retorna invalid
+ * 1. Comprova si és membre de l'organització.
+ * 2. Si el rol local no és admin, comprova el registre de SuperAdmins.
+ * 3. SuperAdmin preval sobre un rol local user/viewer.
+ * 4. Si no és membre ni SuperAdmin, retorna invalid.
  */
 export async function validateUserMembership(
   db: Firestore,
@@ -136,11 +141,13 @@ export async function validateUserMembership(
     .doc(`organizations/${orgId}/members/${uid}`)
     .get();
 
+  let memberValidation: MembershipValidation | null = null;
+
   if (memberSnap.exists) {
     const data = memberSnap.data();
-    return {
+    memberValidation = {
       valid: true,
-      role: (data?.role as 'admin' | 'user' | 'viewer') ?? 'viewer',
+      role: normalizeMembershipRole(data?.role),
       userOverrides: data?.userOverrides && typeof data.userOverrides === 'object'
         ? (data.userOverrides as { deny?: string[] })
         : null,
@@ -148,12 +155,21 @@ export async function validateUserMembership(
         ? data.userGrants.filter((value): value is string => typeof value === 'string')
         : null,
     };
+
+    // El rol local admin ja concedeix el màxim accés organitzatiu.
+    if (memberValidation.role === 'admin') {
+      return memberValidation;
+    }
   }
 
-  // SuperAdmin bypass: accés admin a totes les organitzacions
+  // SuperAdmin bypass: preval sobre rols locals user/viewer.
   const superAdminSnap = await db.doc(`systemSuperAdmins/${uid}`).get();
   if (superAdminSnap.exists) {
     return { valid: true, role: 'admin', userOverrides: null, userGrants: null };
+  }
+
+  if (memberValidation) {
+    return memberValidation;
   }
 
   return { valid: false, role: null, userOverrides: null, userGrants: null };

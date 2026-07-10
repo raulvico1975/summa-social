@@ -38,6 +38,7 @@ import {
 } from '@/lib/permissions';
 import { validateAndCanonicalizeUserPermissionWrite } from '@/lib/permissions-write';
 import { buildInvitationUrl } from '@/lib/invitations/client';
+import { createInvitationViaApi, InvitationApiError } from '@/services/invitations';
 
 interface InviteMemberDialogProps {
   open: boolean;
@@ -237,44 +238,19 @@ export function InviteMemberDialog({ open, onOpenChange, onInviteCreated }: Invi
         canonicalGrants = validation.value.grants;
       }
 
-      const idToken = await user!.getIdToken();
-      const createRes = await fetch('/api/invitations/create', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${idToken}`,
-        },
-        body: JSON.stringify({
-          organizationId,
-          email,
-          role,
-          ...(role === 'user' && canonicalDeny.length > 0 ? { userOverrides: { deny: canonicalDeny } } : {}),
-          ...(role === 'user' && canonicalGrants.length > 0 ? { userGrants: canonicalGrants } : {}),
-        }),
+      const createBody = await createInvitationViaApi({
+        user: user!,
+        organizationId,
+        email,
+        role,
+        source: 'member-dialog',
+        ...(role === 'user' && canonicalDeny.length > 0 ? { userOverrides: { deny: canonicalDeny } } : {}),
+        ...(role === 'user' && canonicalGrants.length > 0 ? { userGrants: canonicalGrants } : {}),
       });
-
-      const createBody = await createRes.json().catch(() => ({} as { error?: string; token?: string; reused?: boolean }));
-
-      if (!createRes.ok) {
-        switch (createBody.error) {
-          case 'member_already_exists':
-            setError('Aquest email ja és membre de l’organització.');
-            return;
-          default:
-            setError(t.members.errorCreatingInvitation);
-            return;
-        }
-      }
-
-      const createdToken = createBody.token;
-      if (!createdToken) {
-        setError(t.members.errorCreatingInvitation);
-        return;
-      }
 
       // Generar URL d'invitació
       const inviteUrl = buildInvitationUrl(
-        createdToken,
+        createBody.token,
         window.location.origin,
         process.env.NODE_ENV === 'production'
       );
@@ -289,9 +265,13 @@ export function InviteMemberDialog({ open, onOpenChange, onInviteCreated }: Invi
 
       onInviteCreated?.();
 
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error creating invitation:', err);
-      setError(t.members.errorCreatingInvitation);
+      setError(
+        err instanceof InvitationApiError && err.code === 'member_already_exists'
+          ? 'Aquest email ja és membre de l’organització.'
+          : t.members.errorCreatingInvitation
+      );
     } finally {
       setIsCreating(false);
     }

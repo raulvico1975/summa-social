@@ -157,45 +157,6 @@ function useOrganizationBySlug(orgSlug?: string) {
 
           orgDoc = { id: orgId, ...orgSnap.data() } as Organization;
 
-          // ═══════════════════════════════════════════════════════════════════
-          // 3. Validar membership canònic o bypass explícit de SuperAdmin
-          // ═══════════════════════════════════════════════════════════════════
-          const demoMode = isDemoEnv();
-          const memberRef = doc(firestore, 'organizations', orgId, 'members', user.uid);
-          let resolvedMember: OrganizationMember | null = null;
-          try {
-            const memberSnap = await getDoc(memberRef);
-            if (memberSnap.exists()) {
-              resolvedMember = normalizeOrganizationMember(memberSnap.data(), {
-                userId: user.uid,
-                email: user.email ?? '',
-                displayName: user.displayName ?? '',
-              });
-            }
-          } catch (memberErr) {
-            if (isPermissionDenied(memberErr)) {
-              throw new AccessDeniedError();
-            }
-            throw memberErr;
-          }
-
-          let isSuperAdmin = false;
-          if (!resolvedMember && !demoMode) {
-            const saRef = doc(firestore, 'systemSuperAdmins', user.uid);
-            const saSnap = await getDoc(saRef);
-            isSuperAdmin = saSnap.exists();
-          }
-
-          runIfActive(() =>
-            setUserRole(
-              resolveOrganizationAccessRole({
-                memberRole: resolvedMember?.role ?? null,
-                isSuperAdmin,
-                isDemoMode: demoMode,
-              })
-            )
-          );
-
         } else {
           // ═══════════════════════════════════════════════════════════════════
           // CARREGA PER USUARI (comportament antic - per compatibilitat)
@@ -252,6 +213,14 @@ function useOrganizationBySlug(orgSlug?: string) {
           throw new Error('No s\'ha trobat cap organització');
         }
 
+        const demoMode = isDemoEnv();
+        let isSuperAdmin = false;
+        if (!demoMode) {
+          const saRef = doc(firestore, 'systemSuperAdmins', user.uid);
+          const saSnap = await getDoc(saRef);
+          isSuperAdmin = saSnap.exists();
+        }
+
         // ═══════════════════════════════════════════════════════════════════
         // GENERACIÓ AUTOMÀTICA DE SLUG
         // Si l'organització no té slug, el generem i reservem
@@ -286,20 +255,33 @@ function useOrganizationBySlug(orgSlug?: string) {
               email: user.email ?? '',
               displayName: user.displayName ?? '',
             });
+            const effectiveRole = resolveOrganizationAccessRole({
+              memberRole: normalizedMember.role,
+              isSuperAdmin,
+              isDemoMode: demoMode,
+            });
+            const effectiveMember = effectiveRole === normalizedMember.role
+              ? normalizedMember
+              : { ...normalizedMember, role: effectiveRole };
 
             runIfActive(() => setUserProfile({
               organizationId: profileData.organizationId ?? orgId,
-              role: normalizedMember.role,
+              role: effectiveRole,
               displayName: normalizedMember.displayName,
               email: normalizedMember.email || user.email || undefined,
               organizations: profileData.organizations,
             }));
 
-            runIfActive(() => setMember(normalizedMember));
-            runIfActive(() => setUserRole(normalizedMember.role));
+            runIfActive(() => setMember(effectiveMember));
+            runIfActive(() => setUserRole(effectiveRole));
           } else {
             runIfActive(() => setUserProfile(null));
             runIfActive(() => setMember(null));
+            runIfActive(() => setUserRole(resolveOrganizationAccessRole({
+              memberRole: null,
+              isSuperAdmin,
+              isDemoMode: demoMode,
+            })));
           }
         } catch {
           if (process.env.NODE_ENV !== 'production') {

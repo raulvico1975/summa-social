@@ -17,10 +17,11 @@ import { useToast } from '@/hooks/use-toast';
 import { useFirebase } from '@/firebase';
 import { collection, doc, setDoc } from 'firebase/firestore';
 import { buildInvitationUrl } from '@/lib/invitations/client';
+import { createInvitationViaApi } from '@/services/invitations';
 import { generateSlug, isSlugAvailable, reserveSlug, isValidSlug } from '@/lib/slugs';
 import { logAdminAction } from '@/lib/admin-audit';
 import { Loader2, Building2, Mail, User, Copy, Check } from 'lucide-react';
-import type { Organization, Invitation, OrganizationRole } from '@/lib/data';
+import type { Organization } from '@/lib/data';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useTranslations } from '@/i18n';
 
@@ -28,16 +29,6 @@ interface CreateOrganizationDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
-
-// Genera un token únic
-const generateToken = (): string => {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-  let token = '';
-  for (let i = 0; i < 32; i++) {
-    token += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return token;
-};
 
 export function CreateOrganizationDialog({ open, onOpenChange }: CreateOrganizationDialogProps) {
   const { firestore, user } = useFirebase();
@@ -139,27 +130,17 @@ export function CreateOrganizationDialog({ open, onOpenChange }: CreateOrganizat
       await reserveSlug(firestore, orgRef.id, slug.trim(), name.trim());
 
       // 4. Crear la invitació per al primer admin
-      const invitationRef = doc(collection(firestore, 'invitations'));
-      const token = generateToken();
-      const expiresAt = new Date();
-      expiresAt.setDate(expiresAt.getDate() + 7); // Expira en 7 dies
-
-      const invitationData: Omit<Invitation, 'id'> = {
-        token,
+      const invitation = await createInvitationViaApi({
+        user: user!,
         organizationId: orgRef.id,
-        organizationName: name.trim(),
-        role: 'admin' as OrganizationRole,
-        email: adminEmail.trim().toLowerCase(),
-        createdAt: now,
-        expiresAt: expiresAt.toISOString(),
-        createdBy: user!.uid,
-      };
-
-      await setDoc(invitationRef, { ...invitationData, id: invitationRef.id });
+        email: adminEmail,
+        role: 'admin',
+        source: 'create-organization',
+      });
 
       // 5. Generar URL d'invitació
       const inviteUrl = buildInvitationUrl(
-        token,
+        invitation.token,
         window.location.origin,
         process.env.NODE_ENV === 'production'
       );
