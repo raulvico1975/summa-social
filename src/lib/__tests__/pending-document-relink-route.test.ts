@@ -150,7 +150,7 @@ test('POST /api/pending-documents/relink-document retorna 403 per role viewer', 
   assert.equal(response.status, 403);
   assert.deepEqual(await response.json(), {
     success: false,
-    error: 'READ_ONLY_ROLE',
+    error: 'El teu compte té accés de només lectura i no pot desar canvis. Tanca la sessió i torna a entrar.',
     code: 'READ_ONLY_ROLE',
   });
 });

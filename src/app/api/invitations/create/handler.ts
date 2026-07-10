@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { randomUUID } from 'node:crypto';
 import { getAdminDb, validateUserMembership, verifyIdToken } from '@/lib/api/admin-sdk';
 import { validateAndCanonicalizeUserPermissionWrite } from '@/lib/permissions-write';
 import type { OrganizationRole } from '@/lib/data';
@@ -12,6 +13,7 @@ interface CreateInvitationRequest {
   organizationId: string;
   email: string;
   role: string;
+  source?: string;
   userOverrides?: {
     deny?: string[];
   };
@@ -44,10 +46,18 @@ function isOrganizationRole(value: unknown): value is OrganizationRole {
   return value === 'admin' || value === 'user' || value === 'viewer';
 }
 
+function normalizeInvitationSource(value: unknown): string {
+  return value === 'member-dialog' || value === 'member-import' || value === 'create-organization'
+    ? value
+    : 'unknown';
+}
+
 export async function handleInvitationCreate(
   request: NextRequest,
   deps: CreateInvitationDeps = DEFAULT_DEPS
 ): Promise<NextResponse<CreateInvitationResponse>> {
+  const requestId = randomUUID();
+  const clientBuild = request.headers?.get?.('x-summa-client-build')?.slice(0, 80) || 'unknown';
   const authResult = await deps.verifyIdTokenFn(request);
   if (!authResult) {
     return NextResponse.json({ success: false, error: 'unauthorized' }, { status: 401 });
@@ -61,6 +71,7 @@ export async function handleInvitationCreate(
   }
 
   const { organizationId, email, role } = body;
+  const source = normalizeInvitationSource(body.source);
   if (!organizationId || !email || !role) {
     return NextResponse.json({ success: false, error: 'missing_fields' }, { status: 400 });
   }
@@ -73,6 +84,15 @@ export async function handleInvitationCreate(
     const db = deps.getAdminDbFn();
     const membership = await deps.validateUserMembershipFn(db, authResult.uid, organizationId);
     if (!membership.valid || membership.role !== 'admin') {
+      console.warn('[invitations/create] Access denied', {
+        requestId,
+        uid: authResult.uid,
+        organizationId,
+        role: membership.role,
+        validMembership: membership.valid,
+        source,
+        clientBuild,
+      });
       return NextResponse.json({ success: false, error: 'forbidden' }, { status: 403 });
     }
 
@@ -100,11 +120,22 @@ export async function handleInvitationCreate(
 
     const activeInvitation = existingInvitationsSnap.docs.find((doc) => {
       const data = doc.data();
-      return data.organizationId === organizationId && isInvitationStillActive(data, deps.nowIsoFn());
+      return data.organizationId === organizationId
+        && typeof data.token === 'string'
+        && data.token.length > 0
+        && isInvitationStillActive(data, deps.nowIsoFn());
     });
 
     if (activeInvitation) {
       const activeData = activeInvitation.data();
+      console.info('[invitations/create] Reused invitation', {
+        requestId,
+        uid: authResult.uid,
+        organizationId,
+        invitationId: activeInvitation.id,
+        source,
+        clientBuild,
+      });
       return NextResponse.json({
         success: true,
         reused: true,
@@ -154,6 +185,15 @@ export async function handleInvitationCreate(
 
     await invitationRef.set(invitationData);
 
+    console.info('[invitations/create] Created invitation', {
+      requestId,
+      uid: authResult.uid,
+      organizationId,
+      invitationId: invitationRef.id,
+      source,
+      clientBuild,
+    });
+
     return NextResponse.json({
       success: true,
       invitationId: invitationRef.id,
@@ -161,7 +201,14 @@ export async function handleInvitationCreate(
       reused: false,
     });
   } catch (error) {
-    console.error('[invitations/create] Error:', error);
+    console.error('[invitations/create] Error', {
+      requestId,
+      uid: authResult.uid,
+      organizationId,
+      source,
+      clientBuild,
+      error,
+    });
     return NextResponse.json({ success: false, error: 'internal_error' }, { status: 500 });
   }
 }

@@ -21,6 +21,10 @@ class FakeDocRef {
     public readonly path: string
   ) {}
 
+  get id() {
+    return this.path.split('/').pop() || '';
+  }
+
   async get() {
     const data = this.store.get(this.path);
     return new FakeDocSnap(data !== undefined, data);
@@ -179,9 +183,10 @@ test('POST /api/invitations/create creates new invitation when no conflicts exis
   );
 
   assert.equal(response.status, 200);
-  const body = await response.json() as { success: boolean; token?: string; reused?: boolean };
+  const body = await response.json() as { success: boolean; token?: string; invitationId?: string; reused?: boolean };
   assert.equal(body.success, true);
   assert.equal(body.reused, false);
   assert.ok(body.token);
+  assert.ok(body.invitationId);
   assert.equal(Array.from(store.keys()).filter((path) => path.startsWith('invitations/')).length, 1);
 });

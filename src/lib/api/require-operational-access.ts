@@ -11,14 +11,22 @@ export function requireOperationalAccess(
 ) {
   if (!membership.valid) {
     return NextResponse.json(
-      { success: false as const, error: 'NOT_MEMBER', code: 'NOT_MEMBER' },
+      {
+        success: false as const,
+        error: 'Aquest compte no està vinculat a aquesta entitat. Tanca la sessió i torna a entrar.',
+        code: 'NOT_MEMBER',
+      },
       { status: 403 }
     );
   }
 
-  if (membership.role === 'viewer') {
+  if (membership.role !== 'admin' && membership.role !== 'user') {
     return NextResponse.json(
-      { success: false as const, error: 'READ_ONLY_ROLE', code: 'READ_ONLY_ROLE' },
+      {
+        success: false as const,
+        error: 'El teu compte té accés de només lectura i no pot desar canvis. Tanca la sessió i torna a entrar.',
+        code: 'READ_ONLY_ROLE',
+      },
       { status: 403 }
     );
   }

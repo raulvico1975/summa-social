@@ -12,6 +12,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import type { DocumentReference } from 'firebase-admin/firestore';
+import { randomUUID } from 'node:crypto';
 import {
   getAdminDb,
   verifyIdToken,
@@ -61,6 +62,9 @@ interface PreparedWrite {
 export async function POST(
   request: NextRequest
 ): Promise<NextResponse<ImportContactsResponse>> {
+  const requestId = randomUUID();
+  const clientBuild = request.headers.get('x-summa-client-build')?.slice(0, 80) || 'unknown';
+
   // 1. Auth
   const authResult = await verifyIdToken(request);
   if (!authResult) {
@@ -108,7 +112,19 @@ export async function POST(
   // 4. Membership + accés operatiu (admin/user)
   const membership = await validateUserMembership(db, authResult.uid, orgId);
   const accessError = requireOperationalAccess(membership);
-  if (accessError) return accessError;
+  if (accessError) {
+    accessError.headers.set('Cache-Control', 'no-store');
+    accessError.headers.set('X-Summa-Request-Id', requestId);
+    console.warn('[contacts/import] Access denied', {
+      requestId,
+      uid: authResult.uid,
+      orgId,
+      role: membership.role,
+      validMembership: membership.valid,
+      clientBuild,
+    });
+    return accessError;
+  }
 
   // 5. Pre-validació: llegir tots els docs i preparar writes
   const prepared: PreparedWrite[] = [];
@@ -168,18 +184,39 @@ export async function POST(
     try {
       await batch.commit();
     } catch (error) {
-      console.error('[contacts/import] Error writing contacts batch:', error);
+      console.error('[contacts/import] Error writing contacts batch', {
+        requestId,
+        uid: authResult.uid,
+        orgId,
+        role: membership.role,
+        clientBuild,
+        error,
+      });
       return NextResponse.json(
         {
           success: false,
           error: 'No s’han pogut guardar els canvis del contacte. Torna-ho a provar i, si es repeteix, avisa suport.',
           code: 'WRITE_FAILED',
         },
-        { status: 500 }
+        {
+          status: 500,
+          headers: {
+            'Cache-Control': 'no-store',
+            'X-Summa-Request-Id': requestId,
+          },
+        }
       );
     }
     updatedCount += chunk.length;
   }
 
-  return NextResponse.json({ success: true, updatedCount });
+  return NextResponse.json(
+    { success: true, updatedCount },
+    {
+      headers: {
+        'Cache-Control': 'no-store',
+        'X-Summa-Request-Id': requestId,
+      },
+    }
+  );
 }

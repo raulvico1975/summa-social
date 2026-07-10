@@ -26,16 +26,16 @@ import { useToast } from '@/hooks/use-toast';
 import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
 import { useTranslations } from '@/i18n';
-import { collection, doc, setDoc, query, where } from 'firebase/firestore';
+import { collection, query, where } from 'firebase/firestore';
 import {
   readInvitesExcel,
   generateInviteImportPreview,
-  prepareInvitationData,
   type InviteImportResult,
   type InviteImportPreview,
 } from '@/lib/members-import';
 import { downloadMembersInviteTemplate } from '@/lib/members-export';
 import type { OrganizationMember, OrganizationRole, Invitation } from '@/lib/data';
+import { createInvitationViaApi } from '@/services/invitations';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // TIPUS
@@ -178,15 +178,13 @@ export function MemberInviterImporter({ open, onOpenChange, onComplete }: Member
       let created = 0;
 
       for (const preview of toCreate) {
-        const invitationRef = doc(collection(firestore, 'invitations'));
-        const invitationData = prepareInvitationData(
-          preview.parsed,
+        await createInvitationViaApi({
+          user,
           organizationId,
-          organization.name,
-          user.uid
-        );
-
-        await setDoc(invitationRef, { ...invitationData, id: invitationRef.id });
+          email: preview.parsed.email,
+          role: preview.parsed.role,
+          source: 'member-import',
+        });
         created++;
       }
 
