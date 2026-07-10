@@ -65,6 +65,8 @@ L'administrador de la teva entitat t'haurà enviat un email d'invitació. Busca 
 
 **No trobes l'email?** Mira a la carpeta de spam o correu brossa. Si no hi és, demana a l'administrador que et torni a enviar la invitació.
 
+Si en obrir l'enllaç apareix **"No hem pogut validar la invitació"**, pot ser una incidència temporal del servei. Clica **"Reintentar"** abans de demanar una invitació nova.
+
 ### Sobre la seguretat
 
 Per protegir les dades de l'entitat, hem configurat algunes mesures de seguretat:

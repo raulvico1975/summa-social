@@ -10,6 +10,13 @@ Aquest fitxer ja no pretén duplicar el document mestre.
 
 ## Resum dels canvis recents
 
+### 2026-07-09
+
+- documentació per usuari: si el servei no pot validar temporalment una invitació, el registre ho diferencia d'un enllaç invàlid i permet reintentar-ho.
+- API/integracions: la resolució via `/api/invitations/resolve` reintenta errors temporals i conserva separats els estats d'invitació invàlida, caducada, utilitzada o no disponible.
+- codi intern: `src/lib/invitations/client.ts` centralitza la resolució d'invitacions i genera enllaços canònics de producció sota `https://summasocial.app`.
+- operativa: les proves del client d'invitacions cobreixen URL canònica, reintents de xarxa/servidor, rate limit i estats caducat/utilitzat.
+
 ### 2026-07-08
 
 - documentació per usuari: els proveïdors es poden guardar sense NIF/CIF quan encara no es disposa de la dada fiscal; el nom continua sent obligatori.

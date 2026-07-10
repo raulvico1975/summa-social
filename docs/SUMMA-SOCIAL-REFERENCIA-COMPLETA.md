@@ -4985,14 +4985,17 @@ La invitació genera un token únic.
 
 **Exemple d'enllaç:**
 
-`/registre?token=INVITE_TOKEN`
+`https://summasocial.app/registre?token=INVITE_TOKEN`
+
+En producció, l'enllaç es genera sempre amb l'origen canònic `https://summasocial.app`, encara que l'admin estigui operant des d'un host de previsualització.
 
 #### 2. Registre amb invitació
 
 Quan l'usuari accedeix amb el token:
-1. Es mostra el formulari de registre.
-2. L'usuari crea el compte Firebase.
-3. El sistema crida:
+1. El client resol la invitació via `POST /api/invitations/resolve` i reintenta fins a tres vegades els errors temporals de xarxa, servidor o rate limit.
+2. Si la invitació és vàlida, es mostra el formulari de registre.
+3. L'usuari crea el compte Firebase.
+4. El sistema crida:
 
 `POST /api/invitations/accept`
 
@@ -5018,6 +5021,8 @@ Si l'acceptació és correcta:
 | `already_member` | l'usuari ja és membre |
 
 Nota: el token invàlid normalment es detecta primer a `POST /api/invitations/resolve`, abans de cridar `accept`.
+
+La resolució conserva estats diferenciats per a invitacions invàlides, caducades i ja utilitzades. Els errors temporals retornen un estat de servei no disponible: el registre mostra que la invitació pot ser correcta i ofereix **Reintentar**, sense descriure-la com a invàlida.
 
 #### 4. Cas `already_member`
 
@@ -5056,6 +5061,7 @@ Després de qualsevol canvi en aquest flux s'han de validar:
 - registre amb invitació nova
 - token invàlid
 - token ja usat
+- indisponibilitat temporal de `POST /api/invitations/resolve` i reintent
 - usuari ja membre amb `inviteToken`
 - login normal sense invitació
 

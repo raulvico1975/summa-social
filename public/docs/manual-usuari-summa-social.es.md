@@ -58,6 +58,8 @@ Normalmente una persona administradora de tu entidad te habrá enviado una invit
 - revisa spam
 - pide que te la reenvíen
 
+Si al abrir el enlace aparece **"No hemos podido validar la invitación"**, puede ser una incidencia temporal del servicio. Pulsa **"Reintentar"** antes de pedir una invitación nueva.
+
 ### Sobre la seguridad
 
 Para proteger los datos de la entidad:
