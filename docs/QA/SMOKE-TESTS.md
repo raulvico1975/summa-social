@@ -1,5 +1,7 @@
 # Smoke Tests - Summa Social
 
+> Aquest document és el smoke històric de lectura. Per provar operacions reals amb un administrador ordinari, persistència i neteja auditable, usa [USER-QA-STANDARD.md](./USER-QA-STANDARD.md).
+
 **Temps estimat:** 5–10 minuts
 **Quan executar:** Abans de cada deploy a producció, abans d'onboarding de nova org
 **Requisits:** NO crear ni eliminar dades. Només verificar que funciona.

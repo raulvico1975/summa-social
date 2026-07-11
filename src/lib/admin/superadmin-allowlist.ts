@@ -12,7 +12,6 @@
 
 const SUPERADMIN_EMAILS_BASE = [
   'raul.vico.ferre@gmail.com',
-  'raul@semillasl.com',
 ] as const;
 
 /**
