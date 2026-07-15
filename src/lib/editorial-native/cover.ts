@@ -228,7 +228,19 @@ function extractImageFromCandidates(candidates: unknown): GeneratedImageAsset | 
   return null
 }
 
-function extractGeneratedImage(payload: unknown): GeneratedImageAsset {
+function extractImageFromSteps(steps: unknown): GeneratedImageAsset | null {
+  if (!Array.isArray(steps)) return null
+
+  for (const step of steps) {
+    if (!isRecord(step)) continue
+    const image = extractImageFromOutputs(step.content)
+    if (image) return image
+  }
+
+  return null
+}
+
+export function extractGeneratedImage(payload: unknown): GeneratedImageAsset {
   if (!isRecord(payload)) {
     throw new Error("El motor d'imatge no ha retornat una resposta usable.")
   }
@@ -241,6 +253,9 @@ function extractGeneratedImage(payload: unknown): GeneratedImageAsset {
 
   const candidateImage = extractImageFromCandidates(payload.candidates)
   if (candidateImage) return candidateImage
+
+  const stepImage = extractImageFromSteps(payload.steps)
+  if (stepImage) return stepImage
 
   throw new Error("La resposta del model d'imatge no inclou cap imatge.")
 }
@@ -320,7 +335,8 @@ export async function generateNativeBlogCover(post: NativeBlogPost): Promise<{
       coverImageAlt: deriveCoverAlt(post),
       kind: 'generated',
     }
-  } catch {
+  } catch (error) {
+    console.error('[editorial-native/cover] generated cover failed:', error)
     const fallback = await saveFallbackSvgCover(post)
     return {
       ...fallback,
