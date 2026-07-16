@@ -34,6 +34,7 @@ export const DEFAULT_BANK_HEADER_SYNONYMS: Record<HeaderField, string[]> = {
     'f. ejecucion',
     'f ejecución',
     'f. ejecución',
+    'data',
   ],
   valueDate: [
     'd valor',
