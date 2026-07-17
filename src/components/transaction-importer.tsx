@@ -49,6 +49,10 @@ import {
   type ParsedBankStatementRow,
 } from '@/lib/importers/bank/bankStatementParser';
 import {
+  EmptyBankStatementWorkbookError,
+  selectBankStatementSheet,
+} from '@/lib/importers/bank/selectBankStatementSheet';
+import {
   buildBankMappingColumnOptions,
   buildBankMappingPreviewRows,
   getBankMappingColumnCount,
@@ -382,22 +386,24 @@ export function TransactionImporter({ availableCategories }: TransactionImporter
         const XLSX = await import('xlsx');
         const data = e.target?.result;
         const workbook = XLSX.read(data, { type: 'array', cellDates: true });
-        const sheetName = workbook.SheetNames[0];
-        const worksheet = workbook.Sheets[sheetName];
-        const json = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' });
+        const sheets = workbook.SheetNames.map((name) => ({
+          name,
+          rows: (XLSX.utils.sheet_to_json(workbook.Sheets[name], {
+            header: 1,
+            defval: '',
+          }) as unknown[][]).map((row) => (Array.isArray(row) ? row : [])),
+        }));
+        const selectedSheet = selectBankStatementSheet(sheets);
 
-        if (!json || json.length === 0) {
-          throw new Error(t.importers.transaction.errors.emptyXlsx);
-        }
-
-        const rows = (json as unknown[][]).map((row) => (Array.isArray(row) ? row : []));
-        await processRowsMatrix(rows, bankAccountId, file.name);
+        await processRowsMatrix(selectedSheet.rows, bankAccountId, file.name);
       } catch (error: any) {
         console.error('Error processing XLSX data:', error);
         toast({
           variant: 'destructive',
           title: t.importers.transaction.errors.importError,
-          description: mapParseErrorToMessage(error, t, tr) || t.importers.transaction.errors.cannotProcessXlsx,
+          description: error instanceof EmptyBankStatementWorkbookError
+            ? t.importers.transaction.errors.emptyXlsx
+            : mapParseErrorToMessage(error, t, tr) || t.importers.transaction.errors.cannotProcessXlsx,
           duration: 9000,
         });
         setIsImporting(false);

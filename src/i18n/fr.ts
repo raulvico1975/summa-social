@@ -259,6 +259,8 @@ export const fr = {
       splitPaymentRemittance: "Ventiler virement paiements",
       splitStripeRemittance: "Ventiler virement Stripe",
       delete: "Supprimer",
+      confirmDeleteTransactionTitle: "Supprimer le mouvement",
+      confirmDeleteTransactionDescription: "Ce mouvement sera supprimé définitivement. Cette action est irréversible.",
       createNewEmisor: "Créer un nouvel émetteur...",
       unlink: "(Dissocier)",
       editTransaction: "Modifier mouvement",
