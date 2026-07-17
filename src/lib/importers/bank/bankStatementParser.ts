@@ -133,6 +133,11 @@ const toStringValue = (value: unknown): string => {
   return String(value ?? '').trim();
 };
 
+const isSelectedForImport = (value: unknown): boolean => {
+  const normalized = normalizeCell(value);
+  return normalized === 'si' || normalized === 'yes' || normalized === '1';
+};
+
 const toDateTimeIso = (dateOnly: string): string => {
   return `${dateOnly}T00:00:00.000Z`;
 };
@@ -480,6 +485,7 @@ export function parseBankStatementRows(
   const header = normalizedRows[headerRowIndex].map((cell) => String(cell ?? '').trim());
   const autoIndices = buildHeaderIndexMap(header);
   const indices = applyColumnMappingOverride(autoIndices, config.columnMappingOverride);
+  const importFlagIndex = header.findIndex((cell) => normalizeCell(cell) === 'importar?');
   const missingColumns = validateRequiredColumns(indices);
   if (missingColumns.length > 0) {
     throw new BankStatementParseError('MISSING_REQUIRED_COLUMNS', { missingColumns });
@@ -506,6 +512,10 @@ export function parseBankStatementRows(
   for (let rowIndex = headerRowIndex + 1; rowIndex < normalizedRows.length; rowIndex++) {
     const row = normalizedRows[rowIndex];
     if (isRowEmpty(row)) continue;
+
+    if (importFlagIndex !== -1 && !isSelectedForImport(getCellByIndex(row, importFlagIndex))) {
+      continue;
+    }
 
     dataRowsCount += 1;
     const rawRow = buildRawRow(header, row);

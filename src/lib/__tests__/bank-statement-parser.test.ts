@@ -174,4 +174,72 @@ describe('bank-statement-parser', () => {
       }
     );
   });
+
+  it('imports only selected rows from a cash-control sheet', () => {
+    const rows: unknown[][] = [
+      ['Data', 'Concepte', 'Import (€)', 'Saldo (€)', 'Importar?'],
+      ['01/07/2026', 'Moviment no seleccionat', '10,00', '110,00', 'No'],
+      ['02/07/2026', 'Donació seleccionada', '15,00', '125,00', 'Sí'],
+    ];
+
+    const result = parseBankStatementRows(rows);
+
+    assert.strictEqual(result.rows.length, 1);
+    assert.strictEqual(result.rows[0].description, 'Donació seleccionada');
+    assert.strictEqual(result.rows[0].amount, 15);
+    assert.strictEqual(result.riskSignals.operationDateDerived, false);
+    assert.strictEqual(shouldOpenManualMapping(result), false);
+  });
+
+  it('accepts common affirmative values for the cash-control flag', () => {
+    const affirmativeValues = ['Sí', 'Si', 'SI', 'Yes', 1];
+
+    for (const value of affirmativeValues) {
+      const rows: unknown[][] = [
+        ['Data', 'Concepte', 'Import', 'Saldo', 'Importar?'],
+        ['01/07/2026', `Selecció ${String(value)}`, 10, 110, value],
+      ];
+
+      const result = parseBankStatementRows(rows);
+      assert.strictEqual(result.rows.length, 1, `expected ${String(value)} to be selected`);
+    }
+  });
+
+  it('excludes blank and unrecognised cash-control flag values', () => {
+    const rows: unknown[][] = [
+      ['Data', 'Concepte', 'Import', 'Saldo', 'Importar?'],
+      ['01/07/2026', 'No seleccionat', 10, 110, 'No'],
+      ['02/07/2026', 'Buit', 15, 125, ''],
+      ['03/07/2026', 'Valor no reconegut', 20, 145, 'potser'],
+    ];
+
+    assert.throws(
+      () => parseBankStatementRows(rows),
+      (error: unknown) => error instanceof BankStatementParseError && error.code === 'NO_VALID_TRANSACTIONS'
+    );
+  });
+
+  it('keeps importing ordinary bank statements without the cash-control flag', () => {
+    const rows: unknown[][] = [
+      ['Data', 'Concepte', 'Import (€)', 'Saldo (€)'],
+      ['01/07/2026', 'Moviment bancari', '10,00', '110,00'],
+      ['02/07/2026', 'Un altre moviment', '15,00', '125,00'],
+    ];
+
+    const result = parseBankStatementRows(rows);
+
+    assert.strictEqual(result.rows.length, 2);
+  });
+
+  it('does not activate the cash-control filter for a generic Importar column', () => {
+    const rows: unknown[][] = [
+      ['Data', 'Concepte', 'Import', 'Saldo', 'Importar'],
+      ['01/07/2026', 'Moviment amb No', 10, 110, 'No'],
+      ['02/07/2026', 'Moviment amb Sí', 15, 125, 'Sí'],
+    ];
+
+    const result = parseBankStatementRows(rows);
+
+    assert.strictEqual(result.rows.length, 2);
+  });
 });
