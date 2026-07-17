@@ -259,6 +259,8 @@ export const ca = {
       splitPaymentRemittance: "Dividir remesa pagaments",
       splitStripeRemittance: "Dividir Remesa Stripe",
       delete: "Eliminar",
+      confirmDeleteTransactionTitle: "Eliminar moviment",
+      confirmDeleteTransactionDescription: "Aquest moviment s'eliminarà permanentment. Aquesta acció no es pot desfer.",
       createNewEmisor: "Crear nou emissor...",
       unlink: "(Desvincular)",
       editTransaction: "Editar Transacció",

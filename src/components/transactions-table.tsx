@@ -3524,9 +3524,9 @@ export function TransactionsTable({
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={(open) => !open && handleCloseDeleteDialog()}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>{t.settings.confirmDeleteTitle}</AlertDialogTitle>
+            <AlertDialogTitle>{t.movements.table.confirmDeleteTransactionTitle}</AlertDialogTitle>
             <AlertDialogDescription>
-              {t.settings.confirmDeleteDescription}
+              {t.movements.table.confirmDeleteTransactionDescription}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
