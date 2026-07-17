@@ -7,7 +7,9 @@ import { getPublicLandingSitemapEntries } from '@/lib/public-landings';
 const BASE_URL = 'https://summasocial.app';
 const PUBLIC_BASE_PATHS = ['', '/funcionalitats', '/qui-som', '/contact', '/privacy', '/novetats', '/blog'] as const;
 
-export const revalidate = 3600;
+// Dynamic entries come from Firestore. Generate the sitemap at request time so
+// a slow content backend cannot block an otherwise unrelated application build.
+export const dynamic = 'force-dynamic';
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const now = new Date();

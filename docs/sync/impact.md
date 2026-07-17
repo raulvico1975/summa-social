@@ -1,8 +1,8 @@
 # Impacte funcional i sincronitzacio documental
 
 ## Metadata
-- date: 2026-07-11
-- change_scope: estandard QA d'usuari i correccio del rol del compte QA permanent
+- date: 2026-07-17
+- change_scope: desacoblar el build de les lectures Firestore del blog public i del sitemap
 
 ## Declaracio obligatoria
 - help_topics_updated: []
@@ -10,11 +10,10 @@
 - manual_sections: []
 - faq_updated: no
 - faq_questions: []
-- justification_if_no_change: "El canvi no altera cap flux ni text d'usuari. Elimina raul@semillasl.com de l'allowlist SuperAdmin perquè el compte QA sigui un administrador ordinari i afegeix eines internes de QA documentades a docs/QA/."
+- justification_if_no_change: "El canvi no modifica cap flux, text ni ajuda visible. Només evita que el build executi consultes remotes del blog i del sitemap; aquestes rutes continuen llegint les mateixes dades en temps de peticio."
 
 ## Notes
 
-- `raul@semillasl.com` deixa de veure superfícies reservades a SuperAdmin.
-- El preflight bloqueja qualsevol futura contradiccio entre el compte QA i l'allowlist SuperAdmin.
-- `qa:user` aporta execucio, evidencia, auditoria i neteja exacta de proves sintetiques.
-- No hi ha dependències noves, migracions ni canvis destructius de Firestore.
+- Les rutes de blog localitzades i legacy es renderitzen en temps de peticio, igual que les novetats publiques ja existents.
+- El sitemap conserva les mateixes entrades, pero deixa de consultar Firestore durant el build.
+- No hi ha dependencies noves, migracions ni canvis de Firestore.
