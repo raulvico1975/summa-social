@@ -9,7 +9,9 @@ import {
   type PublicLocale,
 } from '@/lib/public-locale'
 
-export const revalidate = 60
+// The blog reads Firestore through the Admin SDK. Rendering it at build time
+// makes unrelated releases depend on that external service being fast enough.
+export const dynamic = 'force-dynamic'
 
 type PageProps = {
   params: Promise<{ lang: string }>

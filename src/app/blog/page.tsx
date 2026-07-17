@@ -2,7 +2,9 @@ import type { Metadata } from 'next'
 import { BlogIndexView } from '@/components/public/blog/BlogIndexView'
 import { getBlogCopy } from '@/lib/blog/copy'
 
-export const revalidate = 60
+// This legacy entry point uses the same Firestore-backed view as the localized
+// blog, so it must not fetch remote content while Next.js is building the app.
+export const dynamic = 'force-dynamic'
 
 const locale = 'ca' as const
 

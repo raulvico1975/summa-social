@@ -9,7 +9,9 @@ import {
   type PublicLocale,
 } from '@/lib/public-locale'
 
-export const revalidate = 60
+// Blog content is runtime data. Keep the production build independent from
+// Firestore availability and render the article on request.
+export const dynamic = 'force-dynamic'
 
 type PageProps = {
   params: Promise<{ lang: string; slug: string }>

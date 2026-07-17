@@ -4,7 +4,8 @@ import { BlogPostView } from '@/components/public/blog/BlogPostView'
 import { getBlogCopy } from '@/lib/blog/copy'
 import { getLocalizedBlogPostBySlug } from '@/lib/blog/firestore'
 
-export const revalidate = 60
+// Article data comes from Firestore and belongs to request-time rendering.
+export const dynamic = 'force-dynamic'
 
 const locale = 'ca' as const
 
