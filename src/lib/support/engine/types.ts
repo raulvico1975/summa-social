@@ -21,6 +21,7 @@ export type SuccessResponse = {
   answer: string
   guideId: string | null
   uiPaths: string[]
+  language?: InputLang
   clarifyOptions?: ClarifyOption[]
 }
 

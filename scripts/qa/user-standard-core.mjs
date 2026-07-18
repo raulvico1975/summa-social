@@ -176,6 +176,41 @@ export function redactSecrets(value, key = '') {
   return value;
 }
 
+export async function validateFirebasePasswordCredential({
+  apiKey,
+  email,
+  password,
+  fetchImpl = globalThis.fetch,
+}) {
+  if (!apiKey) return { ok: false, code: 'QA_FIREBASE_WEB_API_KEY_MISSING' };
+  if (!email || !password) return { ok: false, code: 'QA_CREDENTIAL_MISSING' };
+  if (typeof fetchImpl !== 'function') return { ok: false, code: 'QA_CREDENTIAL_CHECK_UNAVAILABLE' };
+
+  try {
+    const response = await fetchImpl(
+      `https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${encodeURIComponent(apiKey)}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password, returnSecureToken: true }),
+      }
+    );
+    if (response.ok) return { ok: true, code: 'QA_CREDENTIAL_VALID' };
+
+    const payload = await response.json().catch(() => ({}));
+    const upstreamCode = String(payload?.error?.message ?? 'UNKNOWN').split(' : ')[0];
+    const knownCodes = new Set(['INVALID_LOGIN_CREDENTIALS', 'INVALID_PASSWORD', 'EMAIL_NOT_FOUND', 'USER_DISABLED']);
+    return {
+      ok: false,
+      code: knownCodes.has(upstreamCode)
+        ? `QA_CREDENTIAL_${upstreamCode}`
+        : 'QA_CREDENTIAL_REJECTED',
+    };
+  } catch {
+    return { ok: false, code: 'QA_CREDENTIAL_CHECK_NETWORK_ERROR' };
+  }
+}
+
 export function normalizePermissionProfile(member) {
   const capabilities = Object.entries(member?.capabilities ?? {})
     .filter(([, enabled]) => enabled === true)

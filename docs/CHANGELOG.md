@@ -10,6 +10,14 @@ Aquest fitxer ja no pretén duplicar el document mestre.
 
 ## Resum dels canvis recents
 
+### 2026-07-18
+
+- bot d'ajuda: la resposta segueix l'idioma real de cada pregunta en català o castellà, independentment de l'idioma configurat a la interfície, i localitza també les rutes de navegació.
+- bot d'ajuda: el context i els registres es vinculen a l'organització visible a la URL, amb validació server-side de l'slug i la membresia; ja no depenen de l'organització legacy del perfil.
+- bot d'ajuda: ampliada la cobertura natural de quotes, remeses, despeses fora de banc, permisos de només lectura, diverses organitzacions, mòbil, lentitud, contacte d'empresa, Model 347 i consultes fiscals amb límits segurs.
+- qualitat: afegit un gate adversarial de 96 formulacions naturals CA/ES, proves de resolució d'organització i validació real —sense exposar secrets— de la credencial permanent QA guardada al Keychain.
+- operativa: canvis preparats i validats en una branca aïllada; aquest paquet no autoritza cap desplegament ni es barreja amb el desplegament SEO pendent.
+
 ### 2026-07-08
 
 - documentació per usuari: els proveïdors es poden guardar sense NIF/CIF quan encara no es disposa de la dada fiscal; el nom continua sent obligatori.

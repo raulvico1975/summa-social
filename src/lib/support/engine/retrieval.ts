@@ -1,5 +1,5 @@
 import type { KBCard } from '../load-kb'
-import { retrieveCard, type KbLang, type RetrievalResult } from '../bot-retrieval'
+import { isQuestionDomainCompatible, retrieveCard, type KbLang, type RetrievalResult } from '../bot-retrieval'
 import { resolveClarifyChoice } from './disambiguation'
 import type { SupportContext } from '../support-context'
 
@@ -54,7 +54,7 @@ export async function resolveRetrieval(input: {
   ) {
     try {
       const aiIntent = await classifyIntent({ message, lang, cards })
-      if (aiIntent?.card) {
+      if (aiIntent?.card && isQuestionDomainCompatible(result?.questionDomain, aiIntent.card.domain ?? 'general')) {
         result = {
           card: aiIntent.card,
           mode: 'card',

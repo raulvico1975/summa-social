@@ -1,0 +1,54 @@
+{
+  "id": "manual-mobile-usage",
+  "type": "concept",
+  "domain": "general",
+  "risk": "safe",
+  "guardrail": "none",
+  "answerMode": "full",
+  "title": {
+    "ca": "Fer servir Summa Social des del mòbil",
+    "es": "Usar Summa Social desde el móvil"
+  },
+  "intents": {
+    "ca": [
+      "puc fer servir Summa Social des del mòbil",
+      "Summa funciona al telèfon",
+      "treballar amb Summa des d una tauleta"
+    ],
+    "es": [
+      "puedo usar Summa Social desde el móvil",
+      "Summa funciona en el teléfono",
+      "trabajar con Summa desde una tableta"
+    ]
+  },
+  "guideId": null,
+  "answer": {
+    "ca": "Sí. Summa Social funciona des de qualsevol dispositiu amb navegador: ordinador, tauleta o mòbil.\n\nEl mòbil és pràctic per consultar el Dashboard, buscar un donant o revisar una dada puntual. Per importar extractes, categoritzar molts moviments o generar informes fiscals és més còmode un ordinador.\n\nSi hi accedeixes sovint des del mòbil, pots afegir summasocial.app a la pantalla d’inici.",
+    "es": "Sí. Summa Social funciona desde cualquier dispositivo con navegador: ordenador, tableta o móvil.\n\nEl móvil es práctico para consultar el Dashboard, buscar un donante o revisar un dato puntual. Para importar extractos, categorizar muchos movimientos o generar informes fiscales es más cómodo un ordenador.\n\nSi accedes a menudo desde el móvil, puedes añadir summasocial.app a la pantalla de inicio."
+  },
+  "uiPaths": [
+    "Dashboard"
+  ],
+  "needsSnapshot": false,
+  "keywords": [
+    "mòbil",
+    "movil",
+    "telèfon",
+    "telefono",
+    "tablet",
+    "navegador"
+  ],
+  "source_faq": [
+    "Q4"
+  ],
+  "source_manual": [],
+  "source_guides": [],
+  "related": [
+    "guide-first-day"
+  ],
+  "error_key": null,
+  "symptom": {
+    "ca": null,
+    "es": null
+  }
+}

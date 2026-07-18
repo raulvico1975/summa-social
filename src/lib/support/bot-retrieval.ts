@@ -472,6 +472,20 @@ function scoreDomainAlignment(questionDomain: QuestionDomain, cardDomainRaw: str
   return -32
 }
 
+export function isQuestionDomainCompatible(questionDomain: string | undefined, cardDomainRaw: string): boolean {
+  if (!questionDomain || questionDomain === 'general') return true
+  const cardDomain = normalizeCardDomain(cardDomainRaw)
+  const compatibleDomains: Record<Exclude<QuestionDomain, 'general'>, string[]> = {
+    fiscal: ['fiscal'],
+    sepa: ['sepa', 'remittances'],
+    remittances: ['remittances', 'sepa'],
+    returns: ['remittances', 'sepa'],
+    permissions: ['config'],
+    danger: ['danger'],
+  }
+  return (compatibleDomains[questionDomain as Exclude<QuestionDomain, 'general'>] ?? []).includes(cardDomain)
+}
+
 type RetrievalSupportHints = {
   followUp: boolean
   routeHintText: string
@@ -733,6 +747,114 @@ function detectProtectedOverride(message: string): RetrievalOverride | null {
   // Natural-language protected routing: route common CA/ES phrasings only to
   // already verified KB cards or guarded fallbacks. Do not create new procedures here.
   if (
+    /\b(desgrava|desgravar|deduccio|deduccion|deducir|declaro|declarar|tributa|tributar)\w*\b/.test(normalized) &&
+    /\b(donacio|donacion|donatiu|donativo|quota|cuota|hisenda|hacienda|aeat|fiscal)\w*\b/.test(normalized)
+  ) {
+    return { kind: 'fallback', cardId: 'fallback-fiscal-unclear', decisionReason: 'fiscal_advice_out_of_scope' }
+  }
+
+  if (/\b347\b/.test(normalized)) {
+    return { kind: 'card', cardId: 'guide-model-347', minScore: 720, decisionReason: 'model_347_natural' }
+  }
+
+  if (
+    /\bstripe\b/.test(normalized) &&
+    /\b(donacio|donacion|donatiu|donativo|donacions|donaciones)\w*\b/.test(normalized) &&
+    !/\b182\b/.test(normalized)
+  ) {
+    return { kind: 'card', cardId: 'guide-stripe-donations', minScore: 720, decisionReason: 'stripe_donations_natural' }
+  }
+
+  if (
+    /\b(revis|comprov|verific)\w*\b/.test(normalized) &&
+    /\b(dades|datos)\s+fiscal\w*\b/.test(normalized) &&
+    /\b(donant|donante|soci|socio)\w*\b/.test(normalized)
+  ) {
+    return { kind: 'card', cardId: 'howto-donor-fiscal-review', minScore: 720, decisionReason: 'donor_fiscal_review_natural' }
+  }
+
+  if (
+    /\b(esborr|borr|elimin)\w*\b/.test(normalized) &&
+    /\b(moviment|movimiento)\w*\b/.test(normalized) &&
+    /\b(assign|asign|vincul|enllac|enlaz)\w*\b/.test(normalized) &&
+    /\b(projecte|proyecto)\w*\b/.test(normalized)
+  ) {
+    return { kind: 'card', cardId: 'ts-blocked-by-project-links', minScore: 720, decisionReason: 'movement_blocked_by_project_links' }
+  }
+
+  if (
+    /\b(per on comenco|per on començo|por donde empiezo|por donde comienzo|com comenco|com començo|como empiezo|como comienzo)\b/.test(normalized) &&
+    /\b(summa|aplicacio|aplicacion|app)\b/.test(normalized)
+  ) {
+    return { kind: 'card', cardId: 'guide-first-day', minScore: 720, decisionReason: 'first_day_summa_orientation' }
+  }
+
+  if (
+    /\b(voluntari|voluntaria|voluntario|usuari|usuario|membre|miembro|persona)\w*\b/.test(normalized) &&
+    (/\b(nomes|solo)\s+(pugui|pueda|pot|puede)?\s*(veure|ver|mirar|consultar)\b/.test(normalized) || /\b(sense|sin)\s+(poder\s+)?(edit|toc|canvi|cambi)\w*\b/.test(normalized) || /\bno\s+(pugui|pueda|pot|puede)?\s*(edit|toc|canvi|cambi)\w*\b/.test(normalized))
+  ) {
+    return { kind: 'card', cardId: 'howto-member-user-permissions', minScore: 720, decisionReason: 'read_only_permissions_natural' }
+  }
+
+  if (/\bempresa\w*\b/.test(normalized) && /\b(persona de contacte|persona de contacto|contacte|contacto)\b/.test(normalized)) {
+    return { kind: 'card', cardId: 'howto-company-contact-person', minScore: 715, decisionReason: 'company_contact_person_natural' }
+  }
+
+  if (
+    /\b(despesa|despeses|gasto|gastos|ticket|tiquet|factura)\w*\b/.test(normalized) &&
+    (/\b(efectiu|efectivo|cash|caixa|caja)\b/.test(normalized) || /\b(no (em )?surt|no (me )?sale)\b/.test(normalized) && /\b(banc|banco|compte|cuenta)\b/.test(normalized))
+  ) {
+    return { kind: 'card', cardId: 'howto-enter-expense', minScore: 720, decisionReason: 'off_bank_cash_expense_natural' }
+  }
+
+  if (
+    /\b(canvi|canviar|canvio|cambi|cambiar|cambio|modific|actualitz|actualiz|edit)\w*\b/.test(normalized) &&
+    /\b(dades|datos|fitxa|ficha)\b/.test(normalized) &&
+    !/\b(fiscal|entitat|entidad|organitzacio|organizacion|empresa|associacio|asociacion)\w*\b/.test(normalized)
+  ) {
+    return { kind: 'card', cardId: 'howto-donor-update-details', minScore: 715, decisionReason: 'donor_details_natural' }
+  }
+
+  if (
+    (/\b(quota|cuota)\w*\b/.test(normalized) && /\b(canvi|cambi|modific|actualitz|actualiz|pujar|subir|baix|baj|apug|augment|aument)\w*\b/.test(normalized)) ||
+    /\b(passa|pasa)\s+de\s+(pagar|cobrar)\s+\d+(?:[.,]\d+)?\s+(?:euros?\s+)?a\s+\d+(?:[.,]\d+)?\b/.test(normalized)
+  ) {
+    return { kind: 'card', cardId: 'howto-donor-update-fee', minScore: 720, decisionReason: 'donor_fee_amount_change_natural' }
+  }
+
+  if (
+    /\b(quota|quotes|cuota|cuotas)\w*\b/.test(normalized) &&
+    /\b(fitxer|fichero|archivo|xml|sepa|banc|banco)\w*\b/.test(normalized) &&
+    /\b(banc|banco|sepa|xml)\b/.test(normalized)
+  ) {
+    return { kind: 'card', cardId: 'howto-remittance-create-sepa', minScore: 725, decisionReason: 'create_fee_remittance_natural' }
+  }
+
+  if (
+    /\bremesa\w*\b/.test(normalized) &&
+    /\b(processat|processada|procesado|procesada|generat|generada|generado)\w*\b/.test(normalized) &&
+    /\b(abans d hora|antes de tiempo|massa aviat|demasiado pronto|tornar enrere|volver atras|error|desf|deshac|equivoc)\w*\b/.test(normalized)
+  ) {
+    return { kind: 'card', cardId: 'howto-remittance-undo', minScore: 725, decisionReason: 'undo_processed_remittance_natural' }
+  }
+
+  if (
+    (/\b(organitzacions|organizaciones|entitats|entidades)\b/.test(normalized) && /\b(diverses|varias|dues|dos|mes d una|mas de una|canviar|cambiar|canvio|cambio|alternar|selector)\b/.test(normalized)) ||
+    /\b(canviar|cambiar|canvio|cambio)\s+(d |de )?(organitzacio|organizacion|entitat|entidad)\b/.test(normalized) ||
+    /\bselector\b.*\b(canviar|cambiar|organitzacio|organizacion|entitat|entidad)\b/.test(normalized)
+  ) {
+    return { kind: 'card', cardId: 'manual-multi-organization', minScore: 710, decisionReason: 'multi_organization_natural' }
+  }
+
+  if (/\b(mobil|movil|mobile|telefon|telefono|tablet)\w*\b/.test(normalized) && /\b(summa|aplicacio|aplicacion|app|fer servir|usar|funciona)\w*\b/.test(normalized)) {
+    return { kind: 'card', cardId: 'manual-mobile-usage', minScore: 710, decisionReason: 'mobile_usage_natural' }
+  }
+
+  if (/\b(aplicacio|aplicacion|app|pagina|pantalla|summa)\b/.test(normalized) && /\b(lent|lenta|lento|despacio|slow|triga|tarda)\w*\b/.test(normalized)) {
+    return { kind: 'card', cardId: 'ts-slow-app', minScore: 710, decisionReason: 'slow_app_troubleshooting_natural' }
+  }
+
+  if (
     /\b(moviment|moviments|movimiento|movimientos)\b/.test(normalized) &&
     !/\b(import|importar|importo|importacio|importacion)\w*\b/.test(normalized) &&
     !(
@@ -792,8 +914,8 @@ function detectProtectedOverride(message: string): RetrievalOverride | null {
     return { kind: 'card', cardId: 'howto-enter-expense', minScore: 705, decisionReason: 'manual_movement_without_bank_import' }
   }
 
-  if (/\b(quota|cuota)\b/.test(normalized) && /\b(pausa|pausar|pause|suspendre|suspender)\b/.test(normalized)) {
-    return { kind: 'fallback', cardId: 'fallback-no-answer', decisionReason: 'member_fee_pause_not_covered' }
+  if (/\b(quota|cuota)\b/.test(normalized) && (/\b(pausa|pausar|pause|suspendre|suspender)\b/.test(normalized) || /\bno\b.*\b(cobrar|cobrem|cobrarle)\w*\b/.test(normalized))) {
+    return { kind: 'card', cardId: 'howto-donor-pause-fee', minScore: 715, decisionReason: 'member_fee_pause_safe_zero' }
   }
 
   if (
@@ -1424,7 +1546,12 @@ export function retrieveCard(
     }
   }
 
-  const regularCards = cards.filter(isRetrievableCard)
+  const regularCards = cards
+    .filter(isRetrievableCard)
+    .filter(card => (
+      !['fiscal', 'permissions', 'danger'].includes(questionDomain) ||
+      isQuestionDomainCompatible(questionDomain, card.domain ?? 'general')
+    ))
   const ranked = regularCards
     .map(card => {
       const baseScore = scoreCard(tokens, normalizedMessage, questionDomain, specificCaseDetected, card, lang, hints)
