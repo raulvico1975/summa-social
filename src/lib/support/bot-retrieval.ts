@@ -783,6 +783,17 @@ function detectProtectedOverride(message: string): RetrievalOverride | null {
   }
 
   if (
+    /\b(moviment|movimiento)\b/.test(normalized) &&
+    (
+      (/\b(assign|asign)\w*\b/.test(normalized) && /\b(banc|banco|bancari|bancario)\w*\b/.test(normalized)) ||
+      (/\b(categoria|category)\b/.test(normalized) && /\b(contacte|contacto)\b/.test(normalized))
+    ) &&
+    !/\b(projecte|proyecto)\w*\b/.test(normalized)
+  ) {
+    return { kind: 'card', cardId: 'howto-assign-bank-movement', minScore: 715, decisionReason: 'assign_bank_movement_natural' }
+  }
+
+  if (
     /\b(per on comenco|per on començo|por donde empiezo|por donde comienzo|com comenco|com començo|como empiezo|como comienzo)\b/.test(normalized) &&
     /\b(summa|aplicacio|aplicacion|app)\b/.test(normalized)
   ) {

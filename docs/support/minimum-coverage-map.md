@@ -45,7 +45,7 @@ Criteri de qualitat:
 | --- | --- | --- | --- | --- |
 | Com importo un extracte bancari | `guide-import-movements` | `good` | `manual` | Card directa, estable i ja connectada a FAQ/manual. |
 | Com detecto duplicats d'un extracte | `howto-import-safe-duplicates` | `good` | `faq` | Card dedicada a prevenció i detecció de solapaments. |
-| Com assigno un moviment bancari | `guide-edit-movement` | `weak` | `faq` | Cobreix edició de categoria/contacte, però no està formulada com a card d'assignació de moviment. |
+| Com assigno un moviment bancari | `howto-assign-bank-movement` | `good` | `faq` | Card dedicada per assignar o corregir categoria i contacte des del moviment. |
 | Com divideixo un moviment | `howto-movement-split-amount` | `good` | `faq` | Card específica per repartir imports d'un moviment. |
 | Com adjunto una factura o document a un moviment | `guide-attach-document` | `good` | `manual` | Card clara i directa. |
 
@@ -73,7 +73,7 @@ Cap dels 30 fluxos mínims queda sense card.
 
 ## Weak cards
 
-- `guide-edit-movement`: cal una card específica per assignar un moviment bancari.
+Cap dels 30 fluxos mínims depèn de cobertura lateral.
 
 ## Already good
 
@@ -94,11 +94,10 @@ Cap dels 30 fluxos mínims queda sense card.
 ## Resum operatiu
 
 - Total fluxos analitzats: `30`
-- `good`: `29`
-- `weak`: `1`
+- `good`: `30`
+- `weak`: `0`
 - `missing`: `0`
 
 Ordre recomanat per a la següent iteració:
-1. Tancar la card específica d'assignació de moviment bancari.
-2. Mantenir el gate adversarial CA/ES amb variants reals i zero desviacions de domini sensible.
-3. Revisar periòdicament preguntes amb feedback negatiu i reformulacions.
+1. Mantenir el gate adversarial CA/ES amb variants reals i zero desviacions de domini sensible.
+2. Revisar periòdicament preguntes amb feedback negatiu i reformulacions.

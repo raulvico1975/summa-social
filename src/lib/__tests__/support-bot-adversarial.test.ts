@@ -139,10 +139,14 @@ const cases: AdversarialCase[] = [
   { query: 'No puedo borrar movimientos porque están asignados a proyectos', lang: 'es', expectedCardId: 'ts-blocked-by-project-links' },
   { query: 'Com començo a fer servir Summa Social?', lang: 'ca', expectedCardId: 'guide-first-day' },
   { query: '¿Cómo empiezo a usar Summa Social?', lang: 'es', expectedCardId: 'guide-first-day' },
+  { query: 'Com assigno un moviment bancari?', lang: 'ca', expectedCardId: 'howto-assign-bank-movement' },
+  { query: 'On poso la categoria i el contacte d’un moviment?', lang: 'ca', expectedCardId: 'howto-assign-bank-movement' },
+  { query: '¿Cómo asigno un movimiento bancario?', lang: 'es', expectedCardId: 'howto-assign-bank-movement' },
+  { query: '¿Dónde pongo la categoría y el contacto de un movimiento?', lang: 'es', expectedCardId: 'howto-assign-bank-movement' },
 ]
 
 test('adversarial natural-language gate routes every CA/ES variant safely', () => {
-  assert.equal(cases.length, 96)
+  assert.equal(cases.length, 100)
   const failures = cases.flatMap(item => {
     const result = retrieveCard(item.query, item.lang, cards)
     const expectedMode = item.expectedMode ?? 'card'
