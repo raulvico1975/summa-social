@@ -7,6 +7,8 @@ import {
   getPublicLandingIndexedLocales,
   getPublicLandingMetadata,
 } from '@/lib/public-landings';
+import { generateMetadata as generateFloresCaseMetadata } from '@/app/public/[lang]/casos/flores-de-kiskeya/page';
+import { generateMetadata as generateTrustMetadata } from '@/app/public/[lang]/confianza/page';
 
 test('public metadata limits hreflang and canonical to publishable locales', () => {
   const metadata = generatePublicPageMetadata('fr', '/model-182', {
@@ -43,3 +45,44 @@ for (const slug of ['software-gestion-ong', 'programa-associacions']) {
     assert.equal(content.finalCta.href, '/es/contact');
   });
 }
+
+test('Flores case and trust pages publish only Catalan and Spanish alternates', async () => {
+  const floresMetadata = await generateFloresCaseMetadata({
+    params: Promise.resolve({ lang: 'ca' }),
+  });
+  const trustMetadata = await generateTrustMetadata({
+    params: Promise.resolve({ lang: 'es' }),
+  });
+
+  assert.equal(
+    floresMetadata.alternates?.canonical,
+    'https://summasocial.app/ca/casos/flores-de-kiskeya'
+  );
+  assert.deepEqual(floresMetadata.alternates?.languages, {
+    ca: 'https://summasocial.app/ca/casos/flores-de-kiskeya',
+    es: 'https://summasocial.app/es/casos/flores-de-kiskeya',
+    'x-default': 'https://summasocial.app/ca/casos/flores-de-kiskeya',
+  });
+  assert.equal(trustMetadata.alternates?.canonical, 'https://summasocial.app/es/confianza');
+  assert.deepEqual(trustMetadata.alternates?.languages, {
+    ca: 'https://summasocial.app/ca/confianza',
+    es: 'https://summasocial.app/es/confianza',
+    'x-default': 'https://summasocial.app/ca/confianza',
+  });
+});
+
+test('certificate and Model 182 copy avoids absolute error-free or automatic claims', () => {
+  for (const slug of ['certificats-donacio', 'model-182']) {
+    const landing = getPublicLandingBySlug(slug);
+    assert.ok(landing);
+
+    for (const locale of ['ca', 'es'] as const) {
+      const metadata = getPublicLandingMetadata(landing, locale);
+      const content = getPublicLandingContent(landing, locale);
+      const publicCopy = JSON.stringify({ metadata, content });
+
+      assert.doesNotMatch(publicCopy, /sense errors|sin errores/i);
+      assert.doesNotMatch(publicCopy, /pràcticament sol|prácticamente solo/i);
+    }
+  }
+});

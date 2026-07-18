@@ -66,16 +66,16 @@ const HUB_COPY: Record<
     lead:
       'Si avui combineu Excel, extractes bancaris i eines disperses per gestionar donacions, quotes i fiscalitat, aquí tens el recorregut més útil per entendre com quedaria ordenat dins de Summa.',
     note:
-      'Cada pàgina de detall ja queda preparada per afegir-hi el vídeo de demo quan el tingueu a punt, de manera que la navegació i el relat comercial queden tancats des d’ara.',
+      'Cada pàgina de detall explica el problema, el procés de treball i els punts de revisió perquè pugueu valorar si encaixa amb la vostra operativa.',
     primaryCta: 'Demana una demostració',
     secondaryCta: 'Veure funcionalitats generals',
     helper: 'Sessió breu, amb exemples reals i sense compromís.',
     demoReady: 'Demo visual disponible',
-    demoSoon: 'Vídeo de demo aviat',
+    demoSoon: 'Guia del procés',
     finalTitle: 'Vols veure només el bloc que avui us genera més fricció?',
     finalDescription:
       'Us podem ensenyar la part de conciliació, remeses, devolucions o fiscalitat sense fer una demo genèrica. Així podreu valorar ràpidament si l’encaix és real.',
-    finalSupport: 'Si després hi afegiu els vídeos, aquesta guia ja queda preparada per actuar com a porta d’entrada principal al detall.',
+    finalSupport: 'A la demostració podem anar directament al procés que vulgueu revisar i treballar amb un exemple proper al vostre cas.',
     groups: [
       {
         id: 'moviments-conciliacio',
@@ -112,17 +112,17 @@ const HUB_COPY: Record<
     lead:
       'Si hoy combináis Excel, extractos bancarios y herramientas dispersas para gestionar donaciones, cuotas y fiscalidad, aquí tenéis el recorrido más útil para entender cómo quedaría ordenado dentro de Summa.',
     note:
-      'Cada página de detalle queda ya preparada para añadir el vídeo de demo cuando lo tengáis listo, de forma que la navegación y el relato comercial quedan montados desde ahora.',
+      'Cada página de detalle explica el problema, el proceso de trabajo y los puntos de revisión para que podáis valorar si encaja con vuestra operativa.',
     primaryCta: 'Pedir una demostración',
     secondaryCta: 'Ver funcionalidades generales',
     helper: 'Sesión breve, con ejemplos reales y sin compromiso.',
     demoReady: 'Demo visual disponible',
-    demoSoon: 'Vídeo demo próximamente',
+    demoSoon: 'Guía del proceso',
     finalTitle: '¿Queréis ver solo el bloque que hoy os genera más fricción?',
     finalDescription:
       'Podemos enseñaros la parte de conciliación, remesas, devoluciones o fiscalidad sin hacer una demo genérica. Así podréis valorar rápido si el encaje es real.',
     finalSupport:
-      'Cuando añadáis los vídeos, esta guía ya quedará preparada para actuar como puerta de entrada principal al detalle.',
+      'En la demostración podemos ir directamente al proceso que queráis revisar y trabajar con un ejemplo cercano a vuestro caso.',
     groups: [
       {
         id: 'movimientos-conciliacion',

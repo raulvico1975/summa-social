@@ -646,12 +646,12 @@ const DONATION_CERTIFICATES_METADATA: Record<PublicLocale, PublicLandingMetadata
   ca: {
     title: 'Certificats de donació per a ONG | Software de gestió per a entitats | Summa Social',
     description:
-      'Genera i envia els certificats de donació sense plantilles manuals, sense errors i sense perdre hores cada any.',
+      'Genera i envia certificats de donació amb un procés guiat, menys feina manual i més control abans de l’enviament.',
   },
   es: {
     title: 'Certificados de donación para ONG | Software de gestión para entidades | Summa Social',
     description:
-      'Genera y envía los certificados de donación sin plantillas manuales, sin errores y sin perder horas cada año.',
+      'Genera y envía certificados de donación con un proceso guiado, menos trabajo manual y más control antes del envío.',
   },
   fr: {
     title: 'Certificats de don | Summa Social',
@@ -666,7 +666,7 @@ const DONATION_CERTIFICATES_METADATA: Record<PublicLocale, PublicLandingMetadata
 const DONATION_CERTIFICATES_CONTENT_CA: PublicLandingContent = {
   hero: {
     title: 'Certificats de donació per a ONG i associacions',
-    subtitle: 'Genera i envia els certificats de donació sense plantilles manuals, sense errors i sense perdre hores cada any.',
+    subtitle: 'Genera i envia certificats de donació amb un procés guiat, menys feina manual i més control abans de l’enviament.',
     introParagraphs: [
       "Per a moltes entitats, l'emissió dels certificats de donació continua sent una tasca lenta i repetitiva. Cal revisar què ha donat cada persona, comprovar si hi ha devolucions, generar el document correcte i fer arribar el certificat al donant.",
       "Quan aquest procés es fa amb fulls de càlcul, plantilles i correus manuals, és fàcil que apareguin errors, duplicitats o simplement massa feina acumulada en pocs dies.",
@@ -790,7 +790,7 @@ const DONATION_CERTIFICATES_CONTENT_CA: PublicLandingContent = {
 const DONATION_CERTIFICATES_CONTENT_ES: PublicLandingContent = {
   hero: {
     title: 'Certificados de donación para ONG y asociaciones',
-    subtitle: 'Genera y envía los certificados de donación sin plantillas manuales, sin errores y sin perder horas cada año.',
+    subtitle: 'Genera y envía certificados de donación con un proceso guiado, menos trabajo manual y más control antes del envío.',
     introParagraphs: [
       'Para muchas entidades, la emisión de certificados de donación sigue siendo una tarea lenta y repetitiva. Hay que revisar qué ha donado cada persona, comprobar si hay devoluciones, generar el documento correcto y hacer llegar el certificado al donante.',
       'Cuando este proceso se hace con hojas de cálculo, plantillas y correos manuales, es fácil que aparezcan errores, duplicidades o simplemente demasiado trabajo acumulado en pocos días.',
@@ -3246,7 +3246,7 @@ const RETURNED_RECEIPTS_CONTENT_ES: PublicLandingContent = {
 const MODEL_182_CONTENT_CA: PublicLandingContent = {
   hero: {
     title: 'Model 182 per a ONG i associacions',
-    subtitle: 'Genera el Model 182 sense Excel, sense errors i sense patir el gener.',
+    subtitle: 'Prepara el Model 182 amb dades ordenades, revisions clares i menys feina manual al gener.',
     introParagraphs: [
       'El Model 182 és una de les obligacions fiscals més delicades per a una entitat. Cada any cal recopilar totes les donacions, verificar les dades dels donants, restar les devolucions i preparar el fitxer per a la gestoria o per a l’AEAT.',
       'Moltes entitats encara ho fan amb Excel i extractes bancaris. Això implica hores de revisió manual, risc d’errors i molta pressió a finals de gener.',
@@ -3305,7 +3305,7 @@ const MODEL_182_CONTENT_CA: PublicLandingContent = {
   },
   solution: {
     title: 'Com ho resol Summa Social',
-    intro: 'Summa Social està dissenyat perquè el Model 182 surti pràcticament sol a partir de les dades reals del banc.',
+    intro: 'Summa Social ajuda a preparar el Model 182 a partir de la informació registrada i conciliada, amb passos de revisió abans d’exportar.',
     steps: [
       {
         title: 'Importes l’extracte bancari',
@@ -3371,7 +3371,7 @@ const MODEL_182_CONTENT_CA: PublicLandingContent = {
 const MODEL_182_CONTENT_ES: PublicLandingContent = {
   hero: {
     title: 'Modelo 182 para ONG y asociaciones',
-    subtitle: 'Genera el Modelo 182 sin Excel, sin errores y sin sufrir en enero.',
+    subtitle: 'Prepara el Modelo 182 con datos ordenados, revisiones claras y menos trabajo manual en enero.',
     introParagraphs: [
       'El Modelo 182 es una de las obligaciones fiscales más delicadas para una entidad. Cada año hay que recopilar todas las donaciones, verificar los datos de los donantes, restar las devoluciones y preparar el fichero para la gestoría o para la AEAT.',
       'Muchas entidades todavía lo hacen con Excel y extractos bancarios. Eso implica horas de revisión manual, riesgo de errores y mucha presión a finales de enero.',
@@ -3430,7 +3430,7 @@ const MODEL_182_CONTENT_ES: PublicLandingContent = {
   },
   solution: {
     title: 'Cómo lo resuelve Summa Social',
-    intro: 'Summa Social está diseñado para que el Modelo 182 salga prácticamente solo a partir de los datos reales del banco.',
+    intro: 'Summa Social ayuda a preparar el Modelo 182 a partir de la información registrada y conciliada, con pasos de revisión antes de exportar.',
     steps: [
       {
         title: 'Importas el extracto bancario',

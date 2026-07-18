@@ -10,6 +10,8 @@ const FOOTER_COPY: Record<
   {
     sitemap: string
     manual: string
+    caseStudy: string
+    trust: string
     socials: string
     socialsNote: string
   }
@@ -17,24 +19,32 @@ const FOOTER_COPY: Record<
   ca: {
     sitemap: 'Mapa del web',
     manual: 'Manual',
+    caseStudy: 'Cas real: Flores de Kiskeya',
+    trust: 'Confiança i dades',
     socials: 'Xarxes',
     socialsNote: 'LinkedIn i Instagram ben aviat.',
   },
   es: {
     sitemap: 'Mapa del sitio',
     manual: 'Manual',
+    caseStudy: 'Caso real: Flores de Kiskeya',
+    trust: 'Confianza y datos',
     socials: 'Redes',
     socialsNote: 'LinkedIn e Instagram, muy pronto.',
   },
   fr: {
     sitemap: 'Plan du site',
     manual: 'Manuel',
+    caseStudy: 'Cas réel : Flores de Kiskeya',
+    trust: 'Confiance et données',
     socials: 'Réseaux',
     socialsNote: 'LinkedIn et Instagram arrivent bientôt.',
   },
   pt: {
     sitemap: 'Mapa do site',
     manual: 'Manual',
+    caseStudy: 'Caso real: Flores de Kiskeya',
+    trust: 'Confiança e dados',
     socials: 'Redes',
     socialsNote: 'LinkedIn e Instagram em breve.',
   },
@@ -51,6 +61,7 @@ export function PublicSiteFooter({ locale }: PublicSiteFooterProps) {
   const updatesHref = `/${locale}/novetats`
   const blogHref = `/${locale}/blog`
   const hasPublicManual = locale === 'ca' || locale === 'es'
+  const hasPublicProofPages = locale === 'ca' || locale === 'es'
 
   return (
     <footer className="border-t bg-muted/20 py-12">
@@ -86,6 +97,19 @@ export function PublicSiteFooter({ locale }: PublicSiteFooterProps) {
               <Link href={`/${locale}/manual`} className="hover:text-foreground hover:underline">
                 {FOOTER_COPY[locale].manual}
               </Link>
+            )}
+            {hasPublicProofPages && (
+              <>
+                <Link
+                  href={`/${locale}/casos/flores-de-kiskeya`}
+                  className="hover:text-foreground hover:underline"
+                >
+                  {FOOTER_COPY[locale].caseStudy}
+                </Link>
+                <Link href={`/${locale}/confianza`} className="hover:text-foreground hover:underline">
+                  {FOOTER_COPY[locale].trust}
+                </Link>
+              </>
             )}
             <Link href={`/${locale}/privacy`} className="hover:text-foreground hover:underline">
               {t.common.privacy}
