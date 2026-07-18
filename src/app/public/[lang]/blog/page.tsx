@@ -31,16 +31,21 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
   const locale = lang as PublicLocale
   const copy = getBlogCopy(locale)
-  const seoMeta = generatePublicPageMetadata(locale, '/blog')
+  const availableLocales: PublicLocale[] = ['ca', 'es']
+  const isIndexable = availableLocales.includes(locale) && isBlogConfigured()
+  const seoMeta = generatePublicPageMetadata(locale, '/blog', {
+    title: copy.metaTitle,
+    description: copy.metaDescription,
+    availableLocales,
+    canonicalLocale: availableLocales.includes(locale) ? locale : 'es',
+    index: isIndexable,
+    follow: isBlogConfigured(),
+  })
 
   if (!isBlogConfigured()) {
     return {
       title: copy.metaTitle,
       description: copy.metaDescription,
-      robots: {
-        index: false,
-        follow: false,
-      },
       ...seoMeta,
     }
   }

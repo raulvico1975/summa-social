@@ -190,7 +190,10 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   return {
     title: t.about.metaTitle,
     description: t.about.metaDescription,
-    ...generatePublicPageMetadata(lang, '/qui-som'),
+    ...generatePublicPageMetadata(lang, '/qui-som', {
+      title: t.about.metaTitle,
+      description: t.about.metaDescription,
+    }),
   };
 }
 

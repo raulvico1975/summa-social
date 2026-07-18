@@ -166,7 +166,11 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   return {
     title: copy.metadata.title,
     description: copy.metadata.description,
-    ...generatePublicPageMetadata(lang, '/gestio-economica-ong'),
+    ...generatePublicPageMetadata(lang, '/gestio-economica-ong', {
+      title: copy.metadata.title,
+      description: copy.metadata.description,
+      availableLocales: ['ca', 'es'],
+    }),
   };
 }
 

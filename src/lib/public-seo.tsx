@@ -95,3 +95,46 @@ export function buildPublicBreadcrumbJsonLd({
     ],
   };
 }
+
+export function buildPublicBlogPostingJsonLd({
+  locale,
+  slug,
+  title,
+  description,
+  publishedAt,
+  updatedAt,
+  imageUrl,
+}: {
+  locale: PublicLocale;
+  slug: string;
+  title: string;
+  description: string;
+  publishedAt: string;
+  updatedAt: string;
+  imageUrl?: string | null;
+}) {
+  const articleUrl = `${PUBLIC_SITE_URL}/${locale}/blog/${slug}`;
+  const organizationId = `${PUBLIC_SITE_URL}/#organization`;
+
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'BlogPosting',
+    '@id': `${articleUrl}#article`,
+    headline: title,
+    description,
+    url: articleUrl,
+    mainEntityOfPage: articleUrl,
+    inLanguage: locale,
+    datePublished: publishedAt,
+    dateModified: updatedAt,
+    ...(imageUrl ? { image: imageUrl } : {}),
+    author: {
+      '@type': 'Organization',
+      '@id': organizationId,
+      name: 'Summa Social',
+    },
+    publisher: {
+      '@id': organizationId,
+    },
+  };
+}

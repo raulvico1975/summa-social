@@ -62,7 +62,14 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   if (!isValidPublicLocale(lang)) return {};
 
   const t = getPublicTranslations(lang);
-  const seoMeta = generatePublicPageMetadata(lang, '/novetats');
+  const availableLocales: PublicLocale[] = ['ca', 'es'];
+  const seoMeta = generatePublicPageMetadata(lang, '/novetats', {
+    title: t.updates.metaTitle,
+    description: t.updates.metaDescription,
+    availableLocales,
+    canonicalLocale: availableLocales.includes(lang) ? lang : 'es',
+    index: availableLocales.includes(lang),
+  });
 
   return {
     title: t.updates.metaTitle,

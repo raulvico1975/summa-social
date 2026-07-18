@@ -12,6 +12,7 @@ import {
   getPublicLandingSlugs,
   getPublicLandingMetadata,
   getPublicLandingContent,
+  getPublicLandingIndexedLocales,
 } from '@/lib/public-landings';
 import { PublicJsonLd, buildPublicBreadcrumbJsonLd } from '@/lib/public-seo';
 import { getPublicTranslations } from '@/i18n/public';
@@ -35,7 +36,13 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
   const locale = lang as PublicLocale;
   const metadata = getPublicLandingMetadata(landing, locale);
-  const seoMeta = generatePublicPageMetadata(locale, `/${landingSlug}`);
+  const indexedLocales = getPublicLandingIndexedLocales(landing);
+  const seoMeta = generatePublicPageMetadata(locale, `/${landingSlug}`, {
+    title: metadata.title,
+    description: metadata.description,
+    availableLocales: indexedLocales,
+    index: indexedLocales.includes(locale),
+  });
 
   return {
     title: metadata.title,
