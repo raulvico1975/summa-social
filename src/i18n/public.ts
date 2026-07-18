@@ -1351,15 +1351,15 @@ const ca: PublicTranslations = {
         'Aprofita el potencial de la IA per conciliar extractes, quotes de socis, models fiscals (182 i 347) i projectes.',
       aiBadge: 'IA',
       conciliation:
-        "Conciliació bancària senzilla i ràpida: Importes l'extracte i en pocs minuts tens tots els moviments classificats, sense errors de transcripció. La intel·ligència artificial reconeix automàticament proveïdors, socis i donants.",
+        "Conciliació bancària més àgil: importa l'extracte, centralitza els moviments i revisa'n la classificació amb menys feina de transcripció manual. La intel·ligència artificial ajuda a identificar proveïdors, socis i donants.",
       fiscal:
-        "Fiscalitat a temps real, sense esforç: Models 182 i 347 amb un clic. Certificats de donació generats i enviats automàticament. Tot validat i llest per enviar a la gestoria o l'AEAT.",
+        "Informació fiscal més ordenada: prepara els Models 182 i 347 i els certificats de donació a partir de les dades registrades. Revisa el resultat abans de compartir-lo amb la gestoria o presentar-lo a l'AEAT.",
       remittances:
-        'Remeses de quotes i pagaments en pocs segons: Divideix automàticament les remeses agrupades del banc. Genera fitxers SEPA per pagaments a proveïdors i nòmines. Fàcil, ràpid i sense errors.',
+        'Remeses de quotes i pagaments amb un procés guiat: revisa les remeses agrupades del banc i prepara fitxers SEPA per a pagaments a proveïdors i nòmines amb més control abans d’enviar-los.',
       vision:
         "Visió clara i actualitzada: Dashboard amb mètriques en temps real. Ingressos, despeses, balanç i alertes, tot visible d'un cop d'ull. Informes automàtics per a junta o patronat.",
       control:
-        "Control absolut de cada euro: Trazabilitat completa des del comprovant fins al moviment bancari. Justificació de subvencions amb un clic: Excel + totes les factures en un ZIP.",
+        "Traçabilitat de cada moviment: segueix el comprovant fins al moviment bancari i prepara la justificació de subvencions amb l'Excel i els comprovants corresponents agrupats en un ZIP.",
       result:
         "El resultat: més temps per a la missió de l'entitat, menys temps amb fulls de càlcul i tasques repetitives. Gestió econòmica professional, accessible i sense complicacions.",
     },
@@ -2036,15 +2036,15 @@ const es: PublicTranslations = {
         'Aprovecha el potencial de la IA para conciliar extractos, cuotas de socios, modelos fiscales (182 y 347) y proyectos.',
       aiBadge: 'IA',
       conciliation:
-        'Conciliación bancaria sencilla y rápida: Importas el extracto y en pocos minutos tienes todos los movimientos clasificados, sin errores de transcripción. La inteligencia artificial reconoce automáticamente proveedores, socios y donantes.',
+        'Conciliación bancaria más ágil: importa el extracto, centraliza los movimientos y revisa su clasificación con menos trabajo de transcripción manual. La inteligencia artificial ayuda a identificar proveedores, socios y donantes.',
       fiscal:
-        'Fiscalidad en tiempo real, sin esfuerzo: Modelos 182 y 347 con un clic. Certificados de donación generados y enviados automáticamente. Todo validado y listo para enviar a la gestoría o la AEAT.',
+        'Información fiscal más ordenada: prepara los Modelos 182 y 347 y los certificados de donación a partir de los datos registrados. Revisa el resultado antes de compartirlo con la gestoría o presentarlo a la AEAT.',
       remittances:
-        'Remesas de cuotas y pagos en pocos segundos: Divide automáticamente las remesas agrupadas del banco. Genera ficheros SEPA para pagos a proveedores y nóminas. Fácil, rápido y sin errores.',
+        'Remesas de cuotas y pagos con un proceso guiado: revisa las remesas agrupadas del banco y prepara ficheros SEPA para pagos a proveedores y nóminas con más control antes de enviarlos.',
       vision:
         'Visión clara y actualizada: Dashboard con métricas en tiempo real. Ingresos, gastos, balance y alertas, todo visible de un vistazo. Informes automáticos para junta o patronato.',
       control:
-        'Control absoluto de cada euro: Trazabilidad completa desde el comprobante hasta el movimiento bancario. Justificación de subvenciones con un clic: Excel + todas las facturas en un ZIP.',
+        'Trazabilidad de cada movimiento: sigue el comprobante hasta el movimiento bancario y prepara la justificación de subvenciones con el Excel y los comprobantes correspondientes agrupados en un ZIP.',
       result:
         'El resultado: más tiempo para la misión de la entidad, menos tiempo con hojas de cálculo y tareas repetitivas. Gestión económica profesional, accesible y sin complicaciones.',
     },
