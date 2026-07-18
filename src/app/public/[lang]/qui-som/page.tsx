@@ -32,6 +32,7 @@ const ABOUT_COPY: Record<
     semillaBody: string;
     entitiesTitle: string;
     entitiesBody: string;
+    floresCaseLink?: string;
     relationTitle: string;
     relationEyebrow: string;
     relationLead: string;
@@ -62,6 +63,7 @@ const ABOUT_COPY: Record<
     entitiesTitle: 'Experiència acumulada amb entitats de referència',
     entitiesBody:
       'L’ecosistema de Semilla ha acumulat experiència amb entitats de referència en cooperació, acció social i justícia global, com Justícia Alimentària Global, Mundubat, CODESPA, l’Organització d’Estats Iberoamericans, Fundació Vicente Ferrer, Brigades Internacionals de Pau, International Action for Peace, Baruma i Flores de Kiskeya. Aquesta trajectòria ha ajudat a entendre millor necessitats que apareixen una vegada i una altra en la gestió econòmica de les entitats: conciliació bancària, seguiment de donants, fiscalitat, justificació documental i informes per a finançadors.',
+    floresCaseLink: 'Veure el cas d’ús real de Fundación Flores de Kiskeya',
     relationTitle: 'Necessitats diferents dins d’una mateixa trajectòria',
     relationEyebrow: 'Context de producte',
     relationLead:
@@ -95,6 +97,7 @@ const ABOUT_COPY: Record<
     entitiesTitle: 'Experiencia acumulada con entidades de referencia',
     entitiesBody:
       'El ecosistema de Semilla ha acumulado experiencia con entidades de referencia en cooperación, acción social y justicia global, como Justícia Alimentària Global, Mundubat, CODESPA, la Organización de Estados Iberoamericanos, Fundación Vicente Ferrer, Brigadas Internacionales de Paz, International Action for Peace, Baruma y Flores de Kiskeya. Esta trayectoria ha ayudado a entender mejor necesidades que aparecen una y otra vez en la gestión económica de las entidades: conciliación bancaria, seguimiento de donantes, fiscalidad, justificación documental e informes para financiadores.',
+    floresCaseLink: 'Ver el caso de uso real de Fundación Flores de Kiskeya',
     relationTitle: 'Necesidades distintas dentro de una misma trayectoria',
     relationEyebrow: 'Contexto de producto',
     relationLead:
@@ -288,6 +291,15 @@ export default async function AboutPage({ params }: PageProps) {
               <Building2 className="h-5 w-5 text-primary" />
               <h2 className="mt-4 text-2xl font-semibold">{copy.entitiesTitle}</h2>
               <p className="mt-4 text-base leading-7 text-muted-foreground">{copy.entitiesBody}</p>
+              {copy.floresCaseLink && (
+                <Link
+                  href={`/${locale}/casos/flores-de-kiskeya`}
+                  className="mt-5 inline-flex items-center text-sm font-medium text-primary hover:underline"
+                >
+                  {copy.floresCaseLink}
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Link>
+              )}
             </article>
           </div>
 

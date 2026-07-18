@@ -1,69 +1,143 @@
-# Pla d'autoritat SEO externa — 90 dies
+# Pla SEO i d’autoritat per a un SaaS inicial — 90 dies
 
-## Objectiu
+## Punt de partida
 
-Reforçar les cerques no vinculades a marca a Catalunya i Espanya amb mencions verificables, casos reals i enllaços editorials cap a les pàgines comercials prioritàries.
+Summa Social és un SaaS nou amb dues entitats usuàries reals. Això canvia l’estratègia: encara no hi ha prou volum de clients, dades o marca per competir amb garanties per cerques molt àmplies com `software ONG`.
 
-## Pàgines que han de rebre autoritat
+Durant els pròxims 90 dies l’objectiu no és prometre primers llocs, sinó construir tres actius que permetin créixer amb credibilitat:
+
+1. una prova d’ús real publicable;
+2. pàgines comercials clares i prudents, amb confiança verificable;
+3. distribució sectorial basada en relacions reals i contingut útil.
+
+## Mercat i intencions prioritàries
+
+El focus comercial és Catalunya i Espanya. Les pàgines catalanes i castellanes han de respondre problemes concrets de responsables d’administració, coordinació i tresoreria d’entitats socials.
 
 | Intenció | Pàgina catalana | Pàgina castellana |
 |---|---|---|
 | Software de gestió per a ONG | `/ca/software-gestion-ong` | `/es/software-gestion-ong` |
 | Programa per a associacions | `/ca/programa-associacions` | `/es/programa-associacions` |
-| Gestió econòmica d'entitats | `/ca/gestio-economica-ong` | `/es/gestio-economica-ong` |
-| Donants, remeses i fiscalitat | Landing específica del procés | Landing específica del procés |
+| Gestió econòmica d’entitats | `/ca/gestio-economica-ong` | `/es/gestio-economica-ong` |
+| Conciliació, donants, remeses i fiscalitat | Landing específica del procés | Landing específica del procés |
+| Prova d’ús real | `/ca/casos/flores-de-kiskeya` | `/es/casos/flores-de-kiskeya` |
+| Confiança i dades | `/ca/confianza` | `/es/confianza` |
 
-Els textos d'enllaç han de ser naturals i variats: `Summa Social`, `software de gestió per a ONG`, `programa de gestió per a associacions` o el nom del procés concret. No s'han de forçar textos exactes repetits.
+No s’han de crear traduccions o articles només per augmentar el nombre d’URL. Cada pàgina nova ha de respondre una pregunta observada en converses reals.
 
-## Tres accions prioritàries
+## Les tres modificacions prioritàries
 
-### 1. Publicar tres casos reals de clients
+### 1. Convertir l’ús real en prova pública creïble
 
-Cada cas hauria d'explicar un problema concret, el circuit anterior, el canvi introduït i un resultat verificable. Format mínim:
+Publicar un únic cas identificat: **Fundación Flores de Kiskeya**.
 
-- entitat, tipus i mida aproximada;
-- procés resolt: conciliació, remeses, donants, fiscalitat o projectes;
-- situació anterior i temps o risc que generava;
-- canvi operatiu amb Summa Social;
-- dada de resultat validada pel client;
-- captura real o cita autoritzada;
-- enllaç a una landing comercial relacionada.
+Abast publicable actual:
 
-Prioritat: un cas de conciliació/remeses, un de donants/Model 182 i un de seguiment econòmic de projectes.
+- és una entitat usuària real de Summa Social;
+- ús qualitatiu relacionat amb moviments bancaris, documentació i control economicoadministratiu;
+- enllaç a la web oficial de l’entitat;
+- connexió amb les pàgines de gestió econòmica i contacte.
 
-### 2. Aconseguir enllaços editorials de clients i aliats
+Límits:
 
-Seleccionar primer cinc organitzacions amb relació real amb Summa Social: clients, consultores del Tercer Sector, federacions, proveïdors tecnològics o entitats formatives. La menció ha de formar part d'una pàgina útil —cas, recursos, eines recomanades o projecte compartit— i no d'un directori artificial.
+- cap xifra interna, captura, document o dada d’operació;
+- cap cita o testimonial sense consentiment específic;
+- cap logotip sense autorització d’ús;
+- cap resultat quantitatiu o estalvi de temps no mesurat i validat;
+- no presentar Flores com un aval comercial formal.
 
-Text base en català:
+Amb només dues entitats usuàries, un cas honest és més valuós que tres casos incomplets. La segona entitat només s’ha d’incorporar quan hi hagi permís i una història verificable.
 
-> Estem reforçant la informació pública de Summa Social perquè les entitats puguin entendre millor com resol la gestió econòmica, els donants i la fiscalitat. Si encaixa editorialment amb la vostra web, us proposem afegir una menció breu a Summa Social dins la pàgina de recursos o del projecte compartit, enllaçant la funcionalitat més relacionada. Us passem text i URL, però adapteu-los al vostre criteri editorial.
+### 2. Reforçar confiança i precisió abans de generar més contingut
 
-Text base en castellà:
+Accions sobre el web:
 
-> Estamos reforzando la información pública de Summa Social para que las entidades entiendan mejor cómo resuelve la gestión económica, los donantes y la fiscalidad. Si encaja editorialmente en vuestra web, proponemos incluir una mención breve dentro de la página de recursos o del proyecto compartido, enlazando la funcionalidad más relacionada. Os facilitamos texto y URL, pero podéis adaptarlos a vuestro criterio editorial.
+- retirar textos interns o editorials visibles al públic;
+- substituir promeses absolutes —com `sense errors` o `pràcticament sol`— per beneficis defensables: menys feina manual, millor control i passos de revisió;
+- publicar una pàgina CA/ES de confiança basada en funcionalitats i documents vigents;
+- explicar permisos, traçabilitat documental, suport i sortida de dades sense inventar certificacions ni auditories;
+- enllaçar el cas real i la pàgina de confiança des de superfícies públiques rellevants;
+- mantenir canonical, hreflang i sitemap coherents en CA/ES.
 
-### 3. Crear una peça de referència que mereixi ser citada
+No es publicarà encara una guia fiscal. Qualsevol recurs sobre Model 182, Model 347 o tancament anual necessita revisió fiscal i editorial específica abans d’indexar-se.
 
-Publicar una guia pràctica amb dades pròpies i exemples reals, no un article genèric. Recomanació: `Guia 2027 de tancament econòmic i fiscal per a associacions i ONG`, amb calendari, comprovacions, errors habituals i plantilles descarregables. Ha d'enllaçar les landings de conciliació, donants, certificats, Model 182 i Model 347.
+### 3. Distribuir coneixement útil dins del sector, sense una campanya artificial d’enllaços
 
-La distribució prioritària és a federacions, assessories especialitzades, formacions del Tercer Sector i butlletins professionals. Qualsevol enviament extern requereix validació prèvia.
+Durant 90 dies, prioritzar converses càlides amb entitats, assessories, federacions i persones que ja coneixen l’equip. L’objectiu de cada conversa és entendre una fricció i, només si hi ha encaix editorial, compartir una pàgina útil.
+
+Ritme operatiu proposat:
+
+- preparar una llista curta de fins a 10 relacions reals;
+- registrar les preguntes que es repeteixen en demos i suport;
+- actualitzar primer una landing existent quan la resposta ja hi encaixa;
+- publicar com a màxim una peça nova si resol una pregunta recurrent i pot ser revisada per una persona experta;
+- proposar una menció o enllaç només quan aporta context a una pàgina real d’un aliat;
+- no comprar enllaços, no usar directoris massius i no repetir textos d’ancoratge exactes.
+
+Qualsevol correu, contacte extern o petició d’enllaç requereix autorització prèvia de Raül. Aquest pla prepara la selecció i els textos, però no autoritza enviaments.
+
+## Seqüència de 90 dies
+
+### Dies 1–30: base verificable
+
+- publicar el cas Flores i la pàgina de confiança;
+- corregir claims absoluts i textos interns;
+- verificar indexabilitat, canonical, hreflang i sitemap;
+- establir una línia base de Search Console, si l’accés està disponible;
+- anotar la font dels contactes comercials de manera simple, sense afegir eines noves.
+
+### Dies 31–60: aprenentatge comercial
+
+- revisar les consultes i pàgines amb impressions no vinculades a marca;
+- agrupar preguntes repetides de demos i suport;
+- millorar una o dues landings existents amb aquestes preguntes;
+- preparar una possible peça de referència i sotmetre-la a revisió experta abans de publicar;
+- seleccionar relacions càlides on compartir el cas o una guia aporti valor real.
+
+### Dies 61–90: distribució i decisió
+
+- executar només els contactes autoritzats;
+- comprovar si les mencions generen visites o converses qualificades;
+- decidir si convé aprofundir en una intenció concreta o aturar contingut que no aporta demanda;
+- preparar un segon cas només si hi ha permís, evidència i una història diferent de la de Flores.
 
 ## Mesura
 
-Revisió mensual a Google Search Console i Bing Webmaster Tools:
+Les mètriques serveixen per decidir, no per prometre posicions.
 
-- impressions i posició mitjana a Catalunya i Espanya;
-- consultes no vinculades a `Summa Social`;
-- clics cap a les dues landings generals i la guia;
-- dominis nous que enllacen el web;
-- conversions orgàniques a contacte o alta.
+### Indicadors mensuals
 
-Consultes prioritàries: `software gestión ONG`, `programa gestión asociaciones`, `gestión económica ONG`, `software entidades sociales`, `remesas SEPA asociaciones`, `gestión donantes ONG`, `Modelo 182 ONG` i equivalents en català.
+- impressions i clics no vinculats a `Summa Social` a Espanya;
+- consultes en català i rendiment de les pàgines `/ca/` com a aproximació al mercat català;
+- pàgines que comencen a rebre impressions per problemes concrets;
+- contactes i demos qualificades procedents de cerca orgànica o referència;
+- mencions editorials noves i visites que generen;
+- preguntes comercials que es repeteixen i poden millorar el producte o el web.
 
-## Autoritzacions pendents
+Search Console permet filtrar per país, però no dona una lectura completa i exacta de Catalunya. La posició catalana s’ha de contrastar amb consultes en català, pàgines CA i, si cal, una mostra manual o una eina de seguiment geolocalitzada.
 
-- noms, dades, captures i cites de clients;
-- selecció de les organitzacions que es poden contactar;
-- enviament dels correus;
-- publicació al web o desplegament dels canvis.
+### Consultes de treball
+
+- `software gestió ONG` / `software gestión ONG`;
+- `programa gestió associacions` / `programa gestión asociaciones`;
+- `gestió econòmica ONG` / `gestión económica ONG`;
+- `conciliació bancària ONG` / `conciliación bancaria ONG`;
+- `gestió donants ONG` / `gestión donantes ONG`;
+- `remeses SEPA associacions` / `remesas SEPA asociaciones`;
+- `Model 182 ONG` / `Modelo 182 ONG`.
+
+No cal intentar posicionar totes les consultes alhora. Cada mes s’ha de prioritzar la intenció que mostri millor combinació d’impressions, encaix de producte i converses qualificades.
+
+## Autoritzacions i límits vigents
+
+Autoritzat:
+
+- publicar el nom de Fundación Flores de Kiskeya com a entitat usuària real;
+- desplegar els canvis SEO CA/ES aprovats.
+
+No autoritzat sense confirmació addicional:
+
+- logotip, captures, cites, xifres o dades internes de Flores;
+- enviament de correus o peticions d’enllaç;
+- publicació d’una guia fiscal sense revisió específica;
+- afirmacions de resultats, certificacions o garanties no verificades.

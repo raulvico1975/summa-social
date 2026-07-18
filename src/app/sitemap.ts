@@ -21,6 +21,8 @@ const PUBLIC_STATIC_ROUTES: Array<{
   { path: '/novetats', locales: CONTENT_LOCALES, changeFrequency: 'daily', priority: 0.7 },
   { path: '/blog', locales: CONTENT_LOCALES, changeFrequency: 'weekly', priority: 0.75 },
   { path: '/gestio-economica-ong', locales: CONTENT_LOCALES, changeFrequency: 'monthly', priority: 0.85 },
+  { path: '/casos/flores-de-kiskeya', locales: CONTENT_LOCALES, changeFrequency: 'monthly', priority: 0.72 },
+  { path: '/confianza', locales: CONTENT_LOCALES, changeFrequency: 'monthly', priority: 0.65 },
 ];
 
 // Dynamic entries come from Firestore. Generate the sitemap at request time so
