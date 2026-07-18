@@ -139,7 +139,8 @@ export async function orchestrator(input: {
   if (retrievalResult?.clarifyOptions?.length) {
     const options = retrievalResult.clarifyOptions.slice(0, 3)
     const clarifyUiPaths = normalizeUiPathsAgainstCatalog(
-      options.flatMap(option => option.uiPaths ?? [])
+      options.flatMap(option => option.uiPaths ?? []),
+      kbLang
     )
     const sensitiveClarify = intentType === 'operational' && isSensitiveDomain(retrievalResult.questionDomain, message)
     return {
@@ -217,7 +218,7 @@ export async function orchestrator(input: {
           cardId: selectedFallback.id,
           answer: selectedFallback.answer?.[kbLang] ?? selectedFallback.answer?.ca ?? selectedFallback.answer?.es ?? buildSpecificCaseFallbackAnswer(kbLang),
           guideId: null,
-          uiPaths: selectedFallback.uiPaths?.length ? normalizeUiPathsAgainstCatalog(selectedFallback.uiPaths) : SAFE_FALLBACK_PATHS[kbLang],
+          uiPaths: selectedFallback.uiPaths?.length ? normalizeUiPathsAgainstCatalog(selectedFallback.uiPaths, kbLang) : SAFE_FALLBACK_PATHS[kbLang],
         },
         meta: {
           intentType,
@@ -249,7 +250,7 @@ export async function orchestrator(input: {
         cardId,
         answer: buildSpecificCaseFallbackAnswer(kbLang),
         guideId: null,
-        uiPaths: specificFallback?.uiPaths?.length ? normalizeUiPathsAgainstCatalog(specificFallback.uiPaths) : SAFE_FALLBACK_PATHS[kbLang],
+        uiPaths: specificFallback?.uiPaths?.length ? normalizeUiPathsAgainstCatalog(specificFallback.uiPaths, kbLang) : SAFE_FALLBACK_PATHS[kbLang],
       },
       meta: {
         intentType,
@@ -279,7 +280,7 @@ export async function orchestrator(input: {
 
   if (intentType === 'operational' && confidenceBand !== 'high') {
     if (!sensitiveQuery && confidenceBand === 'medium' && selectedCard.type !== 'fallback') {
-      const guidedUiPaths = normalizeUiPathsAgainstCatalog(selectedCard.uiPaths)
+      const guidedUiPaths = normalizeUiPathsAgainstCatalog(selectedCard.uiPaths, kbLang)
       return {
         response: {
           ok: true,
@@ -313,7 +314,8 @@ export async function orchestrator(input: {
     const options = pickTopDisambiguationOptions(cards, retrievalResult)
     if (confidenceBand === 'medium' && options.length >= 2) {
       const clarifyUiPaths = normalizeUiPathsAgainstCatalog(
-        options.flatMap(option => option.uiPaths ?? [])
+        options.flatMap(option => option.uiPaths ?? []),
+        kbLang
       )
       return {
         response: {
@@ -359,7 +361,7 @@ export async function orchestrator(input: {
           ? (fallbackCard.answer?.[kbLang] ?? fallbackCard.answer?.ca ?? fallbackCard.answer?.es ?? buildEmergencyFallback(kbLang).answer)
           : buildEmergencyFallback(kbLang).answer,
         guideId: null,
-        uiPaths: fallbackCard?.uiPaths?.length ? normalizeUiPathsAgainstCatalog(fallbackCard.uiPaths) : SAFE_FALLBACK_PATHS[kbLang],
+        uiPaths: fallbackCard?.uiPaths?.length ? normalizeUiPathsAgainstCatalog(fallbackCard.uiPaths, kbLang) : SAFE_FALLBACK_PATHS[kbLang],
       },
       meta: {
         intentType,

@@ -35,6 +35,7 @@ Quan Raül diu `Fes QA d'usuaris`, el perfil per defecte és `standard`. Quan di
 - Baruma: permisos efectius idèntics als d'Ainoa.
 - Prohibit: document a `systemSuperAdmins`, membresia a organitzacions internes o credencial dins del repositori.
 - Credencial: Mac Keychain, servei `summa-social-user-qa`.
+- El preflight valida la credencial guardada contra Firebase Authentication i només conserva el resultat segur; no registra contrasenyes, tokens ni la resposta d'autenticació.
 
 La contrasenya no es mostra per terminal ni es registra a cap evidència. Per una prova manual es pot copiar temporalment:
 
@@ -87,7 +88,7 @@ Cada run crea `tmp/qa-user/<runId>/` amb:
 - `downloads/`: exports del run.
 - `browser.jsonl`: checks i evidències sense secrets.
 
-El `begin` consulta `/api/version` i bloqueja el run si el compte, els permisos, el Keychain, l'organització QA o la revisió servida no són correctes.
+El `begin` consulta `/api/version` i bloqueja el run si el compte, els permisos, la credencial real del Keychain, l'organització QA o la revisió servida no són correctes.
 
 ## Regles de Navegador
 
@@ -117,7 +118,7 @@ Els estats de check són `PASS`, `FAIL` i `BLOCKED`.
 ### Preflight
 
 - `preflight.revision`: `/api/version` respon i la revisió queda registrada.
-- `preflight.account`: compte habilitat, verificat, credencial al Keychain i sense SuperAdmin.
+- `preflight.account`: compte habilitat, verificat, credencial del Keychain autenticada contra Firebase i sense SuperAdmin.
 - `preflight.permissions`: quatre membresies admin, Baruma igual que Ainoa i zero membresies internes.
 
 ### Navegació
@@ -130,6 +131,8 @@ Per Baruma, Flores i PBI:
 4. Confirmar que Projectes és visible a Baruma i no és visible a Flores/PBI.
 
 Checks: `live.baruma.navigation`, `live.flores.navigation`, `live.pbi.navigation`.
+
+En provar el bot d'ajuda, la petició ha d'incloure l'organització visible i els logs de `qa-ong-summa` han de quedar identificats com a entorn QA. Cal provar com a mínim una pregunta en català i una en castellà amb la interfície configurada en l'altre idioma.
 
 ### Contactes
 

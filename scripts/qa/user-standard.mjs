@@ -33,6 +33,7 @@ import {
   redactSecrets,
   samePermissionProfile,
   validateCleanupResource,
+  validateFirebasePasswordCredential,
 } from './user-standard-core.mjs';
 
 const PROJECT_ID = 'summa-social';
@@ -154,6 +155,18 @@ function generatePassword() {
   return `SsQA!${body}7a`;
 }
 
+async function readFirebaseWebApiKey() {
+  if (process.env.NEXT_PUBLIC_FIREBASE_API_KEY) return process.env.NEXT_PUBLIC_FIREBASE_API_KEY;
+  try {
+    const envText = await fs.readFile(path.join(process.cwd(), '.env.local'), 'utf8');
+    const line = envText.split(/\r?\n/).find((candidate) => candidate.trim().startsWith('NEXT_PUBLIC_FIREBASE_API_KEY='));
+    if (!line) return null;
+    return line.slice(line.indexOf('=') + 1).trim().replace(/^['"]|['"]$/g, '') || null;
+  } catch {
+    return null;
+  }
+}
+
 async function findAuthUser(auth, email) {
   try {
     return await auth.getUserByEmail(email);
@@ -209,11 +222,20 @@ async function inspectSetup({ includeKeychain = true } = {}) {
   const snapshots = await db.getAll(...refs);
   const byPath = new Map(snapshots.map((snapshot) => [snapshot.ref.path, snapshot]));
   const issues = [];
+  const keychainPassword = includeKeychain ? readKeychainPassword() : null;
+  const credentialCheck = includeKeychain && keychainPassword
+    ? await validateFirebasePasswordCredential({
+        apiKey: await readFirebaseWebApiKey(),
+        email: QA_EMAIL,
+        password: keychainPassword,
+      })
+    : null;
 
   if (!authUser) issues.push({ type: 'login', code: 'QA_AUTH_USER_MISSING' });
   if (authUser?.disabled) issues.push({ type: 'login', code: 'QA_AUTH_USER_DISABLED' });
   if (authUser && !authUser.emailVerified) issues.push({ type: 'login', code: 'QA_EMAIL_NOT_VERIFIED' });
-  if (includeKeychain && !readKeychainPassword()) issues.push({ type: 'login', code: 'QA_KEYCHAIN_MISSING' });
+  if (includeKeychain && !keychainPassword) issues.push({ type: 'login', code: 'QA_KEYCHAIN_MISSING' });
+  if (credentialCheck && !credentialCheck.ok) issues.push({ type: 'login', code: credentialCheck.code });
   const allowlistedSuperAdmin = staticSuperAdminEmails.includes(QA_EMAIL.toLowerCase());
   if (allowlistedSuperAdmin) issues.push({ type: 'environment', code: 'QA_EMAIL_IN_SUPERADMIN_ALLOWLIST' });
 
@@ -284,7 +306,8 @@ async function inspectSetup({ includeKeychain = true } = {}) {
       disabled: authUser.disabled,
       emailVerified: authUser.emailVerified,
       displayName: authUser.displayName ?? null,
-      keychainPresent: includeKeychain ? Boolean(readKeychainPassword()) : null,
+      keychainPresent: includeKeychain ? Boolean(keychainPassword) : null,
+      credentialValid: credentialCheck?.ok ?? null,
       superAdmin,
       allowlistedSuperAdmin,
     } : null,

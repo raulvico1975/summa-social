@@ -95,6 +95,10 @@ import card84Raw from '../../../docs/kb/cards/troubleshooting/ts-remittance-memb
 import card85Raw from '../../../docs/kb/cards/troubleshooting/ts-remittance-not-matching.json'
 import card86Raw from '../../../docs/kb/cards/troubleshooting/ts-sepa-validation-error.json'
 import card87Raw from '../../../docs/kb/cards/howto/howto-mark-donation-182.json'
+import card88Raw from '../../../docs/kb/cards/manual/manual-mobile-usage.json'
+import card89Raw from '../../../docs/kb/cards/troubleshooting/ts-slow-app.json'
+import card90Raw from '../../../docs/kb/cards/howto/howto-donor-pause-fee.json'
+import card91Raw from '../../../docs/kb/cards/howto/howto-company-contact-person.json'
 import caLocaleRaw from '../../i18n/locales/ca.json'
 import esLocaleRaw from '../../i18n/locales/es.json'
 
@@ -189,6 +193,10 @@ export const bundledCardFiles = [
   card85Raw as KBCard,
   card86Raw as KBCard,
   card87Raw as KBCard,
+  card88Raw as KBCard,
+  card89Raw as KBCard,
+  card90Raw as KBCard,
+  card91Raw as KBCard,
 ]
 
 export const bundledAllCards: KBCard[] = [

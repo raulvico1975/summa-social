@@ -1,6 +1,7 @@
 import type { KBCard } from '../load-kb'
 import type { KbLang } from '../bot-retrieval'
 import type { ClarifyOption } from './types'
+import { localizeUiPath } from './policy'
 
 function getCardLabel(card: KBCard, lang: KbLang): string {
   const rawIntent = card.intents?.[lang]?.find(Boolean)
@@ -41,7 +42,7 @@ export function buildClarifyAnswer(lang: KbLang, options: KBCard[]): string {
 
   const lines = options.slice(0, 3).map((card, i) => {
     const label = getCardLabel(card, lang)
-    const pathHint = card.uiPaths?.[0]
+    const pathHint = card.uiPaths?.[0] ? localizeUiPath(card.uiPaths[0], lang) : null
     return pathHint ? `${i + 1}. ${label} (${pathHint})` : `${i + 1}. ${label}`
   })
 

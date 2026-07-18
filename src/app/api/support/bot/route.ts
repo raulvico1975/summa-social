@@ -21,6 +21,11 @@ import { extractOperationalSteps, normalizeUiPathsAgainstCatalog } from '@/lib/s
 import { clampTimeout, normalizeAssistantTone, normalizeLang, parseClarifyOptionIds, withTimeout } from '@/lib/support/engine/normalize'
 import type { ApiResponse, AssistantTone, InputLang, ResponseSubtype } from '@/lib/support/engine/types'
 import { normalizeSupportContext } from '@/lib/support/support-context'
+import { resolveSupportLanguage } from '@/lib/support/language'
+import {
+  resolveSupportOrganizationId,
+  SupportOrganizationResolutionError,
+} from '@/lib/support/request-context'
 import guideProjectsCardRaw from '../../../../../docs/kb/cards/guides/guide-projects.json'
 import guideAttachDocumentCardRaw from '../../../../../docs/kb/cards/guides/guide-attach-document.json'
 import manualMemberPaidQuotasCardRaw from '../../../../../docs/kb/cards/manual/manual-member-paid-quotas.json'
@@ -102,6 +107,7 @@ type IntentCandidate = {
 
 type PreviousBotContext = {
   previousQuestion?: string
+  previousLanguage?: InputLang
   previousCardId?: string
   previousMode?: 'card' | 'fallback'
   previousClarifyOptionIds?: string[]
@@ -497,9 +503,13 @@ function normalizePreviousBotContext(body: Record<string, unknown>): PreviousBot
   const previousMode = body.previousMode === 'card' ? 'card' : body.previousMode === 'fallback' ? 'fallback' : undefined
   const previousClarifyOptionIds = parseClarifyOptionIds(body.previousClarifyOptionIds)
   const previousWasClarify = body.previousWasClarify === true
+  const previousLanguage = body.previousLanguage === 'ca' || body.previousLanguage === 'es' || body.previousLanguage === 'fr' || body.previousLanguage === 'pt'
+    ? body.previousLanguage
+    : undefined
 
   return {
     previousQuestion: previousQuestion || undefined,
+    previousLanguage,
     previousCardId: previousCardId || undefined,
     previousMode,
     previousClarifyOptionIds,
@@ -560,11 +570,17 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
       return NextResponse.json({ ok: false, code: 'INVALID_INPUT', message: 'message obligatori' }, { status: 400 })
     }
 
-    const parsedLang = normalizeLang(rawLang)
-    inputLang = parsedLang.inputLang
-    kbLang = parsedLang.kbLang
     const clarifyOptionIds = parseClarifyOptionIds(rawClarifyOptionIds)
     const previousContext = normalizePreviousBotContext(body)
+    const languageResolution = resolveSupportLanguage(message, rawLang)
+    const selectedPreviousLanguage = isClarifySelectionMessage(message, previousContext.previousClarifyOptionIds ?? [])
+      ? previousContext.previousLanguage
+      : undefined
+    const parsedLang = selectedPreviousLanguage
+      ? normalizeLang(selectedPreviousLanguage)
+      : languageResolution
+    inputLang = parsedLang.inputLang
+    kbLang = parsedLang.kbLang
     const supportContext = normalizeSupportContext({
       screenContext: body.screenContext,
       recentTurns: body.recentTurns,
@@ -572,11 +588,12 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
     })
 
     const db = getAdminDb()
-    const userDoc = await db.doc(`users/${authResult.uid}`).get()
-    const orgId = userDoc.data()?.organizationId as string | undefined
-    if (!orgId) {
-      return NextResponse.json({ ok: false, code: 'INVALID_INPUT', message: 'Usuari sense organització assignada' }, { status: 400 })
-    }
+    const orgId = await resolveSupportOrganizationId({
+      db,
+      uid: authResult.uid,
+      requestedOrganizationId: body.organizationId,
+      requestedOrgSlug: body.orgSlug,
+    })
 
     const membership = await validateUserMembership(db, authResult.uid, orgId)
     const accessDenied = requireOperationalAccess(membership)
@@ -594,8 +611,9 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
         'smalltalk_response'
       )
       const observabilityWrites: Promise<void>[] = []
+      const previousQuestionLang = previousContext.previousLanguage ?? inputLang
       if (previousContext.previousQuestion && previousContext.previousWasClarify && !isClarifySelectionMessage(message, previousContext.previousClarifyOptionIds ?? [])) {
-        observabilityWrites.push(incrementBotQuestionCounters(db, orgId, previousContext.previousQuestion, inputLang, {
+        observabilityWrites.push(incrementBotQuestionCounters(db, orgId, previousContext.previousQuestion, previousQuestionLang, {
           clarifyAbandonedCount: 1,
           reformulatedAfterClarifyCount: 1,
         }))
@@ -604,7 +622,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
         previousContext.previousMode === 'fallback' &&
         areQueriesSimilar(previousContext.previousQuestion, message)
       ) {
-        observabilityWrites.push(incrementBotQuestionCounters(db, orgId, previousContext.previousQuestion, inputLang, {
+        observabilityWrites.push(incrementBotQuestionCounters(db, orgId, previousContext.previousQuestion, previousQuestionLang, {
           reformulatedAfterFallbackCount: 1,
         }))
       }
@@ -636,6 +654,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
         answer: smallTalk.answer,
         guideId: null,
         uiPaths: [],
+        language: inputLang,
       })
     }
 
@@ -690,7 +709,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
       : []
 
     const deterministicRetrieval = retrieveCard(message, kbLang, retrievableCards, supportContext)
-    const allowAiIntent = false
+    const allowAiIntent = hasGoogleGenAiApiKey() && supportData.aiIntentEnabled !== false
     const allowAiReformat = hasGoogleGenAiApiKey() && aiReformatEnabled
 
     let result = await orchestrator({
@@ -754,6 +773,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
     const responseWithSubtype = {
       ...result.response,
       responseSubtype,
+      language: inputLang,
     }
 
     let responsePayload: ApiResponse | (ApiResponse & { debugTrace?: BotDebugTrace }) = responseWithSubtype as ApiResponse
@@ -761,7 +781,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
       const retrieval = debugRetrieveCard(message, kbLang, retrievableCards, supportContext)
       const selectedCard = retrievableCards.find(card => card.id === result.response.cardId) ?? null
       const selectedUiPathsRaw = selectedCard?.uiPaths ?? []
-      const selectedUiPathsNormalized = normalizeUiPathsAgainstCatalog(selectedUiPathsRaw)
+      const selectedUiPathsNormalized = normalizeUiPathsAgainstCatalog(selectedUiPathsRaw, kbLang)
       const stepsCount = extractOperationalSteps(getCardRawAnswer(selectedCard, kbLang)).length
       const policyDiscards = buildPolicyDiscards({
         decisionReason: result.meta.decisionReason,
@@ -773,7 +793,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
       })
 
       responsePayload = {
-        ...result.response,
+        ...responseWithSubtype,
         debugTrace: {
           orgId,
           kbLang,
@@ -826,13 +846,14 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
       }))
     }
 
+    const previousQuestionLang = previousContext.previousLanguage ?? inputLang
     if (previousContext.previousQuestion && previousContext.previousWasClarify) {
       if (isClarifySelectionMessage(message, previousContext.previousClarifyOptionIds ?? [])) {
-        observabilityWrites.push(incrementBotQuestionCounters(db, orgId, previousContext.previousQuestion, inputLang, {
+        observabilityWrites.push(incrementBotQuestionCounters(db, orgId, previousContext.previousQuestion, previousQuestionLang, {
           clarifySelectedCount: 1,
         }))
       } else {
-        observabilityWrites.push(incrementBotQuestionCounters(db, orgId, previousContext.previousQuestion, inputLang, {
+        observabilityWrites.push(incrementBotQuestionCounters(db, orgId, previousContext.previousQuestion, previousQuestionLang, {
           clarifyAbandonedCount: 1,
           reformulatedAfterClarifyCount: 1,
         }))
@@ -842,7 +863,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
       previousContext.previousMode === 'fallback' &&
       areQueriesSimilar(previousContext.previousQuestion, message)
     ) {
-      observabilityWrites.push(incrementBotQuestionCounters(db, orgId, previousContext.previousQuestion, inputLang, {
+      observabilityWrites.push(incrementBotQuestionCounters(db, orgId, previousContext.previousQuestion, previousQuestionLang, {
         reformulatedAfterFallbackCount: 1,
       }))
     }
@@ -891,6 +912,13 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
     })
   } catch (error: unknown) {
     console.error('[API] support/bot error:', error)
+
+    if (error instanceof SupportOrganizationResolutionError) {
+      return NextResponse.json(
+        { ok: false, code: 'INVALID_INPUT', message: error.message },
+        { status: error.status }
+      )
+    }
 
     if (!hasOperationalAccess) {
       return NextResponse.json(

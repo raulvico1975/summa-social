@@ -11,17 +11,15 @@ import { FieldValue } from 'firebase-admin/firestore'
 import { getAdminDb, validateUserMembership, verifyIdToken } from '@/lib/api/admin-sdk'
 import { requireOperationalAccess } from '@/lib/api/require-operational-access'
 import { createQuestionHash, deriveResponseSubtype, maskPII, normalizeForHash } from '@/lib/support/bot-question-log'
-
-type InputLang = 'ca' | 'es' | 'fr' | 'pt'
+import { resolveSupportLanguage } from '@/lib/support/language'
+import {
+  resolveSupportOrganizationId,
+  SupportOrganizationResolutionError,
+} from '@/lib/support/request-context'
 
 type ApiResponse =
   | { ok: true }
   | { ok: false; error: string }
-
-function normalizeLang(rawLang: unknown): InputLang {
-  const allowedLangs = ['ca', 'es', 'fr', 'pt'] as const
-  return allowedLangs.includes(rawLang as InputLang) ? (rawLang as InputLang) : 'ca'
-}
 
 export async function POST(request: NextRequest): Promise<NextResponse<ApiResponse>> {
   try {
@@ -37,6 +35,8 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
       cardId?: string
       mode?: 'card' | 'fallback'
       responseSubtype?: unknown
+      organizationId?: unknown
+      orgSlug?: unknown
     }
 
     const question = typeof body.question === 'string' ? body.question.trim() : ''
@@ -45,7 +45,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
     }
 
     const helpful = body.helpful === true
-    const lang = normalizeLang(body.lang)
+    const lang = resolveSupportLanguage(question, body.lang).inputLang
     const mode = body.mode === 'card' ? 'card' : 'fallback'
     const cardId = typeof body.cardId === 'string' ? body.cardId : null
     const responseSubtype = deriveResponseSubtype({
@@ -56,11 +56,12 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
 
     const db = getAdminDb()
 
-    const userDoc = await db.doc(`users/${authResult.uid}`).get()
-    const orgId = userDoc.data()?.organizationId as string | undefined
-    if (!orgId) {
-      return NextResponse.json({ ok: false, error: 'Usuari sense organització assignada' }, { status: 400 })
-    }
+    const orgId = await resolveSupportOrganizationId({
+      db,
+      uid: authResult.uid,
+      requestedOrganizationId: body.organizationId,
+      requestedOrgSlug: body.orgSlug,
+    })
 
     const membership = await validateUserMembership(db, authResult.uid, orgId)
     const accessDenied = requireOperationalAccess(membership)
@@ -90,6 +91,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
         lastFeedbackHelpful: helpful,
         lastFeedbackAt: FieldValue.serverTimestamp(),
         lastSeenAt: FieldValue.serverTimestamp(),
+        environment: orgId === 'qa-ong-summa' ? 'qa' : 'production',
       },
       { merge: true }
     )
@@ -97,6 +99,12 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
     return NextResponse.json({ ok: true })
   } catch (error: unknown) {
     console.error('[API] support/bot-feedback error:', error)
+    if (error instanceof SupportOrganizationResolutionError) {
+      return NextResponse.json(
+        { ok: false, error: error.message },
+        { status: error.status }
+      )
+    }
     return NextResponse.json(
       { ok: false, error: (error as Error)?.message?.slice(0, 200) ?? 'Error intern' },
       { status: 500 }

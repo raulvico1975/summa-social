@@ -20,6 +20,7 @@ import Link from 'next/link';
 import { resolveManualAnchorFromHint } from '@/help/help-manual-links';
 import type { ResponseSubtype } from '@/lib/support/engine/types';
 import type { SupportTurn } from '@/lib/support/support-context';
+import { useCurrentOrganization } from '@/hooks/organization-provider';
 
 // -------------------------------------------------------------------
 // Types
@@ -32,6 +33,7 @@ interface BotMessage {
   cardId?: string;
   mode?: 'card' | 'fallback';
   responseSubtype?: ResponseSubtype;
+  language?: 'ca' | 'es' | 'fr' | 'pt';
   questionText?: string;
   clarifyOptions?: Array<{
     index: 1 | 2 | 3;
@@ -155,6 +157,7 @@ function buildRecentTurns(messages: BotMessage[]): SupportTurn[] {
 export function BotSheet({ open, onOpenChange }: BotSheetProps) {
   const { language, tr } = useTranslations();
   const { user } = useFirebase();
+  const { organizationId, orgSlug } = useCurrentOrganization();
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
@@ -163,6 +166,7 @@ export function BotSheet({ open, onOpenChange }: BotSheetProps) {
   const [loading, setLoading] = React.useState(false);
   const [pendingClarifyOptionIds, setPendingClarifyOptionIds] = React.useState<string[]>([]);
   const [feedbackByMessage, setFeedbackByMessage] = React.useState<Record<string, 'up' | 'down'>>({});
+  const [feedbackPendingByMessage, setFeedbackPendingByMessage] = React.useState<Record<string, boolean>>({});
 
   const scrollRef = React.useRef<HTMLDivElement>(null);
   const inputRef = React.useRef<HTMLInputElement>(null);
@@ -236,12 +240,15 @@ export function BotSheet({ open, onOpenChange }: BotSheetProps) {
           lang,
           clarifyOptionIds: pendingClarifyOptionIds.length ? pendingClarifyOptionIds : undefined,
           previousQuestion: previousBotMessage?.questionText,
+          previousLanguage: previousBotMessage?.language,
           previousCardId: previousBotMessage?.cardId,
           previousMode: previousBotMessage?.mode,
           previousClarifyOptionIds: previousBotMessage?.clarifyOptions?.map(option => option.cardId),
           previousWasClarify: previousBotMessage?.cardId === 'clarify-disambiguation',
           recentTurns,
           screenContext,
+          organizationId,
+          orgSlug,
         }),
       });
 
@@ -257,6 +264,7 @@ export function BotSheet({ open, onOpenChange }: BotSheetProps) {
           cardId: data.cardId,
           mode: data.mode,
           responseSubtype: data.responseSubtype,
+          language: data.language,
           questionText: text,
           clarifyOptions,
         }]);
@@ -285,7 +293,7 @@ export function BotSheet({ open, onOpenChange }: BotSheetProps) {
     } finally {
       setLoading(false);
     }
-  }, [loading, user, language, errorGeneric, messages, pathname, pendingClarifyOptionIds, searchParams]);
+  }, [loading, user, language, errorGeneric, messages, pathname, pendingClarifyOptionIds, searchParams, organizationId, orgSlug]);
 
   const handleSend = React.useCallback(() => {
     void sendMessage(input);
@@ -309,14 +317,13 @@ export function BotSheet({ open, onOpenChange }: BotSheetProps) {
   }, [language, onOpenChange])
 
   const handleFeedback = React.useCallback(async (messageKey: string, msg: BotMessage, helpful: boolean) => {
-    if (!user || !msg.questionText || !msg.cardId) return
+    if (!user || !msg.questionText || !msg.cardId || feedbackPendingByMessage[messageKey]) return
     const vote = helpful ? 'up' : 'down'
-    setFeedbackByMessage(prev => ({ ...prev, [messageKey]: vote }))
-    trackUX('bot.feedback', { helpful, cardId: msg.cardId, lang: language })
+    setFeedbackPendingByMessage(prev => ({ ...prev, [messageKey]: true }))
 
     try {
       const idToken = await user.getIdToken()
-      await fetch('/api/support/bot-feedback', {
+      const response = await fetch('/api/support/bot-feedback', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -324,17 +331,26 @@ export function BotSheet({ open, onOpenChange }: BotSheetProps) {
         },
         body: JSON.stringify({
           question: msg.questionText,
-          lang: language,
+          lang: msg.language ?? language,
           helpful,
           cardId: msg.cardId,
           mode: msg.mode ?? 'fallback',
           responseSubtype: msg.responseSubtype,
+          organizationId,
+          orgSlug,
         }),
       })
+      const payload = await response.json().catch(() => null)
+      if (response.ok && payload?.ok === true) {
+        setFeedbackByMessage(prev => ({ ...prev, [messageKey]: vote }))
+        trackUX('bot.feedback', { helpful, cardId: msg.cardId, lang: msg.language ?? language })
+      }
     } catch {
       // Ignore network failures: UX must stay smooth.
+    } finally {
+      setFeedbackPendingByMessage(prev => ({ ...prev, [messageKey]: false }))
     }
-  }, [language, user])
+  }, [feedbackPendingByMessage, language, organizationId, orgSlug, user])
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -352,7 +368,8 @@ export function BotSheet({ open, onOpenChange }: BotSheetProps) {
             {messages.map((msg, i) => {
               const messageKey = String(i)
               const vote = feedbackByMessage[messageKey]
-              const canVote = msg.role === 'bot' && !!msg.questionText && !!msg.cardId && msg.cardId !== 'clarify-disambiguation'
+              const feedbackPending = feedbackPendingByMessage[messageKey] === true
+              const canVote = msg.role === 'bot' && !!msg.questionText && !!msg.cardId
               const visibleText = msg.role === 'bot' ? stripInlineUiPathFooter(msg.text) : msg.text
               return (
               <div
@@ -424,7 +441,7 @@ export function BotSheet({ open, onOpenChange }: BotSheetProps) {
                         variant={vote === 'up' ? 'secondary' : 'ghost'}
                         className="h-6 px-2 text-[11px]"
                         onClick={() => void handleFeedback(messageKey, msg, true)}
-                        disabled={!!vote}
+                        disabled={!!vote || feedbackPending}
                       >
                         <ThumbsUp className="h-3 w-3 mr-1" />
                         {helpfulYes}
@@ -435,7 +452,7 @@ export function BotSheet({ open, onOpenChange }: BotSheetProps) {
                         variant={vote === 'down' ? 'secondary' : 'ghost'}
                         className="h-6 px-2 text-[11px]"
                         onClick={() => void handleFeedback(messageKey, msg, false)}
-                        disabled={!!vote}
+                        disabled={!!vote || feedbackPending}
                       >
                         <ThumbsDown className="h-3 w-3 mr-1" />
                         {helpfulNo}

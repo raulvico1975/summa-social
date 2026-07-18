@@ -260,6 +260,7 @@ export async function logBotQuestion(
       retrievalDomain: meta?.retrievalDomain ?? null,
       retrievalOutcome: meta?.retrievalOutcome ?? (cardIdOrFallbackId === 'clarify-disambiguation' ? 'clarify' : resultMode),
       languageDetected: meta?.languageDetected ?? lang ?? null,
+      environment: orgId === 'qa-ong-summa' ? 'qa' : 'production',
       count: FieldValue.increment(1),
       ...buildModeCounterIncrementPayload(resultMode, cardIdOrFallbackId),
       lastSeenAt: FieldValue.serverTimestamp(),
@@ -292,6 +293,7 @@ export async function incrementBotQuestionCounters(
       lang,
       messageRaw: masked,
       messageNormalized: normalized,
+      environment: orgId === 'qa-ong-summa' ? 'qa' : 'production',
       ...buildCounterIncrementPayload(counters),
     },
     { merge: true }

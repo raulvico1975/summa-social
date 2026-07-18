@@ -336,14 +336,14 @@ test('retrieveCard resolves manual movement creation phrasing safely', () => {
   assert.equal(result.mode, 'card')
 })
 
-test('retrieveCard falls back for member fee pause when the feature is not covered', () => {
+test('retrieveCard explains the safe zero-fee pause workflow', () => {
   const result = retrieveCard('Puc posar una quota en pausa?', 'ca', cards)
-  assert.equal(result.card.id, 'fallback-no-answer')
-  assert.equal(result.mode, 'fallback')
+  assert.equal(result.card.id, 'howto-donor-pause-fee')
+  assert.equal(result.mode, 'card')
 
   const es = retrieveCard('¿Puedo poner la cuota de un socio en pausa?', 'es', cards)
-  assert.equal(es.card.id, 'fallback-no-answer')
-  assert.equal(es.mode, 'fallback')
+  assert.equal(es.card.id, 'howto-donor-pause-fee')
+  assert.equal(es.mode, 'card')
 })
 
 test('retrieveCard resolves remittance low-members variants around inactive members and timing badges', () => {
@@ -414,9 +414,9 @@ test('retrieveCard resolves organization fiscal settings and multiple bank-accou
   assert.equal(bankAccounts.mode, 'card')
 })
 
-test('retrieveCard sends performance complaints to generic troubleshooting', () => {
+test('retrieveCard sends performance complaints to dedicated troubleshooting', () => {
   const result = retrieveCard('L’aplicació va molt lenta. Què puc fer?', 'ca', cards)
-  assert.equal(result.card.id, 'manual-common-errors')
+  assert.equal(result.card.id, 'ts-slow-app')
   assert.equal(result.mode, 'card')
 })
 
@@ -446,8 +446,8 @@ test('retrieveCard resolves remaining top-100 orientation and generic help queri
   assert.equal(dashboard.mode, 'card')
 
   const mobile = retrieveCard('Puc fer servir Summa Social des del mòbil?', 'ca', cards)
-  assert.equal(mobile.card.id, 'fallback-no-answer')
-  assert.equal(mobile.mode, 'fallback')
+  assert.equal(mobile.card.id, 'manual-mobile-usage')
+  assert.equal(mobile.mode, 'card')
 
   const firstTime = retrieveCard('Per on començo si és la primera vegada que entro?', 'ca', cards)
   assert.equal(firstTime.card.id, 'guide-first-day')
