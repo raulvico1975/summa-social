@@ -64,7 +64,9 @@ export function middleware(request: NextRequest) {
     const url = request.nextUrl.clone();
     const rest = '/' + segments.slice(1).join('/');
     url.pathname = `/public/${firstSegment}${rest === '/' ? '' : rest}`;
-    return NextResponse.rewrite(url);
+    const response = NextResponse.rewrite(url);
+    response.headers.set('Content-Language', firstSegment);
+    return response;
   }
 
   // Si l'usuari accedeix a /dashboard sense slug, redirigir a la pàgina de selecció

@@ -14,6 +14,7 @@ import {
 } from '@/lib/blog/reading-time'
 import type { LocalizedBlogPost } from '@/lib/blog/localized'
 import type { PublicLocale } from '@/lib/public-locale'
+import { PublicJsonLd, buildPublicBlogPostingJsonLd } from '@/lib/public-seo'
 import { getPublicTranslations } from '@/i18n/public'
 
 const pageShellClass =
@@ -62,10 +63,22 @@ export function BlogPostArticleView({
   )
 
   return (
-    <main className={pageShellClass}>
-      <PublicSiteHeader locale={locale} currentSection="blog" />
+    <>
+      <PublicJsonLd
+        data={buildPublicBlogPostingJsonLd({
+          locale: post.resolvedLocale,
+          slug: post.slug,
+          title: post.title,
+          description: post.metaDescription || post.excerpt,
+          publishedAt: post.publishedAt,
+          updatedAt: post.updatedAt,
+          imageUrl: post.coverImageUrl,
+        })}
+      />
+      <main className={pageShellClass}>
+        <PublicSiteHeader locale={locale} currentSection="blog" />
 
-      <section className={`pb-8 pt-9 lg:pt-12 ${PUBLIC_SHELL_X}`}>
+        <section className={`pb-8 pt-9 lg:pt-12 ${PUBLIC_SHELL_X}`}>
         <div className="mx-auto max-w-[46rem]">
           <Button
             asChild
@@ -117,33 +130,34 @@ export function BlogPostArticleView({
             )}
           </div>
         </figure>
-      </section>
+        </section>
 
-      <section className={`pb-14 pt-2 ${PUBLIC_SHELL_X}`}>
-        <article className="mx-auto max-w-[46rem] border-t border-slate-200/70 px-1 pt-8 sm:pt-10">
-          <div
-            className="blog-rich-text"
-            dangerouslySetInnerHTML={{ __html: post.contentHtml }}
-          />
-        </article>
-      </section>
+        <section className={`pb-14 pt-2 ${PUBLIC_SHELL_X}`}>
+          <article className="mx-auto max-w-[46rem] border-t border-slate-200/70 px-1 pt-8 sm:pt-10">
+            <div
+              className="blog-rich-text"
+              dangerouslySetInnerHTML={{ __html: post.contentHtml }}
+            />
+          </article>
+        </section>
 
-      <section className={`pb-20 ${PUBLIC_SHELL_X}`}>
-        <div className="mx-auto flex max-w-[46rem] flex-wrap items-center justify-between gap-4 border-t border-slate-200/70 pt-5">
-          <Button asChild variant="outline" className="rounded-full">
-            <Link href={blogBasePath}>{copy.browseBlog}</Link>
-          </Button>
-          <Button asChild className="rounded-full">
-            <Link href={featuresHref}>
-              {t.common.features}
-              <ArrowRight className="ml-2 h-4 w-4" />
-            </Link>
-          </Button>
-        </div>
-      </section>
+        <section className={`pb-20 ${PUBLIC_SHELL_X}`}>
+          <div className="mx-auto flex max-w-[46rem] flex-wrap items-center justify-between gap-4 border-t border-slate-200/70 pt-5">
+            <Button asChild variant="outline" className="rounded-full">
+              <Link href={blogBasePath}>{copy.browseBlog}</Link>
+            </Button>
+            <Button asChild className="rounded-full">
+              <Link href={featuresHref}>
+                {t.common.features}
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Link>
+            </Button>
+          </div>
+        </section>
 
-      <PublicSiteFooter locale={locale} />
-    </main>
+        <PublicSiteFooter locale={locale} />
+      </main>
+    </>
   )
 }
 

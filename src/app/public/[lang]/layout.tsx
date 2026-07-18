@@ -40,6 +40,11 @@ export default async function PublicLayout({ children, params }: PublicLayoutPro
   // No renderitzem <html> ni <body> aquí — ja ho fa src/app/layout.tsx
   return (
     <div className="font-sans antialiased">
+      <script
+        dangerouslySetInnerHTML={{
+          __html: `document.documentElement.lang=${JSON.stringify(lang)};`,
+        }}
+      />
       <PublicJsonLd data={buildPublicSiteJsonLd(lang as PublicLocale)} />
       {children}
     </div>

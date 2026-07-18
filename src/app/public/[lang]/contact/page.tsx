@@ -43,11 +43,13 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   if (!isValidPublicLocale(lang)) return {};
 
   const t = getPublicTranslations(lang);
-  const seoMeta = generatePublicPageMetadata(lang, '/contact');
+  const title = `${t.contact.title} | Summa Social`;
+  const description = t.contact.subtitle;
+  const seoMeta = generatePublicPageMetadata(lang, '/contact', { title, description });
 
   return {
-    title: `${t.contact.title} | Summa Social`,
-    description: t.contact.subtitle,
+    title,
+    description,
     ...seoMeta,
   };
 }

@@ -8,6 +8,7 @@ import type {
 export interface LocalizedBlogPost extends Omit<BlogPost, 'translations'> {
   resolvedLocale: BlogContentLocale
   requestedLocale: PublicLocale
+  availableLocales: BlogContentLocale[]
   isFallback: boolean
 }
 
@@ -39,6 +40,13 @@ export function resolveLocalizedBlogPost(
   const effectiveLocale = getEffectiveBlogLocale(locale)
   const translation = getTranslation(post, effectiveLocale)
   const useTranslation = effectiveLocale !== baseLocale && Boolean(translation)
+  const resolvedLocale = useTranslation ? effectiveLocale : baseLocale
+  const availableLocales: BlogContentLocale[] =
+    baseLocale === 'es'
+      ? ['es']
+      : post.translations?.es
+        ? ['ca', 'es']
+        : ['ca']
 
   return {
     ...post,
@@ -49,9 +57,10 @@ export function resolveLocalizedBlogPost(
     excerpt: translation?.excerpt ?? post.excerpt,
     contentHtml: translation?.contentHtml ?? post.contentHtml,
     coverImageAlt: translation?.coverImageAlt ?? post.coverImageAlt ?? null,
-    resolvedLocale: useTranslation ? effectiveLocale : baseLocale,
+    resolvedLocale,
     requestedLocale: locale,
-    isFallback: effectiveLocale !== baseLocale && !useTranslation,
+    availableLocales,
+    isFallback: locale !== resolvedLocale,
   }
 }
 

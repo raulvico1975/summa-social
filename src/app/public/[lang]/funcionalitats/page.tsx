@@ -507,7 +507,10 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   return {
     title: t.features.metaTitle,
     description: t.features.metaDescription,
-    ...generatePublicPageMetadata(lang, '/funcionalitats'),
+    ...generatePublicPageMetadata(lang, '/funcionalitats', {
+      title: t.features.metaTitle,
+      description: t.features.metaDescription,
+    }),
   };
 }
 

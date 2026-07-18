@@ -27,11 +27,13 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   if (!isValidPublicLocale(lang)) return {};
 
   const t = getPublicTranslations(lang);
-  const seoMeta = generatePublicPageMetadata(lang, '/privacy');
+  const title = `${t.privacy.title} | ${t.common.appName}`;
+  const description = t.common.tagline;
+  const seoMeta = generatePublicPageMetadata(lang, '/privacy', { title, description });
 
   return {
-    title: `${t.privacy.title} | ${t.common.appName}`,
-    description: t.common.tagline,
+    title,
+    description,
     ...seoMeta,
   };
 }
