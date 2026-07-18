@@ -625,12 +625,12 @@ const MODEL_182_METADATA: Record<PublicLocale, PublicLandingMetadata> = {
   ca: {
     title: 'Model 182 per a ONG | Software de gestió per a entitats | Summa Social',
     description:
-      "Com preparar el Model 182 d'una associació sense Excel ni errors. Controla donacions, devolucions i donants amb Summa Social.",
+      "Com preparar el Model 182 d'una associació amb més control i passos de revisió. Ordena donacions, devolucions i dades de donants amb Summa Social.",
   },
   es: {
     title: 'Modelo 182 para ONG | Software de gestión para entidades | Summa Social',
     description:
-      'Cómo preparar el Modelo 182 de una asociación sin Excel ni errores. Controla donaciones, devoluciones y donantes con Summa Social.',
+      'Cómo preparar el Modelo 182 de una asociación con más control y pasos de revisión. Ordena donaciones, devoluciones y datos de donantes con Summa Social.',
   },
   fr: {
     title: 'Modele 182 | Summa Social',
