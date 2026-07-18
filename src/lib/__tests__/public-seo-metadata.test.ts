@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { generatePublicPageMetadata } from '@/lib/public-locale';
 import {
   getPublicLandingBySlug,
@@ -85,4 +86,20 @@ test('certificate and Model 182 copy avoids absolute error-free or automatic cla
       assert.doesNotMatch(publicCopy, /pràcticament sol|prácticamente solo/i);
     }
   }
+});
+
+test('Catalan and Spanish public marketing sources avoid error-free guarantees', () => {
+  const publicMarketingSources = [
+    readFileSync('src/lib/public-landings.ts', 'utf8'),
+    readFileSync('src/i18n/public.ts', 'utf8'),
+  ].join('\n');
+
+  assert.doesNotMatch(
+    publicMarketingSources,
+    /\b(?:sense|sin)\b[^.!?\n]{0,32}\b(?:errors|errores)\b/i
+  );
+  assert.doesNotMatch(
+    publicMarketingSources,
+    /sense esforç|sin esfuerzo|tot validat|todo validado|control absolut|control absoluto/i
+  );
 });
