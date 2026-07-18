@@ -22,6 +22,7 @@ import {
   redactSecrets,
   samePermissionProfile,
   validateCleanupResource,
+  validateFirebasePasswordCredential,
 } from '../user-standard-core.mjs';
 
 const RUN_ID = 'QAUSR-20260710-120000-A1B2C3';
@@ -89,6 +90,44 @@ test('redactSecrets removes credentials and bearer tokens from evidence', () => 
   assert.equal(redacted.nested.authorization, '[REDACTED]');
   assert.equal(redacted.message, 'request used Bearer [REDACTED]');
   assert.doesNotMatch(JSON.stringify(redacted), /unsafe|abc123|abc\.def/);
+});
+
+test('credential preflight validates the real password without returning tokens', async () => {
+  let capturedBody = null;
+  const valid = await validateFirebasePasswordCredential({
+    apiKey: 'web-api-key',
+    email: 'qa@example.test',
+    password: 'secret-password',
+    fetchImpl: async (_url, init) => {
+      capturedBody = JSON.parse(init.body);
+      return { ok: true, json: async () => ({ idToken: 'must-not-leak' }) };
+    },
+  });
+  assert.deepEqual(valid, { ok: true, code: 'QA_CREDENTIAL_VALID' });
+  assert.equal(capturedBody.email, 'qa@example.test');
+  assert.equal(capturedBody.password, 'secret-password');
+  assert.doesNotMatch(JSON.stringify(valid), /must-not-leak|secret-password/);
+});
+
+test('credential preflight distinguishes invalid credentials and network errors', async () => {
+  const invalid = await validateFirebasePasswordCredential({
+    apiKey: 'web-api-key',
+    email: 'qa@example.test',
+    password: 'bad',
+    fetchImpl: async () => ({
+      ok: false,
+      json: async () => ({ error: { message: 'INVALID_LOGIN_CREDENTIALS' } }),
+    }),
+  });
+  assert.deepEqual(invalid, { ok: false, code: 'QA_CREDENTIAL_INVALID_LOGIN_CREDENTIALS' });
+
+  const network = await validateFirebasePasswordCredential({
+    apiKey: 'web-api-key',
+    email: 'qa@example.test',
+    password: 'bad',
+    fetchImpl: async () => { throw new Error('offline'); },
+  });
+  assert.deepEqual(network, { ok: false, code: 'QA_CREDENTIAL_CHECK_NETWORK_ERROR' });
 });
 
 test('permission profiles compare effective role, denies, grants and enabled capabilities', () => {

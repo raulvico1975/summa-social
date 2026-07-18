@@ -1,0 +1,59 @@
+{
+  "id": "ts-slow-app",
+  "type": "troubleshooting",
+  "domain": "general",
+  "risk": "safe",
+  "guardrail": "none",
+  "answerMode": "full",
+  "title": {
+    "ca": "L’aplicació va lenta",
+    "es": "La aplicación va lenta"
+  },
+  "intents": {
+    "ca": [
+      "l aplicació va molt lenta",
+      "Summa triga molt a carregar",
+      "la pantalla tarda a respondre"
+    ],
+    "es": [
+      "la aplicación va muy lenta",
+      "Summa tarda mucho en cargar",
+      "la pantalla responde despacio"
+    ]
+  },
+  "guideId": null,
+  "answer": {
+    "ca": "Prova aquestes comprovacions per ordre:\n1. Recarrega la pàgina.\n2. Fes una recàrrega completa del navegador (Ctrl+Maj+R a Windows o Cmd+Maj+R a Mac).\n3. Comprova la connexió obrint una altra web.\n4. Tanca pestanyes pesades i torna a provar.\n5. Si continua, obre Summa en un altre navegador actualitzat.\n\nSi el problema persisteix, enganxa aquí el missatge d’error literal i indica quina pantalla tarda; així et podré portar a la comprovació concreta.",
+    "es": "Prueba estas comprobaciones por orden:\n1. Recarga la página.\n2. Haz una recarga completa del navegador (Ctrl+Mayús+R en Windows o Cmd+Mayús+R en Mac).\n3. Comprueba la conexión abriendo otra web.\n4. Cierra pestañas pesadas y vuelve a probar.\n5. Si continúa, abre Summa en otro navegador actualizado.\n\nSi el problema persiste, pega aquí el mensaje de error literal e indica qué pantalla tarda; así podré llevarte a la comprobación concreta."
+  },
+  "uiPaths": [
+    "Ajuda contextual",
+    "Manual > Resolució de problemes"
+  ],
+  "needsSnapshot": false,
+  "keywords": [
+    "lent",
+    "lenta",
+    "lento",
+    "despacio",
+    "carregar",
+    "cargar",
+    "rendiment"
+  ],
+  "source_faq": [
+    "Q87"
+  ],
+  "source_manual": [
+    "11.5"
+  ],
+  "source_guides": [],
+  "related": [
+    "manual-common-errors",
+    "ts-offline-error"
+  ],
+  "error_key": null,
+  "symptom": {
+    "ca": "Summa tarda massa a carregar o respondre",
+    "es": "Summa tarda demasiado en cargar o responder"
+  }
+}

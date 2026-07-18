@@ -28,6 +28,16 @@ const OFFICIAL_UI_PATH_PREFIXES = [
   'Página de login',
   'Pàgina de login',
   'Login',
+  'Proveïdors',
+  'Proveedores',
+  'Treballadors',
+  'Trabajadores',
+  "Selector d'organització",
+  'Selector de organización',
+  'Ajuda contextual',
+  'Ayuda contextual',
+  'Hub de guies',
+  'Hub de guías',
 ] as const
 
 const DASHBOARD_ROUTE_UI_PATHS = [
@@ -82,10 +92,65 @@ function normalizeUiPath(path: string): string {
     .replace(/\s+/g, ' ')
 }
 
-export function normalizeUiPathsAgainstCatalog(paths: string[] | null | undefined): string[] {
+const UI_PATH_SEGMENTS: Array<[ca: string, es: string]> = [
+  ['Resolució de problemes', 'Resolución de problemas'],
+  ['Accions avançades', 'Acciones avanzadas'],
+  ['Moviments', 'Movimientos'],
+  ['Donants', 'Donantes'],
+  ['Projectes', 'Proyectos'],
+  ['Configuració', 'Configuración'],
+  ['Liquidacions', 'Liquidaciones'],
+  ['Pendents', 'Pendientes'],
+  ['Proveïdors', 'Proveedores'],
+  ['Treballadors', 'Trabajadores'],
+  ['Comptes bancaris', 'Cuentas bancarias'],
+  ['Fitxa del donant', 'Ficha del donante'],
+  ['Remeses de cobrament', 'Remesas de cobro'],
+  ['Detall de remesa', 'Detalle de remesa'],
+  ['Desfer remesa', 'Deshacer remesa'],
+  ['Assignació de despeses', 'Asignación de gastos'],
+  ['Importar extracte bancari', 'Importar extracto bancario'],
+  ['Selecciona projecte', 'Selecciona proyecto'],
+  ['Pàgina de login', 'Página de login'],
+  ["Selector d'organització", 'Selector de organización'],
+  ['Ajuda contextual', 'Ayuda contextual'],
+  ['Hub de guies', 'Hub de guías'],
+  ['Afegir despesa', 'Añadir gasto'],
+  ['Veure detall', 'Ver detalle'],
+  ['Remeses', 'Remesas'],
+  ['Membres', 'Miembros'],
+  ['Llistat', 'Listado'],
+  ['Editar', 'Editar'],
+  ['Manual', 'Manual'],
+  ['Informes', 'Informes'],
+  ['Dashboard', 'Dashboard'],
+  ['Header', 'Header'],
+]
+
+export function localizeUiPath(path: string, lang: KbLang): string {
+  const normalized = normalizeUiPath(path)
+  const segments = normalized.split(' > ').map(segment => segment.trim())
+  return segments.map(segment => {
+    const match = UI_PATH_SEGMENTS.find(([ca, es]) => segment === ca || segment === es)
+    if (match) return lang === 'es' ? match[1] : match[0]
+
+    return UI_PATH_SEGMENTS.reduce((localized, [ca, es]) => {
+      const source = lang === 'es' ? ca : es
+      const target = lang === 'es' ? es : ca
+      return localized.split(source).join(target)
+    }, segment)
+  }).join(' > ')
+}
+
+export function normalizeUiPathsAgainstCatalog(
+  paths: string[] | null | undefined,
+  lang?: KbLang
+): string[] {
   if (!Array.isArray(paths)) return []
   const unique = Array.from(new Set(paths.map(path => normalizeUiPath(path)).filter(Boolean)))
-  return unique.filter(isCatalogPath)
+  const catalogPaths = unique.filter(isCatalogPath)
+  if (!lang) return catalogPaths
+  return Array.from(new Set(catalogPaths.map(path => localizeUiPath(path, lang))))
 }
 
 export function extractOperationalSteps(answer: string): string[] {

@@ -1,0 +1,27 @@
+{
+  "id": "howto-donor-pause-fee",
+  "type": "howto",
+  "domain": "donors",
+  "risk": "safe",
+  "guardrail": "none",
+  "answerMode": "full",
+  "title": { "ca": "Posar temporalment una quota a zero", "es": "Poner temporalmente una cuota a cero" },
+  "intents": {
+    "ca": ["posar una quota en pausa", "aturar temporalment la quota d un soci", "que un soci no entri a la propera remesa"],
+    "es": ["poner una cuota en pausa", "parar temporalmente la cuota de un socio", "que un socio no entre en la próxima remesa"]
+  },
+  "guideId": null,
+  "answer": {
+    "ca": "Summa no té un botó separat de pausa, però pots deixar temporalment la quota a zero:\n1. Ves a Donants i obre la fitxa del soci.\n2. Clica Editar i posa Import de quota = 0.\n3. Desa i comprova que la fitxa mostra quota zero.\n4. Quan vulguis reprendre els cobraments, torna a informar l’import habitual.\n\nEls socis amb quota zero queden fora de les noves remeses. Això no modifica una remesa que ja s’hagi generat: revisa-la abans d’enviar-la.",
+    "es": "Summa no tiene un botón separado de pausa, pero puedes dejar temporalmente la cuota a cero:\n1. Ve a Donantes y abre la ficha del socio.\n2. Haz clic en Editar y pon Importe de cuota = 0.\n3. Guarda y comprueba que la ficha muestra cuota cero.\n4. Cuando quieras reanudar los cobros, vuelve a indicar el importe habitual.\n\nLos socios con cuota cero quedan fuera de las remesas nuevas. Esto no modifica una remesa que ya se haya generado: revísala antes de enviarla."
+  },
+  "uiPaths": ["Donants > Fitxa del donant > Editar"],
+  "needsSnapshot": false,
+  "keywords": ["quota", "cuota", "pausa", "aturar", "parar", "zero"],
+  "source_faq": [],
+  "source_manual": ["6.a"],
+  "source_guides": [],
+  "related": ["howto-donor-update-fee", "howto-remittance-review-before-send"],
+  "error_key": null,
+  "symptom": { "ca": null, "es": null }
+}

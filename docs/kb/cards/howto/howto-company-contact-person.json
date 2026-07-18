@@ -1,0 +1,27 @@
+{
+  "id": "howto-company-contact-person",
+  "type": "howto",
+  "domain": "donors",
+  "risk": "safe",
+  "guardrail": "none",
+  "answerMode": "full",
+  "title": { "ca": "Informar la persona de contacte d’una empresa", "es": "Indicar la persona de contacto de una empresa" },
+  "intents": {
+    "ca": ["afegir la persona de contacte d una empresa donant", "qui és el contacte d una empresa", "assignar un soci com a contacte d una empresa"],
+    "es": ["añadir la persona de contacto de una empresa donante", "quién es el contacto de una empresa", "asignar un socio como contacto de una empresa"]
+  },
+  "guideId": null,
+  "answer": {
+    "ca": "Per informar el contacte d’una empresa donant:\n1. Ves a Donants i obre la fitxa de l’empresa.\n2. Clica Editar i comprova que el tipus és Empresa.\n3. Escriu el nom al camp Persona de contacte.\n4. Desa i comprova que apareix a la fitxa.\n\nAquest camp és informatiu: desa el nom de la persona, però no crea una relació amb una altra fitxa de soci ni afecta informes fiscals.",
+    "es": "Para indicar el contacto de una empresa donante:\n1. Ve a Donantes y abre la ficha de la empresa.\n2. Haz clic en Editar y comprueba que el tipo es Empresa.\n3. Escribe el nombre en el campo Persona de contacto.\n4. Guarda y comprueba que aparece en la ficha.\n\nEste campo es informativo: guarda el nombre de la persona, pero no crea una relación con otra ficha de socio ni afecta a los informes fiscales."
+  },
+  "uiPaths": ["Donants > Fitxa del donant > Editar"],
+  "needsSnapshot": false,
+  "keywords": ["empresa", "persona de contacte", "persona de contacto", "donant", "donante"],
+  "source_faq": [],
+  "source_manual": ["3.2"],
+  "source_guides": [],
+  "related": ["howto-donor-update-details"],
+  "error_key": null,
+  "symptom": { "ca": null, "es": null }
+}

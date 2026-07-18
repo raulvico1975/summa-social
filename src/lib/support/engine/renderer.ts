@@ -84,8 +84,8 @@ function buildRawAnswer(card: KBCard, kbLang: KbLang): string {
   return ''
 }
 
-export function toEngineCard(card: KBCard, rawAnswer: string): EngineCard {
-  const uiPathsAllowed = normalizeUiPathsAgainstCatalog(card.uiPaths)
+export function toEngineCard(card: KBCard, rawAnswer: string, kbLang: KbLang = 'ca'): EngineCard {
+  const uiPathsAllowed = normalizeUiPathsAgainstCatalog(card.uiPaths, kbLang)
   const steps = extractOperationalSteps(rawAnswer)
 
   return {
@@ -118,7 +118,7 @@ export async function renderAnswer(input: {
   } = input
 
   const rawAnswer = mode === 'fallback' ? buildFallbackAnswerFromCard(card, kbLang) : buildRawAnswer(card, kbLang)
-  const engineCard = toEngineCard(card, rawAnswer)
+  const engineCard = toEngineCard(card, rawAnswer, kbLang)
 
   // P0 hard guardrail: operational procedures are rendered only from validated KB cards with concrete steps.
   if (intentType === 'operational' && !canRenderOperational(engineCard)) {
