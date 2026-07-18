@@ -2,6 +2,7 @@
  * Utilitats per gestionar idiomes a les rutes públiques.
  * Suporta ca/es/fr/pt amb detecció automàtica via Accept-Language.
  */
+import type { Metadata } from 'next';
 
 export type PublicLocale = 'ca' | 'es' | 'fr' | 'pt';
 
@@ -52,16 +53,34 @@ export function detectPublicLocale(acceptLanguage: string | null): PublicLocale 
   return DEFAULT_PUBLIC_LOCALE;
 }
 
+const OPEN_GRAPH_LOCALES: Record<PublicLocale, string> = {
+  ca: 'ca_ES',
+  es: 'es_ES',
+  fr: 'fr_FR',
+  pt: 'pt_PT',
+};
+
+export interface PublicPageMetadataOptions {
+  title?: string;
+  description?: string;
+  availableLocales?: PublicLocale[];
+  canonicalLocale?: PublicLocale;
+  index?: boolean;
+  follow?: boolean;
+  openGraphType?: 'website' | 'article';
+}
+
 /**
- * Genera els metadades hreflang per SEO.
- * Retorna un objecte amb les URLs alternatives per cada idioma.
+ * Genera les metadades hreflang per SEO.
+ * Només anuncia idiomes que tenen una versió publicable equivalent.
  */
 export function generateAlternateLanguages(
   basePath: string,
-  baseUrl: string = 'https://summasocial.app'
-): Record<PublicLocale, string> {
-  const result = {} as Record<PublicLocale, string>;
-  for (const locale of PUBLIC_LOCALES) {
+  baseUrl: string = 'https://summasocial.app',
+  locales: PublicLocale[] = PUBLIC_LOCALES
+): Partial<Record<PublicLocale, string>> {
+  const result: Partial<Record<PublicLocale, string>> = {};
+  for (const locale of locales) {
     result[locale] = `${baseUrl}/${locale}${basePath}`;
   }
   return result;
@@ -74,18 +93,56 @@ export function generateAlternateLanguages(
 export function generatePublicPageMetadata(
   locale: PublicLocale,
   basePath: string,
+  options: PublicPageMetadataOptions = {},
   baseUrl: string = 'https://summasocial.app'
-) {
-  const alternates = generateAlternateLanguages(basePath, baseUrl);
-  const canonical = alternates[locale];
+): Metadata {
+  const availableLocales = options.availableLocales?.length
+    ? [...new Set(options.availableLocales)]
+    : PUBLIC_LOCALES;
+  const canonicalLocale = options.canonicalLocale ?? locale;
+  const alternates = generateAlternateLanguages(basePath, baseUrl, availableLocales);
+  const canonical = `${baseUrl}/${canonicalLocale}${basePath}`;
+  const fallbackLocale = availableLocales.includes(DEFAULT_PUBLIC_LOCALE)
+    ? DEFAULT_PUBLIC_LOCALE
+    : availableLocales[0] ?? canonicalLocale;
+  const fallbackUrl = `${baseUrl}/${fallbackLocale}${basePath}`;
+  const alternateLocales = availableLocales
+    .filter((candidate) => candidate !== locale)
+    .map((candidate) => OPEN_GRAPH_LOCALES[candidate]);
 
   return {
     alternates: {
       canonical,
       languages: {
         ...alternates,
-        'x-default': alternates[DEFAULT_PUBLIC_LOCALE], // ca com a fallback
+        'x-default': fallbackUrl,
       },
     },
+    ...(typeof options.index === 'boolean'
+      ? {
+          robots: {
+            index: options.index,
+            follow: options.follow ?? true,
+          },
+        }
+      : {}),
+    ...(options.title && options.description
+      ? {
+          openGraph: {
+            title: options.title,
+            description: options.description,
+            url: canonical,
+            siteName: 'Summa Social',
+            locale: OPEN_GRAPH_LOCALES[locale],
+            alternateLocale: alternateLocales,
+            type: options.openGraphType ?? 'website',
+          },
+          twitter: {
+            card: 'summary' as const,
+            title: options.title,
+            description: options.description,
+          },
+        }
+      : {}),
   };
 }

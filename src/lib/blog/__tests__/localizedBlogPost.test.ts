@@ -39,15 +39,17 @@ test('resolveLocalizedBlogPost uses es translation for es locale', () => {
   assert.equal(post.title, 'Primer post en castellano')
   assert.equal(post.resolvedLocale, 'es')
   assert.equal(post.isFallback, false)
+  assert.deepEqual(post.availableLocales, ['ca', 'es'])
 })
 
-test('resolveLocalizedBlogPost falls back to es for fr locale when translation exists', () => {
+test('resolveLocalizedBlogPost marks unsupported fr locale as fallback to es', () => {
   const post = resolveLocalizedBlogPost(buildBlogPost(), 'fr')
 
   assert.equal(post.title, 'Primer post en castellano')
   assert.equal(post.resolvedLocale, 'es')
   assert.equal(post.requestedLocale, 'fr')
-  assert.equal(post.isFallback, false)
+  assert.equal(post.isFallback, true)
+  assert.deepEqual(post.availableLocales, ['ca', 'es'])
 })
 
 test('resolveLocalizedBlogPost falls back to base locale when es translation is missing', () => {
@@ -59,4 +61,5 @@ test('resolveLocalizedBlogPost falls back to base locale when es translation is 
   assert.equal(post.title, 'Primer post')
   assert.equal(post.resolvedLocale, 'ca')
   assert.equal(post.isFallback, true)
+  assert.deepEqual(post.availableLocales, ['ca'])
 })

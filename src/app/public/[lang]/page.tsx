@@ -1424,7 +1424,10 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   if (!isValidPublicLocale(lang)) return {};
 
   const t = getPublicTranslations(lang);
-  const seoMeta = generatePublicPageMetadata(lang, '');
+  const seoMeta = generatePublicPageMetadata(lang, '', {
+    title: t.home.metaTitle,
+    description: t.home.metaDescription,
+  });
 
   return {
     title: t.home.metaTitle,

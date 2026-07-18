@@ -27,7 +27,10 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
   const locale = lang as PublicLocale;
   const t = getPublicTranslations(locale);
-  const seoMeta = generatePublicPageMetadata(locale, '/preus');
+  const seoMeta = generatePublicPageMetadata(locale, '/preus', {
+    title: t.pricing.metaTitle,
+    description: t.pricing.metaDescription,
+  });
 
   return {
     title: t.pricing.metaTitle,

@@ -38,15 +38,22 @@ function detectBrowserLanguage(): Language {
 const getInitialLanguage = (): Language => {
   if (typeof window === 'undefined') return 'ca';
 
-  // 1. Prioritat: localStorage (usuari ja ha triat manualment)
+  // 1. En una ruta publica localitzada, la URL és la font de veritat.
+  // Evita que /es, /fr o /pt acabin declarant l'idioma del navegador.
+  const routeLocale = window.location.pathname.split('/').filter(Boolean)[0] as Language | undefined;
+  const validLanguages: Language[] = ['ca', 'es', 'fr', 'pt'];
+  if (routeLocale && validLanguages.includes(routeLocale)) {
+    return routeLocale;
+  }
+
+  // 2. Prioritat: localStorage (usuari ja ha triat manualment)
   const savedLanguage = localStorage.getItem('summa-lang') as Language;
   // Acceptem tots els idiomes vàlids (ca/es/fr/pt), pt només té JSON però és vàlid
-  const validLanguages: Language[] = ['ca', 'es', 'fr', 'pt'];
   if (savedLanguage && validLanguages.includes(savedLanguage)) {
     return savedLanguage;
   }
 
-  // 2. Detectar idioma del navegador
+  // 3. Detectar idioma del navegador
   return detectBrowserLanguage();
 };
 

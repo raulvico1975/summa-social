@@ -59,11 +59,21 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const update = await getPublicProductUpdateBySlug(slug, { locale: lang as PublicLocale });
   if (!update) return {};
 
-  const seoMeta = generatePublicPageMetadata(lang, `/novetats/${slug}`);
+  const title = `${update.title} | Summa Social`;
+  const description = update.excerpt || update.title;
+  const availableLocales: PublicLocale[] = ['ca', 'es'];
+  const seoMeta = generatePublicPageMetadata(lang, `/novetats/${slug}`, {
+    title,
+    description,
+    availableLocales,
+    canonicalLocale: availableLocales.includes(lang) ? lang : 'es',
+    index: availableLocales.includes(lang),
+    openGraphType: 'article',
+  });
 
   return {
-    title: `${update.title} | Summa Social`,
-    description: update.excerpt || update.title,
+    title,
+    description,
     ...seoMeta,
   };
 }

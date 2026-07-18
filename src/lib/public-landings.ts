@@ -1960,8 +1960,8 @@ const SOFTWARE_MANAGEMENT_ONG_METADATA: Record<PublicLocale, PublicLandingMetada
     description: "Software per gestionar moviments, donants i informes fiscals d'una ONG.",
   },
   es: {
-    title: 'Software de gestion para ONG | Summa Social',
-    description: 'Landing en preparacion para software de gestion de entidades sin animo de lucro.',
+    title: 'Software de gestión para ONG y asociaciones | Summa Social',
+    description: 'Centraliza movimientos, donantes, cuotas y obligaciones fiscales con un software de gestión económica pensado para ONG y asociaciones.',
   },
   fr: {
     title: 'Logiciel de gestion pour associations | Summa Social',
@@ -2092,14 +2092,134 @@ const SOFTWARE_MANAGEMENT_ONG_CONTENT_CA: PublicLandingContent = {
   },
 };
 
+const SOFTWARE_MANAGEMENT_ONG_CONTENT_ES: PublicLandingContent = {
+  hero: {
+    title: 'Software de gestión para ONG y asociaciones',
+    subtitle: 'Controla movimientos, donantes, cuotas y fiscalidad en un único sistema.',
+    introParagraphs: [
+      'Muchas ONG gestionan su actividad económica con una combinación de hojas de cálculo, extractos bancarios y documentos dispersos.',
+      'Con el tiempo, esta forma de trabajar dificulta entender qué está pasando realmente con los ingresos, los gastos y las aportaciones.',
+      'Summa Social es un software de gestión económica diseñado específicamente para entidades sociales.',
+      'Permite centralizar la información económica, los donantes, las cuotas y las obligaciones fiscales en un único sistema.',
+    ],
+    media: {
+      type: 'video',
+      src: '/media/features/dashboard/video/dashboard-loop.mp4',
+      poster: '/media/features/dashboard/stills/dashboard-start.webp',
+      alt: 'Visión general del software de gestión para ONG Summa Social',
+      durationLabel: '5 s',
+      autoPlay: false,
+      loop: false,
+      controls: true,
+      muted: false,
+    },
+  },
+  visualProof: {
+    title: 'La gestión económica de la ONG en un mismo entorno',
+    intro: 'El panel general, los movimientos bancarios y la preparación fiscal comparten la misma base de información.',
+    items: [
+      {
+        title: 'Visión general de la entidad',
+        description: 'El panel principal ayuda a entender la situación económica sin saltar entre herramientas.',
+        imageSrc: '/media/features/dashboard/stills/dashboard-start.webp',
+        imageAlt: 'Panel principal del software de gestión para ONG Summa Social',
+      },
+      {
+        title: 'Trabajo sobre movimientos reales',
+        description: 'Los ingresos y gastos parten de movimientos bancarios que el equipo puede revisar y clasificar.',
+        imageSrc: '/media/features/importar-extracte-bancari/stills/import-extractes-start.webp',
+        imageAlt: 'Importación de un extracto bancario en Summa Social',
+      },
+      {
+        title: 'Información fiscal preparada',
+        description: 'Los datos ordenados permiten preparar certificados y modelos fiscales desde el mismo sistema.',
+        imageSrc: '/media/features/model-182/stills/model-182-start.webp',
+        imageAlt: 'Preparación del Modelo 182 en Summa Social',
+      },
+    ],
+  },
+  problem: {
+    title: 'El problema habitual en la gestión económica de una ONG',
+    intro: 'Cuando la gestión depende de herramientas dispersas, es habitual encontrar:',
+    points: [
+      'información económica repartida entre varios documentos',
+      'dificultades para cuadrar ingresos y gastos',
+      'errores al preparar certificados y modelos fiscales',
+      'demasiadas horas dedicadas a tareas administrativas repetitivas',
+    ],
+    outroParagraphs: [
+      'Además de consumir tiempo, esta fragmentación reduce la claridad sobre la situación económica real de la entidad.',
+    ],
+  },
+  solution: {
+    title: 'Cómo lo resuelve Summa Social',
+    intro: 'Summa Social organiza la gestión económica a partir de los movimientos del banco y conecta cada bloque de trabajo con la misma base de datos.',
+    steps: [
+      {
+        title: 'Movimientos económicos',
+        body: 'Los ingresos y gastos se pueden importar, revisar y clasificar.',
+      },
+      {
+        title: 'Donantes y socios',
+        body: 'Cada aportación queda vinculada a la persona o entidad correspondiente.',
+      },
+      {
+        title: 'Cuotas y remesas',
+        body: 'Las cuotas de socios y las remesas SEPA se gestionan de forma ordenada.',
+      },
+      {
+        title: 'Certificados y modelos fiscales',
+        body: 'La información económica sirve para generar certificados y preparar los modelos 182 y 347.',
+      },
+      {
+        title: 'Visión económica integrada',
+        body: 'El equipo trabaja sobre un sistema coherente en lugar de reconstruir la información en cada cierre.',
+      },
+    ],
+  },
+  includes: {
+    title: 'Qué permite gestionar Summa Social',
+    intro: 'Con Summa Social es más sencillo:',
+    items: [
+      'controlar ingresos y gastos',
+      'gestionar socios y donantes',
+      'preparar cuotas y remesas SEPA',
+      'generar certificados e informes fiscales',
+      'entender la situación económica de la organización',
+    ],
+    outroParagraphs: ['Todo ello dentro de un software pensado para entidades sin ánimo de lucro.'],
+  },
+  operationalBenefits: {
+    title: 'Beneficios operativos',
+    items: [
+      'Información económica centralizada, sin depender de varios documentos vivos.',
+      'Menos trabajo administrativo y menos reconstrucciones manuales.',
+      'Más claridad para revisar la actividad y preparar los cierres.',
+    ],
+  },
+  forSmallAndMidEntities: {
+    title: 'Pensado para ONG pequeñas y medianas',
+    paragraphs: [
+      'Summa Social encaja especialmente en organizaciones con equipos administrativos pequeños que gestionan donaciones, cuotas de socios y obligaciones fiscales.',
+      'No es un ERP generalista y complejo: es una herramienta para ordenar la gestión económica específica de una entidad social.',
+    ],
+  },
+  finalCta: {
+    title: 'Hablemos de vuestra entidad',
+    text: 'Si la gestión económica depende de varias hojas de cálculo y revisiones manuales, contactad con nosotros y valoraremos si Summa Social encaja con vuestra forma de trabajar.',
+    linkLabel: 'Contacta con nosotros',
+    href: '/es/contact',
+  },
+};
+
 const ASSOCIATIONS_PROGRAM_METADATA: Record<PublicLocale, PublicLandingMetadata> = {
   ca: {
     title: 'Programa per associacions i ONG | Summa Social',
     description: 'Programa de gestió per associacions que permet controlar moviments, donants i informes fiscals.',
   },
   es: {
-    title: 'Programa para asociaciones y ONG | Summa Social',
-    description: 'Landing en preparacion para programa de gestion de asociaciones y ONG.',
+    title: 'Programa de gestión para asociaciones y ONG | Summa Social',
+    description: 'Gestiona movimientos, socios, cuotas, donaciones y obligaciones fiscales sin depender de hojas de cálculo dispersas.',
   },
   fr: {
     title: 'Programme pour associations et ONG | Summa Social',
@@ -2225,6 +2345,126 @@ const ASSOCIATIONS_PROGRAM_CONTENT_CA: PublicLandingContent = {
     text: "Si la gestió econòmica de la teva associació depèn de diversos fulls de càlcul i revisions manuals, contacta amb nosaltres i valorarem si Summa Social us pot ajudar a ordenar-la.",
     linkLabel: 'Contacta amb nosaltres',
     href: '/ca/contact',
+  },
+};
+
+const ASSOCIATIONS_PROGRAM_CONTENT_ES: PublicLandingContent = {
+  hero: {
+    title: 'Programa de gestión para asociaciones y ONG',
+    subtitle: 'Controla movimientos, socios, cuotas e informes fiscales sin hojas de cálculo dispersas.',
+    introParagraphs: [
+      'Muchas asociaciones gestionan su información económica con hojas de cálculo, extractos bancarios y documentos separados.',
+      'Esta fórmula puede funcionar al principio, pero se vuelve frágil cuando aumentan los socios, las cuotas, las donaciones o las obligaciones de información.',
+      'Summa Social es un programa de gestión creado para asociaciones y entidades sociales.',
+      'Centraliza la información económica, la base de socios y donantes, las remesas y la preparación fiscal en un único sistema.',
+    ],
+    media: {
+      type: 'video',
+      src: '/media/features/dashboard/video/dashboard-loop.mp4',
+      poster: '/media/features/dashboard/stills/dashboard-start.webp',
+      alt: 'Visión general del programa de gestión para asociaciones Summa Social',
+      durationLabel: '5 s',
+      autoPlay: false,
+      loop: false,
+      controls: true,
+      muted: false,
+    },
+  },
+  visualProof: {
+    title: 'Qué puede gestionar una asociación desde el programa',
+    intro: 'Las pantallas conectan los movimientos reales del banco con las cuotas, los socios, los donantes y la información fiscal.',
+    items: [
+      {
+        title: 'Movimientos y extractos',
+        description: 'Los ingresos y gastos se importan, revisan y clasifican sobre una base común.',
+        imageSrc: '/media/features/importar-extracte-bancari/stills/import-extractes-start.webp',
+        imageAlt: 'Importación de extractos bancarios para una asociación en Summa Social',
+      },
+      {
+        title: 'Cuotas y remesas SEPA',
+        description: 'El cobro de cuotas queda integrado con el resto de la gestión económica.',
+        imageSrc: '/media/features/remeses-sepa/stills/remeses-sepa-start.webp',
+        imageAlt: 'Gestión de remesas SEPA para asociaciones en Summa Social',
+      },
+      {
+        title: 'Base de socios y donantes',
+        description: 'La asociación puede consultar fichas, historial de aportaciones e incidencias sin hojas separadas.',
+        imageSrc: '/media/features/gestio-donants/stills/historic-donant-start.webp',
+        imageAlt: 'Historial de socios y donantes en Summa Social',
+      },
+    ],
+  },
+  problem: {
+    title: 'El problema habitual en la gestión de una asociación',
+    intro: 'Cuando la información se reparte entre varias herramientas, aparecen problemas como:',
+    points: [
+      'datos económicos duplicados o difíciles de cuadrar',
+      'poca visibilidad sobre cuotas pendientes y recibos devueltos',
+      'errores al preparar certificados e informes fiscales',
+      'muchas horas de revisión manual antes de cada cierre',
+    ],
+    outroParagraphs: [
+      'A medida que crece la actividad, mantener hojas de cálculo conectadas de forma manual se vuelve cada vez más difícil.',
+    ],
+  },
+  solution: {
+    title: 'Cómo lo resuelve Summa Social',
+    intro: 'El programa organiza la gestión económica a partir de los movimientos reales del banco y conecta cada operación con socios, donantes, proyectos y obligaciones fiscales.',
+    steps: [
+      {
+        title: 'Importar movimientos',
+        body: 'Los ingresos y gastos se incorporan desde el extracto bancario.',
+      },
+      {
+        title: 'Revisar y clasificar',
+        body: 'El equipo puede identificar cada operación y mantener una trazabilidad clara.',
+      },
+      {
+        title: 'Gestionar socios y cuotas',
+        body: 'Las aportaciones, cuotas y remesas se relacionan con la persona correcta.',
+      },
+      {
+        title: 'Preparar la fiscalidad',
+        body: 'Los datos ordenados sirven para certificados de donación y modelos fiscales.',
+      },
+      {
+        title: 'Consultar una visión conjunta',
+        body: 'La información económica deja de estar fragmentada y se consulta desde una misma aplicación.',
+      },
+    ],
+  },
+  includes: {
+    title: 'Qué permite gestionar el programa',
+    intro: 'Summa Social reúne las tareas clave de una asociación:',
+    items: [
+      'ingresos, gastos y conciliación bancaria',
+      'socios, donantes e historial de aportaciones',
+      'cuotas, remesas SEPA y recibos devueltos',
+      'certificados de donación y modelos fiscales',
+      'seguimiento económico de proyectos',
+    ],
+    outroParagraphs: ['La entidad trabaja con una única base en lugar de mantener varios documentos paralelos.'],
+  },
+  operationalBenefits: {
+    title: 'Beneficios operativos',
+    items: [
+      'Menos tiempo dedicado a copiar, cuadrar y reconstruir información.',
+      'Más trazabilidad sobre cobros, devoluciones y aportaciones.',
+      'Una base más clara para informar a la junta, la dirección y los financiadores.',
+    ],
+  },
+  forSmallAndMidEntities: {
+    title: 'Pensado para asociaciones pequeñas y medianas',
+    paragraphs: [
+      'Es especialmente útil para asociaciones con equipos administrativos reducidos que gestionan cuotas, donaciones, proyectos y obligaciones fiscales.',
+      'No pretende añadir la complejidad de un ERP generalista, sino ordenar los procesos económicos propios de una entidad sin ánimo de lucro.',
+    ],
+  },
+  finalCta: {
+    title: 'Hablemos de vuestra asociación',
+    text: 'Si vuestra gestión económica depende de hojas de cálculo y revisiones manuales, contactad con nosotros y veremos cómo encajar vuestro circuito de trabajo.',
+    linkLabel: 'Contacta con nosotros',
+    href: '/es/contact',
   },
 };
 
@@ -3889,10 +4129,10 @@ const PUBLIC_LANDINGS: PublicLandingDefinition[] = [
   {
     slug: 'software-gestion-ong',
     metadata: SOFTWARE_MANAGEMENT_ONG_METADATA,
-    indexedLocales: ['ca'],
+    indexedLocales: ['ca', 'es'],
     content: {
       ca: withRelatedLandings(SOFTWARE_MANAGEMENT_ONG_CONTENT_CA, 'ca', 'software-gestion-ong'),
-      es: buildPendingContent('es', LANDING_NAMES['software-gestion-ong'].es),
+      es: withRelatedLandings(SOFTWARE_MANAGEMENT_ONG_CONTENT_ES, 'es', 'software-gestion-ong'),
       fr: buildPendingContent('fr', LANDING_NAMES['software-gestion-ong'].fr),
       pt: buildPendingContent('pt', LANDING_NAMES['software-gestion-ong'].pt),
     },
@@ -3900,10 +4140,10 @@ const PUBLIC_LANDINGS: PublicLandingDefinition[] = [
   {
     slug: 'programa-associacions',
     metadata: ASSOCIATIONS_PROGRAM_METADATA,
-    indexedLocales: ['ca'],
+    indexedLocales: ['ca', 'es'],
     content: {
       ca: withRelatedLandings(ASSOCIATIONS_PROGRAM_CONTENT_CA, 'ca', 'programa-associacions'),
-      es: buildPendingContent('es', LANDING_NAMES['programa-associacions'].es),
+      es: withRelatedLandings(ASSOCIATIONS_PROGRAM_CONTENT_ES, 'es', 'programa-associacions'),
       fr: buildPendingContent('fr', LANDING_NAMES['programa-associacions'].fr),
       pt: buildPendingContent('pt', LANDING_NAMES['programa-associacions'].pt),
     },
