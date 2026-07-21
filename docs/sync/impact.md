@@ -1,19 +1,22 @@
 # Impacte funcional i sincronitzacio documental
 
 ## Metadata
-- date: 2026-07-17
-- change_scope: desacoblar el build de les lectures Firestore del blog public i del sitemap
+- date: 2026-07-21
+- change_scope: reforcar la comunicacio i conversio de les novetats de producte dins de l'app i al web public
 
 ## Declaracio obligatoria
-- help_topics_updated: []
+- help_topics_updated: ["novetats del producte"]
 - manual_updated: no
 - manual_sections: []
-- faq_updated: no
-- faq_questions: []
-- justification_if_no_change: "El canvi no modifica cap flux, text ni ajuda visible. Només evita que el build executi consultes remotes del blog i del sitemap; aquestes rutes continuen llegint les mateixes dades en temps de peticio."
+- faq_updated: yes
+- faq_questions: ["7¾. Com em puc assabentar de les novetats i millores de Summa Social?"]
+- justification_if_no_change: null
 
 ## Notes
 
-- Les rutes de blog localitzades i legacy es renderitzen en temps de peticio, igual que les novetats publiques ja existents.
-- El sitemap conserva les mateixes entrades, pero deixa de consultar Firestore durant el build.
-- No hi ha dependencies noves, migracions ni canvis de Firestore.
+- El generador setmanal prioritza resultats i benefici, amb seccions concretes en catala i castella.
+- Les rutes reconegudes poden afegir fins a dues accions segures dins de Summa; els canvis desconeguts no inventen botons.
+- Obrir el detall intern marca la novetat com a llegida i manté la lectura web com a accio secundaria.
+- La home publica mostra les dues novetats mes recents amb fallback segur, i el detall public incorpora CTA a demo i funcionalitats.
+- Les novetats anteriors continuen sent compatibles sense migracio.
+- No hi ha dependencies noves, migracions ni canvis destructius de Firestore; tampoc s'escriu `undefined`.

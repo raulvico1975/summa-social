@@ -6,7 +6,7 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, CalendarDays } from 'lucide-react';
+import { ArrowLeft, ArrowRight, CalendarDays } from 'lucide-react';
 import { PUBLIC_SHELL_X } from '@/components/public/public-shell';
 import { PublicSiteHeader } from '@/components/public/PublicSiteHeader';
 import { Button } from '@/components/ui/button';
@@ -18,6 +18,7 @@ import {
 import { getPublicProductUpdateBySlug } from '@/lib/product-updates/public';
 import { getPublicTranslations } from '@/i18n/public';
 import { renderStructuredText } from '@/lib/render-structured-text';
+import { getPublicFeaturesHref } from '@/lib/public-site-paths';
 
 export const dynamic = 'force-dynamic';
 
@@ -27,6 +28,43 @@ interface PageProps {
 
 const pageShellClass =
   'min-h-screen bg-[radial-gradient(circle_at_top,rgba(14,165,233,0.12),transparent_32%),linear-gradient(180deg,#f8fbff_0%,#ffffff_26%,#ffffff_100%)]';
+
+const UPDATE_CTA_COPY: Record<PublicLocale, {
+  eyebrow: string;
+  title: string;
+  description: string;
+  primary: string;
+  secondary: string;
+}> = {
+  ca: {
+    eyebrow: 'Summa continua avançant',
+    title: 'Vols veure com funcionaria a la teva entitat?',
+    description: 'T’ensenyem una demo centrada en la vostra operativa real i en les tasques que més temps us ocupen.',
+    primary: 'Demanar una demo',
+    secondary: 'Veure funcionalitats',
+  },
+  es: {
+    eyebrow: 'Summa sigue avanzando',
+    title: '¿Quieres ver cómo funcionaría en tu entidad?',
+    description: 'Te enseñamos una demo centrada en vuestra operativa real y en las tareas que más tiempo os ocupan.',
+    primary: 'Pedir una demo',
+    secondary: 'Ver funcionalidades',
+  },
+  fr: {
+    eyebrow: 'Summa continue d’avancer',
+    title: 'Vous souhaitez voir comment cela fonctionnerait dans votre organisation ?',
+    description: 'Nous vous proposons une démo centrée sur votre fonctionnement réel et vos tâches les plus chronophages.',
+    primary: 'Demander une démo',
+    secondary: 'Voir les fonctionnalités',
+  },
+  pt: {
+    eyebrow: 'A Summa continua a evoluir',
+    title: 'Quer ver como funcionaria na sua organização?',
+    description: 'Mostramos uma demo centrada na vossa operação real e nas tarefas que vos ocupam mais tempo.',
+    primary: 'Pedir uma demo',
+    secondary: 'Ver funcionalidades',
+  },
+};
 
 export function generateStaticParams() {
   return [];
@@ -94,6 +132,7 @@ export default async function NovetatsDetailPage({ params }: PageProps) {
   }
 
   const publishedAt = formatPublicDate(update.publishedAt, locale);
+  const ctaCopy = UPDATE_CTA_COPY[locale];
 
   return (
     <main className={pageShellClass}>
@@ -128,15 +167,40 @@ export default async function NovetatsDetailPage({ params }: PageProps) {
       </section>
 
       <section className={`pb-20 ${PUBLIC_SHELL_X}`}>
-        <article className="mx-auto max-w-4xl rounded-[2rem] border border-border/60 bg-white/95 p-6 shadow-[0_28px_80px_-56px_rgba(15,23,42,0.22)] sm:p-10">
-          {update.content ? (
-            <div className="prose prose-neutral max-w-none text-base leading-8 prose-headings:tracking-tight prose-p:text-muted-foreground prose-li:text-muted-foreground">
-              {renderStructuredText(update.content)}
+        <div className="mx-auto max-w-4xl space-y-8">
+          <article className="rounded-[2rem] border border-border/60 bg-white/95 p-6 shadow-[0_28px_80px_-56px_rgba(15,23,42,0.22)] sm:p-10">
+            {update.content ? (
+              <div className="prose prose-neutral max-w-none text-base leading-8 prose-headings:tracking-tight prose-p:text-muted-foreground prose-li:text-muted-foreground">
+                {renderStructuredText(update.content)}
+              </div>
+            ) : (
+              <p className="text-base leading-7 text-muted-foreground">{update.excerpt}</p>
+            )}
+          </article>
+
+          <aside className="rounded-[2rem] border border-sky-200/80 bg-[linear-gradient(135deg,rgba(14,165,233,0.14),rgba(255,255,255,0.98)_55%,rgba(240,249,255,0.95))] p-6 shadow-[0_28px_80px_-56px_rgba(14,165,233,0.38)] sm:p-8">
+            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-primary/85">
+              {ctaCopy.eyebrow}
+            </p>
+            <h2 className="mt-3 text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
+              {ctaCopy.title}
+            </h2>
+            <p className="mt-4 max-w-2xl text-base leading-7 text-muted-foreground">
+              {ctaCopy.description}
+            </p>
+            <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+              <Button asChild size="lg" className="rounded-full px-7">
+                <Link href={`/${locale}/contact`}>
+                  {ctaCopy.primary}
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Link>
+              </Button>
+              <Button asChild size="lg" variant="outline" className="rounded-full px-7">
+                <Link href={getPublicFeaturesHref(locale)}>{ctaCopy.secondary}</Link>
+              </Button>
             </div>
-          ) : (
-            <p className="text-base leading-7 text-muted-foreground">{update.excerpt}</p>
-          )}
-        </article>
+          </aside>
+        </div>
       </section>
 
       <footer className={`mt-auto border-t py-6 ${PUBLIC_SHELL_X}`}>

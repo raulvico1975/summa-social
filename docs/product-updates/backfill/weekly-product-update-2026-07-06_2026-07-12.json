@@ -1,0 +1,29 @@
+{
+  "externalId": "weekly-product-update-2026-07-06_2026-07-12",
+  "locale": "ca",
+  "title": "Contactes i invitacions: guardat i accessos més fiables",
+  "description": "Guardar contactes és més fiable i les invitacions validen millor els accessos i els enllaços.",
+  "link": null,
+  "contentLong": "Aquesta setmana hem reforçat el guardat de contactes i el flux d’invitacions amb canvis desplegats entre el 06/07/2026 i el 12/07/2026.\n\nQuè canvia:\n- Ara les invitacions validen millor l’accés i els enllaços abans de continuar.\n- Ara pots guardar contactes amb menys errors quan encara falta alguna dada fiscal.\n\nOn ho notaràs:\n- al registre, l’accés i la incorporació de persones usuàries.\n- a les fitxes de contactes i proveïdors.\n\nQuè has de fer:\n- Revisa l’enllaç rebut i demana una invitació nova si ja no és vàlid.\n- Continua guardant el contacte i completa les dades fiscals quan les tinguis disponibles.\n\nLímit:\n- No modifica dades ja guardades.\n- Només reforça com s’executen aquestes accions dins del flux habitual.",
+  "guideUrl": null,
+  "videoUrl": null,
+  "web": {
+    "enabled": true,
+    "slug": "novetats-setmanals-2026-07-06-2026-07-12",
+    "excerpt": "Guardat de contactes més fiable i invitacions amb validacions d’accés més clares.",
+    "content": "Aquesta setmana hem reforçat el guardat de contactes i el flux d’invitacions amb canvis desplegats entre el 06/07/2026 i el 12/07/2026.\n\nQuè canvia:\n- Ara les invitacions validen millor l’accés i els enllaços abans de continuar.\n- Ara pots guardar contactes amb menys errors quan encara falta alguna dada fiscal.\n\nOn ho notaràs:\n- al registre, l’accés i la incorporació de persones usuàries.\n- a les fitxes de contactes i proveïdors.\n\nQuè has de fer:\n- Revisa l’enllaç rebut i demana una invitació nova si ja no és vàlid.\n- Continua guardant el contacte i completa les dades fiscals quan les tinguis disponibles.\n\nLímit:\n- No modifica dades ja guardades.\n- Només reforça com s’executen aquestes accions dins del flux habitual."
+  },
+  "locales": {
+    "es": {
+      "title": "Contactos e invitaciones: guardado y accesos más fiables",
+      "description": "Guardar contactos es más fiable y las invitaciones validan mejor los accesos y los enlaces.",
+      "contentLong": "Esta semana hemos reforzado el guardado de contactos y el flujo de invitaciones con cambios desplegados entre el 06/07/2026 y el 12/07/2026.\n\nQué cambia:\n- Ahora las invitaciones validan mejor el acceso y los enlaces antes de continuar.\n- Ahora puedes guardar contactos con menos errores cuando todavía falta algún dato fiscal.\n\nDónde lo notarás:\n- en el registro, el acceso y la incorporación de personas usuarias.\n- en las fichas de contactos y proveedores.\n\nQué tienes que hacer:\n- Revisa el enlace recibido y solicita una invitación nueva si ya no es válido.\n- Sigue guardando el contacto y completa los datos fiscales cuando estén disponibles.\n\nLímite:\n- No modifica datos ya guardados.\n- Solo refuerza cómo se ejecutan estas acciones dentro del flujo habitual.",
+      "web": {
+        "title": "Contactos e invitaciones: guardado y accesos más fiables",
+        "excerpt": "Guardado de contactos más fiable e invitaciones con validaciones de acceso más claras.",
+        "content": "Esta semana hemos reforzado el guardado de contactos y el flujo de invitaciones con cambios desplegados entre el 06/07/2026 y el 12/07/2026.\n\nQué cambia:\n- Ahora las invitaciones validan mejor el acceso y los enlaces antes de continuar.\n- Ahora puedes guardar contactos con menos errores cuando todavía falta algún dato fiscal.\n\nDónde lo notarás:\n- en el registro, el acceso y la incorporación de personas usuarias.\n- en las fichas de contactos y proveedores.\n\nQué tienes que hacer:\n- Revisa el enlace recibido y solicita una invitación nueva si ya no es válido.\n- Sigue guardando el contacto y completa los datos fiscales cuando estén disponibles.\n\nLímite:\n- No modifica datos ya guardados.\n- Solo refuerza cómo se ejecutan estas acciones dentro del flujo habitual."
+      }
+    }
+  },
+  "isActive": true
+}

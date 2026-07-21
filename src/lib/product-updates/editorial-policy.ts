@@ -40,11 +40,25 @@ const GENERIC_PHRASES = [
 ];
 
 // Public weekly updates must read as useful operational notes, not as generic release copy.
-const REQUIRED_WEEKLY_SECTIONS = [
+const LEGACY_WEEKLY_SECTIONS = [
   'que canvia',
   'on ho notaras',
   'que has de fer',
   'limit',
+];
+
+const OUTCOME_WEEKLY_SECTIONS = [
+  'que pots fer ara',
+  'per que es util',
+  'on ho trobaras',
+  'que has de fer',
+];
+
+const OPTIONAL_OUTCOME_WEEKLY_SECTIONS = ['tingues en compte'];
+const KNOWN_WEEKLY_SECTIONS = [
+  ...LEGACY_WEEKLY_SECTIONS,
+  ...OUTCOME_WEEKLY_SECTIONS,
+  ...OPTIONAL_OUTCOME_WEEKLY_SECTIONS,
 ];
 
 const FUNCTIONAL_AREA_TERMS = [
@@ -64,6 +78,12 @@ const FUNCTIONAL_AREA_TERMS = [
   'projecte',
   'subvencio',
   'justificacio',
+  'contacte',
+  'contacto',
+  'invitacio',
+  'invitacion',
+  'usuari',
+  'usuario',
   'permis',
   'rol',
   'arxiva',
@@ -133,6 +153,10 @@ const CATALAN_LEAKS_IN_SPANISH = [
   'que canvia',
   'que has de fer',
   'on ho notaras',
+  'que pots fer ara',
+  'per que es util',
+  'on ho trobaras',
+  'tingues en compte',
 ];
 
 function normalizeForPolicy(value: string): string {
@@ -162,7 +186,7 @@ function extractSections(contentLong: string): Map<string, string> {
 
   for (const line of contentLong.split('\n')) {
     const normalizedLine = normalizeSectionTitle(line);
-    if (REQUIRED_WEEKLY_SECTIONS.includes(normalizedLine)) {
+    if (KNOWN_WEEKLY_SECTIONS.includes(normalizedLine)) {
       flush();
       currentSection = normalizedLine;
       continue;
@@ -243,7 +267,10 @@ export function validateWeeklyProductUpdateEditorial(
   }
 
   const sections = extractSections(payload.contentLong);
-  for (const section of REQUIRED_WEEKLY_SECTIONS) {
+  const usesOutcomeFormat = sections.has('que pots fer ara') || sections.has('per que es util');
+  const requiredSections = usesOutcomeFormat ? OUTCOME_WEEKLY_SECTIONS : LEGACY_WEEKLY_SECTIONS;
+
+  for (const section of requiredSections) {
     const sectionText = sections.get(section);
     if (!sectionText) {
       errors.push(`contentLong must include section "${section}:"`);
@@ -259,9 +286,17 @@ export function validateWeeklyProductUpdateEditorial(
     errors.push('weekly update must mention a concrete functional or economic area');
   }
 
-  const changeSection = normalizeForPolicy(sections.get('que canvia') ?? '');
+  const changeSectionKey = usesOutcomeFormat ? 'que pots fer ara' : 'que canvia';
+  const changeSection = normalizeForPolicy(sections.get(changeSectionKey) ?? '');
   if (!hasAnyTerm(changeSection, VISIBLE_CHANGE_TERMS)) {
-    errors.push('section "que canvia:" must describe a visible user-facing change');
+    errors.push(`section "${changeSectionKey}:" must describe a visible user-facing change`);
+  }
+
+  if (usesOutcomeFormat) {
+    const benefitSection = sections.get('per que es util') ?? '';
+    if (!hasSubstantialSection(benefitSection)) {
+      errors.push('section "per que es util:" must explain a concrete user benefit');
+    }
   }
 
   const actionSection = normalizeForPolicy(sections.get('que has de fer') ?? '');
@@ -269,9 +304,11 @@ export function validateWeeklyProductUpdateEditorial(
     errors.push('section "que has de fer:" must state a concrete user action or that no action is needed');
   }
 
-  const limitSection = normalizeForPolicy(sections.get('limit') ?? '');
-  if (!hasAnyTerm(limitSection, LIMIT_TERMS)) {
-    errors.push('section "limit:" must state what is not covered or what has not changed');
+  if (!usesOutcomeFormat) {
+    const limitSection = normalizeForPolicy(sections.get('limit') ?? '');
+    if (!hasAnyTerm(limitSection, LIMIT_TERMS)) {
+      errors.push('section "limit:" must state what is not covered or what has not changed');
+    }
   }
 
   if (normalizedSpanishText.length > 0) {

@@ -10,7 +10,7 @@ import { PUBLIC_SHELL_X, PUBLIC_WIDE_SHELL } from '@/components/public/public-sh
 import { RotatingHeroPhrase } from '@/components/public/RotatingHeroPhrase';
 import { PublicSiteHeader } from '@/components/public/PublicSiteHeader';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, CheckCircle2, Download, FileCheck, Settings, Upload } from 'lucide-react';
+import { ArrowRight, CalendarDays, CheckCircle2, Download, FileCheck, Settings, Upload } from 'lucide-react';
 import {
   PUBLIC_LOCALES,
   isValidPublicLocale,
@@ -21,11 +21,38 @@ import { SUPPORT_EMAIL } from '@/lib/constants';
 import { getPublicTranslations } from '@/i18n/public';
 import { type PublicLandingHeroMedia } from '@/lib/public-landings';
 import { getPublicFeaturesHref, getPublicPricingHref } from '@/lib/public-site-paths';
+import {
+  listPublicProductUpdates,
+  type PublicProductUpdate,
+} from '@/lib/product-updates/public';
 
 const surfaceClass =
   'rounded-[1.75rem] border border-border/60 bg-white/90 shadow-[0_22px_60px_-40px_rgba(15,23,42,0.18)] backdrop-blur';
 
 const SURFACE_CLASS = surfaceClass;
+
+const HOME_UPDATES_COPY: Record<'ca' | 'es', {
+  eyebrow: string;
+  title: string;
+  description: string;
+  viewAll: string;
+  read: string;
+}> = {
+  ca: {
+    eyebrow: 'Producte viu',
+    title: 'Summa continua millorant',
+    description: 'Aquestes són les últimes millores que ja podeu aprofitar dins de l’aplicació.',
+    viewAll: 'Veure totes les novetats',
+    read: 'Llegir la novetat',
+  },
+  es: {
+    eyebrow: 'Producto vivo',
+    title: 'Summa sigue mejorando',
+    description: 'Estas son las últimas mejoras que ya podéis aprovechar dentro de la aplicación.',
+    viewAll: 'Ver todas las novedades',
+    read: 'Leer la novedad',
+  },
+};
 
 const HERO_ROTATING_SEGMENTS: Record<PublicLocale, string> = {
   ca: 'donacions, quotes i informes fiscals',
@@ -1573,6 +1600,14 @@ export default async function HomePage({ params }: PageProps) {
   const howWeWorkHref = `/${locale}#how-we-work`;
   const updatesHref = `/${locale}/novetats`;
   const hasPublicManual = locale === 'ca' || locale === 'es';
+  let latestUpdates: PublicProductUpdate[] = [];
+  if (locale === 'ca' || locale === 'es') {
+    try {
+      latestUpdates = (await listPublicProductUpdates({ locale })).slice(0, 2);
+    } catch (error) {
+      console.warn('[public-home] latest product updates unavailable:', error);
+    }
+  }
   const headlineParts = splitTextAroundPhrase(t.home.heroTagline, HERO_ROTATING_SEGMENTS[locale]);
   const headlinePrefix = headlineParts.before.trim();
   const headlineSuffix = headlineParts.after.trim();
@@ -2151,6 +2186,64 @@ export default async function HomePage({ params }: PageProps) {
           </div>
         </div>
       </section>
+
+      {latestUpdates.length > 0 && (locale === 'ca' || locale === 'es') && (
+        <section className={`bg-slate-50/80 py-16 lg:py-20 ${PUBLIC_SHELL_X}`}>
+          <div className="mx-auto max-w-6xl">
+            <div className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
+              <div className="max-w-3xl space-y-3">
+                <p className="text-sm font-semibold uppercase tracking-[0.18em] text-primary/85">
+                  {HOME_UPDATES_COPY[locale].eyebrow}
+                </p>
+                <h2 className="text-3xl font-semibold tracking-tight text-foreground sm:text-[2.35rem]">
+                  {HOME_UPDATES_COPY[locale].title}
+                </h2>
+                <p className="text-base leading-7 text-muted-foreground sm:text-lg">
+                  {HOME_UPDATES_COPY[locale].description}
+                </p>
+              </div>
+              <Link
+                href={updatesHref}
+                className="inline-flex items-center text-sm font-semibold text-primary hover:underline"
+              >
+                {HOME_UPDATES_COPY[locale].viewAll}
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Link>
+            </div>
+
+            <div className="mt-9 grid gap-5 md:grid-cols-2">
+              {latestUpdates.map((update) => {
+                const publishedAt = formatPublicDate(update.publishedAt, locale);
+                return (
+                  <article key={update.id} className={`${SURFACE_CLASS} flex h-full flex-col p-6 sm:p-7`}>
+                    {publishedAt && (
+                      <p className="inline-flex items-center gap-2 text-sm text-muted-foreground">
+                        <CalendarDays className="h-4 w-4 text-primary" />
+                        {publishedAt}
+                      </p>
+                    )}
+                    <h3 className="mt-4 text-xl font-semibold tracking-tight text-foreground">
+                      {update.title}
+                    </h3>
+                    {update.excerpt && (
+                      <p className="mt-3 flex-1 text-sm leading-6 text-muted-foreground">
+                        {update.excerpt}
+                      </p>
+                    )}
+                    <Link
+                      href={`/${locale}/novetats/${update.slug}`}
+                      className="mt-5 inline-flex items-center text-sm font-semibold text-primary hover:underline"
+                    >
+                      {HOME_UPDATES_COPY[locale].read}
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </Link>
+                  </article>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+      )}
 
       <section data-preview-section="cta-final" className={`pb-20 pt-10 lg:pt-14 ${PUBLIC_SHELL_X}`}>
         <div className="mx-auto max-w-6xl rounded-[2.4rem] border border-sky-200/70 bg-[linear-gradient(135deg,rgba(14,165,233,0.16),rgba(255,255,255,0.96)_45%,rgba(240,249,255,0.92))] p-6 shadow-[0_30px_90px_-56px_rgba(14,165,233,0.45)] sm:p-8 lg:p-10">

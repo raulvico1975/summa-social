@@ -76,6 +76,13 @@ function buildValidPayload() {
     contentLong: 'Hem simplificat el detall de cobraments per entendre millor cada pas.',
     guideUrl: null,
     videoUrl: null,
+    appActions: [
+      {
+        href: '/dashboard/movimientos',
+        label: 'Obrir moviments',
+        locales: { es: { label: 'Abrir movimientos' } },
+      },
+    ],
     web: {
       enabled: true,
       slug: 'millora-detall-cobraments',
@@ -270,6 +277,13 @@ test('handleProductUpdatesPublish creates product update, avoids undefined and r
     es: buildSpanishLocalization().es.web,
   });
   assert.equal('videoUrl' in (stored ?? {}), true);
+  assert.deepEqual(stored?.appActions, [
+    {
+      href: '/dashboard/movimientos',
+      label: 'Obrir moviments',
+      locales: { es: { label: 'Abrir movimientos' } },
+    },
+  ]);
   assert.equal(Object.values(stored ?? {}).includes(undefined), false);
   assert.deepEqual(revalidatedPaths, [
     '/ca',
@@ -279,6 +293,28 @@ test('handleProductUpdatesPublish creates product update, avoids undefined and r
     '/es/novetats',
     '/es/novetats/millora-detall-cobraments',
   ]);
+});
+
+test('handleProductUpdatesPublish rejects unsafe app action paths', async () => {
+  const payload = buildValidPayload();
+  payload.appActions[0]!.href = 'https://example.com/redirect';
+
+  const response = await handleProductUpdatesPublish(
+    createRequest(payload),
+    {
+      getAdminDbFn: () => new FakeDb(new Map()) as never,
+      nowTimestampFn: () => 'now',
+      getPublishSecretFn: () => 'top-secret',
+      getPublicBaseUrlFn: () => 'https://summasocial.app',
+      getPublicLocalesFn: () => ['ca'],
+      localizeProductUpdateFn: async () => buildSpanishLocalization(),
+      revalidatePathsFn: async () => {},
+    }
+  );
+
+  assert.equal(response.status, 400);
+  const body = await response.json() as { details?: string[] };
+  assert.ok(body.details?.includes('appActions.0.href must be a safe dashboard path'));
 });
 
 test('handleProductUpdatesPublish is idempotent for existing externalId', async () => {

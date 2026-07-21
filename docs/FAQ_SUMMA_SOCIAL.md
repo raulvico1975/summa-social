@@ -249,7 +249,9 @@ Summa Social guarda automàticament molts canvis mentre treballes. Si estaves ed
 - Quan hi ha novetats noves, veuràs un badge numèric sobre la icona (1, 2, 3...)
 - La safata es pot obrir un instant per fer visible una novetat nova, però sense quedar-se oberta
 - Clica la icona per obrir l'inbox de novetats
-- Llegeix les que t'interessin, marca-les com llegides, i el badge desapareix
+- Quan obres el detall d'una novetat, queda marcada com a llegida i el badge s'actualitza
+- Si la novetat afecta una pantalla concreta, trobaràs un botó per provar-la directament dins de Summa
+- L'enllaç «Llegir al web» et permet consultar o compartir la versió pública
 
 **Sobre les notificacions:**
 - **No t'interromprem** amb popups automàtics mentre treballes

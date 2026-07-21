@@ -42,12 +42,6 @@ export function ProductUpdatesFab() {
   const [selectedUpdate, setSelectedUpdate] = React.useState<FirestoreProductUpdate | null>(null);
   const [isDetailOpen, setIsDetailOpen] = React.useState(false);
 
-  const handleOpenDetail = (update: FirestoreProductUpdate) => {
-    setSelectedUpdate(update);
-    setIsDetailOpen(true);
-    setIsOpen(false); // Tancar panel
-  };
-
   // Carregar readIds al muntar
   React.useEffect(() => {
     if (organizationId && user?.uid) {
@@ -67,10 +61,17 @@ export function ProductUpdatesFab() {
     (updateId: string) => {
       if (!organizationId || !user?.uid) return;
       markNotificationRead(organizationId, user.uid, updateId);
-      setReadIds((prev) => [...prev, updateId]);
+      setReadIds((prev) => prev.includes(updateId) ? prev : [...prev, updateId]);
     },
     [organizationId, user?.uid]
   );
+
+  const handleOpenDetail = React.useCallback((update: FirestoreProductUpdate) => {
+    handleMarkRead(update.id);
+    setSelectedUpdate(update);
+    setIsDetailOpen(true);
+    setIsOpen(false);
+  }, [handleMarkRead]);
 
   const handleMarkAllRead = React.useCallback(() => {
     if (!organizationId || !user?.uid) return;
@@ -156,9 +157,9 @@ export function ProductUpdatesFab() {
                           <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
                             {update.body}
                           </p>
-                          {update.href && (
+                          {(update.appActions?.[0] || update.href) && (
                             <Link
-                              href={buildUrl(update.href)}
+                              href={buildUrl(update.appActions?.[0]?.href ?? update.href!)}
                               onClick={(e) => {
                                 e.stopPropagation();
                                 handleMarkRead(update.id);
@@ -166,7 +167,7 @@ export function ProductUpdatesFab() {
                               }}
                               className="inline-flex items-center text-xs text-primary hover:underline mt-2"
                             >
-                              {update.ctaLabel ?? t.productUpdates.openUpdate}
+                              {update.appActions?.[0]?.label ?? update.ctaLabel ?? t.productUpdates.openUpdate}
                             </Link>
                           )}
                         </div>

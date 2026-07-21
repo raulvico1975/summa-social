@@ -8,6 +8,10 @@ export type ProductUpdate = {
   body: string;
   href?: string; // ruta interna sense orgSlug
   ctaLabel?: string;
+  appActions?: Array<{
+    href: string;
+    label: string;
+  }>;
   createdAt: string; // YYYY-MM-DD
   locale?: 'ca' | 'es';
   locales?: Partial<Record<'es', {

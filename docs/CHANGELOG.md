@@ -10,6 +10,15 @@ Aquest fitxer ja no pretén duplicar el document mestre.
 
 ## Resum dels canvis recents
 
+### 2026-07-21
+
+- comunicació de producte: les novetats setmanals passen a explicar què pot fer l’usuari, quin benefici obté i on trobar-ho; quan hi ha una ruta segura, el detall intern ofereix accions directes dins de Summa.
+- web públic: la portada mostra les dues novetats més recents amb fallback segur i cada detall incorpora una crida clara a demo i funcionalitats.
+- novetats de producte: el generador setmanal reconeix els canvis reals de contactes, invitacions, bot d’ajuda i importació bancària sense dependre d’una sessió web.
+- monitoratge: les fallades del pipeline s’enregistren com una incidència crítica al sistema existent d’alertes i una execució posterior correcta la resol automàticament.
+- recuperació: publicats i verificats els payloads bilingües CA/ES de les setmanes 06–12/07 i 13–19/07.
+- desplegament de Functions: el build elimina sortides antigues i comprova que el paquet carrega exactament l’índex compilat que Firebase desplegarà.
+
 ### 2026-07-18
 
 - bot d'ajuda: la resposta segueix l'idioma real de cada pregunta en català o castellà, independentment de l'idioma configurat a la interfície, i localitza també les rutes de navegació.
