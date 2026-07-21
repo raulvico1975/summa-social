@@ -15,6 +15,7 @@ Aquest fitxer ja no pretén duplicar el document mestre.
 - novetats de producte: el generador setmanal reconeix els canvis reals de contactes, invitacions, bot d’ajuda i importació bancària sense dependre d’una sessió web.
 - monitoratge: les fallades del pipeline s’enregistren com una incidència crítica al sistema existent d’alertes i una execució posterior correcta la resol automàticament.
 - recuperació: preparats i validats els payloads bilingües CA/ES de les setmanes 06–12/07 i 13–19/07; continuen sense publicar fins que s’autoritzi l’escriptura a producció.
+- desplegament de Functions: el build elimina sortides antigues i comprova que el paquet carrega exactament l’índex compilat que Firebase desplegarà.
 
 ### 2026-07-18
 

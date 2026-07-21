@@ -18,4 +18,5 @@
 - Els commits reals de les setmanes 06-12/07 i 13-19/07 generen copy concret i validat en catala i castella.
 - Una fallada crea o actualitza una unica incidencia a `systemIncidents`; una execucio correcta posterior la resol.
 - Els dos payloads de recuperacio queden preparats localment i no s'escriuen a produccio sense autoritzacio explicita.
+- El paquet de Functions neteja la sortida compilada anterior i valida el seu `main` real abans de qualsevol deploy.
 - No hi ha dependencies noves, migracions ni canvis destructius de Firestore; tampoc s'escriu `undefined`.
