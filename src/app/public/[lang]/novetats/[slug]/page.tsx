@@ -8,6 +8,7 @@ import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, ArrowRight, CalendarDays } from 'lucide-react';
 import { PUBLIC_SHELL_X } from '@/components/public/public-shell';
+import { PublicSiteFooter } from '@/components/public/PublicSiteFooter';
 import { PublicSiteHeader } from '@/components/public/PublicSiteHeader';
 import { Button } from '@/components/ui/button';
 import {
@@ -19,6 +20,7 @@ import { getPublicProductUpdateBySlug } from '@/lib/product-updates/public';
 import { getPublicTranslations } from '@/i18n/public';
 import { renderStructuredText } from '@/lib/render-structured-text';
 import { getPublicFeaturesHref } from '@/lib/public-site-paths';
+import { PublicJsonLd, buildPublicProductUpdateJsonLd } from '@/lib/public-seo';
 
 export const dynamic = 'force-dynamic';
 
@@ -135,8 +137,19 @@ export default async function NovetatsDetailPage({ params }: PageProps) {
   const ctaCopy = UPDATE_CTA_COPY[locale];
 
   return (
-    <main className={pageShellClass}>
-      <PublicSiteHeader locale={locale} />
+    <>
+      <PublicJsonLd
+        data={buildPublicProductUpdateJsonLd({
+          locale,
+          slug: update.slug,
+          updatesLabel: t.updates.navLabel,
+          title: update.title,
+          description: update.excerpt || update.title,
+          publishedAt: update.publishedAt,
+        })}
+      />
+      <main className={pageShellClass}>
+        <PublicSiteHeader locale={locale} currentSection="updates" />
 
       <section className={`pb-10 pt-8 lg:pt-12 ${PUBLIC_SHELL_X}`}>
         <div className="mx-auto max-w-5xl">
@@ -203,21 +216,8 @@ export default async function NovetatsDetailPage({ params }: PageProps) {
         </div>
       </section>
 
-      <footer className={`mt-auto border-t py-6 ${PUBLIC_SHELL_X}`}>
-        <div className="max-w-lg mx-auto flex items-center justify-center gap-6 text-sm text-muted-foreground">
-          <Link href={`/${locale}/privacy`} className="hover:underline">
-            {t.common.privacy}
-          </Link>
-          <span>·</span>
-          <Link href={`/${locale}/contact`} className="hover:underline">
-            {t.common.contact}
-          </Link>
-          <span>·</span>
-          <Link href={`/${locale}/novetats`} className="hover:underline">
-            {t.updates.navLabel}
-          </Link>
-        </div>
-      </footer>
-    </main>
+        <PublicSiteFooter locale={locale} />
+      </main>
+    </>
   );
 }

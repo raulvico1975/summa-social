@@ -6799,7 +6799,7 @@ Les assignacions creades abans de la implementació del camp `budgetLineIds` no 
 
 Sistema unificat per comunicar novetats del producte als usuaris a través de múltiples canals:
 - **Campaneta/FAB (instància)**: Mostra N últimes novetats dins l'aplicació (inbox pull, sense toast automàtic)
-- **Web públic**: Pàgina `/novetats` per SEO i sharing
+- **Web públic**: pàgines oficials `https://summasocial.app/ca/novetats` i `https://summasocial.app/es/novetats` per a SEO i compartició
 - **Social**: Copy per X i LinkedIn (manual)
 
 ### Comportament UX
@@ -6884,8 +6884,14 @@ Les novetats es mostren **només via inbox** (campaneta o FAB), mai amb toast au
 
 ### Web públic: SSR server-side des de `productUpdates`
 
-El web públic `/novetats` NO fa lectura client-side de Firestore.
+El web públic `/{lang}/novetats` NO fa lectura client-side de Firestore.
 La lectura es resol server-side amb Admin SDK sobre `productUpdates`.
+
+**URLs i indexació:**
+- les rutes indexables oficials són `/ca/novetats`, `/es/novetats` i els seus detalls
+- `/novetats`, `/novedades`, `/es/novedades` i les rutes internes `/public/{lang}/...` redirigeixen permanentment a l'URL neta corresponent
+- les pàgines servides des del domini tècnic de Firebase redirigeixen al domini públic `summasocial.app`; les API en queden excloses
+- el llistat publica dades estructurades `CollectionPage` + `ItemList` i cada detall publica `Article`, amb el producte Summa Social com a subjecte
 
 **Conseqüència operativa:**
 - `public/novetats-data.json` ja NO és la font principal del web públic

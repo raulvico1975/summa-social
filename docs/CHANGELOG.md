@@ -12,6 +12,7 @@ Aquest fitxer ja no pretén duplicar el document mestre.
 
 ### 2026-07-21
 
+- SEO i claredat pública: les novetats tenen una URL oficial inequívoca (`/ca/novetats` i `/es/novetats`), les rutes antigues o internes hi redirigeixen permanentment i el llistat i el detall reforcen títols, copy, navegació i dades estructurades per a cercadors.
 - comunicació de producte: les novetats setmanals passen a explicar què pot fer l’usuari, quin benefici obté i on trobar-ho; quan hi ha una ruta segura, el detall intern ofereix accions directes dins de Summa.
 - web públic: la portada mostra les dues novetats més recents amb fallback segur i cada detall incorpora una crida clara a demo i funcionalitats.
 - novetats de producte: el generador setmanal reconeix els canvis reals de contactes, invitacions, bot d’ajuda i importació bancària sense dependre d’una sessió web.
