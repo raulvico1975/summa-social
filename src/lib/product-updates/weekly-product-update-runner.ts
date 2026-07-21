@@ -9,14 +9,16 @@ import { validateWeeklyProductUpdateEditorial } from './editorial-policy';
 import {
   filterVisibleProductCommits,
   generateWeeklyProductUpdateContent,
+  type WeeklyGeneratedAppAction,
   type WeeklyGeneratedContent,
 } from './weekly-generator';
 import { buildPreviousWeeklyWindow } from './weekly-window';
 
-type WeeklyGeneratedContentResult = Omit<WeeklyGeneratedContent, 'title' | 'description' | 'locales'> & {
+type WeeklyGeneratedContentResult = Omit<WeeklyGeneratedContent, 'title' | 'description' | 'locales' | 'appActions'> & {
   title?: string;
   description?: string;
   locales?: WeeklyGeneratedContent['locales'];
+  appActions?: WeeklyGeneratedAppAction[];
 };
 
 export interface PublishProductUpdateRequest {
@@ -28,6 +30,7 @@ export interface PublishProductUpdateRequest {
   contentLong: string;
   guideUrl?: string | null;
   videoUrl?: string | null;
+  appActions?: WeeklyGeneratedAppAction[] | null;
   web?: {
     enabled: boolean;
     slug: string;
@@ -183,6 +186,7 @@ export async function runWeeklyProductUpdateJob(
       contentLong: generated.contentLong,
       guideUrl: null,
       videoUrl: null,
+      appActions: generated.appActions ?? null,
       web: {
         enabled: true,
         slug: seed.slug,

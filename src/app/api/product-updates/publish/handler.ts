@@ -33,6 +33,16 @@ interface PublishProductUpdateWebPayload {
   content?: string | null;
 }
 
+interface PublishProductUpdateAppAction {
+  href: string;
+  label: string;
+  locales?: {
+    es?: {
+      label: string;
+    } | null;
+  } | null;
+}
+
 interface PublishProductUpdateSourceMeta {
   system: 'openclaw';
   externalId: string;
@@ -51,6 +61,7 @@ interface PublishProductUpdatePayload {
   contentLong: string;
   guideUrl?: string | null;
   videoUrl?: string | null;
+  appActions?: PublishProductUpdateAppAction[] | null;
   web?: PublishProductUpdateWebPayload | null;
   locales?: Partial<Record<ProductUpdateLocalizedLocale, PublishProductUpdateLocalizedPayload>> | null;
   sourceMeta?: PublishProductUpdateSourceMeta | null;
@@ -121,6 +132,7 @@ const EXCERPT_MAX = 160;
 const CONTENT_MAX = 6000;
 const URL_MAX = 2000;
 const REF_MAX = 32;
+const APP_ACTION_MAX = 2;
 
 function getPublishSecretFromEnv(): string | null {
   return process.env.PRODUCT_UPDATES_PUBLISH_SECRET?.trim() || null;
@@ -233,6 +245,10 @@ function isValidOptionalUrl(value: string | null): boolean {
   } catch {
     return false;
   }
+}
+
+function isSafeAppActionHref(value: string): boolean {
+  return /^\/dashboard(?:\/[a-zA-Z0-9_-]+)*$/.test(value);
 }
 
 function sanitizeStringField(
@@ -415,6 +431,69 @@ function sanitizeLocalizedMap(
   return { es: localizedEs };
 }
 
+function sanitizeAppActions(
+  value: unknown,
+  errors: string[]
+): PublishProductUpdateAppAction[] | null {
+  if (value === null || value === undefined) return null;
+  if (!Array.isArray(value)) {
+    errors.push('appActions must be an array');
+    return null;
+  }
+  if (value.length > APP_ACTION_MAX) {
+    errors.push(`appActions exceeds max length ${APP_ACTION_MAX}`);
+  }
+
+  const actions: PublishProductUpdateAppAction[] = [];
+  value.slice(0, APP_ACTION_MAX).forEach((entry, index) => {
+    const field = `appActions.${index}`;
+    if (!isRecord(entry)) {
+      errors.push(`${field} must be an object`);
+      return;
+    }
+
+    const href = sanitizeStringField(entry.href, `${field}.href`, errors, {
+      max: 500,
+      required: true,
+    });
+    const label = sanitizeStringField(entry.label, `${field}.label`, errors, {
+      max: TITLE_MAX,
+      required: true,
+    });
+    if (href && !isSafeAppActionHref(href)) {
+      errors.push(`${field}.href must be a safe dashboard path`);
+    }
+
+    let localizedEs: { label: string } | null = null;
+    if (entry.locales !== null && entry.locales !== undefined) {
+      if (!isRecord(entry.locales)) {
+        errors.push(`${field}.locales must be an object`);
+      } else if (entry.locales.es !== null && entry.locales.es !== undefined) {
+        if (!isRecord(entry.locales.es)) {
+          errors.push(`${field}.locales.es must be an object`);
+        } else {
+          const esLabel = sanitizeStringField(
+            entry.locales.es.label,
+            `${field}.locales.es.label`,
+            errors,
+            { max: TITLE_MAX, required: true }
+          );
+          if (esLabel) localizedEs = { label: esLabel };
+        }
+      }
+    }
+
+    if (!href || !label || !isSafeAppActionHref(href)) return;
+    actions.push({
+      href,
+      label,
+      locales: localizedEs ? { es: localizedEs } : null,
+    });
+  });
+
+  return actions.length > 0 ? actions : null;
+}
+
 function sanitizeWeb(
   value: unknown,
   channels: ProductUpdateChannel[],
@@ -552,6 +631,7 @@ function validatePublishPayload(raw: unknown): {
   const link = normalizeString(raw.link);
   const channels = sanitizeChannels(raw.channels, raw.web, errors);
   const isActive = sanitizeOptionalBoolean(raw.isActive, 'isActive', errors);
+  const appActions = sanitizeAppActions(raw.appActions, errors);
 
   if (!isValidOptionalUrl(guideUrl)) {
     errors.push('guideUrl must be a valid http(s) URL');
@@ -625,6 +705,7 @@ function validatePublishPayload(raw: unknown): {
       contentLong,
       guideUrl,
       videoUrl,
+      appActions,
       web: web?.enabled ? web : null,
       locales,
       sourceMeta: isRecord(sourceMetaRaw) && sourceMetaExternalId
@@ -749,6 +830,7 @@ export async function handleProductUpdatesPublish(
       contentLong: payload.contentLong,
       guideUrl: payload.guideUrl ?? null,
       videoUrl: payload.videoUrl ?? null,
+      appActions: payload.appActions,
       publishedAt: now,
       createdAt: now,
       isActive: payload.isActive !== false,

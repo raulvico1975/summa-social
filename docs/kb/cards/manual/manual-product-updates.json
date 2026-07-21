@@ -25,8 +25,8 @@
   },
   "guideId": null,
   "answer": {
-    "ca": "Les novetats es consulten a la campaneta del header.\n\nQuè fer:\n1. Mira si hi ha badge numèric a la icona.\n2. Si hi ha una novetat nova, la safata es pot obrir un instant per fer-la visible.\n3. Clica la icona per obrir la safata de novetats quan vulguis.\n4. Llegeix-les i marca-les com a llegides.\n\nNo apareixen pop-ups grans mentre treballes: tu decideixes quan revisar-les.",
-    "es": "Las novedades se consultan en la campanita del header.\n\nQué hacer:\n1. Mira si hay badge numérico en el icono.\n2. Si hay una novedad nueva, la bandeja puede abrirse un instante para hacerla visible.\n3. Haz clic en el icono para abrir la bandeja de novedades cuando quieras.\n4. Léelas y márcalas como leídas.\n\nNo aparecen pop-ups grandes mientras trabajas: tú decides cuándo revisarlas."
+    "ca": "Les novetats es consulten a la campaneta del header.\n\nQuè fer:\n1. Mira si hi ha badge numèric a la icona.\n2. Si hi ha una novetat nova, la safata es pot obrir un instant per fer-la visible.\n3. Clica la icona per obrir la safata de novetats quan vulguis.\n4. Obre el detall: quedarà marcada com a llegida.\n5. Si hi ha una acció disponible, pots anar directament a la pantalla corresponent dins de Summa; «Llegir al web» obre la versió pública.\n\nNo apareixen pop-ups grans mentre treballes: tu decideixes quan revisar-les.",
+    "es": "Las novedades se consultan en la campanita del header.\n\nQué hacer:\n1. Mira si hay badge numérico en el icono.\n2. Si hay una novedad nueva, la bandeja puede abrirse un instante para hacerla visible.\n3. Haz clic en el icono para abrir la bandeja de novedades cuando quieras.\n4. Abre el detalle: quedará marcada como leída.\n5. Si hay una acción disponible, puedes ir directamente a la pantalla correspondiente dentro de Summa; «Leer en la web» abre la versión pública.\n\nNo aparecen pop-ups grandes mientras trabajas: tú decides cuándo revisarlas."
   },
   "uiPaths": [
     "Header > Campaneta de novetats"

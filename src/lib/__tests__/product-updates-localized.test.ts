@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {
   getEffectiveProductUpdateLocale,
   resolveAppProductUpdateCopy,
+  resolveProductUpdateAppActions,
   resolvePublicProductUpdateCopy,
 } from '@/lib/product-updates/localized';
 
@@ -11,6 +12,26 @@ test('getEffectiveProductUpdateLocale maps es, fr and pt to spanish content', ()
   assert.equal(getEffectiveProductUpdateLocale('es'), 'es');
   assert.equal(getEffectiveProductUpdateLocale('fr'), 'es');
   assert.equal(getEffectiveProductUpdateLocale('pt'), 'es');
+});
+
+test('resolveProductUpdateAppActions localizes and filters internal actions', () => {
+  const actions = resolveProductUpdateAppActions({
+    appActions: [
+      {
+        href: '/dashboard/movimientos',
+        label: 'Importar moviments',
+        locales: { es: { label: 'Importar movimientos' } },
+      },
+      {
+        href: 'https://example.com/phishing',
+        label: 'Acció externa',
+      },
+    ],
+  }, 'es');
+
+  assert.deepEqual(actions, [
+    { href: '/dashboard/movimientos', label: 'Importar movimientos' },
+  ]);
 });
 
 test('resolveAppProductUpdateCopy prefers app localized spanish copy', () => {

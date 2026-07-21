@@ -2,21 +2,21 @@
 
 ## Metadata
 - date: 2026-07-21
-- change_scope: reparar la publicacio setmanal de novetats i recuperar les peces pendents de juliol
+- change_scope: reforcar la comunicacio i conversio de les novetats de producte dins de l'app i al web public
 
 ## Declaracio obligatoria
-- help_topics_updated: []
+- help_topics_updated: ["novetats del producte"]
 - manual_updated: no
 - manual_sections: []
-- faq_updated: no
-- faq_questions: []
-- justification_if_no_change: "El flux visible no canvia d'ubicacio: la campaneta interna i /novetats continuen llegint productUpdates. El canvi repara el generador i prepara dues peces CA/ES encara no publicades; no cal modificar manual o FAQ."
+- faq_updated: yes
+- faq_questions: ["7¾. Com em puc assabentar de les novetats i millores de Summa Social?"]
+- justification_if_no_change: null
 
 ## Notes
 
-- La funcio setmanal deixa de dependre d'una sessio web per generar el contingut.
-- Els commits reals de les setmanes 06-12/07 i 13-19/07 generen copy concret i validat en catala i castella.
-- Una fallada crea o actualitza una unica incidencia a `systemIncidents`; una execucio correcta posterior la resol.
-- Els dos payloads de recuperacio queden preparats localment i no s'escriuen a produccio sense autoritzacio explicita.
-- El paquet de Functions neteja la sortida compilada anterior i valida el seu `main` real abans de qualsevol deploy.
+- El generador setmanal prioritza resultats i benefici, amb seccions concretes en catala i castella.
+- Les rutes reconegudes poden afegir fins a dues accions segures dins de Summa; els canvis desconeguts no inventen botons.
+- Obrir el detall intern marca la novetat com a llegida i manté la lectura web com a accio secundaria.
+- La home publica mostra les dues novetats mes recents amb fallback segur, i el detall public incorpora CTA a demo i funcionalitats.
+- Les novetats anteriors continuen sent compatibles sense migracio.
 - No hi ha dependencies noves, migracions ni canvis destructius de Firestore; tampoc s'escriu `undefined`.

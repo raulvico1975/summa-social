@@ -4,7 +4,7 @@
 'use client';
 
 import * as React from 'react';
-import { ExternalLink, BookOpen, Play } from 'lucide-react';
+import { ArrowRight, ExternalLink, BookOpen, CalendarDays, Play } from 'lucide-react';
 import Link from 'next/link';
 
 import {
@@ -30,6 +30,17 @@ function isExternalUrl(value?: string | null): value is string {
   return typeof value === 'string' && /^https?:\/\//.test(value);
 }
 
+function formatUpdateDate(value: string, language: string): string | null {
+  if (!value) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  return new Intl.DateTimeFormat(language === 'ca' ? 'ca-ES' : 'es-ES', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  }).format(date);
+}
+
 export function ProductUpdateDetailModal({
   update,
   open,
@@ -48,16 +59,19 @@ export function ProductUpdateDetailModal({
     ? update.publicExcerpt
     : update.body;
   const publicHref = hasPublicSlug ? `/${language}/novetats/${update.publicSlug}` : null;
+  const publishedAt = formatUpdateDate(update.createdAt, language);
   const guideHref = hasGuideUrl
     ? (isExternalUrl(update.guideUrl) ? update.guideUrl : buildUrl(update.guideUrl!))
     : null;
-  const actionHref = update.href
+  const legacyActionHref = update.appActions?.length
+    ? null
+    : update.href && !publicHref
     ? (isExternalUrl(update.href) ? update.href : buildUrl(update.href))
     : null;
-  const primaryHref = publicHref ?? actionHref;
-  const primaryLabel = publicHref
-    ? t.productUpdates.readOnWeb
-    : (update.ctaLabel ?? t.productUpdates.openUpdate);
+  const appActions = (update.appActions ?? []).map((action) => ({
+    ...action,
+    href: buildUrl(action.href),
+  }));
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -68,6 +82,12 @@ export function ProductUpdateDetailModal({
         </DialogHeader>
 
         <div className="space-y-4 pt-2">
+          {publishedAt && (
+            <p className="inline-flex items-center gap-2 text-xs font-medium text-muted-foreground">
+              <CalendarDays className="h-3.5 w-3.5 text-primary" />
+              {publishedAt}
+            </p>
+          )}
           {/* Contingut llarg (text pla estructurat) */}
           {hasContentLong && (
             <div className="text-sm text-muted-foreground">
@@ -110,21 +130,37 @@ export function ProductUpdateDetailModal({
             </div>
           )}
 
-          {/* CTA principal si existeix */}
-          {primaryHref && (
-            <div className="pt-2 border-t">
-              {isExternalUrl(primaryHref) ? (
-                <Button asChild className="w-full">
-                  <a href={primaryHref} target="_blank" rel="noopener noreferrer">
-                    {primaryLabel}
-                    <ExternalLink className="h-4 w-4 ml-2" />
-                  </a>
+          {/* Accions dins de Summa i lectura pública */}
+          {(appActions.length > 0 || legacyActionHref || publicHref) && (
+            <div className="space-y-2 border-t pt-4">
+              {appActions.map((action) => (
+                <Button key={action.href} asChild className="w-full">
+                  <Link href={action.href} onClick={() => onOpenChange(false)}>
+                    {action.label}
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Link>
                 </Button>
-              ) : (
+              ))}
+              {legacyActionHref && (
                 <Button asChild className="w-full">
-                  <Link href={primaryHref} onClick={() => onOpenChange(false)}>
-                    {primaryLabel}
-                    <ExternalLink className="h-4 w-4 ml-2" />
+                  {isExternalUrl(legacyActionHref) ? (
+                    <a href={legacyActionHref} target="_blank" rel="noopener noreferrer">
+                      {update.ctaLabel ?? t.productUpdates.openUpdate}
+                      <ExternalLink className="ml-2 h-4 w-4" />
+                    </a>
+                  ) : (
+                    <Link href={legacyActionHref} onClick={() => onOpenChange(false)}>
+                      {update.ctaLabel ?? t.productUpdates.openUpdate}
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </Link>
+                  )}
+                </Button>
+              )}
+              {publicHref && (
+                <Button asChild variant="outline" className="w-full">
+                  <Link href={publicHref} onClick={() => onOpenChange(false)}>
+                    {t.productUpdates.readOnWeb}
+                    <ExternalLink className="ml-2 h-4 w-4" />
                   </Link>
                 </Button>
               )}
