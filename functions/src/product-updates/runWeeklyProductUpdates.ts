@@ -7,6 +7,11 @@ import {
   runWeeklyProductUpdateJob,
   type PublishProductUpdateRequest,
 } from "../../../src/lib/product-updates/weekly-product-update-runner";
+import { buildPreviousWeeklyWindow } from "../../../src/lib/product-updates/weekly-window";
+import {
+  resolveWeeklyProductUpdatesIncident,
+  upsertWeeklyProductUpdatesIncident,
+} from "./incidents";
 
 type PublishEndpointResponse =
   | {
@@ -130,34 +135,54 @@ export const runWeeklyProductUpdates = functions
   .pubsub.schedule("0 8 * * 1")
   .timeZone("Europe/Madrid")
   .onRun(async () => {
-    const githubToken = process.env.GITHUB_TOKEN?.trim();
-    if (!githubToken) {
-      functions.logger.error("weekly_product_updates.error", {
-        status: "error",
-        errorMessage: "Missing GITHUB_TOKEN",
-      });
-      throw new Error("Missing GITHUB_TOKEN");
-    }
+    const timeZone = "Europe/Madrid";
+    const window = buildPreviousWeeklyWindow(new Date(), timeZone);
+    const db = admin.firestore();
 
-    await runWeeklyProductUpdateJob({
-      timeZone: "Europe/Madrid",
-      listRelevantCommits: ({ weekStart, weekEnd }) =>
-        fetchWeeklyRelevantCommits({
-          token: githubToken,
-          owner: "raulvico1975",
-          repo: "summa-social",
-          branch: "main",
-          since: weekStart,
-          until: weekEnd,
-        }),
-      hasExistingExternalId,
-      publishProductUpdate: callPublishRoute,
-      verifyPublishedProductUpdate,
-      logger: {
-        info: (event, payload) => functions.logger.info(event, payload),
-        error: (event, payload) => functions.logger.error(event, payload),
-      },
-    });
+    try {
+      const githubToken = process.env.GITHUB_TOKEN?.trim();
+      if (!githubToken) {
+        throw new Error("Missing GITHUB_TOKEN");
+      }
+
+      await runWeeklyProductUpdateJob({
+        timeZone,
+        listRelevantCommits: ({ weekStart, weekEnd }) =>
+          fetchWeeklyRelevantCommits({
+            token: githubToken,
+            owner: "raulvico1975",
+            repo: "summa-social",
+            branch: "main",
+            since: weekStart,
+            until: weekEnd,
+          }),
+        hasExistingExternalId,
+        publishProductUpdate: callPublishRoute,
+        verifyPublishedProductUpdate,
+        logger: {
+          info: (event, payload) => functions.logger.info(event, payload),
+          error: (event, payload) => functions.logger.error(event, payload),
+        },
+      });
+      try {
+        await resolveWeeklyProductUpdatesIncident(db);
+      } catch (incidentError) {
+        functions.logger.error("weekly_product_updates.incident_resolve_failed", {
+          status: "error",
+          errorMessage: incidentError instanceof Error ? incidentError.message : String(incidentError),
+        });
+      }
+    } catch (error) {
+      try {
+        await upsertWeeklyProductUpdatesIncident({ db, window, error });
+      } catch (incidentError) {
+        functions.logger.error("weekly_product_updates.incident_record_failed", {
+          status: "error",
+          errorMessage: incidentError instanceof Error ? incidentError.message : String(incidentError),
+        });
+      }
+      throw error;
+    }
 
     return null;
   });

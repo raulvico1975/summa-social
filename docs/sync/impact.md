@@ -1,8 +1,8 @@
 # Impacte funcional i sincronitzacio documental
 
 ## Metadata
-- date: 2026-07-17
-- change_scope: desacoblar el build de les lectures Firestore del blog public i del sitemap
+- date: 2026-07-21
+- change_scope: reparar la publicacio setmanal de novetats i recuperar les peces pendents de juliol
 
 ## Declaracio obligatoria
 - help_topics_updated: []
@@ -10,10 +10,12 @@
 - manual_sections: []
 - faq_updated: no
 - faq_questions: []
-- justification_if_no_change: "El canvi no modifica cap flux, text ni ajuda visible. Només evita que el build executi consultes remotes del blog i del sitemap; aquestes rutes continuen llegint les mateixes dades en temps de peticio."
+- justification_if_no_change: "El flux visible no canvia d'ubicacio: la campaneta interna i /novetats continuen llegint productUpdates. El canvi repara el generador i prepara dues peces CA/ES encara no publicades; no cal modificar manual o FAQ."
 
 ## Notes
 
-- Les rutes de blog localitzades i legacy es renderitzen en temps de peticio, igual que les novetats publiques ja existents.
-- El sitemap conserva les mateixes entrades, pero deixa de consultar Firestore durant el build.
-- No hi ha dependencies noves, migracions ni canvis de Firestore.
+- La funcio setmanal deixa de dependre d'una sessio web per generar el contingut.
+- Els commits reals de les setmanes 06-12/07 i 13-19/07 generen copy concret i validat en catala i castella.
+- Una fallada crea o actualitza una unica incidencia a `systemIncidents`; una execucio correcta posterior la resol.
+- Els dos payloads de recuperacio queden preparats localment i no s'escriuen a produccio sense autoritzacio explicita.
+- No hi ha dependencies noves, migracions ni canvis destructius de Firestore; tampoc s'escriu `undefined`.
