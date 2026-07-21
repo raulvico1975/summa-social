@@ -1,0 +1,29 @@
+{
+  "externalId": "weekly-product-update-2026-07-13_2026-07-19",
+  "locale": "ca",
+  "title": "Ajuda i importació bancària: respostes i selecció més precises",
+  "description": "El bot resol millor preguntes naturals i l’importador identifica millor el full de l’extracte.",
+  "link": null,
+  "contentLong": "Aquesta setmana hem millorat el bot d’ajuda i la selecció de fulls en la importació bancària amb canvis desplegats entre el 13/07/2026 i el 19/07/2026.\n\nQuè canvia:\n- El bot d’ajuda respon millor les preguntes naturals sobre assignació de moviments.\n- El bot d’ajuda entén millor l’idioma, l’entitat visible i el context de cada pregunta.\n- Ara l’importador bancari selecciona millor el full que conté l’extracte vàlid.\n\nOn ho notaràs:\n- al bot d’ajuda quan consultes com revisar o assignar moviments.\n- al bot d’ajuda en català i castellà.\n- a la importació de moviments des de fitxers Excel.\n\nQuè has de fer:\n- Escriu la consulta amb les teves paraules i revisa el pas recomanat.\n- Pregunta amb naturalitat des de l’entitat amb què estàs treballant.\n- Revisa el resum de la importació abans de confirmar els moviments.\n\nLímit:\n- No modifica dades ja guardades.\n- Només reforça com s’executen aquestes accions dins del flux habitual.",
+  "guideUrl": null,
+  "videoUrl": null,
+  "web": {
+    "enabled": true,
+    "slug": "novetats-setmanals-2026-07-13-2026-07-19",
+    "excerpt": "Millor orientació al bot d’ajuda i selecció més precisa del full de l’extracte.",
+    "content": "Aquesta setmana hem millorat el bot d’ajuda i la selecció de fulls en la importació bancària amb canvis desplegats entre el 13/07/2026 i el 19/07/2026.\n\nQuè canvia:\n- El bot d’ajuda respon millor les preguntes naturals sobre assignació de moviments.\n- El bot d’ajuda entén millor l’idioma, l’entitat visible i el context de cada pregunta.\n- Ara l’importador bancari selecciona millor el full que conté l’extracte vàlid.\n\nOn ho notaràs:\n- al bot d’ajuda quan consultes com revisar o assignar moviments.\n- al bot d’ajuda en català i castellà.\n- a la importació de moviments des de fitxers Excel.\n\nQuè has de fer:\n- Escriu la consulta amb les teves paraules i revisa el pas recomanat.\n- Pregunta amb naturalitat des de l’entitat amb què estàs treballant.\n- Revisa el resum de la importació abans de confirmar els moviments.\n\nLímit:\n- No modifica dades ja guardades.\n- Només reforça com s’executen aquestes accions dins del flux habitual."
+  },
+  "locales": {
+    "es": {
+      "title": "Ayuda e importación bancaria: respuestas y selección más precisas",
+      "description": "El bot resuelve mejor preguntas naturales y el importador identifica mejor la hoja del extracto.",
+      "contentLong": "Esta semana hemos mejorado el bot de ayuda y la selección de hojas en la importación bancaria con cambios desplegados entre el 13/07/2026 y el 19/07/2026.\n\nQué cambia:\n- El bot de ayuda responde mejor a las preguntas naturales sobre asignación de movimientos.\n- El bot de ayuda entiende mejor el idioma, la entidad visible y el contexto de cada pregunta.\n- Ahora el importador bancario selecciona mejor la hoja que contiene el extracto válido.\n\nDónde lo notarás:\n- en el bot de ayuda cuando consultas cómo revisar o asignar movimientos.\n- en el bot de ayuda en catalán y castellano.\n- en la importación de movimientos desde archivos Excel.\n\nQué tienes que hacer:\n- Escribe la consulta con tus palabras y revisa el paso recomendado.\n- Pregunta con naturalidad desde la entidad con la que estás trabajando.\n- Revisa el resumen de la importación antes de confirmar los movimientos.\n\nLímite:\n- No modifica datos ya guardados.\n- Solo refuerza cómo se ejecutan estas acciones dentro del flujo habitual.",
+      "web": {
+        "title": "Ayuda e importación bancaria: respuestas y selección más precisas",
+        "excerpt": "Mejor orientación en el bot de ayuda y selección más precisa de la hoja del extracto.",
+        "content": "Esta semana hemos mejorado el bot de ayuda y la selección de hojas en la importación bancaria con cambios desplegados entre el 13/07/2026 y el 19/07/2026.\n\nQué cambia:\n- El bot de ayuda responde mejor a las preguntas naturales sobre asignación de movimientos.\n- El bot de ayuda entiende mejor el idioma, la entidad visible y el contexto de cada pregunta.\n- Ahora el importador bancario selecciona mejor la hoja que contiene el extracto válido.\n\nDónde lo notarás:\n- en el bot de ayuda cuando consultas cómo revisar o asignar movimientos.\n- en el bot de ayuda en catalán y castellano.\n- en la importación de movimientos desde archivos Excel.\n\nQué tienes que hacer:\n- Escribe la consulta con tus palabras y revisa el paso recomendado.\n- Pregunta con naturalidad desde la entidad con la que estás trabajando.\n- Revisa el resumen de la importación antes de confirmar los movimientos.\n\nLímite:\n- No modifica datos ya guardados.\n- Solo refuerza cómo se ejecutan estas acciones dentro del flujo habitual."
+      }
+    }
+  },
+  "isActive": true
+}

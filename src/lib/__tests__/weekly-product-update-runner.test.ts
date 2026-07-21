@@ -138,6 +138,112 @@ test('runWeeklyProductUpdateJob pot generar contingut setmanal sense cridar endp
   assert.equal((publishedPayload as PublishProductUpdateRequest).title.startsWith('Dashboard:'), true);
 });
 
+test('runWeeklyProductUpdateJob genera la novetat real de contactes i invitacions de juliol', async () => {
+  let publishedPayload: PublishProductUpdateRequest | null = null;
+
+  const result = await runWeeklyProductUpdateJob({
+    now: () => new Date('2026-07-13T06:00:00.000Z'),
+    listRelevantCommits: async () => [
+      buildCommit({
+        sha: '698133405',
+        message: 'feat(api): actualitza fluxos de dades i validacions [23 fitxers, risc ALT]',
+        files: ['src/app/api/contacts/import/route.ts', 'src/app/api/invitations/create/handler.ts'],
+        areas: ['integracions'],
+      }),
+      buildCommit({
+        sha: 'cfcabd14b',
+        message: 'fix(invitations): endureix validacio i enllacos',
+        files: ['src/app/[orgSlug]/login/page.tsx', 'src/app/registre/page.tsx'],
+        areas: ['general'],
+      }),
+      buildCommit({
+        sha: '95fd0f89f',
+        message: 'fix(contacts): evita errors en guardar contactes',
+        files: ['src/app/api/contacts/import/route.ts', 'src/components/supplier-manager.tsx'],
+        areas: ['integracions'],
+      }),
+    ],
+    hasExistingExternalId: async () => false,
+    publishProductUpdate: async (payload) => {
+      publishedPayload = payload;
+      return { status: 'success' };
+    },
+    verifyPublishedProductUpdate: async () => true,
+  });
+
+  assert.equal(result.status, 'success');
+  assert.ok(publishedPayload);
+  assert.equal(
+    (publishedPayload as PublishProductUpdateRequest).title,
+    'Contactes i invitacions: guardat i accessos més fiables'
+  );
+  assert.match(
+    (publishedPayload as PublishProductUpdateRequest).contentLong,
+    /guardar contactes amb menys errors/
+  );
+});
+
+test('runWeeklyProductUpdateJob genera la novetat real de bot i importacio bancaria de juliol', async () => {
+  let publishedPayload: PublishProductUpdateRequest | null = null;
+
+  const result = await runWeeklyProductUpdateJob({
+    now: () => new Date('2026-07-20T06:00:00.000Z'),
+    listRelevantCommits: async () => [
+      buildCommit({
+        sha: 'cfa6406c6',
+        message: 'feat(core): actualitza logica interna i robustesa [3 fitxers, risc MITJA]',
+        files: ['src/i18n/public.ts', 'src/lib/public-landings.ts'],
+        areas: ['general'],
+      }),
+      buildCommit({
+        sha: 'bcd79bfc2',
+        message: 'fix(support-bot): resol assignació natural de moviments',
+        files: ['src/lib/support/bot-retrieval.ts'],
+        areas: ['suport'],
+      }),
+      buildCommit({
+        sha: '044b90e36',
+        message: 'feat(support-bot): reforça ajuda natural CA ES què canvia: corregeix context d’entitat, idioma, cobertura i accés QA',
+        files: ['src/app/api/support/bot/route.ts', 'src/components/help/BotSheet.tsx'],
+        areas: ['integracions', 'suport'],
+      }),
+      buildCommit({
+        sha: 'be31d40e3',
+        message: 'feat(ui): actualitza comportament visible de l aplicacio [8 fitxers, risc MITJA]',
+        files: ['src/components/transaction-importer.tsx', 'src/lib/importers/bank/selectBankStatementSheet.ts'],
+        areas: ['moviments'],
+      }),
+      buildCommit({
+        sha: '79464f2c4',
+        message: 'feat(ui): actualitza comportament visible de l aplicacio [7 fitxers, risc MITJA]',
+        files: ['src/app/public/[lang]/blog/page.tsx'],
+        areas: ['general'],
+      }),
+    ],
+    hasExistingExternalId: async () => false,
+    publishProductUpdate: async (payload) => {
+      publishedPayload = payload;
+      return { status: 'success' };
+    },
+    verifyPublishedProductUpdate: async () => true,
+  });
+
+  assert.equal(result.status, 'success');
+  assert.ok(publishedPayload);
+  assert.equal(
+    (publishedPayload as PublishProductUpdateRequest).title,
+    'Ajuda i importació bancària: respostes i selecció més precises'
+  );
+  assert.match(
+    (publishedPayload as PublishProductUpdateRequest).contentLong,
+    /importador bancari selecciona millor el full/
+  );
+  assert.match(
+    (publishedPayload as PublishProductUpdateRequest).contentLong,
+    /entén millor l’idioma, l’entitat visible i el context/
+  );
+});
+
 test('runWeeklyProductUpdateJob tracta com a duplicat una setmana ja publicada', async () => {
   let publishCalled = false;
 
