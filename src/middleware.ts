@@ -3,9 +3,10 @@
  *
  * Responsabilitats:
  * 1. Redirect app.summasocial.app → summasocial.app (canonical)
- * 2. Redirect /{lang}/login → /{lang} (no existeix login públic general)
- * 3. Rewrite /{lang}/... → /public/{lang}/... (rutes públiques)
- * 4. Redirect /dashboard → /redirect-to-org (selector d'org)
+ * 2. Canonicalitzar dominis tècnics i rutes públiques legacy/internes
+ * 3. Redirect /{lang}/login → /{lang} (no existeix login públic general)
+ * 4. Rewrite /{lang}/... → /public/{lang}/... (rutes públiques)
+ * 5. Redirect /dashboard → /redirect-to-org (selector d'org)
  *
  * IMPORTANT (anti-regressió):
  * - Totes les decisions de routing es fan AQUÍ, abans de renderitzar JSX
@@ -19,6 +20,7 @@ import type { NextRequest } from 'next/server';
 
 const CANONICAL_HOST = 'summasocial.app';
 const ALIAS_HOST = 'app.summasocial.app';
+const TECHNICAL_PUBLIC_HOST = 'studio--summa-social.us-central1.hosted.app';
 
 // Idiomes públics vàlids per [lang]
 const PUBLIC_LOCALES = new Set(['ca', 'es', 'fr', 'pt']);
@@ -33,13 +35,47 @@ const PROTECTED_ROUTES = [
   '/public', // segment intern per rutes públiques
 ];
 
+const LEGACY_PUBLIC_PATHS = new Map<string, string>([
+  ['/novetats', '/ca/novetats'],
+  ['/novedades', '/es/novetats'],
+  ['/es/novedades', '/es/novetats'],
+]);
+
+function normalizeHost(host: string): string {
+  return host.trim().toLowerCase().replace(/:\d+$/, '');
+}
+
+/**
+ * Converteix rutes antigues o internes en l'URL pública neta que s'ha d'indexar.
+ */
+export function resolveCanonicalPublicPath(pathname: string): string {
+  const internalPublicMatch = pathname.match(/^\/public\/(ca|es|fr|pt)(\/.*)?$/);
+  if (internalPublicMatch) {
+    return `/${internalPublicMatch[1]}${internalPublicMatch[2] ?? ''}`;
+  }
+
+  return LEGACY_PUBLIC_PATHS.get(pathname) ?? pathname;
+}
+
 export function middleware(request: NextRequest) {
   const host = request.headers.get('host') ?? '';
   const { pathname, search } = request.nextUrl;
+  const normalizedHost = normalizeHost(host);
+  const canonicalPathname = resolveCanonicalPublicPath(pathname);
+  const isAliasHost = normalizedHost === ALIAS_HOST;
+  const isTechnicalPublicPage =
+    normalizedHost === TECHNICAL_PUBLIC_HOST &&
+    (request.method === 'GET' || request.method === 'HEAD') &&
+    !pathname.startsWith('/api/');
 
-  // Redirect de app.summasocial.app a summasocial.app (canonical)
-  if (host === ALIAS_HOST || host.startsWith(`${ALIAS_HOST}:`)) {
-    const canonicalUrl = `https://${CANONICAL_HOST}${pathname}${search}`;
+  // Un sol salt cap al domini i ruta canònics. Les API del backend tècnic es
+  // mantenen operatives perquè integracions i comprovacions no canviïn d'origen.
+  if (isAliasHost || isTechnicalPublicPage || canonicalPathname !== pathname) {
+    const canonicalHost = isAliasHost || isTechnicalPublicPage ? CANONICAL_HOST : host;
+    const protocol = isAliasHost || isTechnicalPublicPage
+      ? 'https'
+      : request.nextUrl.protocol.replace(/:$/, '');
+    const canonicalUrl = `${protocol}://${canonicalHost}${canonicalPathname}${search}`;
     return NextResponse.redirect(canonicalUrl, 308);
   }
 
