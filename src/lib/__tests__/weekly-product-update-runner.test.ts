@@ -232,7 +232,7 @@ test('runWeeklyProductUpdateJob genera la novetat real de bot i importacio banca
   assert.ok(publishedPayload);
   assert.equal(
     (publishedPayload as PublishProductUpdateRequest).title,
-    'Ajuda i importació bancària: respostes i selecció més precises'
+    'Ajuda i importació bancària: més precisió'
   );
   assert.match(
     (publishedPayload as PublishProductUpdateRequest).contentLong,

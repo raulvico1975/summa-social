@@ -493,7 +493,7 @@ export function generateWeeklyProductUpdateContent(args: {
   const title = hasInvitationsAndContacts
     ? 'Contactes i invitacions: guardat i accessos més fiables'
     : hasSupportBot && hasBankImport
-    ? 'Ajuda i importació bancària: respostes i selecció més precises'
+    ? 'Ajuda i importació bancària: més precisió'
     : hasArchivePermissions && hasSupportBot
     ? 'Projectes, categories i ajuda: més control i millor orientació'
     : hasArchivePermissions
@@ -502,7 +502,7 @@ export function generateWeeklyProductUpdateContent(args: {
   const esTitle = hasInvitationsAndContacts
     ? 'Contactos e invitaciones: guardado y accesos más fiables'
     : hasSupportBot && hasBankImport
-    ? 'Ayuda e importación bancaria: respuestas y selección más precisas'
+    ? 'Ayuda e importación bancaria: más precisión'
     : hasArchivePermissions && hasSupportBot
     ? 'Proyectos, categorías y ayuda: más control y mejor orientación'
     : hasArchivePermissions

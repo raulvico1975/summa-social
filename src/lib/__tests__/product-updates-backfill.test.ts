@@ -22,7 +22,13 @@ test('els payloads de backfill de juliol són vàlids, bilingües i publicables'
       locale: string;
       isActive: boolean;
     };
-    const locales = payload.locales as { es?: { title?: string; contentLong?: string } } | undefined;
+    const locales = payload.locales as {
+      es?: {
+        title?: string;
+        contentLong?: string;
+        web?: { title?: string };
+      };
+    } | undefined;
     const web = payload.web as { enabled?: boolean; slug?: string } | undefined;
 
     assert.equal(typeof payload.externalId, 'string');
@@ -34,6 +40,9 @@ test('els payloads de backfill de juliol són vàlids, bilingües i publicables'
     assert.match(web?.slug ?? '', /^novetats-setmanals-2026-07-/);
     assert.equal(typeof locales?.es?.title, 'string');
     assert.equal(typeof locales?.es?.contentLong, 'string');
+    assert.ok((payload.title?.length ?? 0) <= 60);
+    assert.ok((locales?.es?.title?.length ?? 0) <= 60);
+    assert.ok((locales?.es?.web?.title?.length ?? 0) <= 60);
     assert.deepEqual(validateWeeklyProductUpdateEditorial(payload), { ok: true });
     assert.doesNotMatch(JSON.stringify(payload), /undefined/);
   }
