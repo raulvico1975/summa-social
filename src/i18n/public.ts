@@ -1653,10 +1653,11 @@ const ca: PublicTranslations = {
     cta: 'Entrar a Summa Social',
   },
   updates: {
-    metaTitle: 'Novetats | Summa Social',
-    metaDescription: 'Descobreix les últimes novetats i millores de Summa Social.',
+    metaTitle: 'Novetats de Summa Social | Millores del producte',
+    metaDescription:
+      'Consulta les noves funcionalitats i millores de Summa Social per gestionar l’economia, la fiscalitat i els projectes de la teva entitat.',
     navLabel: 'Novetats',
-    title: 'Novetats del producte',
+    title: 'Novetats de Summa Social',
     back: 'Tornar',
     noUpdates: 'No hi ha novetats publicades.',
     readMore: 'Llegir més',
@@ -1665,7 +1666,7 @@ const ca: PublicTranslations = {
     latestLabel: 'Nou a Summa',
     latestTitle: 'L’última millora publicada',
     latestDescription:
-      'Anem publicant millores petites i útils perquè sigui fàcil entendre què canvia i com es notarà en el dia a dia.',
+      'Aquí expliquem què hem millorat, què pots fer ara i on ho notaràs. Una cronologia pública de com Summa Social evoluciona amb les necessitats reals de les entitats.',
   },
   about: {
     metaTitle: 'Qui som | Summa Social',
@@ -2337,10 +2338,11 @@ const es: PublicTranslations = {
     cta: 'Entrar a Summa Social',
   },
   updates: {
-    metaTitle: 'Novedades | Summa Social',
-    metaDescription: 'Descubre las últimas novedades y mejoras de Summa Social.',
+    metaTitle: 'Novedades de Summa Social | Mejoras del producto',
+    metaDescription:
+      'Consulta las nuevas funcionalidades y mejoras de Summa Social para gestionar la economía, la fiscalidad y los proyectos de tu entidad.',
     navLabel: 'Novedades',
-    title: 'Novedades del producto',
+    title: 'Novedades de Summa Social',
     back: 'Volver',
     noUpdates: 'No hay novedades publicadas.',
     readMore: 'Leer más',
@@ -2349,7 +2351,7 @@ const es: PublicTranslations = {
     latestLabel: 'Nuevo en Summa',
     latestTitle: 'La última mejora publicada',
     latestDescription:
-      'Vamos publicando mejoras pequeñas y útiles para que sea fácil entender qué cambia y cómo se notará en el día a día.',
+      'Aquí explicamos qué hemos mejorado, qué puedes hacer ahora y dónde lo notarás. Una cronología pública de cómo Summa Social evoluciona con las necesidades reales de las entidades.',
   },
   about: {
     metaTitle: 'Quiénes somos | Summa Social',

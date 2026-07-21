@@ -138,3 +138,124 @@ export function buildPublicBlogPostingJsonLd({
     },
   };
 }
+
+export function buildPublicUpdatesCollectionJsonLd({
+  locale,
+  title,
+  description,
+  updates,
+}: {
+  locale: PublicLocale;
+  title: string;
+  description: string;
+  updates: Array<{ slug: string; title: string }>;
+}) {
+  const pageUrl = `${PUBLIC_SITE_URL}/${locale}/novetats`;
+
+  return [
+    buildPublicBreadcrumbJsonLd({
+      locale,
+      path: '/novetats',
+      currentName: title,
+    }),
+    {
+      '@context': 'https://schema.org',
+      '@type': 'CollectionPage',
+      '@id': `${pageUrl}#collection`,
+      name: title,
+      description,
+      url: pageUrl,
+      inLanguage: locale,
+      isPartOf: {
+        '@id': `${PUBLIC_SITE_URL}/${locale}#website`,
+      },
+      about: {
+        '@id': `${PUBLIC_SITE_URL}/${locale}#software`,
+      },
+      mainEntity: {
+        '@type': 'ItemList',
+        numberOfItems: updates.length,
+        itemListElement: updates.map((update, index) => ({
+          '@type': 'ListItem',
+          position: index + 1,
+          name: update.title,
+          url: `${pageUrl}/${update.slug}`,
+        })),
+      },
+    },
+  ];
+}
+
+export function buildPublicProductUpdateJsonLd({
+  locale,
+  slug,
+  updatesLabel,
+  title,
+  description,
+  publishedAt,
+}: {
+  locale: PublicLocale;
+  slug: string;
+  updatesLabel: string;
+  title: string;
+  description: string;
+  publishedAt: string | null;
+}) {
+  const updatesUrl = `${PUBLIC_SITE_URL}/${locale}/novetats`;
+  const articleUrl = `${updatesUrl}/${slug}`;
+  const organizationId = `${PUBLIC_SITE_URL}/#organization`;
+
+  return [
+    {
+      '@context': 'https://schema.org',
+      '@type': 'BreadcrumbList',
+      itemListElement: [
+        {
+          '@type': 'ListItem',
+          position: 1,
+          name: 'Summa Social',
+          item: `${PUBLIC_SITE_URL}/${locale}`,
+        },
+        {
+          '@type': 'ListItem',
+          position: 2,
+          name: updatesLabel,
+          item: updatesUrl,
+        },
+        {
+          '@type': 'ListItem',
+          position: 3,
+          name: title,
+          item: articleUrl,
+        },
+      ],
+    },
+    {
+      '@context': 'https://schema.org',
+      '@type': 'Article',
+      '@id': `${articleUrl}#article`,
+      headline: title,
+      description,
+      url: articleUrl,
+      mainEntityOfPage: articleUrl,
+      inLanguage: locale,
+      ...(publishedAt
+        ? {
+            datePublished: publishedAt,
+            dateModified: publishedAt,
+          }
+        : {}),
+      author: {
+        '@type': 'Organization',
+        '@id': organizationId,
+        name: 'Summa Social',
+      },
+      publisher: {
+        '@id': organizationId,
+      },
+      about: {
+        '@id': `${PUBLIC_SITE_URL}/${locale}#software`,
+      },
+    },
+  ];
+}

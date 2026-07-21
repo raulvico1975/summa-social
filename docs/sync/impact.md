@@ -2,7 +2,7 @@
 
 ## Metadata
 - date: 2026-07-21
-- change_scope: reforcar la comunicacio i conversio de les novetats de producte dins de l'app i al web public
+- change_scope: reforcar la comunicacio, conversio, claredat d'URL i posicionament de les novetats dins de l'app i al web public
 
 ## Declaracio obligatoria
 - help_topics_updated: ["novetats del producte"]
@@ -18,5 +18,7 @@
 - Les rutes reconegudes poden afegir fins a dues accions segures dins de Summa; els canvis desconeguts no inventen botons.
 - Obrir el detall intern marca la novetat com a llegida i manté la lectura web com a accio secundaria.
 - La home publica mostra les dues novetats mes recents amb fallback segur, i el detall public incorpora CTA a demo i funcionalitats.
+- Les URLs oficials son `/ca/novetats` i `/es/novetats`; els accessos antics, interns o des del domini tecnic redirigeixen permanentment al domini public i a la ruta neta.
+- El llistat i el detall incorporen copy SEO mes descriptiu, navegacio publica completa i dades estructurades per explicar a cercadors que son actualitzacions de Summa Social.
 - Les novetats anteriors continuen sent compatibles sense migracio.
 - No hi ha dependencies noves, migracions ni canvis destructius de Firestore; tampoc s'escriu `undefined`.
