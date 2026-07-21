@@ -45,6 +45,15 @@ function normalizeHost(host: string): string {
   return host.trim().toLowerCase().replace(/:\d+$/, '');
 }
 
+function getExternalHost(request: NextRequest): string {
+  const forwardedHost = request.headers.get('x-forwarded-host')?.split(',')[0]?.trim();
+  return forwardedHost || request.headers.get('host') || '';
+}
+
+function isLocalDevelopmentHost(host: string): boolean {
+  return host === 'localhost' || host === '127.0.0.1' || host === '[::1]';
+}
+
 /**
  * Converteix rutes antigues o internes en l'URL pública neta que s'ha d'indexar.
  */
@@ -58,7 +67,10 @@ export function resolveCanonicalPublicPath(pathname: string): string {
 }
 
 export function middleware(request: NextRequest) {
-  const host = request.headers.get('host') ?? '';
+  // App Hosting executa Next.js darrere d'un proxy de Cloud Run. El header
+  // `host` pot contenir el domini intern del runtime; `x-forwarded-host`
+  // conserva el domini que ha demanat l'usuari.
+  const host = getExternalHost(request);
   const { pathname, search } = request.nextUrl;
   const normalizedHost = normalizeHost(host);
   const canonicalPathname = resolveCanonicalPublicPath(pathname);
@@ -71,8 +83,12 @@ export function middleware(request: NextRequest) {
   // Un sol salt cap al domini i ruta canònics. Les API del backend tècnic es
   // mantenen operatives perquè integracions i comprovacions no canviïn d'origen.
   if (isAliasHost || isTechnicalPublicPage || canonicalPathname !== pathname) {
-    const canonicalHost = isAliasHost || isTechnicalPublicPage ? CANONICAL_HOST : host;
-    const protocol = isAliasHost || isTechnicalPublicPage
+    const mustUsePublicDomain =
+      isAliasHost ||
+      isTechnicalPublicPage ||
+      (canonicalPathname !== pathname && !isLocalDevelopmentHost(normalizedHost));
+    const canonicalHost = mustUsePublicDomain ? CANONICAL_HOST : host;
+    const protocol = mustUsePublicDomain
       ? 'https'
       : request.nextUrl.protocol.replace(/:$/, '');
     const canonicalUrl = `${protocol}://${canonicalHost}${canonicalPathname}${search}`;

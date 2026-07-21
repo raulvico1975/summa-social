@@ -8,11 +8,14 @@ import {
   buildPublicUpdatesCollectionJsonLd,
 } from '@/lib/public-seo';
 
-function request(url: string, method = 'GET'): NextRequest {
+function request(url: string, method = 'GET', forwardedHost?: string): NextRequest {
   const parsed = new URL(url);
   return new NextRequest(url, {
     method,
-    headers: { host: parsed.host },
+    headers: {
+      host: parsed.host,
+      ...(forwardedHost ? { 'x-forwarded-host': forwardedHost } : {}),
+    },
   });
 }
 
@@ -36,6 +39,38 @@ test('middleware permanently redirects the unlocalized updates route and preserv
     response.headers.get('location'),
     'https://summasocial.app/ca/novetats?utm_source=manual'
   );
+});
+
+test('middleware does not leak the App Hosting runtime host in public redirects', () => {
+  const response = middleware(
+    request(
+      'https://studio-469685881071.us-central1.run.app/novetats?utm_source=proxy',
+      'GET',
+      'summasocial.app'
+    )
+  );
+
+  assert.equal(response.status, 308);
+  assert.equal(
+    response.headers.get('location'),
+    'https://summasocial.app/ca/novetats?utm_source=proxy'
+  );
+});
+
+test('legacy public redirects still use the official domain if proxy headers are unavailable', () => {
+  const response = middleware(
+    request('https://studio-469685881071.us-central1.run.app/public/ca/novetats')
+  );
+
+  assert.equal(response.status, 308);
+  assert.equal(response.headers.get('location'), 'https://summasocial.app/ca/novetats');
+});
+
+test('local development keeps redirects on the local server', () => {
+  const response = middleware(request('http://localhost:3000/novetats'));
+
+  assert.equal(response.status, 308);
+  assert.equal(response.headers.get('location'), 'http://localhost:3000/ca/novetats');
 });
 
 test('middleware collapses the technical host and internal path into one canonical redirect', () => {
