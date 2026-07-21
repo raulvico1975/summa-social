@@ -117,6 +117,10 @@ test('runWeeklyProductUpdateJob publica una sola peça setmanal quan hi ha canvi
   assert.equal(payload.locale, 'ca');
   assert.equal(payload.web?.enabled, true);
   assert.equal(payload.isActive, true);
+  assert.deepEqual(payload.appActions?.map((action) => action.href), [
+    '/dashboard',
+    '/dashboard/project-module/projects',
+  ]);
 });
 
 test('runWeeklyProductUpdateJob pot generar contingut setmanal sense cridar endpoint IA', async () => {
@@ -175,11 +179,19 @@ test('runWeeklyProductUpdateJob genera la novetat real de contactes i invitacion
   assert.ok(publishedPayload);
   assert.equal(
     (publishedPayload as PublishProductUpdateRequest).title,
-    'Contactes i invitacions: guardat i accessos més fiables'
+    'Guarda contactes i convida amb més seguretat'
   );
   assert.match(
     (publishedPayload as PublishProductUpdateRequest).contentLong,
     /guardar contactes amb menys errors/
+  );
+  assert.match(
+    (publishedPayload as PublishProductUpdateRequest).contentLong,
+    /Per què és útil:/
+  );
+  assert.deepEqual(
+    (publishedPayload as PublishProductUpdateRequest).appActions?.map((action) => action.href),
+    ['/dashboard/configuracion', '/dashboard/proveidors']
   );
 });
 
@@ -232,7 +244,7 @@ test('runWeeklyProductUpdateJob genera la novetat real de bot i importacio banca
   assert.ok(publishedPayload);
   assert.equal(
     (publishedPayload as PublishProductUpdateRequest).title,
-    'Ajuda i importació bancària: més precisió'
+    'Troba millor ajuda i importa extractes amb menys errors'
   );
   assert.match(
     (publishedPayload as PublishProductUpdateRequest).contentLong,
@@ -241,6 +253,10 @@ test('runWeeklyProductUpdateJob genera la novetat real de bot i importacio banca
   assert.match(
     (publishedPayload as PublishProductUpdateRequest).contentLong,
     /entén millor l’idioma, l’entitat visible i el context/
+  );
+  assert.deepEqual(
+    (publishedPayload as PublishProductUpdateRequest).appActions?.map((action) => action.href),
+    ['/dashboard/manual', '/dashboard/movimientos']
   );
 });
 
@@ -483,6 +499,26 @@ test('validateWeeklyProductUpdateEditorial rebutja seccions presents amb conting
   assert.equal(validation.ok, false);
   assert.match(validation.errors.join('\n'), /generic editorial phrase is not allowed: millores internes/);
   assert.match(validation.errors.join('\n'), /section "limit:" must state what is not covered/);
+});
+
+test('validateWeeklyProductUpdateEditorial exigeix benefici concret al format orientat a resultats', () => {
+  const validation = validateWeeklyProductUpdateEditorial({
+    title: 'Dashboard: consulta millor els indicadors',
+    description: 'Ara pots revisar l’activitat recent des del dashboard.',
+    contentLong: [
+      'Què pots fer ara:',
+      '- Ara pots consultar els indicadors recents del dashboard.',
+      '',
+      'On ho trobaràs:',
+      '- Al resum del dashboard.',
+      '',
+      'Què has de fer:',
+      '- Revisa el dashboard abans de preparar l’informe.',
+    ].join('\n'),
+  });
+
+  assert.equal(validation.ok, false);
+  assert.match(validation.errors.join('\n'), /contentLong must include section "per que es util:"/);
 });
 
 test('generateWeeklyProductUpdateContent normalitza permisos a llenguatge d’usuari', () => {

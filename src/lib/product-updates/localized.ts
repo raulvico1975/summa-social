@@ -17,6 +17,11 @@ export interface ProductUpdatePublicCopy {
   content: string | null;
 }
 
+export interface ProductUpdateAppAction {
+  href: string;
+  label: string;
+}
+
 function isRecord(value: unknown): value is RecordLike {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
@@ -97,6 +102,36 @@ export function resolveAppProductUpdateCopy(
       readLocalizedString(localizedApp, 'ctaLabel') ??
       baseCtaLabel,
   };
+}
+
+export function resolveProductUpdateAppActions(
+  raw: unknown,
+  locale?: string | null
+): ProductUpdateAppAction[] {
+  if (!isRecord(raw) || !Array.isArray(raw.appActions)) return [];
+
+  const effectiveLocale = getEffectiveProductUpdateLocale(locale);
+
+  return raw.appActions
+    .map((entry): ProductUpdateAppAction | null => {
+      if (!isRecord(entry)) return null;
+
+      const href = asNonEmptyString(entry.href);
+      const label = asNonEmptyString(entry.label);
+      if (!href || !label || !/^\/dashboard(?:\/|$)/.test(href)) return null;
+
+      const localized = getNestedRecord(
+        getNestedRecord(entry, 'locales'),
+        effectiveLocale
+      );
+
+      return {
+        href,
+        label: readLocalizedString(localized, 'label') ?? label,
+      };
+    })
+    .filter((entry): entry is ProductUpdateAppAction => entry !== null)
+    .slice(0, 2);
 }
 
 export function resolvePublicProductUpdateCopy(

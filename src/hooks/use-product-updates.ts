@@ -9,7 +9,11 @@ import { useFirebase } from '@/firebase';
 import { type ProductUpdate, PRODUCT_UPDATES } from '@/lib/notifications';
 import { isDemoEnv } from '@/lib/demo/isDemoOrg';
 import type { Language } from '@/i18n';
-import { resolveAppProductUpdateCopy, resolvePublicProductUpdateCopy } from '@/lib/product-updates/localized';
+import {
+  resolveAppProductUpdateCopy,
+  resolveProductUpdateAppActions,
+  resolvePublicProductUpdateCopy,
+} from '@/lib/product-updates/localized';
 
 /**
  * Tipus ampliat per incloure camps nous de Firestore.
@@ -41,6 +45,7 @@ function toFirestoreProductUpdate(
 ): FirestoreProductUpdate | null {
   const source = entry.data as Record<string, unknown>;
   const resolvedCopy = resolveAppProductUpdateCopy(source, language);
+  const appActions = resolveProductUpdateAppActions(source, language);
   const resolvedPublicCopy = resolvePublicProductUpdateCopy(source, language);
   if (!resolvedCopy) return null;
 
@@ -77,6 +82,7 @@ function toFirestoreProductUpdate(
     body: resolvedCopy.body,
     href: link,
     ctaLabel: resolvedCopy.ctaLabel ?? undefined,
+    appActions,
     createdAt,
     contentLong: resolvedCopy.contentLong,
     guideUrl,

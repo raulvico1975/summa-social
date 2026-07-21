@@ -49,12 +49,6 @@ export function ProductUpdatesInbox() {
   const [selectedUpdate, setSelectedUpdate] = React.useState<FirestoreProductUpdate | null>(null);
   const [isDetailOpen, setIsDetailOpen] = React.useState(false);
 
-  const handleOpenDetail = (update: FirestoreProductUpdate) => {
-    setSelectedUpdate(update);
-    setIsDetailOpen(true);
-    setIsOpen(false); // Tancar popover
-  };
-
   // Carregar readIds al muntar
   React.useEffect(() => {
     if (organizationId && user?.uid) {
@@ -86,10 +80,17 @@ export function ProductUpdatesInbox() {
     (updateId: string) => {
       if (!organizationId || !user?.uid) return;
       markNotificationRead(organizationId, user.uid, updateId);
-      setReadIds((prev) => [...prev, updateId]);
+      setReadIds((prev) => prev.includes(updateId) ? prev : [...prev, updateId]);
     },
     [organizationId, user?.uid]
   );
+
+  const handleOpenDetail = React.useCallback((update: FirestoreProductUpdate) => {
+    handleMarkRead(update.id);
+    setSelectedUpdate(update);
+    setIsDetailOpen(true);
+    setIsOpen(false);
+  }, [handleMarkRead]);
 
   const handleMarkAllRead = React.useCallback(() => {
     if (!organizationId || !user?.uid) return;
@@ -219,6 +220,7 @@ export function ProductUpdatesInbox() {
                     !!update.guideUrl ||
                     !!update.videoUrl ||
                     !!update.publicSlug ||
+                    !!update.appActions?.length ||
                     !!update.href;
                   const isFeaturedUnread = !read && update.id === latestUnreadId;
                   return (
@@ -256,7 +258,7 @@ export function ProductUpdatesInbox() {
                               }}
                               className="mt-2 inline-flex items-center gap-1 rounded-full border border-primary/18 bg-white/88 px-2.5 py-1 text-[11px] font-semibold tracking-[0.01em] text-primary shadow-[0_10px_24px_-20px_rgba(14,165,233,0.45)] transition-colors hover:border-primary/30 hover:bg-primary hover:text-primary-foreground hover:no-underline"
                             >
-                              {update.ctaLabel ?? t.productUpdates.openUpdate}
+                              {update.appActions?.[0]?.label ?? update.ctaLabel ?? t.productUpdates.openUpdate}
                               <ChevronRight className="h-3.5 w-3.5" />
                             </button>
                           )}
