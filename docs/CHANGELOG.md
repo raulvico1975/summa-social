@@ -10,6 +10,14 @@ Aquest fitxer ja no pretén duplicar el document mestre.
 
 ## Resum dels canvis recents
 
+### 2026-07-27
+
+- documentació per usuari: el web públic incorpora analítica GA4 només després del consentiment explícit, permet rebutjar-la o canviar la preferència des de privacitat i no envia noms, correus, organitzacions, telèfons ni missatges dels formularis.
+- documentació per usuari: nova plantilla gratuïta de conciliació bancària en català i castellà, descarregable en Excel i CSV des d'una pàgina pública pròpia amb instruccions i límits d'ús.
+- API/integracions: la publicació i l'actualització de posts notifiquen les URL canòniques a IndexNow de manera no bloquejant; la notificació s'omet fora de producció o quan està desactivada.
+- codi intern: la descoberta pública reforça l'H1 semàntic, els enllaços interns, les metadades CA/ES, el sitemap i `llms.txt`; les landings FR/PT incompletes redirigeixen a la versió castellana i els `.vtt` queden fora de la indexació.
+- operativa: `npm run marketing:report` separa Search Console, GA4, referències d'assistents d'IA i rastrejadors declarats sense confondre peticions tècniques amb visites humanes; el deploy validat pot notificar IndexNow sense bloquejar la publicació.
+
 ### 2026-07-21
 
 - SEO i claredat pública: les novetats tenen una URL oficial inequívoca (`/ca/novetats` i `/es/novetats`), les rutes antigues o internes hi redirigeixen permanentment i el llistat i el detall reforcen títols, copy, navegació i dades estructurades per a cercadors.

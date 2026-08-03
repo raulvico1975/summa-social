@@ -3254,6 +3254,17 @@ On `{detectat}` és l'idioma detectat via Accept-Language (default: `ca`).
 - Validació: nom, email i missatge; camp honeypot `website` per tallar bots
 - Enviament: Resend amb `RESEND_API_KEY` i `CONTACT_FORM_TO_EMAIL`; si falten, l'API respon error controlat
 - Descobriment: `sitemap.ts`, `robots.ts` i `llms.txt` exposen les rutes públiques rellevants per SEO i agents
+- Recurs públic CA/ES: `/{lang}/recursos/{resourceSlug}` ofereix la plantilla de conciliació bancària en Excel i CSV, amb dades estructurades, canonical i enllaços des del footer
+- Les landings comercials encara incompletes en FR/PT redirigeixen permanentment a la versió ES equivalent i conserven els paràmetres de campanya
+
+#### Analítica pública amb consentiment
+
+- La integració opcional amb GA4 només s'activa quan `NEXT_PUBLIC_GA_MEASUREMENT_ID` té un format vàlid
+- L'etiqueta no es descarrega fins que la persona visitant accepta expressament l'analítica
+- La preferència es pot rebutjar i modificar des de la política de privacitat
+- `contact_intent` registra clics cap a canals de contacte; `generate_lead` només s'emet després que l'API confirmi l'enviament del formulari
+- No s'envien a GA4 noms, correus, organitzacions, telèfons ni missatges dels formularis
+- El contracte operatiu i les fonts canòniques de mesura es documenten a `docs/marketing/mesura-posicionament-visites-2026-07.md`
 
 #### Publicació externa del blog
 
@@ -3264,6 +3275,8 @@ On `{detectat}` és l'idioma detectat via Accept-Language (default: `ca`).
 - `coverImageUrl` és opcional, però `coverImageAlt` només és vàlid si hi ha URL
 - Si el `slug` ja existeix, la resposta és `409 duplicate_slug`
 - Després d'escriure el post es revaliden les superfícies públiques afectades
+- Després de publicar o actualitzar un post, les URL canòniques CA/ES es notifiquen a IndexNow de manera no bloquejant
+- IndexNow no s'executa fora de producció i es pot desactivar amb `INDEXNOW_DISABLED=1`; una fallada de notificació no converteix una publicació correcta en error
 
 #### Upload de cobertes
 
