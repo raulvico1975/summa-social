@@ -5326,8 +5326,8 @@ Les integracions privades v1 existeixen per connectar eines controlades de l'eco
 - Token sempre lligat a una sola organització
 - Scopes explícits i granulars
 - Auditoria de cada crida a `integrationAuditLogs`
-- Escriptures de negoci limitades a preparació documental i vinculació comprovada
-- Cap write directe sobre imports, dates, fiscalitat, remeses, donants o categories
+- Escriptures de negoci limitades als fluxos confirmats i revalidats d'importació bancària i classificació individual, més preparació documental i vinculació comprovada
+- Cap write directe fora dels handlers canònics sobre imports, dates, fiscalitat, remeses, donants o categories
 - Les rutes MCP `prepare-only` només poden actualitzar `lastUsedAt` i afegir auditoria de seguretat; no muten negoci
 
 **Fora d'abast v1:**
@@ -5354,9 +5354,16 @@ Les integracions privades v1 existeixen per connectar eines controlades de l'eco
 |-------|--------|
 | `contacts.read` | Cercar contactes dins l'organització |
 | `transactions.read` | Cercar moviments dins l'organització |
+| `bank_accounts.search` | Resoldre comptes bancaris amb dades emmascarades |
+| `contacts.search` | Resoldre contactes amb dades emmascarades |
+| `transactions.search` | Resoldre moviments amb filtres acotats |
 | `bank_import.preview` | Previsualitzar un extracte estructurat sense importar-lo |
+| `bank_import.prepare` | Crear un pla d'importació bancària de 15 minuts |
+| `bank_import.commit` | Importar exclusivament les files confirmades d'un pla vigent |
 | `donation_classification.prepare` | Validar i preparar la classificació d'un moviment, sense aplicar-la |
+| `donation_classification.apply` | Aplicar la classificació confirmada d'un únic moviment |
 | `certificates.prepare` | Validar i preparar dades d'un certificat individual, sense generar-lo |
+| `certificates.generate` | Generar el PDF individual canònic després de confirmar el pla |
 | `pending_documents.write` | Pujar un document pendent en mode controlat |
 | `pending_documents.link` | Vincular un document pendent existent a un moviment compatible |
 
@@ -5366,13 +5373,22 @@ Les integracions privades v1 existeixen per connectar eines controlades de l'eco
 |----------|--------|-------|--------|
 | `/api/integrations/private/contacts/search` | GET | `contacts.read` | Cerca contactes per text, NIF/CIF o email |
 | `/api/integrations/private/transactions/search` | GET | `transactions.read` | Cerca moviments acotats per text, data, import i estat documental |
+| `/api/integrations/private/conversational-search/bank-accounts` | GET | `bank_accounts.search` | Retorna candidats de compte amb IBAN emmascarat |
+| `/api/integrations/private/conversational-search/contacts` | GET | `contacts.search` | Retorna candidats de contacte i motius de coincidència |
+| `/api/integrations/private/conversational-search/transactions` | GET | `transactions.search` | Retorna candidats de moviment amb filtres obligatoris |
 | `/api/integrations/private/bank-import/preview` | POST | `bank_import.preview` | Valida compte, hash, files i duplicats; retorna estat `prepared` |
+| `/api/integrations/private/bank-import/plan` | POST | `bank_import.prepare` | Persisteix la selecció exacta de files durant 15 minuts |
+| `/api/integrations/private/bank-import/commit` | POST | `bank_import.commit` | Revalida i importa només les files confirmades amb el motor canònic |
 | `/api/integrations/private/donations/classification/prepare` | POST | `donation_classification.prepare` | Retorna patch i precondició, sense modificar el moviment |
+| `/api/integrations/private/donations/classification/plan` | POST | `donation_classification.prepare` | Persisteix un pla per a un moviment i un donant explícits |
+| `/api/integrations/private/donations/classification/apply` | POST | `donation_classification.apply` | Revalida i aplica els quatre camps canònics de donació |
 | `/api/integrations/private/certificates/individual/prepare` | POST | `certificates.prepare` | Retorna elegibilitat i dades font, sense generar PDF |
+| `/api/integrations/private/certificates/individual/plan` | POST | `certificates.prepare` | Persisteix un pla individual lligat al snapshot fiscal |
+| `/api/integrations/private/certificates/individual/generate` | POST | `certificates.generate` | Genera el PDF canònic sense enviar-lo ni desar-lo a Storage |
 | `/api/integrations/private/pending-documents/upload` | POST | `pending_documents.write` | Pujar un fitxer a la safata de documents pendents |
 | `/api/integrations/private/pending-documents/link-transaction` | POST | `pending_documents.link` | Vincular un document pendent a un moviment |
 
-Les tres rutes de preparació formen la Fase A del MCP privat. No existeixen encara eines `commit_bank_statement_import`, `apply_donation_classification` ni `generate_individual_donation_certificate`.
+Les tres rutes `preview`/`prepare` formen la Fase A del MCP privat i no muten dades de negoci. B2, B3 i C1 separen sempre pla i execució: el pla caduca als 15 minuts, queda lligat al token i l'organització, és d'un sol ús i exigeix el text de confirmació exacte. Qualsevol canvi d'estat bloqueja l'execució.
 
 ### 3.14.4 Pujada de documents pendents per integració
 
@@ -5412,6 +5428,15 @@ El MCP Summa Agent és un adaptador privat local sobre les integracions v1. Serv
 **Eines exposades:**
 - `search_contacts`
 - `search_transactions`
+- `search_bank_accounts`
+- `preview_bank_statement_import`
+- `prepare_bank_statement_import_plan`
+- `commit_bank_statement_import`
+- `prepare_donation_classification`
+- `prepare_donation_classification_plan`
+- `apply_donation_classification`
+- `prepare_individual_donation_certificate`
+- `generate_individual_donation_certificate`
 - `upload_pending_document`
 - `link_pending_document_to_transaction`
 - `get_entity_operational_summary`
@@ -5419,7 +5444,9 @@ El MCP Summa Agent és un adaptador privat local sobre les integracions v1. Serv
 **Límits explícits:**
 - No exposa lectura general de documents pendents; el resum retorna `pendingDocuments.readable=false`
 - No amplia scopes: només pot fer el que permeti el token d'integració configurat
-- No substitueix les pantalles d'aprovació humana de Summa Social
+- No executa B2, B3 o C1 sense pla vigent, selecció explícita i confirmació humana exacta
+- C1 només desa localment un PDF individual: no envia correu, no escriu a Storage i no marca cap certificat com enviat
+- La integració consta a `main`/`prod` pel ritual de desplegament del 2026-08-03, però no hi ha evidència d'una prova real amb dades productives
 
 **Fitxers principals:**
 - `docs/contracts/private-admin-integrations-v1.md`
@@ -5428,6 +5455,9 @@ El MCP Summa Agent és un adaptador privat local sobre les integracions v1. Serv
 - `src/app/api/integrations/private/transactions/search/handler.ts`
 - `src/app/api/integrations/private/pending-documents/upload/handler.ts`
 - `src/app/api/integrations/private/pending-documents/link-transaction/handler.ts`
+- `src/lib/private-integrations/bank-import-plan.ts`
+- `src/lib/private-integrations/donation-classification-plan.ts`
+- `src/lib/private-integrations/individual-certificate-plan.ts`
 - `src/lib/summa-agent-mcp/client.ts`
 - `src/lib/summa-agent-mcp/server.ts`
 

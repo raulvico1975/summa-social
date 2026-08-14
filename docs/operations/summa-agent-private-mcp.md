@@ -1,6 +1,6 @@
 # MCP privat per Summa Agent
 
-Estat: local v0.6, amb B1 conversacional, B2 d'importació bancària controlada, B3 de classificació confirmada i C1 de certificat individual canònic.
+Estat: adaptador local v0.6; API B1/B2/B3/C1 integrada a `main`/`prod` pel ritual del 2026-08-03, pendent de prova real amb dades productives.
 
 Aquest adaptador exposa a Summa Agent una capa MCP privada sobre la `private integration API v1` existent de Summa Social. No és una funcionalitat pública per clients i no amplia permisos.
 

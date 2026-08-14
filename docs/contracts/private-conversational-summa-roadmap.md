@@ -23,7 +23,7 @@ No és un MCP públic ni un producte multi-client. La primera implantació queda
 
 ### B1 — Cerca conversacional i resolució d’identitats
 
-Estat: **implementada i validada localment; pendent de revisió i desplegament autoritzat**.
+Estat: **implementada i validada localment; integrada a `main`/`prod`, pendent de prova real amb dades productives**.
 
 Només lectura. Objectiu: que Raül pugui parlar en termes humans —“compte principal”, “ingrés de 20.000 €”, “Fundación Tipsa”— sense conèixer IDs interns.
 
@@ -91,7 +91,7 @@ Criteri de resolució:
 
 ### B2 — Importació bancària amb commit controlat
 
-Estat: **implementada i validada localment; pendent de revisió i desplegament autoritzat**.
+Estat: **implementada i validada localment; integrada a `main`/`prod`, pendent de prova real amb dades productives**.
 
 Scopes:
 
@@ -168,7 +168,7 @@ Patch canònic:
 
 No crea donants, no modifica categories i no classifica més d’un moviment per crida.
 
-Estat local: implementat i validat amb proves específiques; pendent de la revisió final del Supervisor GPT i de qualsevol desplegament autoritzat.
+Estat: implementat i validat amb proves específiques; integrat a `main`/`prod`, pendent de prova real amb dades productives.
 
 ### C1 — Certificat individual canònic de donació
 
@@ -189,7 +189,7 @@ Flux previst:
 
 La fase C1 no envia correu, no marca el certificat com enviat i no altera la fiscalitat. El certificat anual i el massiu queden explícitament fora d'abast per a una futura C2.
 
-Estat local: C1 individual implementada, suite completa superada i acceptada pel Supervisor GPT; no desplegada ni provada amb dades reals.
+Estat: C1 individual implementada, suite completa superada i acceptada pel Supervisor GPT; integrada a `main`/`prod`, però no provada amb dades reals.
 
 ## Auditoria
 

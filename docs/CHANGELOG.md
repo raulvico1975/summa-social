@@ -12,10 +12,10 @@ Aquest fitxer ja no pretén duplicar el document mestre.
 
 ### 2026-08-03
 
-- MCP privat: afegida la Fase A `prepare-only` per previsualitzar un extracte bancari explícit, preparar la classificació d'una donació i preparar les dades d'un certificat individual.
-- seguretat: scopes independents, aïllament per organització i compte/recursos explícits; les úniques escriptures són `lastUsedAt` i auditoria, sense mutacions de negoci.
-- fiscalitat: la preparació valida moviment, donant i NIF/CIF i pot avaluar la classificació proposada sense aplicar-la; no genera PDF ni envia correu.
-- operativa: implementació local en branca aïllada, sense token real, prova productiva, push, merge ni deploy.
+- API/integracions: el MCP privat incorpora cerca conversacional de comptes, contactes i moviments, Fase A `prepare-only` i plans confirmables de 15 minuts per importar extractes, classificar una donació i generar un certificat individual.
+- codi intern: la importació bancària reutilitza el motor canònic de la UI i el certificat individual comparteix el mateix builder PDF; els commits revaliden token, organització, recursos, hashes i estat abans d'escriure.
+- operativa: scopes independents, auditoria sanitzada, plans d'un sol ús i confirmació humana exacta; el codi consta integrat a `main`/`prod` pel ritual de desplegament, però no hi ha evidència d'una prova real amb dades productives.
+- documentació per usuari: sense canvis; és una capacitat privada per agents autoritzats i no afegeix pantalles ni fluxos públics.
 
 ### 2026-07-21
 
