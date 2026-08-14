@@ -1,0 +1,703 @@
+{
+  "surface": "report",
+  "manifest": {
+    "version": 1,
+    "surface": "report",
+    "title": "Plans de Summa Social: valor i coherència",
+    "description": "Avaluació executiva dels plans públics, la seva lògica per a entitats petites i mitjanes i el posicionament davant competidors.",
+    "generatedAt": "2026-08-14T10:46:00+02:00",
+    "charts": [
+      {
+        "id": "monthly_price_ladders",
+        "title": "Preus mensuals públics de referència",
+        "subtitle": "Imports en euros, sense descomptes temporals; els plans no són funcionalment equivalents.",
+        "type": "bar",
+        "dataset": "competitor_prices",
+        "sourceId": "market_price_query",
+        "encodings": {
+          "x": {
+            "field": "vendor",
+            "type": "nominal",
+            "label": "Producte"
+          },
+          "y": {
+            "field": "monthly_price",
+            "type": "quantitative",
+            "label": "Preu mensual",
+            "format": "currency"
+          },
+          "color": {
+            "field": "tier",
+            "type": "nominal",
+            "label": "Nivell"
+          }
+        },
+        "yAxisTitle": "€/mes",
+        "valueFormat": "currency",
+        "layout": "full"
+      }
+    ],
+    "tables": [
+      {
+        "id": "current_plan_assessment",
+        "title": "Avaluació dels plans actuals",
+        "subtitle": "Valor potencial i coherència amb el problema que cada pla promet resoldre.",
+        "dataset": "plan_assessment",
+        "sourceId": "summa_public_pricing",
+        "defaultSort": {
+          "field": "monthly_price",
+          "direction": "asc"
+        },
+        "density": "spacious",
+        "layout": "full",
+        "columns": [
+          {
+            "field": "plan",
+            "label": "Pla",
+            "type": "text"
+          },
+          {
+            "field": "monthly_price",
+            "label": "€/mes",
+            "format": "currency"
+          },
+          {
+            "field": "value_verdict",
+            "label": "Valor"
+          },
+          {
+            "field": "coherence",
+            "label": "Coherència"
+          },
+          {
+            "field": "main_reason",
+            "label": "Lectura principal"
+          }
+        ]
+      },
+      {
+        "id": "competitor_comparison",
+        "title": "Comparació competitiva",
+        "subtitle": "Tarifes públiques i focus principal; no és una equivalència funcional ni una auditoria de producte.",
+        "dataset": "competitor_summary",
+        "sourceId": "market_source_notes",
+        "defaultSort": {
+          "field": "vendor",
+          "direction": "asc"
+        },
+        "density": "spacious",
+        "layout": "full",
+        "columns": [
+          {
+            "field": "vendor",
+            "label": "Producte",
+            "type": "text"
+          },
+          {
+            "field": "price_range",
+            "label": "Rang públic"
+          },
+          {
+            "field": "visible_strength",
+            "label": "Fortalesa visible"
+          },
+          {
+            "field": "implication_for_summa",
+            "label": "Implicació per a Summa"
+          }
+        ]
+      },
+      {
+        "id": "needs_by_entity",
+        "title": "Necessitats de control per tipus d'entitat",
+        "subtitle": "La necessitat depèn més del circuit econòmic que de la mida formal de l'entitat.",
+        "dataset": "needs_matrix",
+        "sourceId": "summa_product_reference",
+        "defaultSort": {
+          "field": "need",
+          "direction": "asc"
+        },
+        "density": "spacious",
+        "layout": "full",
+        "columns": [
+          {
+            "field": "need",
+            "label": "Necessitat",
+            "type": "text"
+          },
+          {
+            "field": "small_entity",
+            "label": "Entitat petita"
+          },
+          {
+            "field": "medium_entity",
+            "label": "Entitat mitjana"
+          },
+          {
+            "field": "current_plan",
+            "label": "Pla actual"
+          }
+        ]
+      },
+      {
+        "id": "recommended_packaging",
+        "title": "Arquitectura de plans recomanada",
+        "subtitle": "Manté 49/79/119 € durant la validació, però ordena els plans per resultat operatiu.",
+        "dataset": "recommended_plans",
+        "sourceId": "analysis_recommendation",
+        "defaultSort": {
+          "field": "monthly_price",
+          "direction": "asc"
+        },
+        "density": "spacious",
+        "layout": "full",
+        "columns": [
+          {
+            "field": "plan",
+            "label": "Pla",
+            "type": "text"
+          },
+          {
+            "field": "monthly_price",
+            "label": "€/mes",
+            "format": "currency"
+          },
+          {
+            "field": "promised_outcome",
+            "label": "Resultat promès"
+          },
+          {
+            "field": "core_scope",
+            "label": "Contingut central"
+          }
+        ]
+      },
+      {
+        "id": "implementation_economics",
+        "title": "Economia mínima de la implantació",
+        "subtitle": "Sensibilitat simple sobre el playbook intern de 20–25 hores; no és una tarifa aprovada.",
+        "dataset": "implementation_sensitivity",
+        "sourceId": "summa_onboarding",
+        "defaultSort": {
+          "field": "hourly_value",
+          "direction": "asc"
+        },
+        "density": "spacious",
+        "layout": "full",
+        "columns": [
+          {
+            "field": "scenario",
+            "label": "Escenari",
+            "type": "text"
+          },
+          {
+            "field": "hourly_value",
+            "label": "Valor hora",
+            "format": "currency"
+          },
+          {
+            "field": "hours",
+            "label": "Hores"
+          },
+          {
+            "field": "implementation_value",
+            "label": "Valor implantació",
+            "format": "currency"
+          },
+          {
+            "field": "interpretation",
+            "label": "Interpretació"
+          }
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "id": "summa_public_pricing",
+        "label": "Preus públics de Summa Social",
+        "href": "https://summasocial.app/es/preus",
+        "path": "src/i18n/public.ts",
+        "query": {
+          "engine": "trino",
+          "description": "Avaluació normalitzada dels tres plans a partir del contingut públic i la proposta central de control econòmic.",
+          "sql": "SELECT * FROM (VALUES ('Inicial', 49.00, 'Condicional', 'Baixa', 'Ordena socis, quotes i 182, però no entrega banc + document, que és el nucli del control econòmic.'), ('Gestió', 79.00, 'Fort', 'Alta', 'És el millor encaix actual: banc, devolucions, documents, IA i fiscalitat ordinària.'), ('Complet', 119.00, 'Fort si hi ha projectes', 'Mitjana', 'Justifica el preu amb projectes, subvencions i multidivisa, però barreja gestoria ordinària amb complexitat de projectes.')) AS t(plan, monthly_price, value_verdict, coherence, main_reason)",
+          "tables_used": []
+        }
+      },
+      {
+        "id": "summa_product_reference",
+        "label": "Referència funcional de Summa Social",
+        "path": "docs/SUMMA-SOCIAL-REFERENCIA-COMPLETA.md",
+        "query": {
+          "engine": "trino",
+          "description": "Matriu de necessitats operatives derivada de la cobertura funcional actual i de la seqüència de control econòmic.",
+          "sql": "SELECT * FROM (VALUES (1, 'Socis, donants, quotes i certificats', 'Essencial quan hi ha base social o donacions', 'Essencial i amb més volum', 'Inicial'), (2, 'Importació i revisió bancària', 'Essencial tan aviat com hi ha flux recurrent', 'Essencial', 'Gestió'), (3, 'Document vinculat al moviment', 'Molt útil; evita carpetes i correus dispersos', 'Essencial per traçabilitat', 'Gestió'), (4, 'Devolucions i cobraments en línia', 'Condicional al model de quotes', 'Freqüent', 'Gestió'), (5, 'Model 347 i exportació per gestoria', 'Condicional per activitat i proveïdors', 'Habitual', 'Dividit entre Gestió i Complet'), (6, 'Projectes i justificació de subvencions', 'Pot ser decisiva amb un sol projecte', 'Habitual si hi ha finançament públic', 'Complet'), (7, 'Multidivisa i despeses de terreny', 'Nínxol de cooperació', 'Condicional al tipus de projecte', 'Complet')) AS t(order_id, need, small_entity, medium_entity, current_plan)",
+          "tables_used": []
+        }
+      },
+      {
+        "id": "summa_onboarding",
+        "label": "Playbook d'implantació de Summa Social",
+        "path": "docs/operations/Onboarding-Playbook.md",
+        "query": {
+          "engine": "trino",
+          "description": "Càlcul de sensibilitat sobre el mínim públic de 300 € i les 20–25 hores del playbook intern.",
+          "sql": "SELECT * FROM (VALUES ('Mínim públic actual', 12.00, '25 h', 300.00, 'No sostenible com a implantació completa; només coherent com a activació molt acotada.'), ('Mínim públic actual', 15.00, '20 h', 300.00, 'Continua sent un ingrés brut molt baix abans de costos.'), ('Sensibilitat moderada', 35.00, '20 h', 700.00, 'Llindar inferior raonable per acompanyament complet, pendent de costos reals.'), ('Sensibilitat reforçada', 50.00, '25 h', 1250.00, 'Escenari alt per dades complexes, migració, formació i seguiment.')) AS t(scenario, hourly_value, hours, implementation_value, interpretation)",
+          "tables_used": []
+        }
+      },
+      {
+        "id": "market_source_notes",
+        "label": "Compilació de tarifes i contingut competitiu",
+        "path": "docs/audits/pricing-plans-2026-08-14/source-notes.md",
+        "query": {
+          "engine": "trino",
+          "description": "Comparació qualitativa normalitzada a partir de les pàgines oficials revisades el 14 d'agost de 2026.",
+          "sql": "SELECT * FROM (VALUES ('Socios.pro', 1, '19,95–29,95 €/mes', 'Amplitud anunciada: socis, SEPA, facturació, comptabilitat, projectes i models AEAT.', 'Pressió de preu molt alta; Summa ha de demostrar profunditat, traçabilitat i acompanyament.'), ('Holded', 2, '29–99 €/mes', 'ERP generalista amb comptabilitat, bancs, remeses, projectes i accés de gestoria.', 'No competir en amplitud ERP; guanyar amb flux sectorial de donants, fiscalitat i subvencions.'), ('Berrly', 3, '39–199 €/mes', 'Socis, comunicació, cobraments, zona privada, esdeveniments i ticketing.', 'Summa és més econòmica-operativa; Berrly és més comunitat i ingressos.'), ('Summa Social', 4, '49–119 €/mes + implantació', 'Cadena banc–contacte–document–fiscalitat–projecte i justificació.', 'Posicionament defensable si converteix la cadena completa en el centre del relat.'), ('Luntia', 5, '120–280 €/mes de referència', 'Socis, beneficiaris, voluntariat, activitats, esdeveniments i donacions.', 'Summa és clarament més assequible, però cobreix un problema més estret i econòmic.'), ('GONG', 6, 'Sense tarifa pública comparable', 'Formulació, seguiment econòmic, cofinançament, informes i justificació de projectes.', 'Competidor funcional del pla superior; Summa pot guanyar per simplicitat i connexió amb banc, donants i documents.')) AS t(vendor, sort_order, price_range, visible_strength, implication_for_summa)",
+          "tables_used": []
+        }
+      },
+      {
+        "id": "market_price_query",
+        "label": "Taula normalitzada de preus mensuals públics",
+        "path": "docs/audits/pricing-plans-2026-08-14/source-notes.md",
+        "query": {
+          "engine": "trino",
+          "description": "Transcripció revisada dels preus mensuals públics o de referència de les fonts oficials, sense descomptes temporals.",
+          "sql": "SELECT * FROM (VALUES ('Summa Social', 'Entrada', 49.00), ('Summa Social', 'Central', 79.00), ('Summa Social', 'Superior', 119.00), ('Berrly', 'Entrada', 39.00), ('Berrly', 'Central', 89.00), ('Berrly', 'Superior', 199.00), ('Socios.pro', 'Entrada', 19.95), ('Socios.pro', 'Central', 24.95), ('Socios.pro', 'Superior', 29.95), ('Holded', 'Entrada', 29.00), ('Holded', 'Central', 59.00), ('Holded', 'Superior', 99.00), ('Luntia', 'Entrada', 120.00), ('Luntia', 'Central', 199.00), ('Luntia', 'Superior', 280.00)) AS t(vendor, tier, monthly_price)",
+          "tables_used": []
+        }
+      },
+      {
+        "id": "analysis_recommendation",
+        "label": "Recomanació de reempaquetat",
+        "path": "docs/audits/pricing-plans-2026-08-14/source-notes.md",
+        "query": {
+          "engine": "trino",
+          "description": "Hipòtesi de reempaquetat que manté els tres preus i redistribueix la cobertura per resultat operatiu.",
+          "sql": "SELECT * FROM (VALUES ('Essencial', 49.00, 'Mes econòmic bàsic ordenat i traçable', 'Socis/donants, quotes, remeses, certificats i 182 + importació bancària bàsica, conciliació i adjunció documental.'), ('Control econòmic', 79.00, 'Operativa ordinària preparada per revisió i gestoria', 'Tot l''anterior + devolucions, cobraments online, IA, documents pendents, 347, exportació de gestoria i circuits múltiples.'), ('Projectes + justificacions', 119.00, 'Projectes i finançadors amb despesa i evidència preparades', 'Tot l''anterior + projectes, justificació econòmica, multidivisa, captura/OCR de rebuts i acompanyament reforçat.')) AS t(plan, monthly_price, promised_outcome, core_scope)",
+          "tables_used": []
+        }
+      }
+    ],
+    "blocks": [
+      {
+        "id": "title",
+        "type": "markdown",
+        "body": "# Plans de Summa Social: valor i coherència"
+      },
+      {
+        "id": "executive_summary",
+        "type": "markdown",
+        "body": "## Executive Summary\n\n- **Sí que hi ha valor, però és desigual entre plans.** Gestió és avui el paquet més coherent: connecta banc, documents, devolucions, fiscalitat i revisió econòmica regular. Complet és defensable per a entitats amb projectes i subvencions. Inicial queda massa a prop d'un gestor de socis i massa lluny de la promesa central de control econòmic.\n- **Els preus 49/79/119 € són defensables dins del mercat especialitzat.** Summa queda entre alternatives de baix cost i plataformes sectorials més cares. El problema no és principalment el nivell de preu, sinó que la pàgina no explica prou bé per què el resultat val més que una eina generalista o una opció de 20–40 €/mes.\n- **La segmentació per mida no és prou lògica.** Una entitat petita també necessita banc i documents; una entitat petita amb una subvenció pot necessitar justificacions; una entitat mitjana sense projectes pot no necessitar multidivisa. Els plans s'han d'ordenar per complexitat del circuit, no per etiqueta de mida.\n- **Recomanació: mantenir provisionalment els tres preus i canviar el contingut i el relat.** Incloure control bancari bàsic a l'entrada, reservar automatització i gestoria per al nivell central, i convertir el nivell superior en un pla clar de projectes i justificacions. Separar activació lleugera de la implantació completa."
+      },
+      {
+        "id": "current_grid_takeaway",
+        "type": "markdown",
+        "body": "## La graella és bona, però el pla Inicial no completa el control econòmic\n\n**Gestió és el centre de gravetat correcte; Inicial és el punt feble.** Si la promesa de Summa és evitar que banc, factures, donants i fiscalitat quedin dispersos, el primer pla no hauria d'excloure completament l'entrada bancària i la vinculació documental. Això obliga una entitat petita a pujar a 79 € abans d'haver experimentat el resultat central del producte.\n\n**Complet té valor, però agrupa dos motius de compra diferents.** Preparar documentació per a gestoria és una necessitat ordinària; gestionar projectes, justificacions i multidivisa és una complexitat específica. Barrejar-les redueix la claredat del salt a 119 €."
+      },
+      {
+        "id": "current_plan_assessment_block",
+        "type": "table",
+        "tableId": "current_plan_assessment",
+        "layout": "full"
+      },
+      {
+        "id": "market_takeaway",
+        "type": "markdown",
+        "body": "## El preu està dins del mercat; la pressió ve de la comparació superficial\n\n**Summa ocupa una franja intermèdia raonable.** És més cara que Socios.pro i que els plans generals de Holded, semblant als primers nivells de Berrly, i clarament més barata que Luntia. La comparació, però, és imperfecta: cada producte resol un sistema de treball diferent.\n\nEl gràfic usa el preu mensual públic o de referència, sense descomptes temporals. Serveix per veure posicionament, no per declarar equivalència de valor. GONG queda fora perquè no s'ha trobat una tarifa SaaS pública comparable."
+      },
+      {
+        "id": "price_chart_block",
+        "type": "chart",
+        "chartId": "monthly_price_ladders",
+        "layout": "full"
+      },
+      {
+        "id": "competitive_detail_intro",
+        "type": "markdown",
+        "body": "## La diferenciació útil és el control econòmic abans de gestoria i finançadors\n\n**SEPA, socis i Model 182 ja no són diferencials suficients.** Berrly i Socios.pro els anuncien, i Holded competeix amb comptabilitat, bancs i gestoria. Summa és més convincent quan ven una cadena completa i sectorial: moviment bancari → contacte → document → criteri fiscal → projecte o justificació.\n\n**El competidor canvia segons el dolor.** Berrly i Luntia guanyen si el problema és comunitat, comunicació, voluntariat o esdeveniments; Holded i Socios.pro guanyen si la compra es decideix per amplitud funcional o preu; GONG és fort quan el centre és la gestió profunda de projectes de cooperació."
+      },
+      {
+        "id": "competitive_table_block",
+        "type": "table",
+        "tableId": "competitor_comparison",
+        "layout": "full"
+      },
+      {
+        "id": "needs_takeaway",
+        "type": "markdown",
+        "body": "## Petita o mitjana no determina el pla: ho determina el circuit\n\n**Hi ha necessitats bàsiques que apareixen abans del volum.** Una entitat petita amb quotes recurrents ja necessita remeses, devolucions i conciliació; una entitat amb una sola subvenció pot necessitar imputació i justificació; una entitat mitjana que només gestiona socis pot no necessitar multidivisa.\n\nLa mida continua sent un senyal comercial útil, però el selector de pla hauria de preguntar per comptes bancaris, tipus de cobraments, documents, gestoria, projectes, finançadors i monedes."
+      },
+      {
+        "id": "needs_table_block",
+        "type": "table",
+        "tableId": "needs_by_entity",
+        "layout": "full"
+      },
+      {
+        "id": "repackaging_takeaway",
+        "type": "markdown",
+        "body": "## Reempaquetar abans de rebaixar\n\n**No recomano abaixar ara els 49/79/119 €.** Primer cal fer que cada salt compri un resultat fàcil d'entendre. La proposta següent és una hipòtesi comercial per validar; pot aplicar-se contractualment mentre la plataforma encara no imposa límits tècnics per pla.\n\nEl canvi més important és donar una versió bàsica del control bancari i documental al pla d'entrada. L'automatització, la preparació per a gestoria i la complexitat multiprocés justifiquen el segon salt; projectes, subvencions i multidivisa justifiquen el tercer."
+      },
+      {
+        "id": "recommended_packaging_block",
+        "type": "table",
+        "tableId": "recommended_packaging",
+        "layout": "full"
+      },
+      {
+        "id": "implementation_takeaway",
+        "type": "markdown",
+        "body": "## La implantació des de 300 € només és coherent si és realment lleugera\n\n**El playbook intern estima 20–25 hores en 6–8 setmanes.** Si tot això es vengués pel mínim públic de 300 €, l'ingrés brut seria només de 12–15 €/h abans de costos. La tensió no demostra que totes les implantacions costin 300 €, però sí que la pàgina ha d'explicar què inclou el mínim.\n\nLa solució és separar una activació lleugera, per dades netes i poques sessions, d'una implantació acompanyada pressupostada per hores, volum i complexitat. Això protegeix el marge i evita que l'entitat percebi el preu inicial com una xifra arbitrària."
+      },
+      {
+        "id": "implementation_table_block",
+        "type": "table",
+        "tableId": "implementation_economics",
+        "layout": "full"
+      },
+      {
+        "id": "recommended_next_steps",
+        "type": "markdown",
+        "body": "## Passos recomanats\n\n1. **Canviar la promesa dels plans, no el preu:** Essencial, Control econòmic i Projectes + justificacions.\n2. **Moure banc i document bàsic a l'entrada:** el primer pla ha de demostrar la proposta central de Summa.\n3. **Publicar condicions que avui falten:** IVA, usuaris, volum o ús raonable, suport, emmagatzematge, permanència, còpies, exportació i contingut exacte de la implantació.\n4. **Validar amb 8–12 converses i 2–3 pilots pagats:** preguntar quin circuit volen controlar, quin pla triarien i què els fa dubtar; no demanar només si el preu sembla bé.\n5. **Mesurar abans de decidir una rebaixa:** pla triat, motiu de compra, temps d'implantació, hores de suport al mes i ús dels mòduls clau."
+      },
+      {
+        "id": "further_questions",
+        "type": "markdown",
+        "body": "## Preguntes que poden canviar la decisió\n\n- Quantes hores reals consumeix cada implantació i cada entitat al mes?\n- Quin és el primer resultat que els clients perceben com a imprescindible: remeses, tancament bancari, fiscalitat o justificació?\n- Quines entitats necessiten gestoria/exportació però no projectes?\n- Quines funcions s'usen de manera recurrent i quines només un cop l'any?\n- El mercat accepta millor una quota més alta amb implantació inclosa o una quota moderada amb implantació separada?"
+      },
+      {
+        "id": "caveats",
+        "type": "markdown",
+        "body": "## Supòsits i límits\n\n**Confiança: compartible amb cauteles.** Les tarifes i funcions visibles s'han verificat en fonts públiques i al repositori, però no hi ha dades recents de conversió, ús per pla, abandonament, marge o entrevistes que demostrin disposició a pagar.\n\nLes pàgines comercials dels competidors poden exagerar amplitud o no reflectir la profunditat real. Per això la conclusió és una recomanació de posicionament i arquitectura de plans, no una prova causal que el canvi augmentarà vendes."
+      }
+    ]
+  },
+  "snapshot": {
+    "version": 1,
+    "generatedAt": "2026-08-14T10:46:00+02:00",
+    "status": "ready",
+    "datasets": {
+      "competitor_prices": [
+        {
+          "vendor": "Summa Social",
+          "tier": "Entrada",
+          "monthly_price": 49
+        },
+        {
+          "vendor": "Summa Social",
+          "tier": "Central",
+          "monthly_price": 79
+        },
+        {
+          "vendor": "Summa Social",
+          "tier": "Superior",
+          "monthly_price": 119
+        },
+        {
+          "vendor": "Berrly",
+          "tier": "Entrada",
+          "monthly_price": 39
+        },
+        {
+          "vendor": "Berrly",
+          "tier": "Central",
+          "monthly_price": 89
+        },
+        {
+          "vendor": "Berrly",
+          "tier": "Superior",
+          "monthly_price": 199
+        },
+        {
+          "vendor": "Socios.pro",
+          "tier": "Entrada",
+          "monthly_price": 19.95
+        },
+        {
+          "vendor": "Socios.pro",
+          "tier": "Central",
+          "monthly_price": 24.95
+        },
+        {
+          "vendor": "Socios.pro",
+          "tier": "Superior",
+          "monthly_price": 29.95
+        },
+        {
+          "vendor": "Holded",
+          "tier": "Entrada",
+          "monthly_price": 29
+        },
+        {
+          "vendor": "Holded",
+          "tier": "Central",
+          "monthly_price": 59
+        },
+        {
+          "vendor": "Holded",
+          "tier": "Superior",
+          "monthly_price": 99
+        },
+        {
+          "vendor": "Luntia",
+          "tier": "Entrada",
+          "monthly_price": 120
+        },
+        {
+          "vendor": "Luntia",
+          "tier": "Central",
+          "monthly_price": 199
+        },
+        {
+          "vendor": "Luntia",
+          "tier": "Superior",
+          "monthly_price": 280
+        }
+      ],
+      "plan_assessment": [
+        {
+          "plan": "Inicial",
+          "monthly_price": 49,
+          "value_verdict": "Condicional",
+          "coherence": "Baixa",
+          "main_reason": "Ordena socis, quotes i 182, però no entrega banc + document, que és el nucli del control econòmic."
+        },
+        {
+          "plan": "Gestió",
+          "monthly_price": 79,
+          "value_verdict": "Fort",
+          "coherence": "Alta",
+          "main_reason": "És el millor encaix actual: banc, devolucions, documents, IA i fiscalitat ordinària."
+        },
+        {
+          "plan": "Complet",
+          "monthly_price": 119,
+          "value_verdict": "Fort si hi ha projectes",
+          "coherence": "Mitjana",
+          "main_reason": "Justifica el preu amb projectes, subvencions i multidivisa, però barreja gestoria ordinària amb complexitat de projectes."
+        }
+      ],
+      "competitor_summary": [
+        {
+          "vendor": "Socios.pro",
+          "sort_order": 1,
+          "price_range": "19,95–29,95 €/mes",
+          "visible_strength": "Amplitud anunciada: socis, SEPA, facturació, comptabilitat, projectes i models AEAT.",
+          "implication_for_summa": "Pressió de preu molt alta; Summa ha de demostrar profunditat, traçabilitat i acompanyament."
+        },
+        {
+          "vendor": "Holded",
+          "sort_order": 2,
+          "price_range": "29–99 €/mes",
+          "visible_strength": "ERP generalista amb comptabilitat, bancs, remeses, projectes i accés de gestoria.",
+          "implication_for_summa": "No competir en amplitud ERP; guanyar amb flux sectorial de donants, fiscalitat i subvencions."
+        },
+        {
+          "vendor": "Berrly",
+          "sort_order": 3,
+          "price_range": "39–199 €/mes",
+          "visible_strength": "Socis, comunicació, cobraments, zona privada, esdeveniments i ticketing.",
+          "implication_for_summa": "Summa és més econòmica-operativa; Berrly és més comunitat i ingressos."
+        },
+        {
+          "vendor": "Summa Social",
+          "sort_order": 4,
+          "price_range": "49–119 €/mes + implantació",
+          "visible_strength": "Cadena banc–contacte–document–fiscalitat–projecte i justificació.",
+          "implication_for_summa": "Posicionament defensable si converteix la cadena completa en el centre del relat."
+        },
+        {
+          "vendor": "Luntia",
+          "sort_order": 5,
+          "price_range": "120–280 €/mes de referència",
+          "visible_strength": "Socis, beneficiaris, voluntariat, activitats, esdeveniments i donacions.",
+          "implication_for_summa": "Summa és clarament més assequible, però cobreix un problema més estret i econòmic."
+        },
+        {
+          "vendor": "GONG",
+          "sort_order": 6,
+          "price_range": "Sense tarifa pública comparable",
+          "visible_strength": "Formulació, seguiment econòmic, cofinançament, informes i justificació de projectes.",
+          "implication_for_summa": "Competidor funcional del pla superior; Summa pot guanyar per simplicitat i connexió amb banc, donants i documents."
+        }
+      ],
+      "needs_matrix": [
+        {
+          "order": 1,
+          "need": "Socis, donants, quotes i certificats",
+          "small_entity": "Essencial quan hi ha base social o donacions",
+          "medium_entity": "Essencial i amb més volum",
+          "current_plan": "Inicial"
+        },
+        {
+          "order": 2,
+          "need": "Importació i revisió bancària",
+          "small_entity": "Essencial tan aviat com hi ha flux recurrent",
+          "medium_entity": "Essencial",
+          "current_plan": "Gestió"
+        },
+        {
+          "order": 3,
+          "need": "Document vinculat al moviment",
+          "small_entity": "Molt útil; evita carpetes i correus dispersos",
+          "medium_entity": "Essencial per traçabilitat",
+          "current_plan": "Gestió"
+        },
+        {
+          "order": 4,
+          "need": "Devolucions i cobraments en línia",
+          "small_entity": "Condicional al model de quotes",
+          "medium_entity": "Freqüent",
+          "current_plan": "Gestió"
+        },
+        {
+          "order": 5,
+          "need": "Model 347 i exportació per gestoria",
+          "small_entity": "Condicional per activitat i proveïdors",
+          "medium_entity": "Habitual",
+          "current_plan": "Dividit entre Gestió i Complet"
+        },
+        {
+          "order": 6,
+          "need": "Projectes i justificació de subvencions",
+          "small_entity": "Pot ser decisiva amb un sol projecte",
+          "medium_entity": "Habitual si hi ha finançament públic",
+          "current_plan": "Complet"
+        },
+        {
+          "order": 7,
+          "need": "Multidivisa i despeses de terreny",
+          "small_entity": "Nínxol de cooperació",
+          "medium_entity": "Condicional al tipus de projecte",
+          "current_plan": "Complet"
+        }
+      ],
+      "recommended_plans": [
+        {
+          "plan": "Essencial",
+          "monthly_price": 49,
+          "promised_outcome": "Mes econòmic bàsic ordenat i traçable",
+          "core_scope": "Socis/donants, quotes, remeses, certificats i 182 + importació bancària bàsica, conciliació i adjunció documental."
+        },
+        {
+          "plan": "Control econòmic",
+          "monthly_price": 79,
+          "promised_outcome": "Operativa ordinària preparada per revisió i gestoria",
+          "core_scope": "Tot l'anterior + devolucions, cobraments online, IA, documents pendents, 347, exportació de gestoria i circuits múltiples."
+        },
+        {
+          "plan": "Projectes + justificacions",
+          "monthly_price": 119,
+          "promised_outcome": "Projectes i finançadors amb despesa i evidència preparades",
+          "core_scope": "Tot l'anterior + projectes, justificació econòmica, multidivisa, captura/OCR de rebuts i acompanyament reforçat."
+        }
+      ],
+      "implementation_sensitivity": [
+        {
+          "scenario": "Mínim públic actual",
+          "hourly_value": 12,
+          "hours": "25 h",
+          "implementation_value": 300,
+          "interpretation": "No sostenible com a implantació completa; només coherent com a activació molt acotada."
+        },
+        {
+          "scenario": "Mínim públic actual",
+          "hourly_value": 15,
+          "hours": "20 h",
+          "implementation_value": 300,
+          "interpretation": "Continua sent un ingrés brut molt baix abans de costos."
+        },
+        {
+          "scenario": "Sensibilitat moderada",
+          "hourly_value": 35,
+          "hours": "20 h",
+          "implementation_value": 700,
+          "interpretation": "Llindar inferior raonable per acompanyament complet, pendent de costos reals."
+        },
+        {
+          "scenario": "Sensibilitat reforçada",
+          "hourly_value": 50,
+          "hours": "25 h",
+          "implementation_value": 1250,
+          "interpretation": "Escenari alt per dades complexes, migració, formació i seguiment."
+        }
+      ]
+    }
+  },
+  "sources": [
+    {
+      "id": "summa_public_pricing",
+      "label": "Preus públics de Summa Social",
+      "href": "https://summasocial.app/es/preus",
+      "path": "src/i18n/public.ts",
+      "query": {
+        "engine": "trino",
+        "description": "Avaluació normalitzada dels tres plans a partir del contingut públic i la proposta central de control econòmic.",
+        "sql": "SELECT * FROM (VALUES ('Inicial', 49.00, 'Condicional', 'Baixa', 'Ordena socis, quotes i 182, però no entrega banc + document, que és el nucli del control econòmic.'), ('Gestió', 79.00, 'Fort', 'Alta', 'És el millor encaix actual: banc, devolucions, documents, IA i fiscalitat ordinària.'), ('Complet', 119.00, 'Fort si hi ha projectes', 'Mitjana', 'Justifica el preu amb projectes, subvencions i multidivisa, però barreja gestoria ordinària amb complexitat de projectes.')) AS t(plan, monthly_price, value_verdict, coherence, main_reason)",
+        "tables_used": []
+      }
+    },
+    {
+      "id": "summa_product_reference",
+      "label": "Referència funcional de Summa Social",
+      "path": "docs/SUMMA-SOCIAL-REFERENCIA-COMPLETA.md",
+      "query": {
+        "engine": "trino",
+        "description": "Matriu de necessitats operatives derivada de la cobertura funcional actual i de la seqüència de control econòmic.",
+        "sql": "SELECT * FROM (VALUES (1, 'Socis, donants, quotes i certificats', 'Essencial quan hi ha base social o donacions', 'Essencial i amb més volum', 'Inicial'), (2, 'Importació i revisió bancària', 'Essencial tan aviat com hi ha flux recurrent', 'Essencial', 'Gestió'), (3, 'Document vinculat al moviment', 'Molt útil; evita carpetes i correus dispersos', 'Essencial per traçabilitat', 'Gestió'), (4, 'Devolucions i cobraments en línia', 'Condicional al model de quotes', 'Freqüent', 'Gestió'), (5, 'Model 347 i exportació per gestoria', 'Condicional per activitat i proveïdors', 'Habitual', 'Dividit entre Gestió i Complet'), (6, 'Projectes i justificació de subvencions', 'Pot ser decisiva amb un sol projecte', 'Habitual si hi ha finançament públic', 'Complet'), (7, 'Multidivisa i despeses de terreny', 'Nínxol de cooperació', 'Condicional al tipus de projecte', 'Complet')) AS t(order_id, need, small_entity, medium_entity, current_plan)",
+        "tables_used": []
+      }
+    },
+    {
+      "id": "summa_onboarding",
+      "label": "Playbook d'implantació de Summa Social",
+      "path": "docs/operations/Onboarding-Playbook.md",
+      "query": {
+        "engine": "trino",
+        "description": "Càlcul de sensibilitat sobre el mínim públic de 300 € i les 20–25 hores del playbook intern.",
+        "sql": "SELECT * FROM (VALUES ('Mínim públic actual', 12.00, '25 h', 300.00, 'No sostenible com a implantació completa; només coherent com a activació molt acotada.'), ('Mínim públic actual', 15.00, '20 h', 300.00, 'Continua sent un ingrés brut molt baix abans de costos.'), ('Sensibilitat moderada', 35.00, '20 h', 700.00, 'Llindar inferior raonable per acompanyament complet, pendent de costos reals.'), ('Sensibilitat reforçada', 50.00, '25 h', 1250.00, 'Escenari alt per dades complexes, migració, formació i seguiment.')) AS t(scenario, hourly_value, hours, implementation_value, interpretation)",
+        "tables_used": []
+      }
+    },
+    {
+      "id": "market_source_notes",
+      "label": "Compilació de tarifes i contingut competitiu",
+      "path": "docs/audits/pricing-plans-2026-08-14/source-notes.md",
+      "query": {
+        "engine": "trino",
+        "description": "Comparació qualitativa normalitzada a partir de les pàgines oficials revisades el 14 d'agost de 2026.",
+        "sql": "SELECT * FROM (VALUES ('Socios.pro', 1, '19,95–29,95 €/mes', 'Amplitud anunciada: socis, SEPA, facturació, comptabilitat, projectes i models AEAT.', 'Pressió de preu molt alta; Summa ha de demostrar profunditat, traçabilitat i acompanyament.'), ('Holded', 2, '29–99 €/mes', 'ERP generalista amb comptabilitat, bancs, remeses, projectes i accés de gestoria.', 'No competir en amplitud ERP; guanyar amb flux sectorial de donants, fiscalitat i subvencions.'), ('Berrly', 3, '39–199 €/mes', 'Socis, comunicació, cobraments, zona privada, esdeveniments i ticketing.', 'Summa és més econòmica-operativa; Berrly és més comunitat i ingressos.'), ('Summa Social', 4, '49–119 €/mes + implantació', 'Cadena banc–contacte–document–fiscalitat–projecte i justificació.', 'Posicionament defensable si converteix la cadena completa en el centre del relat.'), ('Luntia', 5, '120–280 €/mes de referència', 'Socis, beneficiaris, voluntariat, activitats, esdeveniments i donacions.', 'Summa és clarament més assequible, però cobreix un problema més estret i econòmic.'), ('GONG', 6, 'Sense tarifa pública comparable', 'Formulació, seguiment econòmic, cofinançament, informes i justificació de projectes.', 'Competidor funcional del pla superior; Summa pot guanyar per simplicitat i connexió amb banc, donants i documents.')) AS t(vendor, sort_order, price_range, visible_strength, implication_for_summa)",
+        "tables_used": []
+      }
+    },
+    {
+      "id": "market_price_query",
+      "label": "Taula normalitzada de preus mensuals públics",
+      "path": "docs/audits/pricing-plans-2026-08-14/source-notes.md",
+      "query": {
+        "engine": "trino",
+        "description": "Transcripció revisada dels preus mensuals públics o de referència de les fonts oficials, sense descomptes temporals.",
+        "sql": "SELECT * FROM (VALUES ('Summa Social', 'Entrada', 49.00), ('Summa Social', 'Central', 79.00), ('Summa Social', 'Superior', 119.00), ('Berrly', 'Entrada', 39.00), ('Berrly', 'Central', 89.00), ('Berrly', 'Superior', 199.00), ('Socios.pro', 'Entrada', 19.95), ('Socios.pro', 'Central', 24.95), ('Socios.pro', 'Superior', 29.95), ('Holded', 'Entrada', 29.00), ('Holded', 'Central', 59.00), ('Holded', 'Superior', 99.00), ('Luntia', 'Entrada', 120.00), ('Luntia', 'Central', 199.00), ('Luntia', 'Superior', 280.00)) AS t(vendor, tier, monthly_price)",
+        "tables_used": []
+      }
+    },
+    {
+      "id": "analysis_recommendation",
+      "label": "Recomanació de reempaquetat",
+      "path": "docs/audits/pricing-plans-2026-08-14/source-notes.md",
+      "query": {
+        "engine": "trino",
+        "description": "Hipòtesi de reempaquetat que manté els tres preus i redistribueix la cobertura per resultat operatiu.",
+        "sql": "SELECT * FROM (VALUES ('Essencial', 49.00, 'Mes econòmic bàsic ordenat i traçable', 'Socis/donants, quotes, remeses, certificats i 182 + importació bancària bàsica, conciliació i adjunció documental.'), ('Control econòmic', 79.00, 'Operativa ordinària preparada per revisió i gestoria', 'Tot l''anterior + devolucions, cobraments online, IA, documents pendents, 347, exportació de gestoria i circuits múltiples.'), ('Projectes + justificacions', 119.00, 'Projectes i finançadors amb despesa i evidència preparades', 'Tot l''anterior + projectes, justificació econòmica, multidivisa, captura/OCR de rebuts i acompanyament reforçat.')) AS t(plan, monthly_price, promised_outcome, core_scope)",
+        "tables_used": []
+      }
+    }
+  ],
+  "package_info": {
+    "root": "docs/audits/pricing-plans-2026-08-14",
+    "manifestPath": "artifact.json",
+    "snapshotPath": "artifact.json"
+  }
+}
