@@ -10,6 +10,13 @@ Aquest fitxer ja no pretén duplicar el document mestre.
 
 ## Resum dels canvis recents
 
+### 2026-08-14
+
+- codi intern: incorporat el catàleg canònic d'entitlements v3 per als plans Control, Gestió i Complet, amb projecció per organització i gates coordinats a UI, backend, Firestore i Storage; en mode actiu, una subscripció absent o incoherent cau de manera segura a Control.
+- API/integracions: les mutacions documentals, la IA assistida, el Model 347, els documents pendents, el paquet de tancament i els fluxos de projectes i justificació validen al servidor la capacitat comercial corresponent, mantenint la lectura històrica prevista després d'un downgrade.
+- documentació per usuari: la web pública i la FAQ passen a explicar els plans Control 49 €, Gestió 79 € i Complet 119 €, amb funcionalitats diferenciades, contractació assistida i conservació de dades històriques.
+- operativa: afegits dry-runs, auditoria, informe shadow, preflight de cutover i prova semàntica amb emulador; el canvi de mode i qualsevol backfill real continuen subjectes al desplegament controlat documentat.
+
 ### 2026-08-03
 
 - MCP privat: afegida la Fase A `prepare-only` per previsualitzar un extracte bancari explícit, preparar la classificació d'una donació i preparar les dades d'un certificat individual.
