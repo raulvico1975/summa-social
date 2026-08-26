@@ -131,10 +131,13 @@ Aquesta secció resumeix les funcionalitats i millores que consten al registre d
 | 15/08/2026 | Comunicació comercial | Reordenació i simplificació dels missatges del pla Complet. |
 | 14/08/2026 | Accés per pla | Les funcionalitats documentals, de moviments i de justificació s'adapten al pla contractat, conservant les dades històriques quan correspon. |
 | 21/08/2026 | Donacions i fiscalitat | Millora de la coherència dels totals nets de donacions, devolucions, certificats i informes fiscals. |
+| 26/08/2026 | Devolucions | Clarificació del vincle opcional amb el rebut original: una devolució assignada al donant resta encara que no tingui una donació concreta vinculada. |
 
 ### Estat de la correcció de donacions retornades
 
-El repositori conté una correcció posterior per garantir que una donació retornada i la seva devolució es compensin correctament, incloent assignació atòmica i proves de regressió. En el moment d'aquesta actualització, aquesta correcció no consta com un deploy independent posterior al registre del 21/08/2026; per tant, no es considera una funcionalitat confirmada en producció fins a verificar la revisió activa i els casos reals corresponents.
+La correcció està desplegada i verificada en producció des del 26/08/2026. El motor fiscal evita que una donació marcada com a retornada i el moviment bancari negatiu de la mateixa devolució es descomptin dues vegades.
+
+Aquest control de doble recompte no converteix el vincle amb el rebut original en obligatori: si la devolució negativa té un donant assignat (`contactId`), resta una sola vegada del seu total encara que `linkedTransactionId` sigui `null`.
 
 ## 1.4 URLs i Recursos
 
@@ -636,8 +639,8 @@ organizations/
       │       │
       │       # Camps de splits i links:
       │       ├── isSplit: boolean                    # Transacció dividida?
-      │       ├── linkedTransactionId: string | null  # Link a devolució/donació
-      │       ├── linkedTransactionIds: string[]      # Links múltiples
+      │       ├── linkedTransactionId: string | null  # Vincle opcional amb devolució/donació original
+      │       ├── linkedTransactionIds: string[]      # Vincles múltiples, quan n'hi ha
       │       │
       │       # Soft-delete (arxivament):
       │       ├── archivedAt: string | null           # ISO timestamp si arxivada
@@ -1096,6 +1099,8 @@ Quan hi ha devolucions sense assignar, apareix un banner vermell:
 > ⚠️ Hi ha devolucions pendents d'assignar [Revisar]
 
 El botó "Revisar" filtra la taula per mostrar només devolucions pendents.
+
+En aquest context, **pendent d'assignar** vol dir que la devolució encara no té `contactId`. Una devolució que ja té donant però no té `linkedTransactionId` no és pendent i no activa el banner.
 
 ### 3.2.7 Reorganització UX de la Pàgina de Moviments
 
@@ -1852,6 +1857,15 @@ El helper `ensureMax35()` a `generate-pain008.ts` neteja i retalla qualsevol ide
 
 Les devolucions bancàries (rebuts retornats) es gestionen sense modificar el moviment bancari original.
 
+Cal distingir dos conceptes que compleixen funcions diferents:
+
+| Concepte | Camp | Funció | Obligatori |
+|----------|------|--------|------------|
+| **Assignar al donant** | `contactId` | Determina de quin donant resta la devolució | Sí, perquè tingui efecte fiscal sobre un donant |
+| **Vincular al rebut o donació original** | `linkedTransactionId` | Aporta traçabilitat i permet actualitzar l'estat de la donació original | No |
+
+> **Terminologia:** «devolució pendent» significa **sense donant assignat**. «No s'ha vinculat la donació/rebut original» significa que el donant sí que pot estar assignat, però no s'ha identificat una donació concreta d'origen.
+
 | Mètode | Quan usar-lo |
 |--------|--------------|
 | **Assignació manual** | Devolucions individuals, una a una |
@@ -1873,9 +1887,10 @@ Les devolucions bancàries (rebuts retornats) es gestionen sense modificar el mo
 1. **Una devolució individual** és un apunt bancari únic amb import negatiu
 2. **Una devolució en remesa** és un apunt pare amb múltiples quotes filles
 3. **El pare mai té `contactId`** — el donant sempre s'assigna a les filles
-4. **La fitxa del donant i el Model 182** es calculen exclusivament a partir de les filles amb `contactId`
+4. **Una devolució individual o una filla de remesa amb `contactId`** resta del total del donant
+5. **El vincle amb la donació original és opcional** i no determina si la devolució resta
 
-**Implicació fiscal:** Si una remesa té 4 filles però només 2 tenen donant assignat, només aquelles 2 resten al càlcul del Model 182 dels seus respectius donants.
+**Implicació fiscal:** Si una remesa té 4 filles però només 2 tenen donant assignat, només aquelles 2 resten al càlcul del Model 182 dels seus respectius donants. Si cap de les dues té rebut original vinculat, continuen restant igualment.
 
 ### 3.4.3 Assignació manual
 
@@ -1886,6 +1901,18 @@ Les devolucions bancàries (rebuts retornats) es gestionen sense modificar el mo
 5. Confirma l'assignació
 
 **Criteri funcional i fiscal:** el `contactId` del donant és necessari perquè la devolució resti del seu total. El `linkedTransactionId` és opcional i serveix per a la traçabilitat amb una donació o un rebut concret; la seva absència no impedeix la resta fiscal.
+
+#### Estats possibles d'una devolució
+
+| Estat | `contactId` | `linkedTransactionId` | Efecte fiscal | Com es mostra |
+|-------|-------------|-----------------------|---------------|---------------|
+| **Pendent d'assignar** | No | No | No resta de cap donant | Apareix al banner de pendents |
+| **Assignada, sense rebut original vinculat** | Sí | `null` | Resta una vegada del donant | **"No s'ha vinculat la donació/rebut original"** |
+| **Assignada i vinculada** | Sí | ID de la donació | Resta una vegada del donant | Mostra la donació seleccionada |
+
+Quan es vincula una donació concreta, Summa també en marca l'estat com a `returned` o `partial` i desa el vincle recíproc. Això millora la traçabilitat i permet reconèixer la parella, però **no afegeix una segona resta**.
+
+L'absència de `linkedTransactionId` no exigeix cap excepció ni justificació addicional i, per si sola, no bloqueja el Model 182 ni els certificats.
 
 ### 3.4.4 Importador de fitxer del banc
 
@@ -1949,8 +1976,9 @@ El sistema fa matching determinista amb els moviments bancaris:
 > - `contactId` → ID del donant
 > - `contactType` → 'donor'
 > - `transactionType` → 'return'
+> - `linkedTransactionId` → ID de la donació original o `null` si no s'ha vinculat
 >
-> Aquesta persistència és obligatòria perquè la devolució compti al Model 182.
+> Els tres primers camps identifiquen fiscalment la devolució. El `linkedTransactionId` és opcional: pot quedar a `null` sense impedir que la devolució resti.
 
 #### Detecció automàtica de columnes
 
@@ -2048,10 +2076,11 @@ Si algunes devolucions no es poden identificar:
 
 **Important:**
 - El pare (remesa) NO té `contactId` → No es compta
-- Les filles SÍ tenen `contactId` → Es compten com devolucions
+- Les devolucions individuals i les filles que SÍ tenen `contactId` → Es compten com devolucions
+- Amb `linkedTransactionId` o sense → Resten una sola vegada
 - Si total ≤ 0 → Donant no apareix al Model 182
 
-> **Regla clau:** Les devolucions resten al Model 182 quan existeixen filles amb `contactId`, independentment de l'estat global de la remesa (`partial` o `complete`).
+> **Regla clau:** Les devolucions resten al Model 182 quan tenen `contactId`, independentment del seu `linkedTransactionId` i, en el cas de remeses, de l'estat global (`partial` o `complete`).
 
 #### Desglossament visible del Model 182
 
@@ -2068,6 +2097,7 @@ Quan una donació `returned` té una devolució negativa vinculada, la donació 
 #### Banner (Moviments)
 - Un sol banner vermell: "Hi ha devolucions pendents d'assignar"
 - CTA "Revisar" → Filtra per devolucions pendents
+- El criteri del banner és l'absència de donant (`contactId`), no l'absència de rebut original vinculat
 
 #### Accions per fila
 
@@ -2075,6 +2105,8 @@ Quan una donació `returned` té una devolució negativa vinculada, la donació 
 |------|-------|
 | "Assignar donant" (vermell) | Diàleg assignació manual |
 | 📄 (icona) | Obre importador fitxer |
+| "Donació original (opcional)" | Permet seleccionar una donació concreta del donant |
+| "No s'ha vinculat la donació/rebut original" | Desa l'assignació sense vincle concret; la devolució igualment resta |
 
 #### Criteri del botó "Assignar donant"
 
@@ -2181,8 +2213,10 @@ Les remeses de devolucions (OUT) tenen **impacte fiscal directe** perquè reduei
 
 1. ☐ Assegura't que totes les devolucions de l'any estan assignades
 2. ☐ Verifica que no hi ha devolucions pendents
-3. ☐ Comprova que el total de cada donant és correcte (donacions - devolucions)
-4. ☐ Si un donant té total ≤ 0, confirma que no apareix al Model 182
+3. ☐ No confonguis una devolució sense rebut original vinculat amb una devolució pendent: si té donant, ja resta
+4. ☐ Vincula el rebut original només quan el puguis identificar amb seguretat
+5. ☐ Comprova que el total de cada donant és correcte (donacions - devolucions)
+6. ☐ Si un donant té total ≤ 0, confirma que no apareix al Model 182
 
 
 ## 3.5 REMESES OUT / PAGAMENTS
@@ -2683,8 +2717,9 @@ La pantalla pot mostrar el desglossament **Donacions / Devolucions / Net**, per�
 | NATURALEZA | "F" o "J" | individual → F, company → J |
 
 **Gestió de devolucions:**
-- `transactionType === 'return'` → Es resta automàticament
-- `donationStatus === 'returned'` → Es resta automàticament
+- `transactionType === 'return'` amb `contactId` → Es resta automàticament una vegada
+- `linkedTransactionId` pot tenir un ID o ser `null` → No canvia la resta fiscal
+- `donationStatus === 'returned'` i el moviment `return` vinculat representen el mateix retorn → El motor canònic evita el doble recompte
 - Les filles de remeses amb `contactId` → Es compten
 - Els pares de remeses sense `contactId` → S'ignoren
 
@@ -2772,7 +2807,7 @@ Només moviments que arriben al motor fiscal com a donació vàlida dins de l'ap
 - `transactionType === 'donation'`
 - Amb `contactId` assignat
 - No arxivades (`archivedAt` absent)
-- Netes de devolucions (transactionType: 'return' o donationStatus: 'returned')
+- Netes de devolucions (`transactionType: 'return'`), tant si tenen `linkedTransactionId` com si no; les parelles vinculades amb una donació `returned` es dedupliquen
 
 Les vies actuals perquè un moviment hi arribi són:
 - marcat manual amb el `182` de **Moviments**
@@ -6074,7 +6109,8 @@ Indicadors que requeririen intervenció:
 3. Per cada devolució:
    - Si saps de qui és → "Assignar donant"
    - Si tens el fitxer del banc → Icona 📄 → Importar fitxer
-4. Revisar remeses parcials i completar-les
+4. Vincular opcionalment el rebut original només si es pot identificar amb seguretat
+5. Revisar remeses parcials i completar-les
 
 ## 8.4 Fi d'Any
 
@@ -6681,6 +6717,8 @@ El mòdul de devolucions resol el problema de rebuts retornats pel banc sense id
 - REMESA = Agrupació de múltiples moviments en un sol apunt bancari
 - REMESA PARCIAL = Remesa amb algunes devolucions pendents d'identificar
 - MATCHING = Assignació de contacte per coincidència exacta (IBAN/DNI/Nom)
+- DEVOLUCIÓ PENDENT = Devolució sense donant assignat (`contactId` buit)
+- REBUT ORIGINAL NO VINCULAT = Devolució amb donant però sense `linkedTransactionId`; no és un pendent fiscal
 
 ## FLUX DEVOLUCIONS
 
@@ -6689,8 +6727,9 @@ El mòdul de devolucions resol el problema de rebuts retornats pel banc sense id
 3. Per cada devolució:
    - "Assignar donant" → Cerca manual
    - Icona 📄 → Importador de fitxer del banc
-4. L'importador fa matching per IBAN → DNI → Nom exacte
-5. Es creen transaccions filles, el pare queda immutable
+4. Opcionalment, seleccionar la donació original; si no, deixar "No s'ha vinculat la donació/rebut original"
+5. L'importador fa matching per IBAN → DNI → Nom exacte
+6. Es creen transaccions filles, el pare queda immutable
 
 ## BANCS SUPORTATS
 
@@ -6705,10 +6744,12 @@ El mòdul de devolucions resol el problema de rebuts retornats pel banc sense id
 | "No s'ha trobat cap donant" | IBAN diferent | Actualitzar IBAN del donant |
 | "Múltiples candidates" | Diverses transaccions possibles | Assignar manualment |
 | "Sense data fiable" | Banc no informa data | Normal, funciona igualment |
+| "No s'ha vinculat la donació/rebut original" | No s'ha seleccionat una donació concreta | És informatiu: si hi ha donant assignat, la devolució ja resta |
 
 ## FRASES PER RESPONDRE
 
 - "Les devolucions es resten automàticament del total un cop assignades."
+- "Vincular el rebut original és opcional; serveix per a la traçabilitat, no per activar la resta fiscal."
 - "El moviment bancari original no es toca."
 - "Si una remesa queda parcial, pots completar-la més tard."
 - "Summa Social no fa assignacions automàtiques sense coincidència exacta."
@@ -6717,6 +6758,7 @@ El mòdul de devolucions resol el problema de rebuts retornats pel banc sense id
 
 - NO fuzzy matching de noms
 - NO assignació automàtica sense confirmació
+- NO obligació de vincular un rebut original per poder restar la devolució
 - NO modificar moviments bancaris
 - Les remeses parcials requereixen acció manual
 
