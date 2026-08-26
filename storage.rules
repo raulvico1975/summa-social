@@ -25,6 +25,11 @@ service firebase.storage {
       return memberData(orgId).get('role', 'viewer');
     }
 
+    function usesModularPermissionProfile(orgId) {
+      let profile = memberData(orgId).get('permissionProfile', '');
+      return profile in ['socis-remeses', 'projectes'];
+    }
+
     function memberData(orgId) {
       let path = /databases/(default)/documents/organizations/$(orgId)/members/$(request.auth.uid);
       return isSignedIn() && firestore.exists(path) ? firestore.get(path).data : {};
@@ -32,7 +37,9 @@ service firebase.storage {
 
     function hasOperationalOrgAccess(orgId) {
       return isOrgMember(orgId)
-        && (getMemberRole(orgId) == 'admin' || getMemberRole(orgId) == 'user');
+        && ((!usesModularPermissionProfile(orgId)
+          && (getMemberRole(orgId) == 'admin' || getMemberRole(orgId) == 'user'))
+          || hasCapability(orgId, 'remeses.generar'));
     }
 
     function memberPermissionDenied(orgId, permKey) {
@@ -49,10 +56,23 @@ service firebase.storage {
 
     function roleDefaultAllowsPermission(orgId, permKey) {
       let role = getMemberRole(orgId);
-      return (permKey == 'moviments.read' && role in ['admin', 'user', 'viewer'])
-        || (permKey == 'moviments.editar' && role in ['admin', 'user'])
-        || (permKey == 'projectes.manage' && role in ['admin', 'user'])
-        || (permKey == 'sections.projectes' && role in ['admin', 'user', 'viewer']);
+      return (role == 'admin' && permKey in [
+          'socis.read', 'socis.editar', 'remeses.read', 'remeses.preparar',
+          'remeses.generar', 'remeses.desfer'
+        ])
+        || (!usesModularPermissionProfile(orgId)
+          && ((permKey == 'moviments.read' && role in ['admin', 'user', 'viewer'])
+            || (permKey == 'moviments.editar' && role in ['admin', 'user'])
+            || (permKey == 'projectes.manage' && role in ['admin', 'user'])
+            || (permKey == 'sections.projectes' && role in ['admin', 'user', 'viewer'])));
+    }
+
+    function hasCapability(orgId, permKey) {
+      return isOrgMember(orgId)
+        && !memberPermissionDenied(orgId, permKey)
+        && (roleDefaultAllowsPermission(orgId, permKey)
+          || memberData(orgId).get('capabilities', {}).get(permKey, false) == true
+          || memberPermissionGranted(orgId, permKey));
     }
 
     function canEditMovements(orgId) {
@@ -119,6 +139,15 @@ service firebase.storage {
         && (roleDefaultAllowsPermission(orgId, 'moviments.read')
           || memberData(orgId).get('capabilities', {}).get('moviments.read', false) == true
           || memberPermissionGranted(orgId, 'moviments.read'));
+    }
+
+    function hasRemittanceReadCapability(orgId) {
+      return isOrgMember(orgId)
+        && !memberPermissionDenied(orgId, 'remeses.read')
+        && (roleDefaultAllowsPermission(orgId, 'remeses.read')
+          || memberData(orgId).get('capabilities', {}).get('remeses.read', false) == true
+          || memberPermissionGranted(orgId, 'remeses.read')
+          || (!usesModularPermissionProfile(orgId) && getMemberRole(orgId) == 'user'));
     }
 
     function pendingDocumentsOperationallyEnabled(orgId) {
@@ -316,7 +345,7 @@ service firebase.storage {
     }
 
     match /organizations/{orgId}/sepaCollectionRuns/{runId}/{fileName} {
-      allow read: if isSuperAdmin() || isOrgMember(orgId);
+      allow read: if isSuperAdmin() || hasRemittanceReadCapability(orgId);
       allow create, update: if (isSuperAdmin() || hasOperationalOrgAccess(orgId))
         && isXml()
         && isAtMost(2 * 1024 * 1024);

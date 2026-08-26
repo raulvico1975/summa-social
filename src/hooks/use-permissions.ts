@@ -35,6 +35,10 @@ export function usePermissions() {
     [permissions]
   );
 
+  // Els membres antics no tenen permissionProfile i conserven el comportament
+  // existent fins que un administrador els assigni un perfil modular.
+  const isLegacyUser = userRole === 'user' && !member?.permissionProfile;
+
   return {
     permissions,
     can: canPermission,
@@ -43,5 +47,7 @@ export function usePermissions() {
     canReadBankInProjectes: canReadBankInProjectes(permissions),
     canUseProjectModule: canUseProjectModule(permissions),
     canAccessProjectsArea: canAccessProjectsArea(permissions),
+    canAccessSepaCollection: permissions['remeses.read'] || isLegacyUser,
+    canEditSocis: permissions['socis.editar'] || isLegacyUser,
   };
 }

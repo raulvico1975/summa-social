@@ -619,6 +619,8 @@ export type OrganizationMember = {
     deny?: string[];
   };
   userGrants?: string[];
+  /** Preset modular opcional; l'absència manté el comportament legacy. */
+  permissionProfile?: 'socis-remeses' | 'projectes';
 };
 
 /**
@@ -675,6 +677,7 @@ export type Invitation = {
     deny?: string[];
   };
   userGrants?: string[];
+  permissionProfile?: 'socis-remeses' | 'projectes';
   createdAt: string;
   expiresAt: string;
   createdBy: string;

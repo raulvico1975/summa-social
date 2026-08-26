@@ -12,6 +12,7 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   applyOverrides,
   getProjectCapability,
@@ -21,6 +22,11 @@ import {
   sanitizeUserGrants,
   type PermissionKey,
 } from '@/lib/permissions';
+import {
+  getPermissionProfile,
+  isRestrictedPermissionProfile,
+  type PermissionProfileId,
+} from '@/lib/permission-profiles';
 
 interface MembersUserPermissionsDialogProps {
   open: boolean;
@@ -48,6 +54,15 @@ const CRITICAL_ACTION_TOGGLES: PermissionKey[] = [
   'fiscal.certificats.generar',
 ];
 
+const SOCIETY_REMITTANCE_TOGGLES: PermissionKey[] = [
+  'socis.read',
+  'socis.editar',
+  'remeses.read',
+  'remeses.preparar',
+  'remeses.generar',
+  'remeses.desfer',
+];
+
 const SECTION_LABEL_KEYS: Partial<Record<PermissionKey, string>> = {
   'sections.moviments': 'sidebar.movements',
   'sections.projectes': 'sidebar.projects',
@@ -68,6 +83,15 @@ const ACTION_LABEL_KEYS: Partial<Record<PermissionKey, string>> = {
   'fiscal.certificats.generar': 'permissionsDialog.actions.fiscalCertificatsGenerar',
 };
 
+const SOCIETY_REMITTANCE_LABELS: Partial<Record<PermissionKey, string>> = {
+  'socis.read': 'Veure socis i donants',
+  'socis.editar': 'Editar socis i donants',
+  'remeses.read': 'Veure remeses',
+  'remeses.preparar': 'Preparar remeses',
+  'remeses.generar': 'Generar remeses SEPA',
+  'remeses.desfer': 'Desfer remeses',
+};
+
 export function MembersUserPermissionsDialog({
   open,
   onOpenChange,
@@ -80,6 +104,7 @@ export function MembersUserPermissionsDialog({
 
   const [denied, setDenied] = React.useState<Set<PermissionKey>>(new Set());
   const [grants, setGrants] = React.useState<Set<PermissionKey>>(new Set());
+  const [profile, setProfile] = React.useState<PermissionProfileId>('custom');
   const [isSaving, setIsSaving] = React.useState(false);
   const lastFocusedElementRef = React.useRef<HTMLElement | null>(null);
 
@@ -97,6 +122,7 @@ export function MembersUserPermissionsDialog({
     const grantedPermissions = sanitizeUserGrants(member.userGrants);
     setDenied(new Set(deniedPermissions));
     setGrants(new Set(grantedPermissions));
+    setProfile(isRestrictedPermissionProfile(member.permissionProfile) ? member.permissionProfile : 'custom');
   }, [open, member]);
 
   const effectivePermissions = React.useMemo(
@@ -176,6 +202,14 @@ export function MembersUserPermissionsDialog({
   const handleRestoreDefaults = React.useCallback(() => {
     setDenied(new Set());
     setGrants(new Set());
+    setProfile('custom');
+  }, []);
+
+  const handleProfileChange = React.useCallback((value: PermissionProfileId) => {
+    setProfile(value);
+    const next = getPermissionProfile(value);
+    setDenied(new Set<PermissionKey>(sanitizePermissionList(next.userOverrides?.deny)));
+    setGrants(new Set<PermissionKey>(sanitizeUserGrants(next.userGrants)));
   }, []);
 
   const handleSave = React.useCallback(async () => {
@@ -198,6 +232,7 @@ export function MembersUserPermissionsDialog({
           userId: member.userId,
           userOverrides: { deny: deniedList },
           userGrants: grantsList,
+          permissionProfile: profile === 'custom' ? null : profile,
         }),
       });
       const payload = await response.json() as { error?: string };
@@ -236,6 +271,9 @@ export function MembersUserPermissionsDialog({
         ? SECTION_LABEL_KEYS[permission]
         : ACTION_LABEL_KEYS[permission];
 
+    if (!translationKey && group === 'action' && SOCIETY_REMITTANCE_LABELS[permission]) {
+      return SOCIETY_REMITTANCE_LABELS[permission]!;
+    }
     if (!translationKey) {
       return tr('permissionsDialog.unknownPermission', 'Permis desconegut');
     }
@@ -264,6 +302,22 @@ export function MembersUserPermissionsDialog({
             {`${tr('permissionsDialog.description', 'Configura seccions, accions critiques i capacitat de Projectes per a')} ${member.displayName || member.email}.`}
           </DialogDescription>
           <p className="text-xs text-muted-foreground">{userPermissionsStatusLabel}</p>
+          <div className="max-w-md space-y-1 pt-2">
+            <Label htmlFor="member-permission-profile">Perfil inicial</Label>
+            <Select value={profile} onValueChange={(value) => handleProfileChange(value as PermissionProfileId)}>
+              <SelectTrigger id="member-permission-profile">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="custom">Personalitzat (mantenir permisos actuals)</SelectItem>
+                <SelectItem value="socis-remeses">Socis i remeses</SelectItem>
+                <SelectItem value="projectes">Projectes</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              Els dos perfils funcionals activen la política modular també al servidor. Els usuaris sense perfil mantenen el comportament actual.
+            </p>
+          </div>
         </DialogHeader>
 
         <div className="flex-1 min-h-0 overflow-y-auto px-5 py-5 sm:px-6">
@@ -306,6 +360,23 @@ export function MembersUserPermissionsDialog({
             </div>
 
             <div className="space-y-5">
+            <div className="space-y-2 rounded-xl border bg-background p-4 shadow-sm">
+              <h3 className="text-sm font-semibold">Socis i remeses</h3>
+              <div className="grid gap-3">
+                {SOCIETY_REMITTANCE_TOGGLES.map((action) => (
+                  <div key={action} className="flex min-h-12 items-start justify-between gap-3 rounded-lg border bg-background px-3 py-2 sm:items-center">
+                    <Label htmlFor={`society-action-${action}`} className="min-w-0 cursor-pointer text-sm leading-tight break-words">
+                      {permissionLabel(action, 'action')}
+                    </Label>
+                    <Switch
+                      id={`society-action-${action}`}
+                      checked={effectivePermissions[action]}
+                      onCheckedChange={(checked) => togglePermission(action, checked === true)}
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
             <div className="space-y-2 rounded-xl border bg-background p-4 shadow-sm">
               <h3 className="text-sm font-semibold">{tr('permissionsDialog.actionsTitle', 'Accions critiques')}</h3>
               <div className="grid gap-3">

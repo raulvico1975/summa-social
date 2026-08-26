@@ -34,8 +34,14 @@ import {
   getProjectCapability,
   getRoleDefaults,
   isUserPermissionsCustomized,
+  sanitizePermissionList,
+  sanitizeUserGrants,
   type PermissionKey,
 } from '@/lib/permissions';
+import {
+  getPermissionProfile,
+  type PermissionProfileId,
+} from '@/lib/permission-profiles';
 import { validateAndCanonicalizeUserPermissionWrite } from '@/lib/permissions-write';
 import { buildInvitationUrl } from '@/lib/invitations/client';
 import { createInvitationViaApi, InvitationApiError } from '@/services/invitations';
@@ -65,6 +71,24 @@ const CRITICAL_ACTION_TOGGLES: PermissionKey[] = [
   'fiscal.model347.generar',
   'fiscal.certificats.generar',
 ];
+
+const SOCIETY_REMITTANCE_TOGGLES: PermissionKey[] = [
+  'socis.read',
+  'socis.editar',
+  'remeses.read',
+  'remeses.preparar',
+  'remeses.generar',
+  'remeses.desfer',
+];
+
+const SOCIETY_REMITTANCE_LABELS: Partial<Record<PermissionKey, string>> = {
+  'socis.read': 'Veure socis i donants',
+  'socis.editar': 'Editar socis i donants',
+  'remeses.read': 'Veure remeses',
+  'remeses.preparar': 'Preparar remeses',
+  'remeses.generar': 'Generar remeses SEPA',
+  'remeses.desfer': 'Desfer remeses',
+};
 
 const SECTION_LABEL_KEYS: Partial<Record<PermissionKey, string>> = {
   'sections.moviments': 'sidebar.movements',
@@ -97,6 +121,7 @@ export function InviteMemberDialog({ open, onOpenChange, onInviteCreated }: Invi
   const [role, setRole] = React.useState<OrganizationRole>('user');
   const [denied, setDenied] = React.useState<Set<PermissionKey>>(new Set());
   const [grants, setGrants] = React.useState<Set<PermissionKey>>(new Set());
+  const [profile, setProfile] = React.useState<PermissionProfileId>('custom');
 
   // Estat
   const [isCreating, setIsCreating] = React.useState(false);
@@ -126,6 +151,7 @@ export function InviteMemberDialog({ open, onOpenChange, onInviteCreated }: Invi
       setRole('user');
       setDenied(new Set());
       setGrants(new Set());
+      setProfile('custom');
       setError('');
       setCreatedInviteUrl(null);
       setCopied(false);
@@ -197,6 +223,14 @@ export function InviteMemberDialog({ open, onOpenChange, onInviteCreated }: Invi
   const handleRestoreDefaults = React.useCallback(() => {
     setDenied(new Set());
     setGrants(new Set());
+    setProfile('custom');
+  }, []);
+
+  const handleProfileChange = React.useCallback((value: PermissionProfileId) => {
+    setProfile(value);
+    const next = getPermissionProfile(value);
+    setDenied(new Set<PermissionKey>(sanitizePermissionList(next.userOverrides?.deny)));
+    setGrants(new Set<PermissionKey>(sanitizeUserGrants(next.userGrants)));
   }, []);
 
   const handleCreate = async () => {
@@ -246,6 +280,7 @@ export function InviteMemberDialog({ open, onOpenChange, onInviteCreated }: Invi
         source: 'member-dialog',
         ...(role === 'user' && canonicalDeny.length > 0 ? { userOverrides: { deny: canonicalDeny } } : {}),
         ...(role === 'user' && canonicalGrants.length > 0 ? { userGrants: canonicalGrants } : {}),
+        ...(role === 'user' && profile !== 'custom' ? { permissionProfile: profile as 'socis-remeses' | 'projectes' } : {}),
       });
 
       // Generar URL d'invitació
@@ -320,6 +355,7 @@ export function InviteMemberDialog({ open, onOpenChange, onInviteCreated }: Invi
         : ACTION_LABEL_KEYS[permission];
 
     if (!translationKey) {
+      if (SOCIETY_REMITTANCE_LABELS[permission]) return SOCIETY_REMITTANCE_LABELS[permission];
       return tr('permissionsDialog.unknownPermission', 'Permís desconegut');
     }
     return tr(translationKey, tr('permissionsDialog.unknownPermission', 'Permís desconegut'));
@@ -447,6 +483,23 @@ export function InviteMemberDialog({ open, onOpenChange, onInviteCreated }: Invi
                     </p>
                   </div>
 
+                  <div className="space-y-1">
+                    <Label htmlFor="invite-permission-profile">Perfil inicial</Label>
+                    <Select value={profile} onValueChange={(value) => handleProfileChange(value as PermissionProfileId)}>
+                      <SelectTrigger id="invite-permission-profile">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="custom">Personalitzat (mantenir permisos actuals)</SelectItem>
+                        <SelectItem value="socis-remeses">Socis i remeses</SelectItem>
+                        <SelectItem value="projectes">Projectes</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground break-words leading-relaxed">
+                      Els perfils funcionals són modulars i no canvien els usuaris existents.
+                    </p>
+                  </div>
+
                   <div className="grid gap-5 xl:grid-cols-2">
                     <div className="space-y-2">
                       <p className="text-sm font-semibold">{tr('permissionsDialog.sectionsTitle', 'Seccions')}</p>
@@ -468,6 +521,26 @@ export function InviteMemberDialog({ open, onOpenChange, onInviteCreated }: Invi
                     </div>
 
                     <div className="space-y-5">
+                      <div className="space-y-2">
+                        <p className="text-sm font-semibold">Socis i remeses</p>
+                        <div className="grid gap-2">
+                          {SOCIETY_REMITTANCE_TOGGLES.map((action) => (
+                            <div key={action} className="flex min-h-12 items-start justify-between gap-3 rounded-lg border bg-background px-3 py-2 sm:items-center">
+                              <Label htmlFor={`invite-society-action-${action}`} className="min-w-0 cursor-pointer text-sm leading-tight break-words">
+                                {SOCIETY_REMITTANCE_LABELS[action]}
+                              </Label>
+                              <Switch
+                                id={`invite-society-action-${action}`}
+                                checked={effectivePermissions[action]}
+                                onCheckedChange={(checked) => togglePermission(action, checked === true)}
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      <Separator />
+
                       <div className="space-y-2">
                         <p className="text-sm font-semibold">{tr('permissionsDialog.actionsTitle', 'Accions crítiques')}</p>
                         <div className="grid gap-2">

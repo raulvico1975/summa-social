@@ -27,6 +27,20 @@ export const PROJECT_CAPABILITY_KEYS = [
   'projectes.expenseInput',
 ] as const;
 
+/** Permisos funcionals de la base de socis, separats del llibre bancari. */
+export const SOCIETY_PERMISSION_KEYS = [
+  'socis.read',
+  'socis.editar',
+] as const;
+
+/** Permisos funcionals de preparació i gestió de remeses de socis. */
+export const REMITTANCE_PERMISSION_KEYS = [
+  'remeses.read',
+  'remeses.preparar',
+  'remeses.generar',
+  'remeses.desfer',
+] as const;
+
 const INTERNAL_PERMISSION_KEYS = [
   'configuracio.manage',
   'membres.manage',
@@ -37,6 +51,8 @@ export const PERMISSION_KEYS = [
   ...SECTION_PERMISSION_KEYS,
   ...CRITICAL_ACTION_KEYS,
   ...PROJECT_CAPABILITY_KEYS,
+  ...SOCIETY_PERMISSION_KEYS,
+  ...REMITTANCE_PERMISSION_KEYS,
   ...INTERNAL_PERMISSION_KEYS,
 ] as const;
 
@@ -77,6 +93,8 @@ const ADMIN_DEFAULTS = createPermissionMap([
   ...SECTION_PERMISSION_KEYS,
   ...CRITICAL_ACTION_KEYS,
   'projectes.manage',
+  ...SOCIETY_PERMISSION_KEYS,
+  ...REMITTANCE_PERMISSION_KEYS,
   'configuracio.manage',
   'membres.manage',
   'categories.manage',

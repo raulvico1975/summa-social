@@ -46,3 +46,12 @@ test('firestore rules reserve backup integrations reads to superadmin only', () 
     /match \/integrations\/\{integrationId\}\s*\{[\s\S]*allow read: if isSuperAdmin\(\);[\s\S]*match \/backupOAuthRequests\/\{requestId\}\s*\{[\s\S]*allow read: if isSuperAdmin\(\);/m,
   );
 });
+
+test('firestore rules preserve legacy access until a restricted profile is explicit', () => {
+  const rules = readFileSync(rulesPath, 'utf8');
+
+  assert.match(rules, /function usesModularPermissionProfile\(orgId\)/);
+  assert.match(rules, /profile in \['socis-remeses', 'projectes'\]/);
+  assert.match(rules, /!usesModularPermissionProfile\(orgId\)/);
+  assert.match(rules, /'remeses\.generar'/);
+});

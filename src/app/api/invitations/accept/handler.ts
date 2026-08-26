@@ -7,6 +7,7 @@ import {
   resolveEffectivePermissions,
 } from '@/lib/permissions';
 import { validateAndCanonicalizeUserPermissionWrite } from '@/lib/permissions-write';
+import { isRestrictedPermissionProfile } from '@/lib/permission-profiles';
 import type { OrganizationRole } from '@/lib/data';
 
 interface AcceptRequest {
@@ -129,6 +130,9 @@ export async function handleInvitationAccept(
     const invitationRole: OrganizationRole = isOrganizationRole(invData.role) ? invData.role : 'user';
     const isUserGranularInvitation = invitationRole === 'user'
       && (hasOwn(invData, 'userOverrides') || hasOwn(invData, 'userGrants'));
+    const permissionProfile = isRestrictedPermissionProfile(invData.permissionProfile)
+      ? invData.permissionProfile
+      : null;
 
     let canonicalDeny: string[] = [];
     let canonicalGrants: string[] = [];
@@ -184,6 +188,9 @@ export async function handleInvitationAccept(
       }
       if (canonicalGrants.length > 0) {
         memberPayload.userGrants = canonicalGrants;
+      }
+      if (permissionProfile) {
+        memberPayload.permissionProfile = permissionProfile;
       }
     } else {
       memberPayload.capabilities = defaultCapabilitiesForRole(invitationRole);

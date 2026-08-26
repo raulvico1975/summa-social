@@ -6,6 +6,7 @@ import {
   memberPermissionsDocPath,
   validateAndCanonicalizeUserPermissionWrite,
 } from '@/lib/permissions-write';
+import { isRestrictedPermissionProfile } from '@/lib/permission-profiles';
 
 interface UpdateUserPermissionsBody {
   orgId: string;
@@ -14,6 +15,7 @@ interface UpdateUserPermissionsBody {
     deny?: string[] | null;
   } | null;
   userGrants?: string[] | null;
+  permissionProfile?: string | null;
 }
 
 interface UpdateUserPermissionsResponse {
@@ -111,6 +113,9 @@ export async function POST(request: NextRequest) {
   }
 
   const { deny, grants } = validation.value;
+  const permissionProfile = isRestrictedPermissionProfile(body.permissionProfile)
+    ? body.permissionProfile
+    : null;
   const updatePayload: Record<string, unknown> = {
     updatedAt: FieldValue.serverTimestamp(),
     capabilities: computeStoredMemberCapabilities({
@@ -121,6 +126,7 @@ export async function POST(request: NextRequest) {
     userOverrides: deny.length > 0 ? { deny } : FieldValue.delete(),
     userGrants: grants.length > 0 ? grants : FieldValue.delete(),
   };
+  updatePayload.permissionProfile = permissionProfile ?? FieldValue.delete();
 
   await memberRef.update(updatePayload);
 

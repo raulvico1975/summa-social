@@ -27,6 +27,7 @@ export async function createInvitationViaApi(params: {
   source: InvitationSource;
   userOverrides?: { deny?: string[] };
   userGrants?: string[];
+  permissionProfile?: 'socis-remeses' | 'projectes';
 }): Promise<CreateInvitationResult> {
   const idToken = await params.user.getIdToken();
   const response = await fetch('/api/invitations/create', {
@@ -44,6 +45,7 @@ export async function createInvitationViaApi(params: {
       source: params.source,
       ...(params.userOverrides ? { userOverrides: params.userOverrides } : {}),
       ...(params.userGrants ? { userGrants: params.userGrants } : {}),
+      ...(params.permissionProfile ? { permissionProfile: params.permissionProfile } : {}),
     }),
   });
 

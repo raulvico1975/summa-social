@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { randomUUID } from 'node:crypto';
 import { getAdminDb, validateUserMembership, verifyIdToken } from '@/lib/api/admin-sdk';
 import { validateAndCanonicalizeUserPermissionWrite } from '@/lib/permissions-write';
+import { isRestrictedPermissionProfile } from '@/lib/permission-profiles';
 import type { OrganizationRole } from '@/lib/data';
 import {
   generateInvitationToken,
@@ -18,6 +19,7 @@ interface CreateInvitationRequest {
     deny?: string[];
   };
   userGrants?: string[];
+  permissionProfile?: string | null;
 }
 
 export interface CreateInvitationResponse {
@@ -146,6 +148,9 @@ export async function handleInvitationCreate(
 
     let canonicalDeny: string[] = [];
     let canonicalGrants: string[] = [];
+    const permissionProfile = isRestrictedPermissionProfile(body.permissionProfile)
+      ? body.permissionProfile
+      : null;
     if (role === 'user') {
       const validation = validateAndCanonicalizeUserPermissionWrite({
         deny: body.userOverrides?.deny,
@@ -181,6 +186,9 @@ export async function handleInvitationCreate(
     }
     if (role === 'user' && canonicalGrants.length > 0) {
       invitationData.userGrants = canonicalGrants;
+    }
+    if (role === 'user' && permissionProfile) {
+      invitationData.permissionProfile = permissionProfile;
     }
 
     await invitationRef.set(invitationData);

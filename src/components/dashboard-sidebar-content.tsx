@@ -59,7 +59,7 @@ export function DashboardSidebarContent() {
   const { t, tr, language } = useTranslations();
   const { toast } = useToast();
   const { state: sidebarState, isMobile, setOpenMobile } = useSidebar();
-  const { can, canAccessProjectsArea } = usePermissions();
+  const { can, canAccessProjectsArea, canAccessSepaCollection } = usePermissions();
 
   // Obtenir dades de l'organització i el helper per construir URLs
   const { userProfile, firebaseUser, organization, orgSlug } = useCurrentOrganization();
@@ -198,6 +198,12 @@ export function DashboardSidebarContent() {
         icon: Heart,
         className: 'text-red-500',
       },
+      {
+        path: '/dashboard/donants/remeses-cobrament',
+        label: tr('sidebar.memberRemittances', 'Remeses de socis'),
+        icon: ClipboardList,
+        className: 'text-emerald-600',
+      },
      {
         path: '/dashboard/proveidors',
         label: t.sidebar.suppliers,
@@ -248,6 +254,9 @@ export function DashboardSidebarContent() {
       if (item.path === '/dashboard/projectes') {
         return canAccessProjectsArea;
       }
+      if (item.path === '/dashboard/donants/remeses-cobrament') {
+        return canAccessSepaCollection;
+      }
       const requiredSection = sectionByPath[item.path];
       if (!requiredSection) return true;
       return can(requiredSection);
@@ -258,7 +267,7 @@ export function DashboardSidebarContent() {
       ...item,
       href: buildUrl(item.path),
     }));
-  }, [t, isSuperAdmin, can, canAccessProjectsArea, buildUrl]);
+  }, [t, tr, isSuperAdmin, can, canAccessProjectsArea, canAccessSepaCollection, buildUrl]);
 
   // ═══════════════════════════════════════════════════════════════════════════
   // Helper per comprovar si una ruta està activa

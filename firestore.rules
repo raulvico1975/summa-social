@@ -29,6 +29,13 @@ service cloud.firestore {
       return isMemberOf(orgId) && getMemberRole(orgId) == 'admin';
     }
 
+    // Absència de perfil = política legacy. Només els presets restringits
+    // activen el tallafoc modular per evitar afectar membres existents.
+    function usesModularPermissionProfile(orgId) {
+      let profile = memberData(orgId).get('permissionProfile', '');
+      return profile in ['socis-remeses', 'projectes'];
+    }
+
     // ───────────────────────────────────────────────────────────────────────
     // CAPABILITY HELPERS (D1 — fail-closed)
     // Comprova el camp capabilities del membre (map<string, bool>).
@@ -49,10 +56,40 @@ service cloud.firestore {
 
     function roleDefaultAllowsPermission(orgId, permKey) {
       let role = memberData(orgId).get('role', 'viewer');
-      return (permKey == 'moviments.read' && role in ['admin', 'user', 'viewer'])
-        || (permKey == 'moviments.editar' && role in ['admin', 'user'])
-        || (permKey == 'projectes.manage' && role in ['admin', 'user'])
-        || (permKey == 'sections.projectes' && role in ['admin', 'user', 'viewer']);
+      return (role == 'admin' && permKey in [
+          'socis.read', 'socis.editar', 'remeses.read', 'remeses.preparar',
+          'remeses.generar', 'remeses.desfer'
+        ])
+        || (!usesModularPermissionProfile(orgId)
+          && ((permKey == 'moviments.read' && role in ['admin', 'user', 'viewer'])
+            || (permKey == 'moviments.editar' && role in ['admin', 'user'])
+            || (permKey == 'projectes.manage' && role in ['admin', 'user'])
+            || (permKey == 'sections.projectes' && role in ['admin', 'user', 'viewer'])));
+    }
+
+    function canReadContactType(orgId, contactType) {
+      return isSuperAdmin()
+        || isAdminOf(orgId)
+        || (!usesModularPermissionProfile(orgId) && isMemberOf(orgId))
+        || (contactType == 'donor' && hasCapability(orgId, 'sections.donants'))
+        || (contactType == 'supplier' && hasCapability(orgId, 'sections.proveidors'))
+        || (contactType == 'employee' && hasCapability(orgId, 'sections.treballadors'));
+    }
+
+    function canEditContactType(orgId, contactType) {
+      return isSuperAdmin()
+        || isAdminOf(orgId)
+        || (!usesModularPermissionProfile(orgId) && isMemberOf(orgId) && getMemberRole(orgId) == 'user')
+        || (contactType == 'donor' && hasCapability(orgId, 'socis.editar'))
+        || (contactType == 'supplier' && hasCapability(orgId, 'sections.proveidors'))
+        || (contactType == 'employee' && hasCapability(orgId, 'sections.treballadors'));
+    }
+
+    function canUseSepaCollection(orgId, permission) {
+      return isSuperAdmin()
+        || isAdminOf(orgId)
+        || (!usesModularPermissionProfile(orgId) && isMemberOf(orgId) && getMemberRole(orgId) == 'user')
+        || hasCapability(orgId, permission);
     }
 
     function hasCapability(orgId, permKey) {
@@ -539,8 +576,12 @@ service cloud.firestore {
       // ─────────────────────────────────────────────────────────────────────
 
       match /projects/{projectId} {
-        allow read: if isMemberOf(orgId) || isSuperAdmin();
-        allow create: if isMemberOf(orgId) && getMemberRole(orgId) in ['admin', 'user'] || isSuperAdmin();
+        allow read: if isSuperAdmin()
+          || (!usesModularPermissionProfile(orgId) && isMemberOf(orgId))
+          || hasCapability(orgId, 'sections.projectes');
+        allow create: if isSuperAdmin()
+          || (!usesModularPermissionProfile(orgId) && isMemberOf(orgId) && getMemberRole(orgId) in ['admin', 'user'])
+          || hasProjectCapability(orgId);
 
         // UPDATE: només admin (no user) + bloquejar modificació directa de camps d'arxivat
         // GUARDRAIL: Ni tan sols SuperAdmin pot via client (arxivat sempre via API)
@@ -574,19 +615,18 @@ service cloud.firestore {
         }
 
         function canWriteContacts() {
-          return isSuperAdminDirect()
-            || (isOrgMemberDirect() &&
-                get(/databases/$(database)/documents/organizations/$(orgId)/members/$(request.auth.uid)).data.role in ['admin', 'user']);
+          return canEditContactType(orgId, request.resource.data.get('type', ''));
         }
 
-        allow read: if isOrgMemberDirect() || isSuperAdminDirect();
+        allow read: if canReadContactType(orgId, resource.data.get('type', ''));
         allow create: if canWriteContacts();
 
         // UPDATE: bloquejar modificació directa de camps de desactivació
         // Només l'API (Admin SDK) pot escriure aquests camps
         // GUARDRAIL v1.36: evitar desactivació directa via client
         // NOTA: .get(field, null) per documents antics que no tenen camps d'arxivat
-        allow update: if canWriteContacts()
+        allow update: if canEditContactType(orgId, resource.data.get('type', ''))
+          && request.resource.data.get('type', '') == resource.data.get('type', '')
           && (
             request.resource.data.get('archivedAt', null) == resource.data.get('archivedAt', null)
             && request.resource.data.get('archivedByUid', null) == resource.data.get('archivedByUid', null)
@@ -602,9 +642,9 @@ service cloud.firestore {
       // ─────────────────────────────────────────────────────────────────────
 
       match /donors/{donorId} {
-        allow read: if isMemberOf(orgId) || isSuperAdmin();
+        allow read: if canReadContactType(orgId, 'donor');
         // SECURITY FIX (auditoria 2026-08-23): capability amb overrides, no rol sol.
-        allow create, update, delete: if isSuperAdmin() || hasCapability(orgId, 'moviments.editar');
+        allow create, update, delete: if canEditContactType(orgId, 'donor');
       }
 
       // ─────────────────────────────────────────────────────────────────────
@@ -612,9 +652,9 @@ service cloud.firestore {
       // ─────────────────────────────────────────────────────────────────────
 
       match /suppliers/{supplierId} {
-        allow read: if isMemberOf(orgId) || isSuperAdmin();
+        allow read: if canReadContactType(orgId, 'supplier');
         // SECURITY FIX (auditoria 2026-08-23): capability amb overrides, no rol sol.
-        allow create, update, delete: if isSuperAdmin() || hasCapability(orgId, 'moviments.editar');
+        allow create, update, delete: if canEditContactType(orgId, 'supplier');
       }
 
       // ─────────────────────────────────────────────────────────────────────
@@ -622,9 +662,9 @@ service cloud.firestore {
       // ─────────────────────────────────────────────────────────────────────
 
       match /emissors/{emissorId} {
-        allow read: if isMemberOf(orgId) || isSuperAdmin();
+        allow read: if canReadContactType(orgId, 'supplier');
         // SECURITY FIX (auditoria 2026-08-23): capability amb overrides, no rol sol.
-        allow create, update, delete: if isSuperAdmin() || hasCapability(orgId, 'moviments.editar');
+        allow create, update, delete: if canEditContactType(orgId, 'supplier');
       }
 
       // ─────────────────────────────────────────────────────────────────────
@@ -633,7 +673,10 @@ service cloud.firestore {
       // ─────────────────────────────────────────────────────────────────────
 
       match /bankAccounts/{bankAccountId} {
-        allow read: if isMemberOf(orgId) || isSuperAdmin();
+        allow read: if isSuperAdmin()
+          || (!usesModularPermissionProfile(orgId) && isMemberOf(orgId))
+          || hasCapability(orgId, 'remeses.read')
+          || hasCapability(orgId, 'moviments.read');
         allow create: if isAdminOf(orgId) || isSuperAdmin();
 
         // UPDATE: bloquejar modificació directa de camps d'arxivat
@@ -846,14 +889,14 @@ service cloud.firestore {
       match /remittances/{remittanceId} {
         // SECURITY FIX (auditoria 2026-08-23): capability amb overrides; el
         // delete queda restringit a admin (documents financers/fiscals).
-        allow read: if isMemberOf(orgId) || isSuperAdmin();
+        allow read: if canUseSepaCollection(orgId, 'remeses.read');
         allow create, update: if isSuperAdmin() || hasCapability(orgId, 'moviments.editar');
         allow delete: if isSuperAdmin() || (isMemberOf(orgId) && getMemberRole(orgId) == 'admin');
 
         // Subcol·lecció per ítems pendents de remesa (sense taxId vàlid, etc.)
         match /pending/{pendingId} {
-          allow read: if isMemberOf(orgId) || isSuperAdmin();
-          allow create, update, delete: if (isMemberOf(orgId) && getMemberRole(orgId) in ['admin', 'user']) || isSuperAdmin();
+          allow read: if canUseSepaCollection(orgId, 'remeses.read');
+          allow create, update, delete: if canUseSepaCollection(orgId, 'remeses.generar');
         }
       }
 
@@ -902,8 +945,8 @@ service cloud.firestore {
       // ─────────────────────────────────────────────────────────────────────
 
       match /sepaCollectionRuns/{runId} {
-        allow read: if isSuperAdmin() || isMemberOf(orgId);
-        allow create: if isSuperAdmin() || (isMemberOf(orgId) && getMemberRole(orgId) in ['admin', 'user']);
+        allow read: if canUseSepaCollection(orgId, 'remeses.read');
+        allow create: if canUseSepaCollection(orgId, 'remeses.generar');
         allow update, delete: if false;
       }
 
@@ -913,8 +956,8 @@ service cloud.firestore {
       // ─────────────────────────────────────────────────────────────────────
 
       match /sepaPain008Runs/{runId} {
-        allow read: if isSuperAdmin() || isMemberOf(orgId);
-        allow create: if isSuperAdmin() || (isMemberOf(orgId) && getMemberRole(orgId) in ['admin', 'user']);
+        allow read: if canUseSepaCollection(orgId, 'remeses.read');
+        allow create: if canUseSepaCollection(orgId, 'remeses.generar');
         allow update, delete: if false;
       }
 
@@ -926,7 +969,7 @@ service cloud.firestore {
       // ─────────────────────────────────────────────────────────────────────
 
       match /processLocks/{lockId} {
-        allow read, create, update, delete: if isSuperAdmin() || (isMemberOf(orgId) && getMemberRole(orgId) in ['admin', 'user']);
+        allow read, create, update, delete: if canUseSepaCollection(orgId, 'remeses.read');
       }
 
       // ─────────────────────────────────────────────────────────────────────
