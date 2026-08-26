@@ -15,6 +15,12 @@ export type FiscalKind = 'donation' | 'non_fiscal' | 'pending_review';
  */
 export type DonationStatus = 'completed' | 'returned' | 'partial';
 
+export type ReturnFiscalException = {
+  reason: string;
+  approvedAt: string;
+  approvedByUid: string;
+};
+
 export type Transaction = {
   id: string;
   date: string;
@@ -71,6 +77,12 @@ export type Transaction = {
    * Quan un apunt bancari agrupa múltiples devolucions
    */
   linkedTransactionIds?: string[];
+
+  /**
+   * Excepció fiscal aprovada al servidor per una devolució sense vincle verificat.
+   * null = sense excepció activa.
+   */
+  returnFiscalException?: ReturnFiscalException | null;
   
   /**
    * Indica si aquesta transacció s'ha dividit en múltiples

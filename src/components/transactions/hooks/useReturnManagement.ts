@@ -20,6 +20,12 @@ import {
 
 export type ReturnAssignmentMode = 'single' | 'multi';
 
+export type ReturnAssignmentStatus = 'linked' | 'pending_review';
+
+export function getReturnAssignmentStatus(linkedTransactionId: string | null): ReturnAssignmentStatus {
+  return linkedTransactionId ? 'linked' : 'pending_review';
+}
+
 interface UseReturnManagementParams {
   transactionsCollection: CollectionReference | null;
   contactsCollection: CollectionReference | null;

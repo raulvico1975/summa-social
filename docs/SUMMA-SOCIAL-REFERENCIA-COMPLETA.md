@@ -2050,6 +2050,18 @@ Si algunes devolucions no es poden identificar:
 
 > **Regla clau:** Les devolucions resten al Model 182 quan existeixen filles amb `contactId`, independentment de l'estat global de la remesa (`partial` o `complete`).
 
+#### Readiness fiscal abans de generar
+
+Abans de generar el Model 182 o qualsevol certificat, el servidor recalcula l'estat de totes les devolucions actives de l'any:
+
+- Cada filla activa amb `transactionType === 'return'` s'avalua individualment; el pare de la remesa s'exclou.
+- Una devolució només queda resolta amb un `linkedTransactionId` verificat i recíproc cap a una donació activa, positiva, fiscal i del mateix `contactId`.
+- El contacte, l'import, la data o l'assignació del donant per si sols no permeten inferir el vincle.
+- L'alternativa és `returnFiscalException: { reason, approvedAt, approvedByUid }`, amb els tres camps no buits i aprovada per un Admin o SuperAdmin al servidor.
+- Si queden devolucions sense resoldre, la generació falla atòmicament amb `409 UNRESOLVED_FISCAL_RETURNS`, l'any, el recompte i els identificadors mínims; no es produeix cap sortida parcial.
+
+El Model 347 no forma part d'aquest guardrail.
+
 #### Desglossament visible del Model 182
 
 La pantalla del Model 182 separa els fets econòmics del net fiscal canònic:
@@ -2063,8 +2075,9 @@ Quan una donació `returned` té una devolució negativa vinculada, la donació 
 ### 3.4.8 UI de devolucions
 
 #### Banner (Moviments)
-- Un sol banner vermell: "Hi ha devolucions pendents d'assignar"
-- CTA "Revisar" → Filtra per devolucions pendents
+- Un avís de revisió fiscal: "Revisió de devolucions fiscals"
+- Mostra l'estat de cada filla activa i recorda que assignar només el donant no valida el vincle.
+- Admin/SuperAdmin pot aprovar una excepció amb justificació històrica o revocar-la; el servidor fixa l'hora i l'UID aprovador.
 
 #### Accions per fila
 
@@ -2072,6 +2085,8 @@ Quan una donació `returned` té una devolució negativa vinculada, la donació 
 |------|-------|
 | "Assignar donant" (vermell) | Diàleg assignació manual |
 | 📄 (icona) | Obre importador fitxer |
+| "Aprovar excepció" | Justificació històrica server-side (Admin/SuperAdmin) |
+| "Revocar" | Elimina l'excepció activa i torna a bloquejar la readiness |
 
 #### Criteri del botó "Assignar donant"
 

@@ -3,14 +3,34 @@ import { getAdminDb } from '@/lib/api/admin-sdk';
 import { authenticateIntegrationRequest, createFirestoreIntegrationAuthRepository, hashOpaqueValue, recordIntegrationAudit, type IntegrationAuthRepository } from '@/lib/api/integration-auth';
 import { generateIndividualCertificatePlan, type IndividualCertificateGenerator, type IndividualCertificatePlanStore } from '@/lib/private-integrations/individual-certificate-plan';
 import { createFirestoreIndividualCertificateGenerator, createFirestoreIndividualCertificatePlanStore } from '@/lib/private-integrations/firestore-individual-certificate';
+import { checkFiscalReturnReadiness, fiscalReturnReadinessError } from '@/lib/fiscal/return-fiscal-readiness';
+import type { Transaction } from '@/lib/data';
 
 const ROUTE = 'POST /api/integrations/private/certificates/individual/generate';
 type RequestLike = Pick<NextRequest, 'headers' | 'json'>;
-interface Deps { authRepository?: IntegrationAuthRepository; planStore?: IndividualCertificatePlanStore; generator?: IndividualCertificateGenerator; now?: Date }
+export interface IndividualCertificateGenerateDeps {
+  authRepository?: IntegrationAuthRepository;
+  planStore?: IndividualCertificatePlanStore;
+  generator?: IndividualCertificateGenerator;
+  now?: Date;
+  getTransactionsForReadinessFn?: (organizationId: string) => Promise<Transaction[]>;
+}
 const clean = (value: unknown) => typeof value === 'string' ? value.trim() : '';
 const object = (value: unknown): Record<string, unknown> => value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {};
 
-export async function handlePrivateIndividualCertificateGenerate(request: RequestLike, deps: Deps = {}) {
+async function loadTransactionsForReadiness(organizationId: string): Promise<Transaction[]> {
+  const db = getAdminDb();
+  const snapshot = await db.collection(`organizations/${organizationId}/transactions`).get();
+  return snapshot.docs.map((doc) => ({
+    ...(doc.data() as Transaction),
+    id: doc.id,
+  }));
+}
+
+export async function handlePrivateIndividualCertificateGenerate(
+  request: RequestLike,
+  deps: IndividualCertificateGenerateDeps = {}
+) {
   let raw: unknown = null; try { raw = await request.json(); } catch { /* invalid below */ }
   const body = object(raw); const orgId = clean(body.orgId);
   const repository = deps.authRepository ?? createFirestoreIntegrationAuthRepository(getAdminDb());
@@ -30,6 +50,36 @@ export async function handlePrivateIndividualCertificateGenerate(request: Reques
   }
   const requestKeyHash = hashOpaqueValue(`${input.planId}|${input.transactionId}|${input.donorId}|${input.preconditionToken}`);
   const db = deps.planStore && deps.generator ? null : getAdminDb();
+
+  const readinessLoader = deps.getTransactionsForReadinessFn ?? loadTransactionsForReadiness;
+  if (deps.getTransactionsForReadinessFn || db) {
+    let readinessTransactions: Transaction[];
+    try {
+      readinessTransactions = await readinessLoader(orgId);
+    } catch (error) {
+      console.error('[individual certificate generate] fiscal readiness read failed', { orgId, error });
+      await recordIntegrationAudit({ ...auth.audit, resourceId: input.planId, requestKeyHash, result: 'error', status: 503, code: 'FISCAL_READINESS_UNAVAILABLE' }, repository);
+      return NextResponse.json({ success: false, code: 'FISCAL_READINESS_UNAVAILABLE' }, { status: 503 });
+    }
+
+    const targetTransaction = readinessTransactions.find((transaction) => transaction.id === input.transactionId);
+    const year = targetTransaction ? Number(targetTransaction.date.slice(0, 4)) : NaN;
+    if (!targetTransaction || !Number.isInteger(year) || year < 2000 || year > 2100) {
+      await recordIntegrationAudit({ ...auth.audit, resourceId: input.planId, requestKeyHash, result: 'error', status: 503, code: 'FISCAL_READINESS_UNAVAILABLE' }, repository);
+      return NextResponse.json({ success: false, code: 'FISCAL_READINESS_UNAVAILABLE' }, { status: 503 });
+    }
+
+    const readiness = checkFiscalReturnReadiness({
+      organizationId: orgId,
+      year,
+      transactions: readinessTransactions,
+    });
+    if (!readiness.ready) {
+      await recordIntegrationAudit({ ...auth.audit, resourceId: input.planId, requestKeyHash, result: 'conflict', status: 409, code: 'UNRESOLVED_FISCAL_RETURNS' }, repository);
+      return NextResponse.json(fiscalReturnReadinessError(readiness), { status: 409 });
+    }
+  }
+
   const store = deps.planStore ?? createFirestoreIndividualCertificatePlanStore(db!);
   try {
     const result = await generateIndividualCertificatePlan(input, store, deps.generator ?? createFirestoreIndividualCertificateGenerator(db!));

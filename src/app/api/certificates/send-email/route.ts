@@ -7,7 +7,11 @@ import {
   verifyIdToken,
 } from '@/lib/api/admin-sdk';
 import { requirePermission } from '@/lib/api/require-permission';
-import type { OrganizationLanguage } from '@/lib/data';
+import {
+  checkFiscalReturnReadiness,
+  fiscalReturnReadinessError,
+} from '@/lib/fiscal/return-fiscal-readiness';
+import type { OrganizationLanguage, Transaction } from '@/lib/data';
 
 const MAX_RECIPIENTS_PER_REQUEST = 20;
 const MAX_RECIPIENTS_PER_DAY_PER_ORG = 500;
@@ -28,6 +32,16 @@ interface ValidatedDonor {
   email: string;
   pdfBase64: string;
   singleDonation?: SingleDonationInfo;
+}
+
+export interface CertificateEmailDeps {
+  verifyIdTokenFn: typeof verifyIdToken;
+  getAdminDbFn: typeof getAdminDb;
+  validateUserMembershipFn: typeof validateUserMembership;
+  getTransactionsForReadinessFn: (
+    db: ReturnType<typeof getAdminDb>,
+    organizationId: string
+  ) => Promise<Transaction[]>;
 }
 
 interface RecipientResult {
@@ -147,7 +161,12 @@ function validateRequestBody(body: unknown): {
   const organizationLanguage = normalizeOrganizationLanguage(root.organizationLanguage);
   const donorsRaw = root.donors;
 
-  if (!organizationId || !year || !Array.isArray(donorsRaw)) {
+  if (!organizationId || !/^\d{4}$/.test(year) || !Array.isArray(donorsRaw)) {
+    return null;
+  }
+
+  const numericYear = Number(year);
+  if (!Number.isInteger(numericYear) || numericYear < 2000 || numericYear > 2100) {
     return null;
   }
 
@@ -384,7 +403,28 @@ async function writeCertificateEmailLog(args: {
   }
 }
 
-export async function POST(request: NextRequest) {
+async function loadTransactionsForReadiness(
+  db: ReturnType<typeof getAdminDb>,
+  organizationId: string
+): Promise<Transaction[]> {
+  const snapshot = await db.collection(`organizations/${organizationId}/transactions`).get();
+  return snapshot.docs.map((doc) => ({
+    ...(doc.data() as Transaction),
+    id: doc.id,
+  }));
+}
+
+const defaultDeps: CertificateEmailDeps = {
+  verifyIdTokenFn: verifyIdToken,
+  getAdminDbFn: getAdminDb,
+  validateUserMembershipFn: validateUserMembership,
+  getTransactionsForReadinessFn: loadTransactionsForReadiness,
+};
+
+export async function handleCertificateEmailPost(
+  request: NextRequest,
+  deps: CertificateEmailDeps = defaultDeps
+) {
   const requestId = crypto.randomUUID();
   let quotaDayKey = '';
   let organizationId = '';
@@ -395,7 +435,7 @@ export async function POST(request: NextRequest) {
   };
 
   try {
-    const authResult = await verifyIdToken(request);
+    const authResult = await deps.verifyIdTokenFn(request);
     if (!authResult) {
       return NextResponse.json(
         { success: false, error: 'UNAUTHORIZED', code: 'UNAUTHORIZED' },
@@ -425,8 +465,8 @@ export async function POST(request: NextRequest) {
     organizationId = parsed.organizationId;
     quotaDayKey = getTodayKey();
 
-    const db = getAdminDb();
-    const membership = await validateUserMembership(db, authResult.uid, organizationId);
+    const db = deps.getAdminDbFn();
+    const membership = await deps.validateUserMembershipFn(db, authResult.uid, organizationId);
     const accessError = requirePermission(membership, {
       code: 'FISCAL_CERTIFICATS_GENERAR_REQUIRED',
       check: (permissions) => permissions['fiscal.certificats.generar'],
@@ -450,6 +490,30 @@ export async function POST(request: NextRequest) {
     const orgEmailRaw = parseString(orgData.email).toLowerCase();
     const orgEmail = orgEmailRaw && EMAIL_REGEX.test(orgEmailRaw) ? orgEmailRaw : '';
     const orgLanguage = requestedLanguage || normalizeOrganizationLanguage(orgData.language);
+
+    let readinessTransactions: Transaction[];
+    try {
+      readinessTransactions = await deps.getTransactionsForReadinessFn(db, organizationId);
+    } catch (error) {
+      console.error('[certificates/send-email] fiscal readiness read failed', { organizationId, error });
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'FISCAL_READINESS_UNAVAILABLE',
+          code: 'FISCAL_READINESS_UNAVAILABLE',
+        },
+        { status: 503 }
+      );
+    }
+
+    const readiness = checkFiscalReturnReadiness({
+      organizationId,
+      year: Number(parsed.year),
+      transactions: readinessTransactions,
+    });
+    if (!readiness.ready) {
+      return NextResponse.json(fiscalReturnReadinessError(readiness), { status: 409 });
+    }
 
     const recipientsWithEmail = parsed.donors.filter((d) => Boolean(d.email));
     const skippedNoEmail = parsed.donors.length - recipientsWithEmail.length;
@@ -715,4 +779,8 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
+}
+
+export async function POST(request: NextRequest) {
+  return handleCertificateEmailPost(request);
 }

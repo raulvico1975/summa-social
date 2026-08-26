@@ -66,6 +66,7 @@ import { useToast } from '@/hooks/use-toast';
 import { RemittanceDetailModal } from '@/components/remittance-detail-modal';
 import { StripeImputationModal } from '@/components/stripe/StripeImputationModal';
 import { StripeImputationDetailDialog } from '@/components/stripe/StripeImputationDetailDialog';
+import { ReturnFiscalExceptionQueue } from '@/components/transactions/ReturnFiscalExceptionQueue';
 import { SplitAmountDialog } from '@/components/transactions/split-amount-dialog';
 import { SplitDetailDialog } from '@/components/transactions/split-detail-dialog';
 import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
@@ -77,7 +78,10 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useTranslations } from '@/i18n';
 import { useCurrentOrganization } from '@/hooks/organization-provider';
 import { useEntitlements } from '@/hooks/use-entitlements';
-import { useReturnManagement } from '@/components/transactions/hooks/useReturnManagement';
+import {
+  getReturnAssignmentStatus,
+  useReturnManagement,
+} from '@/components/transactions/hooks/useReturnManagement';
 import { useTransactionsRealtime } from '@/components/transactions/hooks/useTransactionsRealtime';
 import { useTransactionCategorization } from '@/components/transactions/hooks/useTransactionCategorization';
 import { useTransactionActions } from '@/components/transactions/hooks/useTransactionActions';
@@ -176,7 +180,7 @@ export function TransactionsTable({
   canEditMovements = true
 }: TransactionsTableProps = {}) {
   const { firestore, user, storage } = useFirebase();
-  const { organizationId, organization } = useCurrentOrganization();
+  const { organizationId, organization, userRole } = useCurrentOrganization();
   const { canUseCapability } = useEntitlements();
   const canMutateTransactionDocuments = canUseCapability('transactionDocuments.mutate', {
     operationalEnabled: organization?.features?.transactionDocuments !== false,
@@ -2627,6 +2631,13 @@ export function TransactionsTable({
 
   return (
     <TooltipProvider>
+      <ReturnFiscalExceptionQueue
+        transactions={transactions ?? []}
+        organizationId={organizationId}
+        user={user}
+        userRole={userRole}
+        isSuperAdmin={isSuperAdmin}
+      />
       {/* ═══════════════════════════════════════════════════════════════════════
           SECCIÓ: Barra principal (Períodes + Cerca + Compte bancari)
           ═══════════════════════════════════════════════════════════════════════ */}
@@ -3490,10 +3501,14 @@ export function TransactionsTable({
                               </SelectContent>
                             </Select>
                           )}
-                          {returnLinkedTxId && (
+                          {getReturnAssignmentStatus(returnLinkedTxId) === 'linked' ? (
                             <p className="text-xs text-green-600 flex items-center gap-1">
                               <Check className="h-3 w-3" />
                               {t.movements.table.linkedDonationInfo}
+                            </p>
+                          ) : (
+                            <p className="text-xs text-amber-700 dark:text-amber-300">
+                              {t.movements.table.returnLinkPendingInfo}
                             </p>
                           )}
                         </div>

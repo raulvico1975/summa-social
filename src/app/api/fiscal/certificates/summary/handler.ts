@@ -9,7 +9,11 @@ import {
 import { requirePermission } from '@/lib/api/require-permission';
 import { getUnifiedFiscalDonationsWithAdmin } from '@/lib/fiscal/getUnifiedFiscalDonations';
 import { buildCertificateDonorSummaries } from '@/lib/fiscal/certificate-summaries';
-import type { Donor } from '@/lib/data';
+import {
+  checkFiscalReturnReadiness,
+  fiscalReturnReadinessError,
+} from '@/lib/fiscal/return-fiscal-readiness';
+import type { Donor, Transaction } from '@/lib/data';
 
 interface CertificateSummaryResponse {
   success: boolean;
@@ -20,11 +24,12 @@ interface CertificateSummaryResponse {
   totalReturns?: number;
 }
 
-interface CertificateSummaryDeps {
+export interface CertificateSummaryDeps {
   verifyIdTokenFn: typeof verifyIdToken;
   getAdminDbFn: typeof getAdminDb;
   validateUserMembershipFn: typeof validateUserMembership;
   getUnifiedFiscalDonationsWithAdminFn: typeof getUnifiedFiscalDonationsWithAdmin;
+  getTransactionsForReadinessFn?: (db: DbLike, organizationId: string) => Promise<Transaction[]>;
 }
 
 function parseString(value: unknown): string {
@@ -39,13 +44,6 @@ function parseYear(value: unknown): string | null {
   return year;
 }
 
-const defaultDeps: CertificateSummaryDeps = {
-  verifyIdTokenFn: verifyIdToken,
-  getAdminDbFn: getAdminDb,
-  validateUserMembershipFn: validateUserMembership,
-  getUnifiedFiscalDonationsWithAdminFn: getUnifiedFiscalDonationsWithAdmin,
-};
-
 type DbLike = ReturnType<typeof getAdminDb>;
 type DocSnapshotLike = {
   id: string;
@@ -57,6 +55,25 @@ type QuerySnapshotLike = {
     id: string;
     data: () => Record<string, unknown>;
   }>;
+};
+
+async function loadTransactionsForReadiness(
+  db: DbLike,
+  organizationId: string
+): Promise<Transaction[]> {
+  const snapshot = await db.collection(`organizations/${organizationId}/transactions`).get();
+  return snapshot.docs.map((docSnap) => ({
+    ...(docSnap.data() as Transaction),
+    id: docSnap.id,
+  }));
+}
+
+const defaultDeps: CertificateSummaryDeps = {
+  verifyIdTokenFn: verifyIdToken,
+  getAdminDbFn: getAdminDb,
+  validateUserMembershipFn: validateUserMembership,
+  getUnifiedFiscalDonationsWithAdminFn: getUnifiedFiscalDonationsWithAdmin,
+  getTransactionsForReadinessFn: loadTransactionsForReadiness,
 };
 
 export async function handleCertificateSummaryPost(
@@ -111,7 +128,8 @@ export async function handleCertificateSummaryPost(
     ? (db as DbLike).doc(`organizations/${organizationId}/contacts/${donorId}`).get()
     : contactsRef.where('type', '==', 'donor').get();
 
-  const [donorsResult, fiscalTransactions] = await Promise.all([
+  const getTransactionsForReadiness = deps.getTransactionsForReadinessFn ?? loadTransactionsForReadiness;
+  const [donorsResult, fiscalTransactions, readinessTransactions] = await Promise.all([
     donorsPromise,
     deps.getUnifiedFiscalDonationsWithAdminFn({
       db,
@@ -122,7 +140,17 @@ export async function handleCertificateSummaryPost(
         ...(donorId ? { contactId: donorId } : {}),
       },
     }),
+    getTransactionsForReadiness(db, organizationId),
   ]);
+
+  const readiness = checkFiscalReturnReadiness({
+    organizationId,
+    year: Number(year),
+    transactions: readinessTransactions,
+  });
+  if (!readiness.ready) {
+    return NextResponse.json(fiscalReturnReadinessError(readiness), { status: 409 });
+  }
 
   let donors: Donor[];
   if (donorId) {
